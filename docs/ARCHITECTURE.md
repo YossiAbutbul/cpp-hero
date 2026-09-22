@@ -11,14 +11,14 @@ behavioral reference until the port is finished.
 ```
 content/                YAML content (see content/README.md): worlds/NN-slug/{world,lesson-NN,project,boss}.yaml, shared/*.yaml
 src/
-  app/                  App shell: GameProvider (store + game), router (hash), PWA update prompt
+  app/                  App shell: GameProvider (store + game), routes (hash), Stage + transitions, header/HUD, tab bar, hosts
   features/<name>/      screens: map, lesson, challenges, boss, project, curlo, vault, bestiary, practice, stats, settings, onboarding
   engine/               pure game logic, no React/DOM: save/store, progress (XP/levels), hearts, streak, quests,
                         achievements, cosmetics, srs, matching, contentIndex, game (rules wired together), config
   content/              schema.ts (zod: the content format + inferred types), load.ts/validate.ts (YAML → Content),
                         index.ts + useContent.ts (runtime access; hot-reloads in dev)
-  ui/                   shared presentational components
-  styles/               tokens.css (Pop Path), global.css (base, hidden scrollbars, reduced motion)
+  ui/                   shared components, overlays, fx (motion/confetti/celebrations), art; API docs: src/ui/README.md
+  styles/               tokens.css (Pop Path), global.css (base, hidden scrollbars, reduced motion, view transitions)
 scripts/
   validate-content.ts   npm run validate
   check-cpp.ts          npm run check:cpp (compile/run every snippet via g++)
