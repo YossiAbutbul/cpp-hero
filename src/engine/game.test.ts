@@ -154,18 +154,27 @@ describe('level curve (docs in progress.ts)', () => {
   it('a full, perfect run of Worlds 1–3 (one day per world) ends at level 6–7', () => {
     const { game, s, clock } = setup();
     const levels: number[] = [];
-    for (const w of game.worlds()) {
+    const worlds = game.worlds();
+    expect(worlds.length).toBeGreaterThanOrEqual(3);
+    for (const w of worlds) {
       playWorld(game, w);
       levels.push(s().level);
       clock.t += 86_400_000;
       game.boot();
+      if (levels.length === 3) {
+        // Legacy reached level 12 here; the slower curve targets ~6–7.
+        expect(s().level).toBeGreaterThanOrEqual(6);
+        expect(s().level).toBeLessThanOrEqual(7);
+        expect(levels[0]).toBeLessThan(levels[2]!);
+        expect(s().worldsUnlocked.slice(0, 3)).toEqual(['w1', 'w2', 'w3']);
+        expect(s().streak.days).toBe(3);
+      }
     }
-    // Legacy reached level 12 here; the slower curve targets ~6–7.
-    expect(s().level).toBeGreaterThanOrEqual(6);
-    expect(s().level).toBeLessThanOrEqual(7);
-    expect(levels[0]).toBeLessThan(levels[2]!);
-    expect(s().worldsUnlocked).toEqual(['w1', 'w2', 'w3']);
-    expect(s().streak.days).toBe(3);
+    // Soft check for the longer path: after World 8, somewhere around level 12–15.
+    if (levels.length >= 8) {
+      expect(levels[7]).toBeGreaterThanOrEqual(10);
+      expect(levels[7]).toBeLessThanOrEqual(16);
+    }
   });
 });
 

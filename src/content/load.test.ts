@@ -17,7 +17,11 @@ describe('content loader', () => {
   it('loads and validates the real content', () => {
     const r = loadContent(real);
     expect(r.issues).toEqual([]);
-    expect(r.content?.worlds.map((w) => w.id)).toEqual(['w1', 'w2', 'w3']);
+    const worlds = r.content?.worlds ?? [];
+    expect(worlds.length).toBeGreaterThanOrEqual(8);
+    expect(worlds.map((w) => w.num)).toEqual(worlds.map((_, i) => i + 1)); // contiguous 1..n
+    expect(worlds.map((w) => w.id)).toEqual(worlds.map((w) => `w${w.num}`));
+    expect(new Set(worlds.map((w) => w.id)).size).toBe(worlds.length);
     expect(r.content?.worlds[0]?.lessons.map((l) => l.id)).toEqual(['w1.l1', 'w1.l2', 'w1.l3', 'w1.l4', 'w1.l5', 'w1.l6']);
     expect(r.content?.worlds[0]?.story.intro.length).toBeGreaterThan(1);
     expect(r.content?.bestiary.length).toBe(30);
