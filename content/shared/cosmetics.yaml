@@ -62,3 +62,23 @@
   slot: shield
   name: Double-Brace Shield
   source: Beat World 12
+- id: phantom-veil
+  slot: hat
+  name: Phantom Veil
+  source: Defeat the Branch Phantom (World 4)
+- id: hydra-crest
+  slot: hat
+  name: Hydra Crest
+  source: Defeat the Loop Hydra (World 5)
+- id: sentinel-visor
+  slot: hat
+  name: Sentinel Visor
+  source: Defeat the Scope Sentinel (World 6)
+- id: shield-bounds
+  slot: shield
+  name: Bounds Keeper Shield
+  source: Defeat the Overflow Blob (World 7)
+- id: pointer-goggles
+  slot: hat
+  name: Pointer Goggles
+  source: Defeat the Dangling Wraith (World 8)
