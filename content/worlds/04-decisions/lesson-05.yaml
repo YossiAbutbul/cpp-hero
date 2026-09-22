@@ -1,0 +1,406 @@
+# World 4 · Lesson 5: Shield: Cover every path (Shield lesson)
+
+id: w4.l5
+title: "Shield: Cover every path"
+skill: defense
+shield: true
+concept:
+  short: "Give every case a path, reject bad values early, compare doubles with a tolerance, and use == in conditions."
+  analogy: "A good decision is a map with no blank areas: every road, even the weird ones, leads somewhere planned."
+  body:
+    - "**Handle every case.** A switch should always have a `default`, and an if / else if chain usually ends in an `else`. Values nobody expected (a menu choice of 7, a negative level) must go somewhere visible, not vanish silently."
+    - "**Guard clauses**: check for bad values first and leave early with `return 1;`. After the guards, the rest of the code can trust its data, and it isn't buried in nested ifs."
+    - "**Never compare floating-point values with ==.** A `double` stores binary fractions, and 0.1 has no exact binary form (like 1/3 in decimal). So `0.1 + 0.2` is really `0.30000000000000004`, and `0.1 + 0.2 == 0.3` is **false**."
+    - "Compare with a tolerance instead: `std::abs(a - b) < 1e-9` (from `<cmath>`). Pick a tolerance that fits your values' size. For money, the safest option is whole units in an int (cents, copper coins)."
+    - "**The assignment trap**: `if (level = 10)` assigns 10 to level, then tests 10, which is true. It always runs and destroys level. `-Wall` warns: suggest parentheses around assignment used as truth value. Read your warnings!"
+    - "None of these is undefined behavior, but they're silent logic bugs: the code compiles and runs, just wrong. (Reading a variable that a missing else never set IS UB, though: World 2!)"
+  pitfall: "Common beginner mistake: silencing the -Wall warning with `if ((x = 5))` instead of fixing it to `if (x == 5)`."
+demo:
+  code: |-
+    #include <cmath>
+    #include <iomanip>
+    #include <iostream>
+
+    int main() {
+        double price = 0.1 + 0.2;
+        std::cout << std::setprecision(17) << price << '\n';
+        if (price == 0.3) {
+            std::cout << "Exactly 0.3\n";
+        }
+        if (std::abs(price - 0.3) < 1e-9) {
+            std::cout << "Close enough: 0.3\n";
+        }
+        return 0;
+    }
+  steps:
+    - line: 5
+      vars:
+        price: "0.30000000000000004"
+      note: 0.1 and 0.2 can't be stored exactly in binary.
+    - line: 6
+      out: |
+        0.30000000000000004
+      note: 17 digits reveal the tiny rounding error.
+    - line: 7
+      crash: "0.30000000000000004 == 0.3 is false!"
+      note: "== demands every bit match. The Phantom slips through!"
+    - line: 10
+      shield: Tolerance check!
+      note: The difference is tiny, far below 1e-9.
+    - line: 11
+      out: |
+        Close enough: 0.3
+      note: "Treated as equal: that's what we meant."
+    - line: 13
+      note: Doubles compared safely. Phantom-proof!
+challenges:
+  - id: w4.l5.c1
+    type: predict
+    tags: [ w4.float, w2.double ]
+    unsafe: true
+    bug: float-equality
+    prompt: The Phantom's favorite trick. What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          double total = 0.1 + 0.2;
+          if (total == 0.3) {
+              std::cout << "Equal\n";
+          } else {
+              std::cout << "Not equal\n";
+          }
+          return 0;
+      }
+    options:
+      - t: |
+          Not equal
+        why: "Correct: 0.1 + 0.2 is really 0.30000000000000004, so == is false."
+      - t: |
+          Equal
+        why: "Math says yes, doubles say no: 0.1 and 0.2 are stored with tiny errors."
+      - t: |
+          Equal
+          Not equal
+        why: Exactly one of if and else runs.
+      - t: It's undefined behavior
+        why: Not UB. It's perfectly defined, just surprising. The result is reliably false.
+    answer: 0
+    hints:
+      - Can 0.1 be stored exactly in binary?
+      - The sum is off by about 0.00000000000000004.
+    short: 0.1 + 0.2 isn't exactly 0.3 as a double, so == is false.
+    explain: "0.1 and 0.2 have no exact binary form, so each is stored slightly off. Their sum is 0.30000000000000004, while the literal 0.3 is 0.29999999999999999. Different bits, so == is false. Compare with a tolerance."
+  - id: w4.l5.c2
+    type: harden
+    tags: [ w4.float, w2.double ]
+    bug: float-equality
+    prompt: The hero paid 0.1 + 0.2 gold for a 0.3-gold potion. Pick the comparison that accepts it.
+    code: |-
+      #include <cmath>
+      #include <iostream>
+
+      int main() {
+          double paid = 0.1 + 0.2;
+          double price = 0.3;
+          if (___) {
+              std::cout << "Paid in full!\n";
+          } else {
+              std::cout << "Wrong amount\n";
+          }
+          return 0;
+      }
+    options:
+      - t: std::abs(paid - price) < 1e-9
+        why: "Correct: equal within a tiny tolerance, in either direction."
+      - t: paid == price
+        why: The rounding error makes these differ in the last bits, so this says "Wrong amount".
+      - t: paid - price < 1e-9
+        why: "Missing std::abs: paying 0.0 gives a negative difference and would count as paid!"
+      - t: static_cast<int>(paid) == static_cast<int>(price)
+        why: Both become 0. Paying 0.9 or 0.0 would also match.
+    answer: 0
+    hints:
+      - Don't ask "equal?", ask "close enough?"
+      - The difference could be positive or negative.
+    short: "Compare doubles with a tolerance: std::abs(a - b) < 1e-9."
+    explain: "std::abs(paid - price) < 1e-9 is true when the two are within a billionth of each other, whichever is bigger. For real money, count whole cents in an int so there's no rounding at all."
+    sideBySide:
+      unsafe: |-
+        if (paid == price) {                 // false: rounding error
+            std::cout << "Paid in full!\n";
+        }
+      hardened: |-
+        #include <cmath>
+
+        if (std::abs(paid - price) < 1e-9) {
+            std::cout << "Paid in full!\n";
+        }
+      prelude: double paid = 0.1 + 0.2; double price = 0.3;
+  - id: w4.l5.c3
+    type: bug
+    tags: [ w4.assign, w1.warnings ]
+    unsafe: true
+    prompt: A level-3 hero sees "Boss level!" and then "Level 10". Tap the buggy line, then pick the fix.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int level = 3;
+          if (level = 10) {
+              std::cout << "Boss level!\n";
+          }
+          std::cout << "Level " << level << '\n';
+          return 0;
+      }
+    bugLine: 4
+    options:
+      - t: "if (level == 10) {"
+        why: "Correct: == compares; level stays 3 and the if is skipped."
+      - t: "if ((level = 10)) {"
+        why: Extra parentheses only silence the warning. It still assigns 10.
+      - t: "if (level => 10) {"
+        why: "=> isn't a C++ operator. Compile error."
+      - t: "if (level != 10) {"
+        why: "Stops the assignment, but flips the meaning: every other level is a boss level."
+    answer: 0
+    hints:
+      - How many = signs does a comparison need?
+      - Why did level change to 10?
+    short: "= assigns, == compares. if (level = 10) is always true."
+    explain: "`level = 10` stores 10 in level, and the condition's value is 10, which counts as true. So the if always runs and level is wrecked. g++ -Wall warns: suggest parentheses around assignment used as truth value. Use ==."
+    sideBySide:
+      unsafe: |-
+        if (level = 10) {          // assigns 10, always true
+            std::cout << "Boss level!\n";
+        }
+      hardened: |-
+        if (level == 10) {
+            std::cout << "Boss level!\n";
+        }
+      prelude: int level = 3;
+  - id: w4.l5.c4
+    type: harden
+    tags: [ w4.default, w4.switch ]
+    bug: missing-default
+    prompt: The player typed 7 and nothing happened. Pick what completes the switch.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int choice = 7;
+          switch (choice) {
+              case 1:
+                  std::cout << "Attack\n";
+                  break;
+              case 2:
+                  std::cout << "Defend\n";
+                  break;
+              ___
+          }
+          return 0;
+      }
+    options:
+      - t: 'default: std::cout << "Unknown choice: pick 1 or 2\n"; break;'
+        why: "Correct: every unexpected value gets a clear message."
+      - t: 'case 3: std::cout << "Run\n"; break;'
+        why: A new option is nice, but 7 is still silently ignored.
+      - t: "default: break;"
+        why: Catches everything, then hides it. The player still gets no feedback.
+      - t: 'case 7: std::cout << "Unknown\n"; break;'
+        why: Only handles 7. The Phantom just types 8.
+    answer: 0
+    hints:
+      - Which label catches EVERY value without a case?
+      - Silently ignoring bad input is still a bug.
+    short: A default that reports the problem catches every unexpected value.
+    explain: "default runs for any value without its own case: 7, 8, -1, 999. Make it tell the player what went wrong instead of silently doing nothing."
+    sideBySide:
+      unsafe: |-
+        switch (choice) {
+            case 1: std::cout << "Attack\n"; break;
+            case 2: std::cout << "Defend\n"; break;
+        }   // 7: nothing happens, nobody knows why
+      hardened: |-
+        switch (choice) {
+            case 1: std::cout << "Attack\n"; break;
+            case 2: std::cout << "Defend\n"; break;
+            default: std::cout << "Unknown choice: pick 1 or 2\n"; break;
+        }
+      prelude: int choice = 7;
+  - id: w4.l5.c5
+    type: edge
+    tags: [ w4.guard, w3.validate, w3.divzero ]
+    unsafe: true
+    prompt: This checks bad text and levels over 99. Which inputs still cause trouble? Select all.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int level{};
+          if (!(std::cin >> level)) {
+              std::cout << "Numbers only!\n";
+              return 1;
+          }
+          if (level > 99) {
+              std::cout << "Level cap is 99!\n";
+              return 1;
+          }
+          std::cout << "XP per level: " << 1000 / level << '\n';
+          return 0;
+      }
+    options:
+      - t: "0"
+        why: "Exposes it: 1000 / 0 is integer division by zero, undefined behavior."
+      - t: "-4"
+        why: "Exposes it: no guard for negatives, so it prints -250 XP. Nonsense."
+      - t: "50"
+        why: A valid level. 1000 / 50 = 20.
+      - t: "150"
+        why: Caught by the level > 99 guard.
+      - t: abc
+        why: Caught by the read check.
+    answers: [ 0, 1 ]
+    hints:
+      - "Guards cover text and big numbers. What's left?"
+      - Think about the divisor, and the low end of the range.
+    short: The guard misses the low end; 0 divides by zero, negatives are nonsense.
+    explain: "Guard both ends of the range: level < 1 || level > 99. Then 0 (UB: division by zero) and negatives never reach the math. After the guards, the code can trust level."
+    sideBySide:
+      unsafe: |-
+        if (level > 99) {
+            return 1;
+        }
+        std::cout << 1000 / level << '\n';   // 0: UB, -4: nonsense
+      hardened: |-
+        if (level < 1 || level > 99) {
+            std::cout << "Level must be 1 to 99\n";
+            return 1;
+        }
+        std::cout << 1000 / level << '\n';
+      prelude: int level{};
+  - id: w4.l5.c6
+    type: safe
+    tags: [ w4.float, w4.assign, w4.default, w4.guard ]
+    prompt: Safe or unsafe? The Phantom's minions hide in these branches. Go fast!
+    seconds: 30
+    items:
+      - code: |-
+          if (std::abs(a - b) < 1e-9) {
+              std::cout << "same\n";
+          }
+        prelude: double a{0.3}; double b{0.1 + 0.2};
+        safe: true
+        why: Doubles compared with a tolerance.
+      - code: |-
+          if (x = 5) {
+              std::cout << "five\n";
+          }
+        prelude: int x{};
+        safe: false
+        why: "= assigns 5; the condition is always true. Use ==."
+      - code: |-
+          if (0.1 + 0.2 == 0.3) {
+              std::cout << "equal\n";
+          }
+        safe: false
+        why: "Floating-point == is false here: rounding error."
+      - code: |-
+          switch (c) {
+              case 1: std::cout << "one\n"; break;
+              default: std::cout << "other\n"; break;
+          }
+        prelude: int c{};
+        safe: true
+        why: Every case ends in break, and default catches the rest.
+      - code: |-
+          switch (c) {
+              case 1: std::cout << "one\n";
+              case 2: std::cout << "two\n"; break;
+          }
+        prelude: int c{};
+        safe: false
+        why: Case 1 falls through into case 2, and there's no default.
+      - code: |-
+          if (count <= 0) {
+              return 1;
+          }
+          int avg = total / count;
+        prelude: int count{2}; int total{9};
+        safe: true
+        why: A guard clause rejects bad divisors before the division.
+      - code: |-
+          if (level == 10) {
+              std::cout << "Boss!\n";
+          }
+        prelude: int level{};
+        safe: true
+        why: "== compares ints exactly: fine for integers."
+      - code: |-
+          int bonus;
+          if (level > 5) {
+              bonus = 10;
+          }
+          std::cout << bonus;
+        prelude: int level{};
+        safe: false
+        why: "No else: for level 5 or less, bonus is never set. Reading it is UB."
+    hints:
+      - Look for =, == on doubles, and missing breaks.
+      - Does every path give every variable a value?
+    short: Cover every path, compare doubles with a tolerance, use == for ints.
+    explain: Safe branches give every value a path, compare doubles with a tolerance, use == (not =) and guard before the risky part.
+recap:
+  - Every switch gets a default; chains get an else.
+  - Guard clauses reject bad values early with return.
+  - "Doubles: std::abs(a - b) < 1e-9, never ==."
+  - "if (x = 5) assigns. Use ==, and read warnings."
+vault:
+  - id: w4.floatcompare
+    title: Compare doubles with a tolerance
+    code: |-
+      #include <cmath>
+
+      double total = 0.1 + 0.2;          // 0.30000000000000004
+      if (std::abs(total - 0.3) < 1e-9) {
+          // treat as equal
+      }
+    note: "0.1 + 0.2 == 0.3 is false. For money, use whole cents in an int."
+    defense: true
+  - id: w4.switchdefault
+    title: Always a default
+    code: |-
+      switch (choice) {
+          case 1: std::cout << "Attack\n"; break;
+          case 2: std::cout << "Defend\n"; break;
+          default: std::cout << "Unknown choice\n"; break;
+      }
+    prelude: int choice{};
+    note: Unexpected values must go somewhere visible, not vanish.
+    defense: true
+  - id: w4.guardclause
+    title: Guard clauses
+    code: |-
+      if (!(std::cin >> level)) {
+          std::cout << "Numbers only!\n";
+          return 1;
+      }
+      if (level < 1 || level > 99) {
+          std::cout << "Level must be 1 to 99\n";
+          return 1;
+      }
+      // from here on, level is valid
+    prelude: int level{};
+    note: Reject bad values first and leave early. The rest can trust the data.
+    defense: true
+  - id: w4.assigncondition
+    title: == compares, = assigns
+    code: |-
+      if (hp == 0) {
+          std::cout << "Down!\n";
+      }
+      // if (hp = 0) assigns 0: never runs, and hp is wiped. -Wall warns.
+    prelude: int hp{};
+    note: Never silence the warning with extra parentheses. Fix it.
+    defense: true
+reviewTags: [ w3.validate, w2.convert, w4.switch, w4.ternary ]

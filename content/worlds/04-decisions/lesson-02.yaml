@@ -1,0 +1,309 @@
+# World 4 · Lesson 2: Many paths (else if, nesting, combined conditions)
+
+id: w4.l2
+title: Many paths
+skill: logic
+shield: false
+concept:
+  short: "else if chains test conditions top to bottom; the first true one wins and the rest are skipped."
+  analogy: "An else-if ladder is a row of doors: you walk through the first unlocked one and ignore the rest."
+  body:
+    - "`if (a) { ... } else if (b) { ... } else { ... }` checks a, then b, and so on. The **first** true condition's block runs, then the whole chain is done. The final `else` catches everything left over."
+    - "**Order matters.** For ranges, test the most specific (or highest) case first: `score >= 90` before `score >= 50`. Otherwise 95 gets caught by the `>= 50` door."
+    - "Separate `if`s are different: each one is checked on its own, so several can run. Use `else if` when the paths should exclude each other."
+    - "**Nesting**: an if inside another if's block. It works, but deep nesting is hard to read. Often `&&` says it flatter: `if (hasKey && doorLocked)`."
+    - "**Combining conditions** (World 3 recap): `&&` needs both, `||` needs either, `!` flips. For a range, write both sides: `level >= 1 && level <= 10`. `1 <= level <= 10` compiles but means something else, and `-Wall` warns."
+    - "An `else` with no braces around the ifs belongs to the **nearest** unmatched if, whatever the indentation says. Braces make it obvious."
+  pitfall: "Common beginner mistake: writing `if (x > 5)` then `if (x > 2)` as separate ifs and being surprised both run. Chain them with else if."
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        int score = 72;
+        if (score >= 90) {
+            std::cout << "Gold medal\n";
+        } else if (score >= 70) {
+            std::cout << "Silver medal\n";
+        } else if (score >= 50) {
+            std::cout << "Bronze medal\n";
+        } else {
+            std::cout << "Try again\n";
+        }
+        return 0;
+    }
+  steps:
+    - line: 3
+      vars:
+        score: "72"
+      note: The hero scored 72.
+    - line: 4
+      note: "72 >= 90? false. Try the next door."
+    - line: 6
+      note: "72 >= 70? true! This door opens."
+    - line: 7
+      out: |
+        Silver medal
+      note: Only this block runs.
+    - line: 8
+      note: The remaining conditions are never even checked.
+    - line: 13
+      note: One ladder, one winner. Nice climbing!
+challenges:
+  - id: w4.l2.c1
+    type: predict
+    tags: [ w4.elseif ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int level = 12;
+          if (level >= 20) {
+              std::cout << "Legend\n";
+          } else if (level >= 10) {
+              std::cout << "Veteran\n";
+          } else if (level >= 5) {
+              std::cout << "Adventurer\n";
+          } else {
+              std::cout << "Rookie\n";
+          }
+          return 0;
+      }
+    options:
+      - t: |
+          Veteran
+        why: "Correct: 12 >= 20 is false, 12 >= 10 is true, so the chain stops there."
+      - t: |
+          Veteran
+          Adventurer
+        why: Once one block in an else-if chain runs, the rest are skipped.
+      - t: |
+          Adventurer
+        why: 12 >= 10 is checked first and is true, so we never reach >= 5.
+      - t: |
+          Legend
+        why: 12 is not >= 20.
+    answer: 0
+    hints:
+      - Check each condition top to bottom.
+      - The first true condition wins; the rest are skipped.
+    short: The first true condition (level >= 10) wins; the rest are skipped.
+    explain: 'The chain checks 12 >= 20 (false), then 12 >= 10 (true): prints "Veteran" and the chain ends. 12 >= 5 is also true, but it is never checked.'
+  - id: w4.l2.c2
+    type: bug
+    tags: [ w4.elseif, w3.compare ]
+    prompt: A score of 95 prints "Pass" instead of "Excellent". Tap the buggy line, then pick the fix.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int score = 95;
+          if (score >= 50) {
+              std::cout << "Pass\n";
+          } else if (score >= 90) {
+              std::cout << "Excellent\n";
+          } else {
+              std::cout << "Fail\n";
+          }
+          return 0;
+      }
+    bugLine: 4
+    options:
+      - t: Test score >= 90 first, then score >= 50
+        why: "Correct: the most demanding condition must come first, or the easier one catches everything."
+      - t: Change score >= 90 to score > 90
+        why: The Excellent branch still can never run; >= 50 grabs every score above 50 first.
+      - t: Turn the else if into a separate if
+        why: Then 95 prints BOTH "Pass" and "Excellent".
+      - t: Change score >= 50 to score >= 49
+        why: Doesn't reorder anything. 95 still stops at the first door.
+    answer: 0
+    hints:
+      - Which door does 95 walk through first?
+      - Can the Excellent branch ever run as written?
+    short: In a ladder, test the highest range first, or it's unreachable.
+    explain: "Every score >= 90 is also >= 50, so the first branch catches it and the Excellent branch can never run. Put the stricter test first: >= 90, then >= 50, then else."
+    sideBySide:
+      unsafe: |-
+        if (score >= 50) {
+            std::cout << "Pass\n";
+        } else if (score >= 90) {      // unreachable!
+            std::cout << "Excellent\n";
+        }
+      hardened: |-
+        if (score >= 90) {
+            std::cout << "Excellent\n";
+        } else if (score >= 50) {
+            std::cout << "Pass\n";
+        } else {
+            std::cout << "Fail\n";
+        }
+      prelude: int score = 95;
+  - id: w4.l2.c3
+    type: predict
+    tags: [ w4.elseif, w4.if ]
+    prompt: Two separate ifs this time, no else. What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int hp = 8;
+          if (hp > 5) {
+              std::cout << "Strong ";
+          }
+          if (hp > 2) {
+              std::cout << "Alive";
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          Strong Alive
+        why: "Correct: separate ifs are checked independently, and both are true."
+      - t: "Strong \n"
+        why: Without else, the second if is still checked on its own.
+      - t: |
+          Alive
+        why: 8 > 5 is true, so "Strong " prints first.
+      - t: |
+          StrongAlive
+        why: '"Strong " ends with a space.'
+    answer: 0
+    hints:
+      - Is there an else anywhere?
+      - Each separate if gets its own check.
+    short: Separate ifs are independent; both run when both are true.
+    explain: 'No else links them, so both conditions are checked. 8 > 5 prints "Strong " (with a space), 8 > 2 prints "Alive", then a newline.'
+  - id: w4.l2.c4
+    type: predict
+    tags: [ w4.nested, w1.warnings ]
+    unsafe: true
+    prompt: "No braces, tricky indentation. Which if does the else belong to? What prints?"
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int hp = 5;
+          int shield = 0;
+          if (hp > 0)
+              if (shield > 0)
+                  std::cout << "Protected\n";
+          else
+              std::cout << "Down\n";
+          std::cout << "End\n";
+          return 0;
+      }
+    options:
+      - t: |
+          Down
+          End
+        why: "Correct: else binds to the nearest if (shield > 0), which is false."
+      - t: |
+          End
+        why: That assumes else belongs to hp > 0, as the indentation suggests. It doesn't.
+      - t: |
+          Protected
+          End
+        why: shield is 0, so shield > 0 is false.
+      - t: |
+          Down
+        why: '"End" is outside every if, so it always prints.'
+    answer: 0
+    hints:
+      - C++ ignores indentation.
+      - An else pairs with the nearest if that has no else yet.
+    short: A brace-less else belongs to the nearest if. Indentation lies.
+    explain: 'The else pairs with the closest unmatched if: `if (shield > 0)`. hp > 0 is true, shield > 0 is false, so "Down" prints, then "End". g++ -Wall warns about the ambiguous else. Braces fix it for good.'
+  - id: w4.l2.c5
+    type: fill
+    tags: [ w4.combine, w3.logic ]
+    prompt: The dragon quest needs level 10 or more AND at least 100 gold. Fill in the operator.
+    code: |-
+      int level = 12;
+      int gold = 150;
+      if (level >= 10 ___ gold >= 100) {
+          std::cout << "Dragon quest unlocked!\n";
+      }
+    accept:
+      - "&&"
+      - and
+    placeholder: operator
+    hints:
+      - Both conditions must be true.
+      - The "and" operator from World 3.
+    short: "&& requires both conditions to be true."
+    explain: "`&&` is true only when both sides are true. `||` would unlock the quest for a level-1 hero with 100 gold."
+  - id: w4.l2.c6
+    type: harden
+    tags: [ w4.combine, w3.compare, w3.validate ]
+    prompt: Only levels 1 to 10 (inclusive) may enter the training grounds. Pick the condition.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int level = 15;
+          if (___) {
+              std::cout << "Welcome, trainee!\n";
+          } else {
+              std::cout << "Training is for levels 1-10.\n";
+          }
+          return 0;
+      }
+    options:
+      - t: level >= 1 && level <= 10
+        why: "Correct: both ends of the range are checked, joined by &&."
+      - t: 1 <= level <= 10
+        why: (1 <= level) is 1 or 0, and that is ALWAYS <= 10. Everyone gets in. -Wall warns.
+      - t: level >= 1 || level <= 10
+        why: "Every number passes at least one side, so || lets everyone in."
+      - t: level <= 10
+        why: Forgets the lower end. Level 0 or -3 would walk in.
+    answer: 0
+    hints:
+      - A range has two ends. Check both.
+      - Both checks must pass, so join them with &&.
+    short: "A range check needs both ends: level >= 1 && level <= 10."
+    explain: "`1 <= level <= 10` is read as `(1 <= level) <= 10`: a bool (0 or 1) compared with 10, always true. Write both comparisons and join with &&."
+    sideBySide:
+      unsafe: |-
+        if (1 <= level <= 10) {        // always true!
+            std::cout << "Welcome, trainee!\n";
+        }
+      hardened: |-
+        if (level >= 1 && level <= 10) {
+            std::cout << "Welcome, trainee!\n";
+        }
+      prelude: int level = 15;
+recap:
+  - else if checks top to bottom; first true wins.
+  - Test the highest or strictest case first.
+  - Separate ifs can all run; else if picks one.
+  - "Ranges: check both ends, joined with &&."
+vault:
+  - id: w4.elseif
+    title: else-if ladder
+    code: |-
+      if (score >= 90) {
+          std::cout << "Gold\n";
+      } else if (score >= 70) {
+          std::cout << "Silver\n";
+      } else if (score >= 50) {
+          std::cout << "Bronze\n";
+      } else {
+          std::cout << "Try again\n";
+      }
+    prelude: int score{72};
+    note: Strictest test first. The final else catches everything left.
+    defense: false
+  - id: w4.range
+    title: Range check
+    code: |-
+      if (level >= 1 && level <= 10) {
+          // inside the range
+      }
+    prelude: int level{5};
+    note: "Never write 1 <= level <= 10: it's always true."
+    defense: false
+reviewTags: [ w3.logic, w2.bool, w4.if ]

@@ -1,0 +1,17 @@
+# World 4: Decisions. Lessons are lesson-NN.yaml (played in file order).
+
+id: w4
+num: 4
+title: Decisions
+icon: fork
+blurb: "Teach your program to choose: if and else, switch menus and the ternary shortcut, with a path for every case."
+story:
+  intro:
+    - The gate is safe, but now the Codebase paths keep splitting in two!
+    - Every fork needs a decision. Let's teach our code to choose wisely!
+  bossIntro:
+    - Brr, a chill! The Branch Phantom haunts every path we forgot to handle.
+    - It hides in missing defaults and sneaky == on doubles. Cover every branch!
+  victory:
+    - The Phantom fizzled out! Every branch has a path now. {:D}
+    - But I hear something going round and round in World 5...

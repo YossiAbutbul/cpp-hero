@@ -1,0 +1,344 @@
+# World 4 mini-project: Quest Board
+
+id: w4.p
+title: Quest Board
+intro: "Build the guild's Quest Board: read a hero's level and gold, show their rank, and let them pick a quest from a menu."
+steps:
+  - id: w4.p.s1
+    type: fill
+    tags: [ w4.combine, w4.guard, w3.validate ]
+    prompt: "Guard clause first: levels outside 1 to 99 are rejected. Fill in the operator that joins the two checks."
+    code: |-
+      if (!(std::cin >> level) || level < 1 ___ level > 99) {
+          std::cout << "Level must be a whole number from 1 to 99.\n";
+          return 1;
+      }
+    prelude: int level{};
+    accept:
+      - "||"
+      - or
+    placeholder: operator
+    hints:
+      - A level is bad if it's too low OR too high.
+      - Either problem alone is enough to reject it.
+    short: "|| rejects the level if either end of the range is broken."
+    explain: "A level is invalid if it's below 1 or above 99, so the checks are joined with ||. (&& would need a level that's both below 1 and above 99: impossible, so nothing would be rejected.)"
+  - id: w4.p.s2
+    type: order
+    tags: [ w4.elseif ]
+    prompt: "Order the rank ladder: Legend at 20+, Veteran at 10+, Adventurer at 5+, otherwise Rookie."
+    prelude: int level{12};
+    lines:
+      - "if (level >= 20) {"
+      - '    std::cout << "Rank: Legend\n";'
+      - "} else if (level >= 10) {"
+      - '    std::cout << "Rank: Veteran\n";'
+      - "} else if (level >= 5) {"
+      - '    std::cout << "Rank: Adventurer\n";'
+      - "} else {"
+      - '    std::cout << "Rank: Rookie\n";'
+      - "}"
+    distractors:
+      - "} else (level >= 5) {"
+    hints:
+      - The highest rank must be tested first.
+      - A plain else never has a condition.
+    short: Highest rank first; the final else catches Rookies.
+    explain: "Test 20, then 10, then 5, then else. In the other order, a level-25 hero would stop at >= 5 and be called an Adventurer. `else (level >= 5)` doesn't compile: only else if takes a condition."
+  - id: w4.p.s3
+    type: fill
+    tags: [ w4.switch ]
+    prompt: The menu reads a quest number. Fill in the keyword that jumps to the matching case.
+    code: |-
+      ___ (choice) {
+          case 1:
+              std::cout << "Rescue the lost cat. Reward: 10 gold.\n";
+              break;
+          default:
+              std::cout << "No such quest. Pick 1, 2 or 3.\n";
+              break;
+      }
+    prelude: int choice{1};
+    accept:
+      - switch
+    placeholder: keyword
+    hints:
+      - One value, many numbered cases.
+      - It starts with s.
+    short: switch jumps to the case matching choice.
+    explain: "`switch (choice)` jumps straight to the case whose label equals choice, or to default if none does."
+  - id: w4.p.s4
+    type: predict
+    tags: [ w4.switch, w4.nested ]
+    prompt: "Test run: a level 4 hero picks quest 2 (the Cave). What prints?"
+    code: |-
+      switch (choice) {
+          case 1:
+              std::cout << "Rescue the lost cat.\n";
+              break;
+          case 2:
+              if (level < 5) {
+                  std::cout << "Too dangerous! Reach level 5 first.\n";
+              } else {
+                  std::cout << "Explore the Echo Cave.\n";
+              }
+              break;
+          default:
+              std::cout << "No such quest.\n";
+              break;
+      }
+    prelude: int level{4}; int choice{2};
+    options:
+      - t: |
+          Too dangerous! Reach level 5 first.
+        why: "Correct: case 2 runs, and 4 < 5 takes the if path."
+      - t: |
+          Explore the Echo Cave.
+        why: Level 4 is below 5, so the else path is skipped.
+      - t: |
+          Too dangerous! Reach level 5 first.
+          No such quest.
+        why: break after the if/else leaves the switch before default.
+      - t: |
+          Rescue the lost cat.
+        why: switch jumps to case 2, not case 1.
+    answer: 0
+    hints:
+      - Which case does choice 2 jump to?
+      - Inside the case, is 4 < 5?
+    short: Case 2 runs; level 4 is below 5, so it's too dangerous.
+    explain: "The switch jumps to case 2. Inside, the nested if checks 4 < 5 (true) and prints the warning. break then leaves the switch, so default never runs."
+  - id: w4.p.s5
+    type: mcq
+    tags: [ w4.fallthrough, w4.switch ]
+    prompt: Why does every quest case end with break?
+    options:
+      - t: Without it, the next case's code runs too (fallthrough)
+        why: "Correct: switch keeps going downward until a break or the closing brace."
+      - t: Without it, the program doesn't compile
+        why: It compiles. -Wextra warns, but the danger is the silent fallthrough.
+      - t: break jumps back to the menu
+        why: break leaves the switch and continues after it. It doesn't loop.
+      - t: It's only needed on the last case
+        why: The last case is the one place where break changes nothing (though it's good style).
+    answer: 0
+    hints:
+      - What happened in the Switchboard lesson without break?
+      - switch doesn't stop at the next label.
+    short: Without break, execution falls into the next case.
+    explain: "A case label is only a jump target. After jumping in, execution runs straight down through the following cases until break. Picking the cat quest would also start the cave quest."
+program: |-
+  #include <cmath>
+  #include <iostream>
+
+  int main() {
+      int level{};
+      double gold{};
+
+      std::cout << "Hero level (1-99): ";
+      if (!(std::cin >> level) || level < 1 || level > 99) {
+          std::cout << "Level must be a whole number from 1 to 99.\n";
+          return 1;
+      }
+
+      std::cout << "Gold: ";
+      if (!(std::cin >> gold) || gold < 0.0) {
+          std::cout << "Gold must be a number, 0 or more.\n";
+          return 1;
+      }
+
+      if (level >= 20) {
+          std::cout << "Rank: Legend\n";
+      } else if (level >= 10) {
+          std::cout << "Rank: Veteran\n";
+      } else if (level >= 5) {
+          std::cout << "Rank: Adventurer\n";
+      } else {
+          std::cout << "Rank: Rookie\n";
+      }
+
+      std::cout << "1) Village  2) Cave  3) Dragon\n";
+      std::cout << "Pick a quest: ";
+      int choice{};
+      if (!(std::cin >> choice)) {
+          std::cout << "Pick with a number.\n";
+          return 1;
+      }
+
+      const double supplies = 0.1 + 0.2;   // torch + map
+      const double dragonFee = 50.0;
+
+      switch (choice) {
+          case 1:
+              std::cout << "Rescue the lost cat. Reward: 10 gold.\n";
+              break;
+          case 2:
+              if (level < 5) {
+                  std::cout << "Too dangerous! Reach level 5 first.\n";
+              } else if (gold > supplies || std::abs(gold - supplies) < 1e-9) {
+                  std::cout << "Explore the Echo Cave. Reward: 40 gold.\n";
+              } else {
+                  std::cout << "You need 0.3 gold for a torch and a map.\n";
+              }
+              break;
+          case 3:
+              if (level < 10) {
+                  std::cout << "Too dangerous! Reach level 10 first.\n";
+              } else if (gold < dragonFee) {
+                  std::cout << "The dragon guide costs 50 gold.\n";
+              } else {
+                  std::cout << "Face the dragon! Reward: 500 gold.\n";
+              }
+              break;
+          default:
+              std::cout << "No such quest. Pick 1, 2 or 3.\n";
+              break;
+      }
+      return 0;
+  }
+programStdin: "12\n60\n3\n"
+stress:
+  intro: Brace yourself! I'll post the nastiest requests on your Quest Board!
+  attacks:
+    - input: "-3"
+      label: A negative level!
+      challenge:
+        id: w4.p.a1
+        type: harden
+        tags: [ w4.guard, w3.validate, w4.combine ]
+        prompt: "A hero claims level -3 and gets ranked Rookie. Pick the guard that rejects impossible levels."
+        code: |-
+          std::cout << "Hero level (1-99): ";
+          if (!(std::cin >> level) || ___) {
+              std::cout << "Level must be a whole number from 1 to 99.\n";
+              return 1;
+          }
+        prelude: int level{};
+        options:
+          - t: level < 1 || level > 99
+            why: "Correct: both ends of the range are guarded, so -3, 0 and 500 are all rejected."
+          - t: level < 0
+            why: Blocks -3, but level 0 and level 500 still get onto the board.
+          - t: level < 1 && level > 99
+            why: No number is both below 1 AND above 99, so nothing is ever rejected.
+          - t: level == -3
+            why: Only this exact attack. -4 walks right in.
+        answer: 0
+        hints:
+          - The valid range is 1 to 99. Guard both ends.
+          - Either problem alone should reject the level.
+        short: Guard both ends of the range with level < 1 || level > 99.
+        explain: "Without a lower bound, the else of the rank ladder happily calls -3 a Rookie. A guard clause checks the whole valid range before anything else runs."
+        sideBySide:
+          unsafe: |-
+            if (!(std::cin >> level)) {
+                return 1;
+            }   // -3 slips through and becomes a "Rookie"
+          hardened: |-
+            if (!(std::cin >> level) || level < 1 || level > 99) {
+                std::cout << "Level must be a whole number from 1 to 99.\n";
+                return 1;
+            }
+          prelude: int level{};
+    - input: "7"
+      label: Menu choice 7!
+      challenge:
+        id: w4.p.a2
+        type: bug
+        tags: [ w4.default, w4.switch ]
+        bug: missing-default
+        prompt: "Quest 7 doesn't exist, yet the hero is sent to rescue the cat! Tap the buggy line, then pick the fix."
+        code: |-
+          switch (choice) {
+              case 2:
+                  std::cout << "Explore the Echo Cave.\n";
+                  break;
+              case 3:
+                  std::cout << "Face the dragon!\n";
+                  break;
+              default:
+                  std::cout << "Rescue the lost cat.\n";
+                  break;
+          }
+        prelude: int choice{7};
+        bugLine: 8
+        options:
+          - t: Give the cat quest its own case 1, and make default print "No such quest"
+            why: "Correct: each real quest has a case, and default reports every unexpected number."
+          - t: Delete the default
+            why: Then 7 does nothing at all, silently. The player never learns why.
+          - t: Add case 7 above default
+            why: Only covers 7. The Phantom tries 8, 0 or -1 next.
+          - t: Change default to case 1
+            why: Fixes quest 1, but now 7 is silently ignored. There should still be a default.
+        answer: 0
+        hints:
+          - Which label does 7 land on?
+          - default should report bad values, not treat them as a quest.
+        short: default must report unknown choices, not quietly pick a quest.
+        explain: "default runs for every value without its own case: 7, 0, -1, 999. Using it as quest 1 means any typo sends the hero on the cat quest. Give quest 1 its own case and let default say the choice is invalid."
+        sideBySide:
+          unsafe: |-
+            switch (choice) {
+                case 2: std::cout << "Explore the Echo Cave.\n"; break;
+                default: std::cout << "Rescue the lost cat.\n"; break;   // 7 lands here!
+            }
+          hardened: |-
+            switch (choice) {
+                case 1: std::cout << "Rescue the lost cat.\n"; break;
+                case 2: std::cout << "Explore the Echo Cave.\n"; break;
+                default: std::cout << "No such quest. Pick 1, 2 or 3.\n"; break;
+            }
+          prelude: int choice{7};
+    - input: "0.3"
+      label: Exactly 0.3 gold!
+      challenge:
+        id: w4.p.a3
+        type: harden
+        tags: [ w4.float, w2.double ]
+        bug: float-equality
+        prompt: "The hero has exactly 0.3 gold; torch and map cost 0.1 + 0.2. The board says \"not enough\"! Pick the fix."
+        code: |-
+          #include <cmath>
+          #include <iostream>
+
+          int main() {
+              double gold{};
+              if (!(std::cin >> gold) || gold < 0.0) {
+                  return 1;
+              }
+              const double supplies = 0.1 + 0.2;   // torch + map
+              if (gold > supplies || ___) {
+                  std::cout << "Explore the Echo Cave.\n";
+              } else {
+                  std::cout << "You need 0.3 gold for a torch and a map.\n";
+              }
+              return 0;
+          }
+        options:
+          - t: std::abs(gold - supplies) < 1e-9
+            why: "Correct: 0.3 and 0.30000000000000004 are within the tolerance, so they count as equal."
+          - t: gold == supplies
+            why: "The Phantom's trick: 0.3 == 0.30000000000000004 is false, so the hero is turned away."
+          - t: gold == 0.3
+            why: Only works for this exact price, and hardcodes a number that will change.
+          - t: gold - supplies < 1e-9
+            why: No std::abs, so a hero with 0 gold also passes. Free supplies for everyone!
+        answer: 0
+        hints:
+          - 0.1 + 0.2 is not exactly 0.3 as a double.
+          - "\"Enough\" means more than the price, or equal within a tolerance."
+        short: Treat values within a tiny tolerance as equal; == fails on doubles.
+        explain: "Typed-in 0.3 is stored as 0.29999999999999999, while 0.1 + 0.2 is 0.30000000000000004, so == is false and even >= fails. Compare with a tolerance. Real shops avoid this entirely by counting whole copper coins in an int."
+        sideBySide:
+          unsafe: |-
+            if (gold > supplies || gold == supplies) {   // 0.3: "not enough"!
+                std::cout << "Explore the Echo Cave.\n";
+            }
+          hardened: |-
+            #include <cmath>
+
+            if (gold > supplies || std::abs(gold - supplies) < 1e-9) {
+                std::cout << "Explore the Echo Cave.\n";
+            }
+          prelude: double gold{0.3}; const double supplies = 0.1 + 0.2;

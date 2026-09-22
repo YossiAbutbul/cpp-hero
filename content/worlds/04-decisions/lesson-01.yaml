@@ -1,0 +1,234 @@
+# World 4 · Lesson 1: Fork in the road (if / else)
+
+id: w4.l1
+title: Fork in the road
+skill: logic
+shield: false
+concept:
+  short: "if runs a block only when its condition is true; else runs when it's false."
+  analogy: "An if is a fork in the road: the condition is the signpost, and you take exactly one path."
+  body:
+    - "`if (condition) { ... }` runs the block in braces only when the condition is `true`. The condition is any `bool` expression, like the comparisons from World 3: `hp > 0`, `gold >= 10 && level > 2`."
+    - "Add `else { ... }` for the other path: exactly one of the two blocks runs, never both, never neither."
+    - "After the whole if/else is done, the program continues with the next line as usual."
+    - "**Always use braces**, even for one line. Without them, only the very next statement belongs to the if, and indentation doesn't change that. `-Wall` warns about misleading indentation."
+    - "Watch out for a stray semicolon: `if (hp > 0);` ends the if right there with an empty statement, and the block after it ALWAYS runs. `-Wextra` warns about that empty body."
+    - "A number used as a condition counts as true when it isn't 0. Prefer spelling it out: `if (count != 0)` says what you mean."
+  pitfall: "Common beginner mistake: `if (gold >= 10); { buy(); }`. The `;` is the whole if body, so the braces run every time."
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        int hp = 3;
+        if (hp > 0) {
+            std::cout << "Still standing!\n";
+        } else {
+            std::cout << "Game over.\n";
+        }
+        std::cout << "Turn ends.\n";
+        return 0;
+    }
+  steps:
+    - line: 3
+      vars:
+        hp: "3"
+      note: Our hero has 3 hp.
+    - line: 4
+      vars:
+        hp: "3"
+      note: "3 > 0 is true: take the if path."
+    - line: 5
+      out: |
+        Still standing!
+      note: Only the if block runs.
+    - line: 6
+      note: The else block is skipped entirely.
+    - line: 9
+      out: |
+        Turn ends.
+      note: After the if/else, the program carries on.
+    - line: 10
+      note: One fork, one path taken. Brace-tastic!
+challenges:
+  - id: w4.l1.c1
+    type: predict
+    tags: [ w4.if, w4.else ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int gold = 8;
+          if (gold >= 10) {
+              std::cout << "Buy sword\n";
+          } else {
+              std::cout << "Keep saving\n";
+          }
+          std::cout << "Done\n";
+          return 0;
+      }
+    options:
+      - t: |
+          Keep saving
+          Done
+        why: "Correct: 8 >= 10 is false, so the else runs, then Done."
+      - t: |
+          Buy sword
+          Done
+        why: 8 is less than 10, so the if block is skipped.
+      - t: |
+          Keep saving
+        why: Done is after the if/else, so it always prints.
+      - t: |
+          Buy sword
+          Keep saving
+          Done
+        why: Exactly one of if and else runs, never both.
+    answer: 0
+    hints:
+      - Is 8 >= 10 true or false?
+      - Code after the if/else runs no matter which path was taken.
+    short: 8 >= 10 is false, so else runs; Done always prints.
+    explain: 'The condition 8 >= 10 is false, so the if block is skipped and the else block prints "Keep saving". The last line is outside the if/else, so "Done" prints too.'
+  - id: w4.l1.c2
+    type: fill
+    tags: [ w4.else ]
+    prompt: Fill in the keyword that gives the if a second path.
+    code: |-
+      int hp = 0;
+      if (hp > 0) {
+          std::cout << "Fight on!\n";
+      } ___ {
+          std::cout << "Respawn...\n";
+      }
+    accept:
+      - else
+    placeholder: keyword
+    hints:
+      - This path runs when the condition is false.
+      - It's a four-letter keyword.
+    short: else runs when the if condition is false.
+    explain: "`else` attaches to the if right before it. When hp > 0 is false, the else block runs instead."
+  - id: w4.l1.c3
+    type: bug
+    tags: [ w4.if, w1.warnings ]
+    unsafe: true
+    prompt: This prints "Sword bought!" even with 3 gold. Tap the buggy line, then pick the fix.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int gold = 3;
+          if (gold >= 10); {
+              std::cout << "Sword bought!\n";
+          }
+          return 0;
+      }
+    bugLine: 4
+    options:
+      - t: "if (gold >= 10) {"
+        why: "Correct: without the stray ;, the block belongs to the if again."
+      - t: "if (gold > 10); {"
+        why: The condition was fine. The ; still ends the if, so the block always runs.
+      - t: "if ((gold >= 10)); {"
+        why: Extra parentheses change nothing; the ; is still the whole if body.
+      - t: "if (gold == 10) {"
+        why: "Removes the ;, but changes the rule: a hero with 15 gold could no longer buy."
+    answer: 0
+    hints:
+      - Look at what comes right after the closing parenthesis.
+      - A lone ; is a complete (empty) statement.
+    short: "if (...); ends the if; the block after it always runs."
+    explain: "`if (gold >= 10);` has an empty statement `;` as its body. The braces after it are just a normal block that always runs. g++ with -Wextra warns: suggest braces around empty body. Remove the ;."
+    sideBySide:
+      unsafe: |-
+        if (gold >= 10); {             // ; is the whole if body
+            std::cout << "Sword bought!\n";
+        }
+      hardened: |-
+        if (gold >= 10) {
+            std::cout << "Sword bought!\n";
+        }
+      prelude: int gold = 3;
+  - id: w4.l1.c4
+    type: mcq
+    tags: [ w4.if, w1.warnings ]
+    unsafe: true
+    prompt: hp is 5. What happens? (Note the missing braces.)
+    code: |-
+      if (hp <= 0)
+          std::cout << "You fell!\n";
+          std::cout << "Game over\n";
+    prelude: int hp = 5;
+    options:
+      - t: '"Game over" prints; "You fell!" does not'
+        why: "Correct: without braces, only the first line belongs to the if."
+      - t: Nothing prints
+        why: The indentation lies. The second line isn't part of the if.
+      - t: Both lines print
+        why: hp <= 0 is false, so the one line the if controls is skipped.
+      - t: Compile error
+        why: It compiles. -Wall warns about misleading indentation, though.
+    answer: 0
+    hints:
+      - Without braces, how many statements does an if control?
+      - C++ ignores indentation completely.
+    short: Without braces, an if controls just one statement. Always use braces.
+    explain: 'Without braces, the if controls only the next statement. The second cout always runs, whatever the indentation says. g++ -Wall warns "this if clause does not guard...". Always write the braces.'
+  - id: w4.l1.c5
+    type: order
+    tags: [ w4.if, w4.else, w1.main ]
+    prompt: Order the lines so the program prints "Door locked" when there's no key.
+    lines:
+      - "#include <iostream>"
+      - int main() {
+      - "    bool hasKey = false;"
+      - "    if (hasKey) {"
+      - '        std::cout << "Door opens\n";'
+      - "    } else {"
+      - '        std::cout << "Door locked\n";'
+      - "    }"
+      - "    return 0;"
+      - "}"
+    distractors:
+      - "    if (hasKey); {"
+    hints:
+      - The variable must exist before the if checks it.
+      - "else goes between the two blocks: } else {"
+    short: Declare, check with if, give the else path, close braces.
+    explain: "Include, open main, declare hasKey, then if with its block, } else { with its block, and close. The distractor has a stray ; that would make the first block always run."
+  - id: w4.l1.c6
+    type: write
+    tags: [ w4.if, w3.compare ]
+    prompt: 'Write one line: if hp is 0 or less, print "Game over" and a newline. Use braces.'
+    prelude: int hp{};
+    accept:
+      - 'if (hp <= 0) { std::cout << "Game over\n"; }'
+      - "if (hp <= 0) { std::cout << \"Game over\" << '\\n'; }"
+      - 'if (hp < 1) { std::cout << "Game over\n"; }'
+    acceptRe:
+      - '^if ?\( ?(hp ?<= ?0|hp ?< ?1|0 ?>= ?hp) ?\) ?\{ ?std::cout ?<< ?"Game over(\\n)?" ?(<< ?(''\\n''|"\\n") ?)?; ?\}$'
+    placeholder: if (...) { ... }
+    hints:
+      - "The condition: hp <= 0."
+      - "if (condition) { statement; }"
+    short: 'if (hp <= 0) { std::cout << "Game over\n"; }'
+    explain: 'The condition goes in parentheses, the action in braces: `if (hp <= 0) { std::cout << "Game over\n"; }`. Braces keep it safe when you add more lines later.'
+recap:
+  - if runs its block only when the condition is true.
+  - else runs when it's false. Exactly one path runs.
+  - "Always use braces; never put ; after if (...)."
+vault:
+  - id: w4.ifelse
+    title: if / else
+    code: |-
+      if (hp > 0) {
+          std::cout << "Still standing!\n";
+      } else {
+          std::cout << "Game over.\n";
+      }
+    prelude: int hp{3};
+    note: "Exactly one block runs. Always use braces, and no ; after the ( )."
+    defense: false
+reviewTags: [ w2.bool, w3.compare, w1.cout ]

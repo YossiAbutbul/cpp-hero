@@ -1,0 +1,251 @@
+# World 4 · Lesson 4: The ternary shortcut (?:)
+
+id: w4.l4
+title: The ternary shortcut
+skill: logic
+shield: false
+concept:
+  short: "condition ? a : b gives a when the condition is true, otherwise b. It picks a value."
+  analogy: "The ternary is a coin with two faces: the condition flips it, and you get one value back."
+  body:
+    - "`condition ? valueIfTrue : valueIfFalse` is an **expression**: it produces a value you can store or print. `int bonus = level >= 10 ? 50 : 10;`"
+    - "It's the only C++ operator with three parts, hence the name **ternary** (also called the conditional operator)."
+    - "Only one side is evaluated, just like only one branch of an if runs."
+    - "Both sides should have compatible types: two numbers, or two strings. `hp > 0 ? \"alive\" : 0` makes no sense and won't compile."
+    - "**Precedence**: `?:` is very low, below `<<`. When printing, wrap it in parentheses: `std::cout << (hp > 0 ? \"alive\" : \"down\");`."
+    - "Use it to choose between two simple values. For actions, or more than two choices, an if/else or switch is clearer. Nested ternaries quickly become a puzzle."
+  pitfall: "Common beginner mistake: `std::cout << hp > 0 ? \"a\" : \"b\";` without parentheses. `<<` grabs hp first, and the line doesn't compile."
+demo:
+  code: |-
+    #include <iostream>
+    #include <string>
+
+    int main() {
+        int hp = 0;
+        std::string status = hp > 0 ? "alive" : "down";
+        int bonus = hp > 0 ? 10 : 0;
+        std::cout << status << ' ' << bonus << '\n';
+        std::cout << (hp > 0 ? "Fight!" : "Respawn") << '\n';
+        return 0;
+    }
+  steps:
+    - line: 4
+      vars:
+        hp: "0"
+      note: Our hero is out of hp.
+    - line: 5
+      vars:
+        hp: "0"
+        status: '"down"'
+      note: "0 > 0 is false: take the value after the colon."
+    - line: 6
+      vars:
+        hp: "0"
+        status: '"down"'
+        bonus: "0"
+      note: Same trick with numbers.
+    - line: 7
+      out: |
+        down 0
+    - line: 8
+      out: |
+        Respawn
+      note: Parentheses keep the ternary together when printing.
+    - line: 9
+      note: Two values picked, zero if blocks needed.
+challenges:
+  - id: w4.l4.c1
+    type: predict
+    tags: [ w4.ternary ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int gold = 45;
+          int price = 50;
+          std::cout << (gold >= price ? "Buy" : "Too poor") << '\n';
+          int left = gold >= price ? gold - price : gold;
+          std::cout << left << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          Too poor
+          45
+        why: "Correct: 45 >= 50 is false, so both ternaries pick their second value."
+      - t: |
+          Buy
+          -5
+        why: 45 is less than 50, so the true side is never used.
+      - t: |
+          Too poor
+          -5
+        why: The false side of the second ternary is gold (45), not gold - price.
+      - t: |
+          0
+          45
+        why: The ternary picks a string here; it doesn't print a bool.
+    answer: 0
+    hints:
+      - Is 45 >= 50?
+      - False means the value after the colon.
+    short: The condition is false, so both ternaries give their second value.
+    explain: 45 >= 50 is false. The first ternary gives "Too poor"; the second gives gold, which is 45.
+  - id: w4.l4.c2
+    type: mcq
+    tags: [ w4.ternary, w3.precedence ]
+    expect: error
+    prompt: This line is a compile error. Why?
+    code: |-
+      std::cout << hp > 0 ? "alive" : "down";
+    prelude: int hp{3};
+    options:
+      - t: "<< binds tighter than > and ?:, so it becomes (std::cout << hp) > 0 ..."
+        why: "Correct: comparing a stream with 0 doesn't compile. Parenthesize the ternary."
+      - t: The ternary can't hold strings
+        why: It can, as long as both sides are strings.
+      - t: The ternary needs an if around it
+        why: A ternary is an expression on its own; no if needed.
+      - t: hp > 0 isn't a valid condition
+        why: It's fine. The problem is what << grabs first.
+    answer: 0
+    hints:
+      - Which operator runs first, << or ?:?
+      - "Fix: std::cout << (hp > 0 ? \"alive\" : \"down\");"
+    short: "?: is lower than <<. Wrap the ternary in parentheses when printing."
+    explain: '`<<` has higher precedence than `>` and `?:`, so C++ reads `(std::cout << hp) > 0 ? ...`: a stream compared with 0, which does not compile. Write `std::cout << (hp > 0 ? "alive" : "down");`.'
+  - id: w4.l4.c3
+    type: write
+    tags: [ w4.ternary, w2.init ]
+    prompt: "Write one line: declare an int `bonus` that is 50 when `level` is 10 or more, and 10 otherwise. Use ?:"
+    prelude: int level{};
+    accept:
+      - 'int bonus = level >= 10 ? 50 : 10;'
+      - 'int bonus = (level >= 10) ? 50 : 10;'
+      - 'int bonus{level >= 10 ? 50 : 10};'
+      - 'int bonus = level < 10 ? 10 : 50;'
+    acceptRe:
+      - '^(int|auto|const int) bonus ?(= ?|\{ ?)\(?(level ?>= ?10|level ?> ?9|10 ?<= ?level)\)? ?\? ?50 ?: ?10 ?\}? ?;$'
+      - '^(int|auto|const int) bonus ?(= ?|\{ ?)\(?(level ?< ?10|level ?<= ?9)\)? ?\? ?10 ?: ?50 ?\}? ?;$'
+    placeholder: int bonus = ...
+    hints:
+      - "Shape: condition ? valueIfTrue : valueIfFalse"
+      - "The condition is level >= 10."
+    short: |-
+      int bonus = level >= 10 ? 50 : 10;
+    explain: "`int bonus = level >= 10 ? 50 : 10;` reads: is level at least 10? Then 50, otherwise 10."
+  - id: w4.l4.c4
+    type: fill
+    tags: [ w4.ternary, w2.string ]
+    prompt: Fill in the missing symbol of the ternary.
+    code: |-
+      int wins = 7;
+      std::string title = (wins > 5) ___ "Champion" : "Challenger";
+      std::cout << title << '\n';
+    accept:
+      - "?"
+    placeholder: symbol
+    hints:
+      - The condition asks a question.
+      - "Shape: condition ? a : b"
+    short: "? separates the condition from the two values."
+    explain: "`(wins > 5) ? \"Champion\" : \"Challenger\"`: the ? follows the condition, the : separates the two choices."
+  - id: w4.l4.c5
+    type: speed
+    tags: [ w4.ternary, w4.if, w4.elseif, w4.switch ]
+    prompt: Speed round! Decisions, decisions. Go fast!
+    seconds: 45
+    items:
+      - q: What prints?
+        code: |-
+          std::cout << (7 > 3 ? "yes" : "no");
+        options:
+          - "yes"
+          - "no"
+          - "1"
+        answer: 0
+      - q: What is x?
+        code: |-
+          int x = 4 % 2 == 0 ? 10 : 20;
+        options:
+          - "20"
+          - "10"
+          - "0"
+        answer: 1
+      - q: What prints?
+        code: |-
+          int hp = 0;
+          if (hp) { std::cout << "A"; } else { std::cout << "B"; }
+        options:
+          - A
+          - AB
+          - B
+        answer: 2
+      - q: What prints?
+        code: |-
+          int n = 10;
+          if (n > 5) { std::cout << "big"; } else if (n > 8) { std::cout << "huge"; }
+        options:
+          - big
+          - huge
+          - bighuge
+        answer: 0
+      - q: What is r?
+        code: |-
+          int r = (2 > 1) ? (5 > 9 ? 1 : 2) : 3;
+        options:
+          - "1"
+          - "3"
+          - "2"
+        answer: 2
+      - q: Which can be a switch value?
+        options:
+          - char
+          - std::string
+          - double
+        answer: 0
+      - q: No case matches and there's no default. What runs?
+        options:
+          - The first case
+          - Nothing in the switch
+          - A compile error
+        answer: 1
+    hints:
+      - "?: gives the first value when true; 0 counts as false."
+      - An else-if chain stops at the first true condition.
+    short: "0 is false, first true branch wins, switch needs integers."
+    explain: "7 > 3 picks \"yes\"; 4 % 2 == 0 picks 10; 0 is false so B; n > 5 wins first so big; the inner ternary picks 2; only integer-like types (char) can be switched on; with no match and no default, the switch does nothing at all."
+  - id: w4.l4.c6
+    type: mcq
+    tags: [ w4.ternary, w4.elseif ]
+    prompt: When is the ternary operator the best choice?
+    options:
+      - t: Picking one of two simple values, like a label or a bonus
+        why: "Correct: short, readable, and it's an expression you can store."
+      - t: Choosing among five menu options
+        why: Five choices means nested ternaries. A switch is much clearer.
+      - t: Running several statements on each path
+        why: Each side holds one expression. Use if / else for actions.
+      - t: Always; it's faster than if
+        why: Compilers produce the same code either way. Choose for readability.
+    answer: 0
+    hints:
+      - How many values does a ternary produce?
+      - Think about readability, not speed.
+    short: "Use ?: to pick between two simple values; otherwise if or switch."
+    explain: "The ternary shines when you need one of two values in an expression. For actions, or more than two choices, if/else and switch are easier to read and to extend."
+recap:
+  - "cond ? a : b picks a value."
+  - Wrap it in parentheses when printing.
+  - Two simple values only. Otherwise use if or switch.
+vault:
+  - id: w4.ternary
+    title: Ternary operator
+    code: |-
+      int bonus = level >= 10 ? 50 : 10;
+      std::cout << (hp > 0 ? "alive" : "down") << '\n';
+    prelude: int level{12}; int hp{3};
+    note: "An expression: picks one of two values. Parentheses when printing."
+    defense: false
+reviewTags: [ w2.string, w2.double, w4.switch, w4.nested ]

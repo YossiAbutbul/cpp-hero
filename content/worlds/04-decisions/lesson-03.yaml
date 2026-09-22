@@ -1,0 +1,313 @@
+# World 4 · Lesson 3: Switchboard (switch, break, default, fallthrough)
+
+id: w4.l3
+title: Switchboard
+skill: logic
+shield: false
+concept:
+  short: switch jumps to the case matching a value; break leaves; default catches everything else.
+  analogy: "A switch is an elevator panel: press a floor number and it takes you straight to that case."
+  body:
+    - "`switch (choice) { case 1: ... break; case 2: ... break; default: ... }` compares one value against constant cases and jumps straight to the match."
+    - "The value must be an integer type, a `char` or an enum. You can't switch on a `double` or a `std::string` (use if / else if for those). Case labels must be compile-time constants, and no two can be equal."
+    - "**break** leaves the switch. Without it, execution **falls through** into the next case's code, even though that case doesn't match. `-Wextra` warns about this (`-Wimplicit-fallthrough`)."
+    - "Stacking labels with no code between them is fine and common: `case 'y': case 'Y':` both run the same block."
+    - "If you really want to fall through after running some code, say so with `[[fallthrough]];` (C++17). It documents the intent and silences the warning."
+    - "**default** runs when no case matches. Always add one, even if it just reports an error: it's where surprise values go."
+  pitfall: "Common beginner mistake: forgetting break. Choice 1 then runs case 1, case 2 AND default. It compiles fine, and only -Wextra complains."
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        char key = 'D';
+        switch (key) {
+            case 'a':
+            case 'A':
+                std::cout << "Attack!\n";
+                break;
+            case 'd':
+            case 'D':
+                std::cout << "Defend!\n";
+                break;
+            default:
+                std::cout << "Unknown key\n";
+                break;
+        }
+        return 0;
+    }
+  steps:
+    - line: 3
+      vars:
+        key: "'D'"
+      note: The player pressed D.
+    - line: 4
+      note: switch compares key against each case label.
+    - line: 10
+      note: "case 'D' matches: jump straight here."
+    - line: 11
+      out: |
+        Defend!
+      note: Stacked labels share this block.
+    - line: 12
+      note: break leaves the switch. No fallthrough.
+    - line: 17
+      note: Straight to the next line after the switch.
+challenges:
+  - id: w4.l3.c1
+    type: predict
+    tags: [ w4.switch, w4.fallthrough ]
+    unsafe: true
+    prompt: Someone forgot some breaks. What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int choice = 2;
+          switch (choice) {
+              case 1:
+                  std::cout << "Fight\n";
+              case 2:
+                  std::cout << "Bag\n";
+              case 3:
+                  std::cout << "Run\n";
+              default:
+                  std::cout << "???\n";
+          }
+          return 0;
+      }
+    options:
+      - t: |
+          Bag
+          Run
+          ???
+        why: "Correct: jump to case 2, then fall through every case below it."
+      - t: |
+          Bag
+        why: Without break, execution keeps going into the next cases.
+      - t: |
+          Fight
+          Bag
+          Run
+          ???
+        why: switch jumps straight to case 2; case 1 is above it and never runs.
+      - t: |
+          Bag
+          Run
+        why: default is just another label; fallthrough reaches it too.
+    answer: 0
+    hints:
+      - switch jumps to the matching case. Then what stops it?
+      - With no break, it runs every line below the match.
+    short: No break means fallthrough into every case below the match.
+    explain: "switch jumps to case 2 and runs downward until a break or the closing brace. There are no breaks, so Bag, Run and ??? all print. g++ -Wextra warns: this statement may fall through."
+    bug: missing-default
+  - id: w4.l3.c2
+    type: mcq
+    tags: [ w4.switch, w2.string, w2.double ]
+    prompt: Which of these can you use as the value in a switch?
+    options:
+      - t: An int or a char
+        why: "Correct: switch works on integer types, char and enums."
+      - t: A std::string
+        why: Doesn't compile. Compare strings with if / else if instead.
+      - t: A double
+        why: Doesn't compile. Floating-point values can't be switch values.
+      - t: A condition like hp > 0
+        why: It compiles (a bool is an integer type), but an if says it far more clearly.
+    answer: 0
+    hints:
+      - Case labels are whole-number constants.
+      - Text and fractions are out.
+    short: switch works on integers, chars and enums, not strings or doubles.
+    explain: "switch needs an integer-like value (int, char, bool, enums) and constant case labels. For strings or doubles, use an if / else if chain."
+  - id: w4.l3.c3
+    type: fill
+    tags: [ w4.switch, w4.default ]
+    prompt: Fill in the label that catches every value no case handles.
+    code: |-
+      int floor = 7;
+      switch (floor) {
+          case 1:
+              std::cout << "Lobby\n";
+              break;
+          case 2:
+              std::cout << "Armory\n";
+              break;
+          ___:
+              std::cout << "No such floor\n";
+              break;
+      }
+    accept:
+      - default
+    placeholder: label
+    hints:
+      - It runs when nothing else matches.
+      - It's a keyword, not a number.
+    short: default runs when no case matches.
+    explain: "`default:` catches every value without its own case, like floor 7 here. Always include one."
+  - id: w4.l3.c4
+    type: review
+    tags: [ w4.switch, w4.fallthrough, w4.default ]
+    unsafe: true
+    bug: missing-default
+    prompt: Code review! A shop menu. Tap every dangerous line, then submit.
+    code: |-
+      switch (item) {
+          case 1:
+              gold -= 10;
+              std::cout << "Potion bought\n";
+          case 2:
+              gold -= 50;
+              std::cout << "Shield bought\n";
+              break;
+          case 3:
+              gold -= 80;
+              std::cout << "Sword bought\n";
+              break;
+      }
+    prelude: int item{1}; int gold{100};
+    dangerous: [ 3, 12 ]
+    lineNotes:
+      "0": "Fine: switching on an int."
+      "3": "No break after the potion: buying a potion also buys a shield (60 gold gone)."
+      "7": "Fine: break ends case 2."
+      "11": "Fine: break ends case 3."
+      "12": "No default: item 9 silently does nothing. Unknown choices should be reported."
+    hints:
+      - Follow what happens when item is 1.
+      - What happens when item is 9?
+    short: Missing break causes fallthrough; missing default hides bad input.
+    explain: "After case 1 there's no break, so a potion also charges for a shield. And with no default, a choice like 9 is silently ignored; the player never learns the input was wrong. Add break after every case and a default that reports the error."
+    sideBySide:
+      unsafe: |-
+        switch (item) {
+            case 1:
+                gold -= 10;
+                std::cout << "Potion bought\n";   // falls through!
+            case 2:
+                gold -= 50;
+                std::cout << "Shield bought\n";
+                break;
+        }                                         // no default
+      hardened: |-
+        switch (item) {
+            case 1:
+                gold -= 10;
+                std::cout << "Potion bought\n";
+                break;
+            case 2:
+                gold -= 50;
+                std::cout << "Shield bought\n";
+                break;
+            default:
+                std::cout << "No such item\n";
+                break;
+        }
+      prelude: int item{1}; int gold{100};
+  - id: w4.l3.c5
+    type: predict
+    tags: [ w4.fallthrough, w4.switch ]
+    prompt: This fallthrough is on purpose. What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int stars = 2;
+          switch (stars) {
+              case 3:
+                  std::cout << "Crown ";
+                  [[fallthrough]];
+              case 2:
+                  std::cout << "Cape ";
+                  [[fallthrough]];
+              case 1:
+                  std::cout << "Boots";
+                  break;
+              default:
+                  std::cout << "Nothing";
+                  break;
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          Cape Boots
+        why: "Correct: start at case 2, fall through on purpose into case 1, then break."
+      - t: |
+          Crown Cape Boots
+        why: Execution jumps to case 2; case 3 is skipped.
+      - t: "Cape \n"
+        why: "[[fallthrough]] doesn't stop anything: it marks that continuing is intended."
+      - t: |
+          Cape Boots
+          Nothing
+        why: break after Boots leaves the switch before default.
+    answer: 0
+    hints:
+      - Where does the switch jump for stars = 2?
+      - "[[fallthrough]] means: keep going on purpose."
+    short: "Jump to case 2, intentional fallthrough to case 1, break."
+    explain: '2 stars jumps to case 2: "Cape ", then [[fallthrough]] continues into case 1: "Boots", then break. Output: "Cape Boots" and a newline. [[fallthrough]] tells readers and the compiler it is intentional.'
+  - id: w4.l3.c6
+    type: order
+    tags: [ w4.switch, w4.default ]
+    prompt: Order the lines into a switch that handles 1 and reports anything else.
+    prelude: int choice{1};
+    lines:
+      - switch (choice) {
+      - "    case 1:"
+      - '        std::cout << "Fight!\n";'
+      - "        break;"
+      - "    default:"
+      - '        std::cout << "Unknown choice\n";'
+      - "}"
+    distractors:
+      - "    case 1;"
+    hints:
+      - "Each case: label, code, break."
+      - "Labels end with a colon :, not a semicolon."
+    short: "switch, case with break, then default, then close."
+    explain: "Open the switch, write case 1: with its code and break, then default: with its message, and close the brace. `case 1;` has a semicolon instead of a colon and won't compile."
+recap:
+  - switch jumps to the case that matches.
+  - End every case with break.
+  - "Intentional fallthrough? Write [[fallthrough]];"
+  - Always add a default.
+vault:
+  - id: w4.switch
+    title: switch with default
+    code: |-
+      switch (key) {
+          case 'f':
+              std::cout << "Fight\n";
+              break;
+          case 'y':
+          case 'Y':
+              std::cout << "Yes\n";
+              break;
+          default:
+              std::cout << "Unknown key\n";
+              break;
+      }
+    prelude: char key{'y'};
+    note: Integers, chars and enums only. break every case; default always.
+    defense: false
+  - id: w4.fallthrough
+    title: Intentional fallthrough
+    code: |-
+      switch (stars) {
+          case 2:
+              std::cout << "Cape ";
+              [[fallthrough]];
+          case 1:
+              std::cout << "Boots\n";
+              break;
+          default:
+              break;
+      }
+    prelude: int stars{2};
+    note: "[[fallthrough]]; says you meant it and silences -Wextra."
+    defense: false
+reviewTags: [ w2.char, w3.cin, w4.elseif ]

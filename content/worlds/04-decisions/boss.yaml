@@ -1,0 +1,533 @@
+# World 4 boss: The Branch Phantom
+
+id: w4.boss
+name: The Branch Phantom
+art: phantom
+hp: 7
+intro: "Ooooh... I haunt every branch you forgot. Is 0.1 + 0.2 really 0.3?"
+taunt:
+  - Your switch has no default. I'll just drift through it...
+  - I left out a break. Enjoy the fallthrough!
+  - if (hp = 0)... oops, did I assign that?
+  - No else? Then that path leads straight to me.
+rounds:
+  - id: w4.boss.r1
+    type: predict
+    tags: [ w4.elseif, w4.combine ]
+    prompt: The Phantom flickers between paths. What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int hp = 40;
+          bool shield = true;
+          if (hp > 50) {
+              std::cout << "Healthy\n";
+          } else if (hp > 20 && shield) {
+              std::cout << "Guarded\n";
+          } else if (hp > 20) {
+              std::cout << "Wounded\n";
+          } else {
+              std::cout << "Critical\n";
+          }
+          return 0;
+      }
+    options:
+      - t: |
+          Guarded
+        why: "Correct: 40 > 50 is false; 40 > 20 && true is true, so the chain stops."
+      - t: |
+          Wounded
+        why: "hp > 20 is true, but \"Guarded\" is checked first and wins."
+      - t: |
+          Guarded
+          Wounded
+        why: An else-if chain runs at most one block.
+      - t: |
+          Healthy
+        why: 40 is not greater than 50.
+    answer: 0
+    hints:
+      - Go top to bottom. Which condition is the first true one?
+      - "&& needs both: is hp > 20 and is shield true?"
+    short: The first true condition, hp > 20 && shield, wins.
+    explain: 'hp > 50 is false. hp > 20 && shield is true && true, so "Guarded" prints and the rest of the chain is skipped.'
+  - id: w4.boss.r2
+    type: predict
+    tags: [ w4.fallthrough, w4.switch ]
+    prompt: "The Phantom's switch falls through, on purpose this time. What prints?"
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int alarm = 1;
+          switch (alarm) {
+              case 2:
+                  std::cout << "Lock the gate. ";
+                  [[fallthrough]];
+              case 1:
+                  std::cout << "Light the torches. ";
+                  [[fallthrough]];
+              case 0:
+                  std::cout << "Stay alert.";
+                  break;
+              default:
+                  std::cout << "Unknown alarm!";
+                  break;
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          Light the torches. Stay alert.
+        why: "Correct: jump to case 1, fall through on purpose to case 0, then break."
+      - t: |
+          Lock the gate. Light the torches. Stay alert.
+        why: The switch jumps straight to case 1; case 2 is above it.
+      - t: "Light the torches. \n"
+        why: "[[fallthrough]] keeps going on purpose; it doesn't stop anything."
+      - t: |
+          Light the torches. Stay alert.Unknown alarm!
+        why: break after "Stay alert." leaves the switch before default.
+    answer: 0
+    hints:
+      - Where does alarm = 1 jump to?
+      - Follow [[fallthrough]] until you hit a break.
+    short: Jump to case 1, fall through to case 0, break before default.
+    explain: 'The switch jumps to case 1 ("Light the torches. "), [[fallthrough]] continues into case 0 ("Stay alert."), and break leaves the switch. Then a newline.'
+  - id: w4.boss.r3
+    type: mcq
+    tags: [ w4.ternary ]
+    prompt: What is `loot` after this line?
+    code: |-
+      int loot = (level > 10) ? (gold > 100 ? 3 : 2) : 1;
+    prelude: int level{15}; int gold{80};
+    options:
+      - t: "2"
+        why: "Correct: level > 10 is true, so the inner ternary runs; 80 > 100 is false, giving 2."
+      - t: "3"
+        why: gold is 80, which is not more than 100.
+      - t: "1"
+        why: level is 15, so the outer condition is true and 1 is skipped.
+      - t: It doesn't compile
+        why: Nested ternaries are legal, just hard to read.
+    answer: 0
+    hints:
+      - Evaluate the outer condition first.
+      - Then the inner ternary picks between 3 and 2.
+    short: Outer true (15 > 10), inner false (80 > 100), so 2.
+    explain: "Outer: 15 > 10 is true, so we take (gold > 100 ? 3 : 2). Inner: 80 > 100 is false, so 2. Legal, but a nested ternary is a good sign an if / else would be clearer."
+  - id: w4.boss.r4
+    type: predict
+    tags: [ w4.float, w2.double ]
+    unsafe: true
+    bug: float-equality
+    prompt: The Phantom whispers its riddle. What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << std::boolalpha << (0.1 + 0.2 == 0.3) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          false
+        why: "Correct: 0.1 + 0.2 is 0.30000000000000004 as a double, not 0.3."
+      - t: |
+          true
+        why: True in math, false in binary floating point.
+      - t: |
+          0
+        why: boolalpha prints bools as words, so false, not 0.
+      - t: |
+          0.3
+        why: The parentheses hold a comparison, so a bool is printed.
+    answer: 0
+    hints:
+      - Can 0.1 be stored exactly?
+      - boolalpha prints true/false as words.
+    short: 0.1 + 0.2 == 0.3 is false; boolalpha prints the word.
+    explain: "0.1 and 0.2 are each stored slightly off, and their sum lands on 0.30000000000000004, while 0.3 is 0.29999999999999999. == compares exact bits, so the answer is false."
+  - id: w4.boss.r5
+    type: speed
+    tags: [ w4.if, w4.switch, w4.ternary, w4.float, w4.assign ]
+    prompt: SPEED ROUND! The Phantom splits into shadows. Answer fast!
+    seconds: 45
+    items:
+      - q: What prints?
+        code: |-
+          int x = 3;
+          if (x > 5) { std::cout << "A"; } else if (x > 1) { std::cout << "B"; } else { std::cout << "C"; }
+        options:
+          - A
+          - B
+          - BC
+        answer: 1
+      - q: What prints? (No breaks.)
+        code: |-
+          switch (2) {
+              case 2: std::cout << "X";
+              [[fallthrough]];
+              case 3: std::cout << "Y";
+          }
+        options:
+          - X
+          - XY
+          - Y
+        answer: 1
+      - q: Is 0.1 + 0.2 == 0.3 true?
+        options:
+          - "Yes"
+          - "No"
+          - It's UB
+        answer: 1
+      - q: What is s?
+        code: |-
+          int s = 0 ? 5 : 9;
+        options:
+          - "5"
+          - "0"
+          - "9"
+        answer: 2
+      - q: What does if (hp = 0) do?
+        options:
+          - Compares hp with 0
+          - Sets hp to 0; the if never runs
+          - Won't compile
+        answer: 1
+      - q: Which catches every unexpected switch value?
+        options:
+          - break
+          - default
+          - else
+        answer: 1
+      - q: Safe way to compare doubles a and b?
+        options:
+          - a == b
+          - std::abs(a - b) < 1e-9
+          - (int)a == (int)b
+        answer: 1
+    hints:
+      - First true branch wins; fallthrough keeps going.
+      - 0 is false. Doubles need a tolerance.
+    short: First true branch wins, 0 is false, doubles need a tolerance.
+    explain: "x = 3 skips A and prints B; case 2 falls through to case 3: XY; 0.1 + 0.2 isn't exactly 0.3; 0 is false so s = 9; hp = 0 assigns 0 (false); default catches everything else; compare doubles with a tolerance."
+  - id: w4.boss.r6
+    type: bug
+    tags: [ w4.assign, w1.warnings ]
+    unsafe: true
+    prompt: "The Phantom tampered with the shield check: the shield never breaks. Tap the buggy line, then pick the fix."
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int shield = 0;
+          if (shield = 0) {
+              std::cout << "Shield broken!\n";
+          } else {
+              std::cout << "Shield holds.\n";
+          }
+          return 0;
+      }
+    bugLine: 4
+    options:
+      - t: "if (shield == 0) {"
+        why: "Correct: == compares, so a 0 shield is reported as broken."
+      - t: "if ((shield = 0)) {"
+        why: Silences -Wall but still assigns 0, which is false. Always "holds".
+      - t: "if (!shield = 0) {"
+        why: "Compile error: you can't assign to the result of !shield."
+      - t: "if (shield = 1) {"
+        why: Still an assignment. Now it's always "broken", even with a full shield.
+    answer: 0
+    hints:
+      - Is this line comparing or assigning?
+      - An assignment's value is the value assigned. Is 0 true?
+    short: "shield = 0 assigns 0, which is false. Compare with ==."
+    explain: "`shield = 0` stores 0 and the condition's value is 0, which is false, so the if never runs, whatever shield was. g++ -Wall warns about it. Use `shield == 0`."
+    sideBySide:
+      unsafe: |-
+        if (shield = 0) {          // assigns: always false
+            std::cout << "Shield broken!\n";
+        }
+      hardened: |-
+        if (shield == 0) {
+            std::cout << "Shield broken!\n";
+        }
+      prelude: int shield = 0;
+  - id: w4.boss.r7
+    type: review
+    tags: [ w4.float, w4.default, w4.fallthrough, w4.assign ]
+    unsafe: true
+    prompt: Code review! The Phantom rewrote the potion shop. Tap every dangerous line.
+    code: |-
+      double paid = 0.1 + 0.2;
+      int potion = 2;
+      if (paid == 0.3) {
+          std::cout << "Paid!\n";
+      }
+      switch (potion) {
+          case 1:
+              std::cout << "Heal\n";
+          case 2:
+              std::cout << "Mana\n";
+              break;
+      }
+      if (potion = 3) {
+          std::cout << "Elixir\n";
+      }
+    dangerous: [ 2, 7, 11, 12 ]
+    lineNotes:
+      "0": "Fine by itself: storing a double."
+      "1": "Fine: an int initialized to 2."
+      "2": "== on doubles: 0.1 + 0.2 == 0.3 is false, so the payment is rejected."
+      "5": "Fine: switching on an int."
+      "7": "No break after Heal: case 1 falls through into Mana."
+      "10": "Fine: break ends case 2."
+      "11": "Closing the switch with no default: potion 9 vanishes silently."
+      "12": "= instead of ==: assigns 3, always true. -Wall warns."
+    hints:
+      - "Look for ==, = and missing labels or breaks."
+      - There are four problems.
+    short: Float ==, a missing break, no default, and = instead of ==.
+    explain: "Four bugs: comparing doubles with ==, a case without break, a switch with no default, and an assignment inside a condition. All four compile. That's why the Phantom loves them."
+    sideBySide:
+      unsafe: |-
+        if (paid == 0.3) { std::cout << "Paid!\n"; }
+        switch (potion) {
+            case 1: std::cout << "Heal\n";
+            case 2: std::cout << "Mana\n"; break;
+        }
+        if (potion = 3) { std::cout << "Elixir\n"; }
+      hardened: |-
+        #include <cmath>
+
+        if (std::abs(paid - 0.3) < 1e-9) { std::cout << "Paid!\n"; }
+        switch (potion) {
+            case 1: std::cout << "Heal\n"; break;
+            case 2: std::cout << "Mana\n"; break;
+            default: std::cout << "Unknown potion\n"; break;
+        }
+        if (potion == 3) { std::cout << "Elixir\n"; }
+      prelude: double paid = 0.1 + 0.2; int potion = 2;
+  - id: w4.boss.r8
+    type: order
+    tags: [ w4.guard, w4.switch, w4.default ]
+    prompt: "Seal the Phantom: order the lines so bad choices are rejected first, then the switch runs."
+    prelude: int choice{2};
+    lines:
+      - "if (choice < 1 || choice > 2) {"
+      - '    std::cout << "Pick 1 or 2\n";'
+      - "    return 1;"
+      - "}"
+      - switch (choice) {
+      - '    case 1: std::cout << "Light\n"; break;'
+      - '    case 2: std::cout << "Seal\n"; break;'
+      - '    default: std::cout << "Impossible!\n"; break;'
+      - "}"
+    distractors:
+      - "if (choice = 2) {"
+    hints:
+      - The guard clause comes before the switch.
+      - Keep the default even after the guard.
+    short: Guard first, then a switch that still has a default.
+    explain: "The guard clause rejects anything outside 1-2 and returns early. The switch still keeps a default: if someone changes the guard later, surprises get reported. `if (choice = 2)` assigns instead of comparing."
+defense:
+  - attack: "4"
+    label: Unhandled switch value!
+    challenge:
+      id: w4.boss.d1
+      type: harden
+      tags: [ w4.default, w4.switch ]
+      bug: missing-default
+      prompt: "The Phantom casts spell 4. Your switch only knows 1 to 3. Pick the missing line."
+      code: |-
+        switch (spell) {
+            case 1: std::cout << "Fire\n"; break;
+            case 2: std::cout << "Ice\n"; break;
+            case 3: std::cout << "Light\n"; break;
+            ___
+        }
+      prelude: int spell{4};
+      options:
+        - t: 'default: std::cout << "Unknown spell!\n"; break;'
+          why: "Correct: spell 4, 99 or -1 all get a clear response."
+        - t: 'case 4: std::cout << "Dark\n"; break;'
+          why: Handles 4 today. The Phantom casts 5 next.
+        - t: "break;"
+          why: A break with no label just ends the last case again. 4 is still ignored.
+        - t: 'else std::cout << "Unknown spell!\n";'
+          why: else belongs to if, not switch. Compile error.
+      answer: 0
+      hints:
+        - Which label catches every value without a case?
+        - Make it say something.
+      short: default catches every value no case handles.
+      explain: "default is the switch's else: it runs when no case matches. Always add one that reports the unexpected value."
+      sideBySide:
+        unsafe: |-
+          switch (spell) {
+              case 1: std::cout << "Fire\n"; break;
+              case 2: std::cout << "Ice\n"; break;
+          }   // spell 4: silence
+        hardened: |-
+          switch (spell) {
+              case 1: std::cout << "Fire\n"; break;
+              case 2: std::cout << "Ice\n"; break;
+              default: std::cout << "Unknown spell!\n"; break;
+          }
+        prelude: int spell{4};
+  - attack: "0.1 + 0.2"
+    label: Floating-point trap!
+    challenge:
+      id: w4.boss.d2
+      type: harden
+      tags: [ w4.float, w2.double ]
+      bug: float-equality
+      prompt: "The Phantom pays 0.1 + 0.2 for a 0.3 ward, then claims it was refused. Pick the check."
+      code: |-
+        #include <cmath>
+        #include <iostream>
+
+        int main() {
+            double paid = 0.1 + 0.2;
+            const double wardPrice = 0.3;
+            if (___) {
+                std::cout << "Ward sold.\n";
+            } else {
+                std::cout << "Wrong amount.\n";
+            }
+            return 0;
+        }
+      options:
+        - t: std::abs(paid - wardPrice) < 1e-9
+          why: "Correct: equal within a tiny tolerance, whichever side is bigger."
+        - t: paid == wardPrice
+          why: The bits differ by a rounding error, so this is false.
+        - t: paid - wardPrice == 0.0
+          why: Still an exact == on doubles. The difference is about 5.5e-17, not 0.
+        - t: std::abs(paid - wardPrice) < 1.0
+          why: Way too loose. Paying 0.0 or 1.2 gold would also count as correct.
+      answer: 0
+      hints:
+        - Never ask a double "exactly equal?"
+        - The tolerance should be tiny.
+      short: "std::abs(a - b) < 1e-9: equal within a tiny tolerance."
+      explain: "Exact == on doubles fails because of rounding. Compare the absolute difference with a small tolerance that fits your values."
+      sideBySide:
+        unsafe: |-
+          if (paid == wardPrice) {           // false!
+              std::cout << "Ward sold.\n";
+          }
+        hardened: |-
+          #include <cmath>
+
+          if (std::abs(paid - wardPrice) < 1e-9) {
+              std::cout << "Ward sold.\n";
+          }
+        prelude: double paid = 0.1 + 0.2; const double wardPrice = 0.3;
+  - attack: "-1"
+    label: Missing else path!
+    challenge:
+      id: w4.boss.d3
+      type: breakit
+      tags: [ w4.else, w2.init ]
+      unsafe: true
+      prompt: "UNSAFE: bonus is only set on some paths. Which level makes the program read garbage?"
+      code: |-
+        #include <iostream>
+
+        int main() {
+            int level{};
+            if (!(std::cin >> level)) {
+                return 1;
+            }
+            int bonus;
+            if (level >= 10) {
+                bonus = 50;
+            } else if (level >= 1) {
+                bonus = 10;
+            }
+            std::cout << "Bonus: " << bonus << '\n';
+            return 0;
+        }
+      options:
+        - t: "-1"
+          why: "Correct: no branch runs, so bonus is never set. Reading it is UB."
+        - t: "10"
+          why: level >= 10 sets bonus to 50.
+        - t: "1"
+          why: level >= 1 sets bonus to 10.
+        - t: "25"
+          why: level >= 10 sets bonus to 50.
+      answer: 0
+      hints:
+        - Which levels match neither condition?
+        - Is bonus ever given a value then?
+      short: No else means -1 leaves bonus uninitialized; reading it is UB.
+      explain: "For level 0 or below, neither branch runs and bonus stays uninitialized. Reading it is undefined behavior: it might print 0, or garbage, or something else on another compiler. Initialize bonus and add an else (or a guard clause)."
+      sideBySide:
+        unsafe: |-
+          int bonus;
+          if (level >= 10) {
+              bonus = 50;
+          } else if (level >= 1) {
+              bonus = 10;
+          }                         // level -1: bonus never set
+        hardened: |-
+          int bonus{};
+          if (level >= 10) {
+              bonus = 50;
+          } else if (level >= 1) {
+              bonus = 10;
+          } else {
+              std::cout << "Level must be 1 or more\n";
+              return 1;
+          }
+        prelude: int level{};
+  - attack: "hp = 0"
+    label: Assignment in a condition!
+    challenge:
+      id: w4.boss.d4
+      type: harden
+      tags: [ w4.assign, w1.warnings ]
+      prompt: "The Phantom rewrote your death check into an assignment. Pick the condition that restores it."
+      code: |-
+        int hp = 5;
+        if (___) {
+            std::cout << "Hero down!\n";
+        } else {
+            std::cout << "Still fighting: " << hp << " hp\n";
+        }
+      options:
+        - t: hp == 0
+          why: "Correct: compares without changing hp."
+        - t: hp = 0
+          why: Assigns 0 to hp (always false) and wipes out the 5 hp. -Wall warns.
+        - t: (hp = 0)
+          why: Same assignment; the parentheses only hide the warning.
+        - t: hp =! 0
+          why: That's hp = !0, which assigns 1. Always true, and hp is wrecked.
+      answer: 0
+      hints:
+        - One = assigns. How many does comparing need?
+        - The condition must not change hp.
+      short: "== compares; = in a condition changes the variable."
+      explain: "`hp = 0` sets hp to 0 and tests 0 (false), so the hero keeps fighting with 0 hp. `hp =! 0` is `hp = !0`, which sets hp to 1. Only `hp == 0` compares. Keep -Wall on: it catches this."
+      sideBySide:
+        unsafe: |-
+          if (hp = 0) {              // assigns 0: false, hp wiped
+              std::cout << "Hero down!\n";
+          }
+        hardened: |-
+          if (hp == 0) {
+              std::cout << "Hero down!\n";
+          }
+        prelude: int hp = 5;
+victory: "Nooo... every path... covered... I can't haunt a default!"
+reward:
+  xp: 200
+  cosmetic: phantom-veil
+  bug: float-equality
