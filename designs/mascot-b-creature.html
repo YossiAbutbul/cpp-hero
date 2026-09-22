@@ -1,0 +1,773 @@
+<title>Kiko</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#FFF4E6;--bg2:#FFE6C7;--card:#FFFFFF;--cream:#FFFAF3;
+  --ink:#2A2140;--ink2:#564E6C;--muted:#7E7690;--line:#F0DFC9;
+  --tang:#F2641B;--tang-d:#BF4808;--tang-l:#FFD2B3;
+  --sun:#FFC62E;--sun-d:#D69500;--sun-l:#FFEDB0;
+  --coral:#FF5A70;--coral-d:#D0324C;--coral-l:#FFD6DC;
+  --teal:#0FA898;--teal-d:#077A6F;--teal-l:#C4F1EA;
+  --sky:#3D8BFF;--sky-d:#2463C4;
+  --lock:#E6DED3;--lock-d:#C6BBAC;
+  --spring:cubic-bezier(.34,1.56,.64,1);
+  --elastic:cubic-bezier(.25,1.7,.45,1);
+  --sh:0 1px 2px rgba(90,45,10,.06),0 4px 10px rgba(90,45,10,.06),0 16px 32px -8px rgba(90,45,10,.14);
+  --f-ui:'Nunito',ui-rounded,'Segoe UI',system-ui,sans-serif;
+  --f-disp:'Baloo 2','Nunito',ui-rounded,'Segoe UI',system-ui,sans-serif;
+  --f-code:'DM Mono',ui-monospace,'Cascadia Mono',Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  background:radial-gradient(circle at 1px 1px,rgba(242,100,27,.12) 1.4px,transparent 0) 0 0/22px 22px,var(--bg)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--sky);outline-offset:3px;border-radius:12px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+h1,h2,h3{font-family:var(--f-disp);line-height:1.1;margin:0}
+p{margin:6px 0}
+code{font-family:var(--f-code);font-size:.9em;background:var(--sun-l);padding:1px 6px;border-radius:7px;white-space:nowrap}
+
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px 48px}
+.topbar{display:flex;align-items:center;gap:8px;padding:14px 0 6px}
+.brand{font-family:var(--f-disp);font-weight:800;font-size:21px;color:var(--tang-d);margin-right:auto;line-height:1}
+.brand small{display:block;font-family:var(--f-ui);font-size:12px;font-weight:800;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.ibtn{height:42px;min-width:42px;padding:0 12px;border-radius:14px;border:2px solid var(--line);background:#fff;display:inline-flex;align-items:center;gap:6px;cursor:pointer;box-shadow:0 3px 0 var(--line);transition:transform .15s var(--spring),box-shadow .15s;font-weight:800;font-size:14px}
+.ibtn:active{transform:translateY(3px);box-shadow:0 0 0 var(--line)}
+.ibtn svg{width:20px;height:20px;flex:none}
+.ibtn[aria-pressed="true"]{background:var(--teal-l);border-color:var(--teal);box-shadow:0 3px 0 var(--teal)}
+@media (max-width:420px){.ibtn .lbl{display:none}}
+
+.grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.span2{grid-column:1/-1}}
+.card{background:var(--card);border-radius:26px;box-shadow:var(--sh);padding:18px 16px;border:2px solid #fff;min-width:0}
+.eyebrow{font-weight:900;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--tang-d)}
+.card h2{font-size:26px;font-weight:800;margin:2px 0 4px}
+.lead{color:var(--ink2);font-size:15px;margin:0 0 12px}
+
+/* pressable buttons */
+.pbtn{--c:var(--tang);--cd:var(--tang-d);font:900 15px/1 var(--f-ui);color:#fff;background:var(--c);border:0;border-radius:18px;padding:14px 16px;cursor:pointer;letter-spacing:.03em;text-transform:uppercase;
+  box-shadow:0 5px 0 var(--cd),0 10px 18px -6px rgba(90,40,10,.35);transition:transform .14s var(--spring),box-shadow .14s var(--spring),filter .15s;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.pbtn:hover{filter:brightness(1.05)}
+.pbtn:active{transform:translateY(4px) scale(1.02,.96);box-shadow:0 1px 0 var(--cd),0 3px 6px -2px rgba(90,40,10,.3)}
+.pbtn.teal{--c:var(--teal);--cd:var(--teal-d)}
+.pbtn.coral{--c:var(--coral-d);--cd:#9E1F35}
+.pbtn.sun{--c:var(--sun);--cd:var(--sun-d);color:var(--ink)}
+.pbtn.sky{--c:var(--sky);--cd:var(--sky-d)}
+.pbtn.ghost{--c:#fff;--cd:var(--line);color:var(--ink);border:2px solid var(--line)}
+.pbtn.ghost[aria-pressed="true"]{--c:var(--tang-l);--cd:var(--tang);border-color:var(--tang);color:var(--tang-d)}
+.pbtn svg{width:18px;height:18px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row .pbtn{flex:1 1 120px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips .pbtn{flex:1 1 96px;text-transform:none;letter-spacing:0;font-size:14.5px;padding:12px 10px}
+
+/* speech */
+.bubble{position:relative;background:#fff;border:2px solid var(--line);border-radius:20px;padding:12px 14px;font-weight:700;font-size:15.5px;box-shadow:0 4px 0 var(--line)}
+.bubble .tag{display:inline-block;font-weight:900;font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-radius:8px;padding:2px 7px;margin-bottom:4px;color:#fff;background:var(--teal-d)}
+.bubble.pop{animation:bpop .4s var(--spring)}
+@keyframes bpop{0%{transform:scale(.9);opacity:.3}100%{transform:none;opacity:1}}
+
+/* HERO */
+.hero{display:grid;gap:10px;align-items:center;position:relative;overflow:hidden;background:linear-gradient(160deg,#fff 50%,var(--sun-l))}
+@media (min-width:760px){.hero{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:24px;padding:24px 28px}}
+.stagebox{position:relative;display:grid;place-items:center}
+.halo{position:relative;width:min(100%,380px);aspect-ratio:1/1;border-radius:50%;background:radial-gradient(circle,var(--sun-l) 0 56%,transparent 57%);display:grid;place-items:center}
+.halo .kiko{width:94%}
+.spark{position:absolute;width:14px;height:14px;background:var(--sun);clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);animation:twinkle 2.4s ease-in-out infinite}
+@keyframes twinkle{50%{transform:scale(.4) rotate(45deg);opacity:.4}}
+.name{font-size:56px;font-weight:800;color:var(--tang-d);line-height:.95;letter-spacing:-.01em}
+.species{display:inline-flex;gap:6px;flex-wrap:wrap;margin:8px 0 10px}
+.pill{font-weight:900;font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:4px 10px;background:var(--tang-l);color:var(--tang-d)}
+.pill.t{background:var(--teal-l);color:var(--teal-d)}
+.pill.s{background:var(--sun-l);color:#8A5E00}
+.persona{font-size:17px;font-weight:700;color:var(--ink2);margin:0 0 14px}
+.hero .bubble{margin:0 0 14px}
+.hero .bubble::before{content:"";position:absolute;left:34px;top:-11px;border:10px solid transparent;border-bottom-color:var(--line);border-top:0}
+.hero .bubble::after{content:"";position:absolute;left:36px;top:-7px;border:8px solid transparent;border-bottom-color:#fff;border-top:0}
+@media (min-width:760px){
+  .hero .bubble::before{left:-11px;top:24px;border:10px solid transparent;border-right-color:var(--line);border-left:0}
+  .hero .bubble::after{left:-7px;top:26px;border:8px solid transparent;border-right-color:#fff;border-left:0}
+}
+.traits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
+.trait{background:#fff;border:2px solid var(--line);border-radius:16px;padding:8px;font-size:13px;font-weight:700;color:var(--ink2);text-align:center;line-height:1.25}
+.trait b{display:block;font-family:var(--f-disp);font-size:16px;color:var(--ink)}
+
+/* expressions */
+.exstage{position:relative;height:300px;border-radius:22px;background:linear-gradient(180deg,#E8F8F5,#FFF6E8);border:2px solid var(--line);overflow:hidden;display:grid;place-items:end center;margin-bottom:12px}
+.exstage .floor{position:absolute;left:0;right:0;bottom:0;height:30px;background:repeating-linear-gradient(90deg,#FBE3C4 0 26px,#F6D7B0 26px 52px)}
+.exstage .kiko{position:relative;width:min(262px,82%);margin-bottom:8px}
+.exlabel{position:absolute;left:12px;top:12px;background:#fff;border:2px solid var(--line);border-radius:12px;padding:4px 10px;font-weight:900;font-size:13px;color:var(--ink2);z-index:2}
+
+/* evolution */
+.forms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.form{position:relative;background:var(--cream);border:2px solid var(--line);border-radius:20px;padding:8px 6px 10px;text-align:center;transition:transform .35s var(--spring),border-color .2s,background .2s}
+.form .kiko{width:100%}
+.form h3{font-size:clamp(14px,4.2vw,17px);font-weight:800;margin-top:2px;overflow-wrap:anywhere}
+.form .ms{font-size:12px;font-weight:800;color:var(--muted);line-height:1.2;margin-top:2px}
+.form .lv{font-weight:900;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--tang-d)}
+.form.cur{border-color:var(--tang);background:#FFF1E4;transform:translateY(-4px)}
+.form.cur::after{content:"You are here";position:absolute;left:50%;top:-11px;transform:translateX(-50%);background:var(--tang);color:#fff;font-weight:900;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:8px;white-space:nowrap}
+.form.locked .kiko{filter:grayscale(.2) opacity(.9)}
+.evnotes{list-style:none;padding:0;margin:12px 0 0;display:grid;gap:6px}
+.evnotes li{background:var(--cream);border:2px solid var(--line);border-radius:14px;padding:7px 10px;font-size:14px;font-weight:700;color:var(--ink2)}
+.evnotes b{font-family:var(--f-disp);color:var(--tang-d);margin-right:4px}
+
+/* defense */
+.tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.tiers .pbtn{flex-direction:column;gap:3px;text-transform:none;letter-spacing:0;padding:10px 6px;font-size:14px}
+.tiers .pbtn small{font-weight:800;font-size:11px;opacity:.8;letter-spacing:.05em;text-transform:uppercase}
+.tiers .pbtn svg{width:28px;height:28px}
+.defstat{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;font-weight:900;font-size:14px;margin-bottom:12px}
+.sbar{height:14px;border-radius:999px;background:var(--lock);overflow:hidden;position:relative}
+.sfill{position:absolute;inset:0;border-radius:999px;background:var(--teal);transform-origin:left;transform:scaleX(.33);transition:transform .8s var(--elastic)}
+.sfill::after{content:"";position:absolute;left:6px;right:6px;top:3px;height:3px;border-radius:3px;background:rgba(255,255,255,.55)}
+.arena{position:relative;height:230px;border-radius:22px;background:linear-gradient(180deg,#EAF2FF,#FFF6E8);border:2px solid var(--line);overflow:hidden;margin-bottom:12px}
+.arena .floor{position:absolute;left:0;right:0;bottom:0;height:30px;background:repeating-linear-gradient(90deg,#FBE3C4 0 26px,#F6D7B0 26px 52px)}
+.arena .kiko{position:absolute;left:4px;bottom:8px;width:230px}
+.hostile{position:absolute;right:14px;top:30px;background:var(--coral-d);color:#fff;font-family:var(--f-code);font-weight:500;font-size:15px;border-radius:12px;padding:7px 10px;box-shadow:0 4px 0 #9E1F35;white-space:nowrap;z-index:3;display:flex;gap:6px;align-items:center}
+.hostile svg{width:15px;height:15px}
+.blocked{position:absolute;left:44%;top:18px;z-index:4;background:var(--teal-d);color:#fff;font-weight:900;font-size:14px;padding:6px 10px;border-radius:12px;display:flex;align-items:center;gap:6px;opacity:0;transform:scale(.6);pointer-events:none}
+.blocked svg{width:16px;height:16px}
+.ring{position:absolute;width:80px;height:80px;margin:-40px 0 0 -40px;border-radius:50%;border:5px solid var(--sun);opacity:0;pointer-events:none;z-index:4}
+.defnote{min-height:44px;font-weight:700;font-size:15px;color:var(--ink2);margin:0 0 10px}
+.defnote code{background:var(--teal-l)}
+
+/* in-context */
+.ctx{display:grid;gap:12px}
+.qcard{position:relative;overflow:hidden;border-radius:24px;background:var(--cream);border:2px solid var(--line);padding:16px 16px 0;min-height:360px}
+.qcard .q{font-weight:800;font-size:16px}
+.snip{font-family:var(--f-code);font-size:14px;background:#fff;border:2px solid var(--line);border-radius:14px;padding:10px 12px;margin:8px 0 10px;line-height:1.6;white-space:pre;overflow-x:auto}
+.snip .k{color:#C2410C}.snip .n{color:#7A4FD0}.snip .t{color:var(--teal-d)}
+.ans{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ans div{background:#fff;border:2px solid var(--line);border-radius:14px;padding:10px;text-align:center;font-family:var(--f-code);font-size:17px;box-shadow:0 3px 0 var(--line);display:flex;align-items:center;justify-content:center;gap:6px;transition:background .2s,border-color .2s}
+.ans div svg{width:18px;height:18px;display:none}
+.ans div.right{background:var(--teal-l);border-color:var(--teal);box-shadow:0 3px 0 var(--teal)}
+.ans div.wrong{background:var(--coral-l);border-color:var(--coral);box-shadow:0 3px 0 var(--coral)}
+.ans div.right .ok,.ans div.wrong .no{display:block}
+.result{position:absolute;left:0;right:0;bottom:0;padding:14px 16px 16px 138px;min-height:132px;border-top:3px solid;transform:translateY(105%);transition:transform .45s var(--spring);z-index:2}
+.result.show{transform:none}
+.result.good{background:var(--teal-l);border-color:var(--teal)}
+.result.bad{background:var(--coral-l);border-color:var(--coral)}
+.result .rh{display:flex;align-items:center;gap:6px;font-family:var(--f-disp);font-weight:800;font-size:23px;line-height:1.1}
+.result.good .rh{color:var(--teal-d)}.result.bad .rh{color:var(--coral-d)}
+.result .rh svg{width:26px;height:26px;flex:none}
+.result p{font-size:14.5px;font-weight:700;margin:4px 0 0}
+.popper{position:absolute;left:-2px;bottom:-10px;width:150px;z-index:3;transform:translateY(110%);transition:transform .5s var(--spring)}
+.popper.up{transform:translateY(0)}
+@media (max-width:360px){.result{padding-left:118px}.popper{width:130px}}
+
+/* evolution overlay */
+.evo{position:fixed;inset:0;z-index:80;display:none;place-items:center;overflow:hidden;background:var(--ink);cursor:pointer;text-align:center;color:#fff}
+.evo.open{display:grid}
+.evo.bright{background:var(--sun);color:var(--ink)}
+.evo .rays{position:absolute;left:50%;top:46%;width:1400px;height:1400px;margin:-700px 0 0 -700px;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.1) 0 9deg,transparent 9deg 18deg);animation:spin 16s linear infinite;border-radius:50%;opacity:.7}
+.evo.bright .rays{background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.4) 0 9deg,transparent 9deg 18deg)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.evo-in{position:relative;padding:20px;width:min(420px,100%)}
+.evo .t1{font-family:var(--f-disp);font-weight:800;font-size:22px;letter-spacing:.06em;min-height:30px}
+.evo .big{width:min(300px,78vw);margin:0 auto;position:relative}
+.evo .big .kiko{width:100%}
+.evo .t2{font-family:var(--f-disp);font-weight:800;font-size:30px;line-height:1.1;min-height:36px;margin-top:4px}
+.evo .t3{font-weight:800;font-size:15px;opacity:.85;min-height:22px;margin-top:4px}
+.evo .skip{position:absolute;right:16px;top:14px;z-index:2;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.3);color:inherit;border-radius:12px;padding:8px 12px;font-weight:900;font-size:13px;cursor:pointer}
+.evo.bright .skip{background:rgba(255,255,255,.5);border-color:rgba(42,33,64,.2)}
+.evo .flashw{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.evo .orb{position:absolute;left:50%;top:50%;width:260px;height:260px;margin:-130px 0 0 -130px;border-radius:50%;background:radial-gradient(circle,rgba(255,236,170,.9),rgba(255,198,46,0) 70%);opacity:0;pointer-events:none}
+.sil .kiko *{fill:#fff!important;stroke:#fff!important}
+.sil .kiko .k-shadow{fill:rgba(255,255,255,.2)!important}
+.sil .kiko .fx{display:none}
+.glowing .kiko{filter:drop-shadow(0 0 14px #FFE38A) drop-shadow(0 0 30px #FFC62E)}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:90;width:100%;height:100%}
+
+.foot{text-align:center;color:var(--muted);font-weight:700;font-size:13px;margin-top:22px}
+
+/* ================= KIKO ================= */
+.kiko{display:block;height:auto;overflow:visible}
+.kiko *{transform-box:view-box}
+.kiko .fur{fill:#F2641B}
+.kiko .fur-d{fill:#C94A0C}
+.kiko .fur-l{fill:#FF8D4D}
+.kiko .cream{fill:#FFF7EC}
+.kiko .dark{fill:#4E2419}
+.kiko .ink{fill:#2A2140}
+.kiko .ln{fill:none;stroke:#2A2140;stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+/* layout transforms */
+.kiko .k-move{transform-origin:122px 232px}
+.kiko .k-sq{transform-origin:122px 232px;animation:k-breathe 3.4s ease-in-out infinite}
+@keyframes k-breathe{50%{transform:scale(1.018,.982)}}
+.kiko .k-head{transform-origin:120px 150px;animation:k-bob 3.4s ease-in-out infinite;transition:transform .35s var(--spring)}
+@keyframes k-bob{50%{transform:translateY(-2px) rotate(-1deg)}}
+.kiko .k-tail{transform-origin:150px 220px;animation:k-sway 3.2s ease-in-out infinite}
+@keyframes k-sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(5deg)}}
+.kiko .k-tailsz{transform-origin:150px 220px;transition:transform .4s var(--spring)}
+.kiko .k-ear{transform-origin:78px 82px;transition:transform .35s var(--spring)}
+.kiko .k-ear-r .k-twitch{transform-origin:76px 80px;animation:k-twitch 5.5s ease-in-out infinite}
+@keyframes k-twitch{0%,86%,100%{transform:none}89%{transform:rotate(-12deg)}92%{transform:rotate(4deg)}95%{transform:rotate(-6deg)}}
+.kiko .k-eye{animation:k-blink 4.8s infinite}
+.kiko .k-eye-l{transform-origin:94px 106px}
+.kiko .k-eye-r{transform-origin:146px 106px;animation-delay:.04s}
+@keyframes k-blink{0%,94%,100%{transform:scaleY(1)}96.5%{transform:scaleY(.08)}}
+.kiko .k-eyes,.kiko .k-hap{transition:opacity .12s}
+.kiko .k-hap{opacity:0}
+.kiko .k-look{transition:transform .35s var(--spring)}
+.kiko .k-shine{transition:transform .35s var(--spring)}
+.kiko .k-brow{fill:#FFF2E0;transition:transform .3s var(--spring)}
+.kiko .k-brow-l{transform-origin:90px 82px;transform:rotate(-10deg)}
+.kiko .k-brow-r{transform-origin:150px 82px;transform:rotate(10deg)}
+.kiko .k-mouth{opacity:0;transition:opacity .1s}
+.kiko .k-arm{transform-origin:94px 166px;transition:transform .38s var(--spring)}
+.kiko .k-shield{transform:translate(62px,200px) rotate(-10deg) scale(.86);transform-origin:0 0;transition:transform .38s var(--spring)}
+.kiko .fx{opacity:0;transition:opacity .15s}
+.kiko .k-think .dot{animation:k-dot 1.2s ease-in-out infinite}
+.kiko .k-think .dot:nth-child(3){animation-delay:.15s}.kiko .k-think .dot:nth-child(4){animation-delay:.3s}
+@keyframes k-dot{0%,60%,100%{transform:none}30%{transform:translateY(-4px)}}
+.kiko .k-think .dot{transform-box:fill-box;transform-origin:center}
+.kiko .k-cape{transform-origin:120px 156px;animation:k-cape 2.6s ease-in-out infinite}
+@keyframes k-cape{50%{transform:skewY(4deg) scaleX(1.05)}}
+.kiko .k-glint{animation:k-glint 3s ease-in-out infinite}
+@keyframes k-glint{0%,60%{transform:translateX(-60px)}90%,100%{transform:translateX(60px)}}
+
+/* forms */
+.kiko .f1,.kiko .f2,.kiko .f3,.kiko .f23{display:none}
+.kiko[data-form="1"] .f1,.kiko[data-form="2"] .f2,.kiko[data-form="3"] .f3,.kiko[data-form="2"] .f23,.kiko[data-form="3"] .f23{display:inline}
+.kiko[data-form="1"] .k-tailsz{transform:scale(.78) rotate(6deg)}
+.kiko[data-form="3"] .k-tailsz{transform:scale(1.04)}
+.kiko .k-eyew-l{transform:scale(1.08);transform-origin:94px 106px}
+.kiko .k-eyew-r{transform:scale(1.08);transform-origin:146px 106px}
+.kiko[data-form="1"] .k-eyew-l,.kiko[data-form="1"] .k-eyew-r{transform:scale(1.18)}
+
+/* tiers */
+.kiko .tier{display:none}
+.kiko[data-tier="1"] .t1,.kiko[data-tier="2"] .t2,.kiko[data-tier="3"] .t3{display:inline}
+.kiko[data-tier="3"] .k-shield .t3{filter:drop-shadow(0 0 4px rgba(255,198,46,.9))}
+
+/* moods ------------------------------------ */
+.kiko[data-mood="happy"] .m-happy,.kiko[data-mood="celebrate"] .m-cele,.kiko[data-mood="worried"] .m-worr,.kiko[data-mood="thinking"] .m-think,.kiko[data-mood="bracing"] .m-brace,.kiko[data-mood="tease"] .m-tease{opacity:1}
+/* celebrate */
+.kiko[data-mood="celebrate"] .k-move{animation:k-jump .62s var(--spring) 2}
+@keyframes k-jump{0%{transform:none}18%{transform:scale(1.08,.9)}45%{transform:translateY(-30px) scale(.95,1.06)}75%{transform:translateY(0) scale(1.06,.93)}100%{transform:none}}
+.kiko[data-mood="celebrate"] .k-eyes{opacity:0}
+.kiko[data-mood="celebrate"] .k-hap{opacity:1}
+.kiko[data-mood="celebrate"] .k-arm{transform:rotate(128deg)}
+.kiko[data-mood="celebrate"] .k-arm-l{animation:k-wave .5s ease-in-out .3s 3}
+@keyframes k-wave{50%{transform:rotate(140deg)}}
+.kiko[data-mood="celebrate"] .k-tail{animation:k-wag .32s ease-in-out infinite}
+@keyframes k-wag{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(9deg)}}
+.kiko[data-mood="celebrate"] .k-sparks{opacity:1}
+.kiko .k-sparks path{transform-box:fill-box;transform-origin:center}
+.kiko[data-mood="celebrate"] .k-sparks path{animation:k-spk .9s ease-in-out infinite}
+.kiko[data-mood="celebrate"] .k-sparks path:nth-child(2){animation-delay:-.3s}.kiko[data-mood="celebrate"] .k-sparks path:nth-child(3){animation-delay:-.6s}.kiko[data-mood="celebrate"] .k-sparks path:nth-child(4){animation-delay:-.45s}
+@keyframes k-spk{0%,100%{transform:scale(.4) rotate(0);opacity:.5}50%{transform:scale(1.15) rotate(45deg);opacity:1}}
+.kiko[data-mood="celebrate"] .k-brow-l{transform:translateY(-5px) rotate(-14deg)}
+.kiko[data-mood="celebrate"] .k-brow-r{transform:translateY(-5px) rotate(14deg)}
+.kiko[data-mood="celebrate"] .k-ear{transform:rotate(-6deg)}
+/* worried */
+.kiko[data-mood="worried"] .k-brow-l{transform:translateY(-5px) rotate(-26deg)}
+.kiko[data-mood="worried"] .k-brow-r{transform:translateY(-5px) rotate(26deg)}
+.kiko[data-mood="worried"] .k-look{transform:translateY(3px)}
+.kiko[data-mood="worried"] .k-shine{transform:translate(1px,1px) scale(1.05)}
+.kiko[data-mood="worried"] .k-ear{transform:rotate(-22deg)}
+.kiko[data-mood="worried"] .k-arm{transform:rotate(-38deg)}
+.kiko[data-mood="worried"] .k-head{animation:k-shiver .5s ease-in-out 2;transform:rotate(3deg)}
+@keyframes k-shiver{25%{transform:translateX(-2px) rotate(2deg)}75%{transform:translateX(2px) rotate(4deg)}}
+.kiko[data-mood="worried"] .k-sweat{opacity:1}
+.kiko[data-mood="worried"] .k-sweat path{animation:k-drip 1.6s ease-in infinite}
+@keyframes k-drip{0%{transform:translateY(-6px);opacity:0}20%{opacity:1}80%{transform:translateY(8px);opacity:1}100%{transform:translateY(12px);opacity:0}}
+.kiko[data-mood="worried"] .k-tail{animation-duration:5s}
+/* thinking */
+.kiko[data-mood="thinking"] .k-look{transform:translate(-4px,-6px)}
+.kiko[data-mood="thinking"] .k-brow-l{transform:translateY(-7px) rotate(-6deg)}
+.kiko[data-mood="thinking"] .k-brow-r{transform:translateY(1px) rotate(-4deg)}
+.kiko[data-mood="thinking"] .k-arm-r{transform:rotate(-124deg)}
+.kiko[data-mood="thinking"] .k-head{transform:rotate(-5deg)}
+.kiko[data-mood="thinking"] .k-think{opacity:1}
+.kiko[data-mood="thinking"] .k-ear-l{transform:rotate(-8deg)}
+/* bracing */
+.kiko[data-mood="bracing"] .k-move{transform:translateY(8px) scale(1.04,.92)}
+.kiko[data-mood="bracing"] .k-move{transition:transform .25s var(--spring)}
+.kiko[data-mood="bracing"] .k-shield{transform:translate(120px,190px) scale(1.72)}
+.kiko[data-mood="bracing"] .k-arm{transform:rotate(-58deg)}
+.kiko[data-mood="bracing"] .k-brow-l{transform:translateY(5px) rotate(22deg)}
+.kiko[data-mood="bracing"] .k-brow-r{transform:translateY(5px) rotate(-22deg)}
+.kiko[data-mood="bracing"] .k-look{transform:translateY(2px) scaleY(.82)}
+.kiko[data-mood="bracing"] .k-ear{transform:rotate(12deg)}
+.kiko[data-mood="bracing"] .k-head{transform:translateY(6px)}
+.kiko[data-mood="bracing"] .k-tail{animation:none;transform:rotate(-10deg)}
+.kiko.hit .k-move{animation:k-hit .3s ease-out}
+@keyframes k-hit{30%{transform:translate(-6px,8px) scale(1.04,.92)}}
+/* tease */
+.kiko[data-mood="tease"] .k-brow-l{transform:translateY(-7px) rotate(-12deg)}
+.kiko[data-mood="tease"] .k-brow-r{transform:translateY(3px) rotate(-6deg)}
+.kiko[data-mood="tease"] .k-look{transform:translate(4px,0)}
+.kiko[data-mood="tease"] .k-head{transform:rotate(6deg)}
+.kiko[data-mood="tease"] .k-arm-r{transform:rotate(-40deg)}
+
+/* reduced motion */
+.rm *,.rm *::before,.rm *::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.12s!important;transition-timing-function:ease!important}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.12s!important;transition-timing-function:ease!important}
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=DM+Mono:wght@400;500&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand">Kiko<small>Cpp Hero companion · Pop Path</small></div>
+    <button class="ibtn" id="soundBtn" aria-pressed="false" title="Sound effects">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#2A2140" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z" fill="#FFC62E"/><path id="sw" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" opacity=".25"/></svg><span class="lbl">Sound</span>
+    </button>
+    <button class="ibtn" id="rmBtn" aria-pressed="false" title="Reduce motion">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#2A2140" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="#C4F1EA"/><path d="M9 9v6M15 9v6"/></svg><span class="lbl">Reduce motion</span>
+    </button>
+  </header>
+
+  <div class="grid">
+    <!-- 1 HERO -->
+    <section class="card hero span2" aria-labelledby="heroName">
+      <div class="stagebox">
+        <div class="halo">
+          <span class="spark" style="left:8%;top:18%"></span>
+          <span class="spark" style="right:10%;top:10%;animation-delay:-.8s"></span>
+          <span class="spark" style="right:4%;top:58%;animation-delay:-1.6s;width:10px;height:10px"></span>
+          <button class="poke" id="heroPoke" aria-label="Pet Kiko" style="background:none;border:0;padding:0;cursor:pointer;width:94%;border-radius:40px"><div id="heroM"></div></button>
+        </div>
+      </div>
+      <div>
+        <div class="eyebrow">Meet your companion</div>
+        <h1 class="name" id="heroName">Kiko</h1>
+        <div class="species"><span class="pill">Red panda</span><span class="pill t">Guardian of safe code</span><span class="pill s" id="formPill">Form 2 · Scout</span></div>
+        <p class="persona">Curious, brave, a tiny bit clumsy. Cheers loudest when you win and teases (gently) when you slip.</p>
+        <div class="bubble" id="heroBubble" aria-live="polite"></div>
+        <div class="row">
+          <button class="pbtn" id="talkBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg>Next line</button>
+        </div>
+        <div class="traits">
+          <div class="trait"><b>Tail</b>5 rings, and a tiny ++ near the tip</div>
+          <div class="trait"><b>Brows</b>Cream spots that do all the acting</div>
+          <div class="trait"><b>Weakness</b>Trips over semicolons</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 EXPRESSIONS -->
+    <section class="card" aria-labelledby="exH">
+      <div class="eyebrow">Expressions</div>
+      <h2 id="exH">Kiko reacts</h2>
+      <p class="lead">Quick, springy swaps. Celebrations get a little longer.</p>
+      <div class="exstage"><span class="exlabel" id="exLabel" aria-live="polite">Happy</span><div class="floor"></div><div id="exM"></div></div>
+      <div class="chips" role="group" aria-label="Choose expression" id="moodBtns">
+        <button class="pbtn ghost" data-mood="happy" aria-pressed="true">Happy</button>
+        <button class="pbtn ghost" data-mood="celebrate" aria-pressed="false">Celebrate</button>
+        <button class="pbtn ghost" data-mood="worried" aria-pressed="false">Worried</button>
+        <button class="pbtn ghost" data-mood="thinking" aria-pressed="false">Thinking</button>
+        <button class="pbtn ghost" data-mood="bracing" aria-pressed="false">Bracing</button>
+      </div>
+    </section>
+
+    <!-- 3 EVOLUTION -->
+    <section class="card" aria-labelledby="evH">
+      <div class="eyebrow">Evolution</div>
+      <h2 id="evH">Three forms</h2>
+      <p class="lead">Kiko grows up as you beat world bosses. Gear changes, the heart stays the same.</p>
+      <div class="forms" id="forms">
+        <div class="form" data-f="1"><div class="fm"></div><div class="lv">Form 1</div><h3>Kit</h3><div class="ms">From the start</div></div>
+        <div class="form" data-f="2"><div class="fm"></div><div class="lv">Form 2</div><h3>Scout</h3><div class="ms">After World 4 boss</div></div>
+        <div class="form" data-f="3"><div class="fm"></div><div class="lv">Form 3</div><h3>Guardian</h3><div class="ms">After World 8 boss</div></div>
+      </div>
+      <div class="row"><button class="pbtn sun" id="evoBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.6 6.6L21 11l-6.4 2.4L12 20l-2.6-6.6L3 11l6.4-2.4z" fill="#fff" stroke="#2A2140" stroke-width="2" stroke-linejoin="round"/></svg><span id="evoTxt">Evolve!</span></button></div>
+      <p class="lead" style="margin:10px 0 0;font-size:13.5px">Tap anywhere during the sequence to skip.</p>
+      <ul class="evnotes">
+        <li><b>Kit</b> Baby tuft, bigger eyes, a stubby tail still learning to fluff.</li>
+        <li><b>Scout</b> Goggles, teal scarf and a backpack full of snacks and semicolons.</li>
+        <li><b>Guardian</b> Windblown cape, chest plate, golden circlet. Tail at full floof.</li>
+      </ul>
+    </section>
+
+    <!-- 4 DEFENSE -->
+    <section class="card" aria-labelledby="dfH">
+      <div class="eyebrow">Defense gear</div>
+      <h2 id="dfH">Shield tiers</h2>
+      <p class="lead">The shield upgrades with your Defense stat, separate from Kiko's form.</p>
+      <div class="tiers" role="group" aria-label="Shield tier" id="tierBtns">
+        <button class="pbtn ghost" data-tier="1" aria-pressed="true"><svg viewBox="-24 -32 48 64" aria-hidden="true"><circle r="20" fill="#E8A765" stroke="#9A5A22" stroke-width="4"/><circle r="6" fill="#9A5A22"/></svg>Oak<small>Def 1–3</small></button>
+        <button class="pbtn ghost" data-tier="2" aria-pressed="false"><svg viewBox="-24 -32 48 64" aria-hidden="true"><path d="M-19-21H19V-2C19 13 9 22 0 27-9 22-19 13-19-2Z" fill="#E4ECF4" stroke="#6C87A3" stroke-width="4" stroke-linejoin="round"/><path d="M-10-6 0 4 10-6" fill="none" stroke="#3D8BFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>Steel<small>Def 4–6</small></button>
+        <button class="pbtn ghost" data-tier="3" aria-pressed="false"><svg viewBox="-24 -32 48 64" aria-hidden="true"><path d="M-22-22H-8L0-29 8-22H22V-1C22 15 11 25 0 31-11 25-22 15-22-1Z" fill="#FFD447" stroke="#C98C00" stroke-width="4" stroke-linejoin="round"/><path d="M0-12 3.5-4.5 11-3.5 5.5 2 7 10 0 6-7 10-5.5 2-11-3.5-3.5-4.5Z" fill="#F2641B"/></svg>Golden<small>Def 7+</small></button>
+      </div>
+      <div class="defstat"><span>Defense</span><div class="sbar" role="progressbar" aria-label="Defense stat" aria-valuemin="0" aria-valuemax="9" aria-valuenow="3" id="defBar"><div class="sfill" id="defFill"></div></div><span id="defNum">3</span></div>
+      <div class="arena" id="arena"><div class="floor"></div><div id="dfM"></div><div class="hostile" id="hostile"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg><span id="hostTxt">-1</span></div><div class="blocked" id="blocked"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Blocked!</div><div class="ring" id="ring"></div></div>
+      <p class="defnote" id="defNote" aria-live="polite">Hostile input incoming. Tap block and Kiko checks it before it gets in.</p>
+      <div class="row"><button class="pbtn coral" id="blockBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>Block attack</button></div>
+    </section>
+
+    <!-- 5 IN CONTEXT -->
+    <section class="card" aria-labelledby="cxH">
+      <div class="eyebrow">In context</div>
+      <h2 id="cxH">Challenge result</h2>
+      <p class="lead">Kiko pops up from the bottom of the result card.</p>
+      <div class="ctx">
+        <div class="qcard" id="qcard">
+          <div class="q">What does this print?</div>
+          <div class="snip"><span class="t">int</span> x = <span class="n">7</span>;
+std::cout &lt;&lt; x / <span class="n">2</span>;</div>
+          <div class="ans"><div id="a1">3.5<svg class="no" viewBox="0 0 24 24" fill="none" stroke="#D0324C" stroke-width="3.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></div><div id="a2">3<svg class="ok" viewBox="0 0 24 24" fill="none" stroke="#077A6F" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg></div></div>
+          <p class="lead" style="margin:14px 2px 0;font-size:14px">Tap a button below to answer and see how Kiko reacts.</p>
+          <div class="result" id="result" aria-live="polite">
+            <div class="rh" id="rh"></div>
+            <p id="rp"></p>
+          </div>
+          <div class="popper" id="popper"></div>
+        </div>
+        <div class="row">
+          <button class="pbtn teal" id="okBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Answer right</button>
+          <button class="pbtn coral" id="badBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Answer wrong</button>
+        </div>
+      </div>
+    </section>
+  </div>
+  <p class="foot">Kiko · mascot option B for Cpp Hero · drawn entirely in inline SVG</p>
+</div>
+
+<div class="evo" id="evo" role="dialog" aria-modal="true" aria-label="Evolution" tabindex="-1">
+  <div class="rays"></div>
+  <div class="orb" id="orb"></div>
+  <button class="skip" id="evoSkip">Skip</button>
+  <div class="evo-in">
+    <div class="t1" id="evoT1"></div>
+    <div class="big" id="evoBig"></div>
+    <div class="t2" id="evoT2"></div>
+    <div class="t3" id="evoT3"></div>
+  </div>
+  <div class="flashw" id="flashw"></div>
+</div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+const S={form:2,tier:1,sound:false,rm:false};
+const mq=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};
+const reduced=()=>S.rm||mq.matches;
+const FORMS={1:'Kit',2:'Scout',3:'Guardian'};
+
+/* ---------- sound ---------- */
+let ac=null;
+function actx(){try{if(!ac){const A=window.AudioContext||window.webkitAudioContext;if(A)ac=new A();}if(ac&&ac.state==='suspended')ac.resume();}catch(e){ac=null}return ac}
+function tone(f,d,type,vol,at,f2){if(!S.sound)return;try{const c=actx();if(!c)return;const t=c.currentTime+(at||0);const o=c.createOscillator(),g=c.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol||.12,t+.012);g.gain.exponentialRampToValueAtTime(0.0001,t+d);o.connect(g).connect(c.destination);o.start(t);o.stop(t+d+.02);}catch(e){}}
+const sfx={
+  tap(){tone(620,.07,'triangle',.07,0,820)},
+  chirp(){tone(700,.08,'sine',.1,0,1200);tone(1100,.1,'sine',.08,.08,1500)},
+  pop(){tone(420,.12,'sine',.12,0,900)},
+  correct(){[523,659,784,1047].forEach((f,i)=>tone(f,.16,'triangle',.11,i*.07))},
+  wrong(){tone(330,.2,'triangle',.08,0,220);tone(247,.28,'triangle',.08,.12,180)},
+  whoosh(){tone(300,.25,'sawtooth',.03,0,900)},
+  ding(){tone(1250,.05,'square',.04);tone(1760,.5,'sine',.12,.02);tone(2637,.35,'sine',.05,.03)},
+  rise(){for(let i=0;i<10;i++)tone(300+i*80,.1,'triangle',.05,i*.14)},
+  evolve(){[392,523,659,784,1047,1319].forEach((f,i)=>tone(f,.22,'triangle',.1,i*.09));tone(1568,.6,'sine',.08,.6)}
+};
+
+/* ---------- mascot SVG ---------- */
+let uid=0;
+const TAIL='M140 238C172 243 224 242 250 212C268 190 270 152 262 128C256 112 244 100 242 88C240 76 248 64 256 52C250 44 238 42 230 50C220 60 214 74 214 90C214 104 208 112 206 126C210 146 212 166 204 180C196 192 176 200 140 200Z';
+const HEAD='M120 32C168 32 202 58 206 96C212 100 216 106 218 114C211 114 206 116 203 118C211 124 215 131 213 139C206 137 200 138 196 141C199 147 198 153 194 157C186 153 179 155 172 158C158 167 140 170 120 170C100 170 82 167 68 158C61 155 54 153 46 157C42 153 41 147 44 141C40 138 34 137 27 139C25 131 29 124 37 118C34 116 29 114 22 114C24 106 28 100 34 96C38 58 72 32 120 32Z';
+const BODY='M86 150C70 168 66 204 78 222C88 236 152 236 162 222C174 204 170 168 154 150Z';
+const EAR='M40 100C28 72 32 42 52 30C70 20 96 32 110 62Z';
+const ARM='M100 160C87 160 77 172 76 186C75 198 84 204 92 200C98 196 100 186 106 173Z';
+function shift(d,dx,dy){let i=0;return d.replace(/-?\d*\.?\d+/g,n=>(+n+(i++%2?dy:dx)).toFixed(1))}
+const HEAD_RIM=HEAD+shift(HEAD,3.5,4), HEAD_SH=HEAD+shift(HEAD,-3,-5), BODY_RIM=BODY+shift(BODY,4,3), BODY_SH=BODY+shift(BODY,-6,-3), TAIL_SH=TAIL+shift(TAIL,-8,-6), TAIL_RIM=TAIL+shift(TAIL,4,4);
+function earG(id,twitch){const inner=`<path fill="url(#${id}fur)" d="${EAR}"/><path fill="#FFF2E0" d="M48 90C40 70 42 48 56 40C69 33 87 42 98 60Z"/><path fill="url(#${id}ein)" d="M55 84C49 67 51 52 61 46C71 41 84 50 90 62Z"/><path fill="#FFF2E0" d="M52 88Q55 72 61 80Q63 63 70 77Q76 61 80 76Q88 65 94 79Z"/><path d="M50 50C54 40 62 35 70 34" fill="none" stroke="#FFF9F0" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>`;return twitch?`<g class="k-twitch">${inner}</g>`:inner}
+function kiko(o){
+  const id='k'+(++uid);
+  const form=o.form||S.form, tier=o.tier||S.tier, mood=o.mood||'happy';
+  return `<svg class="kiko" viewBox="0 0 260 250" data-mood="${mood}" data-form="${form}" data-tier="${tier}" role="img" aria-label="${o.label||'Kiko the red panda'}">
+<defs>
+ <clipPath id="${id}t"><path d="${TAIL}"/></clipPath>
+ <clipPath id="${id}h"><path d="${HEAD}"/></clipPath>
+ <clipPath id="${id}b"><path d="${BODY}"/></clipPath>
+ <clipPath id="${id}g"><path d="M-23-23H-8L0-30 8-23H23V-1C23 16 11.5 26 0 32-11.5 26-23 16-23-1Z"/></clipPath>
+ <radialGradient id="${id}fur" cx=".36" cy=".28" r=".8"><stop offset="0" stop-color="#FA9A5A"/><stop offset=".45" stop-color="#EC7434"/><stop offset=".78" stop-color="#E0662A"/><stop offset="1" stop-color="#C5521F"/></radialGradient>
+ <radialGradient id="${id}tl" cx=".3" cy=".3" r=".85"><stop offset="0" stop-color="#FDB47A"/><stop offset=".5" stop-color="#F08A4A"/><stop offset="1" stop-color="#D86228"/></radialGradient>
+ <radialGradient id="${id}dk" cx=".35" cy=".25" r=".85"><stop offset="0" stop-color="#8A5040"/><stop offset=".55" stop-color="#5E322C"/><stop offset="1" stop-color="#3E2226"/></radialGradient>
+ <linearGradient id="${id}ein" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3E2226"/><stop offset="1" stop-color="#6E3C32"/></linearGradient>
+ <linearGradient id="${id}cr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF8EE"/><stop offset=".6" stop-color="#FFF2E0"/><stop offset="1" stop-color="#F3D6B8"/></linearGradient>
+ <linearGradient id="${id}tf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F9A566"/><stop offset="1" stop-color="#E4722F"/></linearGradient>
+ <radialGradient id="${id}bl"><stop offset="0" stop-color="#FF5A70" stop-opacity=".55"/><stop offset="1" stop-color="#FF5A70" stop-opacity="0"/></radialGradient>
+ <radialGradient id="${id}gs"><stop offset="0" stop-color="#6E3A1A" stop-opacity=".28"/><stop offset=".7" stop-color="#6E3A1A" stop-opacity=".12"/><stop offset="1" stop-color="#6E3A1A" stop-opacity="0"/></radialGradient>
+ <linearGradient id="${id}te" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2FCBB9"/><stop offset=".55" stop-color="#0FA898"/><stop offset="1" stop-color="#0A857A"/></linearGradient>
+ <radialGradient id="${id}ln" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#F2FAFF"/><stop offset=".5" stop-color="#B9DCFF"/><stop offset="1" stop-color="#6FA8F0"/></radialGradient>
+ <linearGradient id="${id}sn" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFDB6A"/><stop offset=".6" stop-color="#FFC62E"/><stop offset="1" stop-color="#E9A400"/></linearGradient>
+ <linearGradient id="${id}cp" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF7589"/><stop offset=".5" stop-color="#E23F5B"/><stop offset="1" stop-color="#B42242"/></linearGradient>
+ <linearGradient id="${id}st" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#E4ECF4"/><stop offset="1" stop-color="#AFC0D2"/></linearGradient>
+ <radialGradient id="${id}au" cx=".35" cy=".3" r=".85"><stop offset="0" stop-color="#FFF0A8"/><stop offset=".45" stop-color="#FFD447"/><stop offset="1" stop-color="#E5A300"/></radialGradient>
+ <radialGradient id="${id}oak" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#F6C487"/><stop offset=".6" stop-color="#DE9A57"/><stop offset="1" stop-color="#B8773A"/></radialGradient>
+</defs>
+<ellipse class="k-shadow" cx="126" cy="236" rx="74" ry="10" fill="url(#${id}gs)"/>
+<g class="k-move"><g class="k-sq">
+ <g class="f3"><g class="k-cape">
+  <path d="M148 154C128 147 104 147 90 154C70 166 46 174 22 172C31 183 32 192 25 201C38 204 45 212 42 224C62 220 82 216 98 214L150 214Z" fill="url(#${id}cp)"/>
+  <path d="M146 162C126 156 106 156 95 162C78 174 60 182 42 184C45 191 45 197 41 203C51 207 55 213 55 218C71 214 87 212 101 210L148 210Z" fill="#9E1F3A" opacity=".55"/>
+  <path d="M22 172C31 183 32 192 25 201C38 204 45 212 42 224" fill="none" stroke="#FFC62E" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M86 158C70 166 52 172 34 173" fill="none" stroke="#FF9AAA" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+ </g></g>
+ <g class="k-tailsz"><g class="k-tail">
+  <path fill="url(#${id}tl)" d="${TAIL}"/>
+  <g clip-path="url(#${id}t)">
+   <g fill="none" stroke="#B8461C" stroke-linecap="round">
+    <path d="M170 190Q162 220 170 250" stroke-width="15"/>
+    <path d="M206 186Q230 214 264 226" stroke-width="15"/>
+    <path d="M198 158Q234 176 278 160" stroke-width="15"/>
+    <path d="M194 134Q230 132 266 102" stroke-width="13"/>
+   </g>
+   <path d="M200 94Q230 90 268 64L268 20L200 20Z" fill="#8E3A1A"/>
+   <path d="${TAIL_RIM}" fill="#FFD2A8" fill-rule="evenodd" opacity=".55"/>
+   <path d="${TAIL_SH}" fill="#6E2410" fill-rule="evenodd" opacity=".3"/>
+   <path d="M152 212C188 212 222 202 236 176C246 150 226 124 228 96" fill="none" stroke="#FFE0C0" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 9" opacity=".6"/>
+  </g>
+  <g fill="#FFE8CF"><rect x="232" y="189" width="9" height="3" rx="1.5"/><rect x="235" y="186" width="3" height="9" rx="1.5"/><rect x="244" y="189" width="9" height="3" rx="1.5"/><rect x="247" y="186" width="3" height="9" rx="1.5"/></g>
+ </g></g>
+ <g class="f2">
+  <path d="M142 160Q142 144 162 144Q184 144 184 162V194Q184 204 172 204H152Q142 204 142 194Z" fill="url(#${id}sn)"/><path d="M142 162Q142 146 162 146Q184 146 184 164V170Q163 176 142 170Z" fill="#D69500"/><path d="M148 152Q156 148 166 148" stroke="#FFF1B8" stroke-width="3" stroke-linecap="round" fill="none"/><rect x="164" y="166" width="7" height="10" rx="2.5" fill="#FFEDB0"/><rect x="156" y="182" width="22" height="14" rx="5" fill="#EBA800"/>
+ </g>
+ <g class="k-body">
+  <path fill="url(#${id}fur)" d="${BODY}"/>
+  <g clip-path="url(#${id}b)">
+   <ellipse cx="120" cy="242" rx="46" ry="28" fill="url(#${id}dk)"/>
+   <path d="${BODY_RIM}" fill="#FFC690" fill-rule="evenodd" opacity=".5"/>
+   <path d="${BODY_SH}" fill="#7A2A10" fill-rule="evenodd" opacity=".28"/>
+   <ellipse cx="120" cy="164" rx="48" ry="15" fill="#9E3A16" opacity=".4"/>
+  </g>
+  <path fill="url(#${id}dk)" d="M84 204C77 220 81 237 98 237C113 237 117 226 112 208Z"/>
+  <path fill="url(#${id}dk)" d="M156 204C163 220 159 237 142 237C127 237 123 226 128 208Z"/>
+  <g fill="#8A5446"><ellipse cx="92" cy="232" rx="3" ry="2"/><ellipse cx="98.5" cy="233.5" rx="3" ry="2"/><ellipse cx="105" cy="232" rx="3" ry="2"/><ellipse cx="135" cy="232" rx="3" ry="2"/><ellipse cx="141.5" cy="233.5" rx="3" ry="2"/><ellipse cx="148" cy="232" rx="3" ry="2"/></g>
+  <path fill="url(#${id}tf)" d="M90 160Q98 184 107 171Q113 188 120 173Q127 188 133 171Q142 184 150 160Z"/>
+ </g>
+ <g class="f2">
+  <path d="M100 164L102 214M140 164L138 214" stroke="#C98C00" stroke-width="6.5" stroke-linecap="round" fill="none"/>
+  <path d="M86 154Q120 178 154 154L154 165Q120 190 86 165Z" fill="url(#${id}te)"/>
+  <path d="M92 158Q120 176 148 158" fill="none" stroke="#7FE6D8" stroke-width="2.5" stroke-linecap="round" opacity=".8"/>
+  <path d="M113 173L126 171L131 192L118 189Z" fill="#077A6F"/><path d="M122 172L128 170L136 186L128 187Z" fill="url(#${id}te)"/>
+ </g>
+ <g class="f3">
+  <path d="M94 165Q120 157 146 165L143 199Q120 212 97 199Z" fill="#7890AA"/>
+  <path d="M98.5 168.5Q120 161.5 141.5 168.5L139 196.5Q120 207.5 101 196.5Z" fill="url(#${id}st)"/>
+  <path d="M103 172Q120 166.5 137 172" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".95"/>
+  <path d="M120 175L127.5 184.5L120 194L112.5 184.5Z" fill="#D69500"/><path d="M120 177.5L125 184.5L120 191L115 184.5Z" fill="url(#${id}au)"/>
+  <circle cx="92" cy="160" r="6.5" fill="#D69500"/><circle cx="92" cy="160" r="4.8" fill="url(#${id}au)"/><circle cx="148" cy="160" r="6.5" fill="#D69500"/><circle cx="148" cy="160" r="4.8" fill="url(#${id}au)"/>
+ </g>
+ <g class="k-shield">
+  <g class="tier t1"><circle r="22" fill="#8A4E1C"/><circle r="18.5" fill="url(#${id}oak)"/><path d="M-7-18V18M7-18V18" stroke="#B0703A" stroke-width="2.4"/><circle r="7" fill="#7A4418"/><circle r="4.6" fill="#A8683A"/><circle cx="-1.6" cy="-1.8" r="1.8" fill="#E8B27A"/><path d="M-13-10A16 16 0 0 1-4-16" fill="none" stroke="#FFE0B5" stroke-width="2.5" stroke-linecap="round" opacity=".8"/></g>
+  <g class="tier t2"><path d="M-20-22H20V-2C20 14 10 23 0 28-10 23-20 14-20-2Z" fill="#5E7896"/><path d="M-16.5-18.5H16.5V-2C16.5 11.5 8 19 0 23.5-8 19-16.5 11.5-16.5-2Z" fill="url(#${id}st)"/><path d="M-11-6 0 5 11-6" fill="none" stroke="#3D8BFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="-12" cy="-14" r="2.2" fill="#7890AA"/><circle cx="12" cy="-14" r="2.2" fill="#7890AA"/><path d="M-13-10V1" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".9"/></g>
+  <g class="tier t3"><path d="M-23-23H-8L0-30 8-23H23V-1C23 16 11.5 26 0 32-11.5 26-23 16-23-1Z" fill="#B07A00"/><path d="M-19-19H-7L0-25 7-19H19V-1C19 13 9.5 21.5 0 27-9.5 21.5-19 13-19-1Z" fill="url(#${id}au)"/><path d="M0-12 3.5-4.5 11-3.5 5.5 2 7 10 0 6-7 10-5.5 2-11-3.5-3.5-4.5Z" fill="#E0662A"/><path d="M0-9 2.3-4 7-3.3" fill="none" stroke="#FFB27A" stroke-width="1.6" stroke-linecap="round"/><path d="M-15-14V0" stroke="#FFF6CF" stroke-width="3" stroke-linecap="round" opacity=".9"/><g clip-path="url(#${id}g)"><path class="k-glint" d="M-10-40L4-40-14 40-28 40Z" fill="#fff" opacity=".55"/></g></g>
+ </g>
+ <g class="k-head">
+  <g class="k-ear k-ear-l">${earG(id,false)}</g>
+  <g transform="matrix(-1 0 0 1 240 0)"><g class="k-ear k-ear-r">${earG(id,true)}</g></g>
+  <path fill="url(#${id}fur)" d="${HEAD}"/>
+  <g clip-path="url(#${id}h)">
+   <path fill="url(#${id}cr)" d="M22 126C40 106 80 106 100 120C110 114 130 114 140 120C160 106 200 106 218 126C222 156 172 176 120 176C68 176 18 156 22 126Z"/>
+   <path d="${HEAD_RIM}" fill="#FFC890" fill-rule="evenodd" opacity=".38"/>
+   <path d="${HEAD_SH}" fill="#8A3414" fill-rule="evenodd" opacity=".22"/>
+   <ellipse cx="120" cy="178" rx="60" ry="14" fill="#C9A184" opacity=".35"/>
+  </g>
+  <ellipse cx="86" cy="58" rx="20" ry="7" fill="#FFC08A" opacity=".3" transform="rotate(-24 86 58)"/>
+  <path d="M99 116C101 128 104 135 110 141M141 116C139 128 136 135 130 141" fill="none" stroke="#B8461C" stroke-width="6.5" stroke-linecap="round"/>
+  <ellipse cx="70" cy="136" rx="16" ry="10" fill="url(#${id}bl)"/><ellipse cx="170" cy="136" rx="16" ry="10" fill="url(#${id}bl)"/>
+  <ellipse class="k-brow k-brow-l" cx="90" cy="82" rx="9.5" ry="5.5"/>
+  <ellipse class="k-brow k-brow-r" cx="150" cy="82" rx="9.5" ry="5.5"/>
+  <g class="k-eyes"><g class="k-look">
+   <g class="k-eyew-l"><g class="k-eye k-eye-l"><ellipse class="ink" cx="94" cy="106" rx="12.5" ry="14.5"/><ellipse cx="94" cy="114" rx="7.5" ry="4.5" fill="#6D5FA8" opacity=".55"/><g class="k-shine"><circle cx="89.5" cy="100" r="5" fill="#fff"/><circle cx="98.5" cy="112" r="2.3" fill="#fff"/></g></g></g>
+   <g class="k-eyew-r"><g class="k-eye k-eye-r"><ellipse class="ink" cx="146" cy="106" rx="12.5" ry="14.5"/><ellipse cx="146" cy="114" rx="7.5" ry="4.5" fill="#6D5FA8" opacity=".55"/><g class="k-shine"><circle cx="141.5" cy="100" r="5" fill="#fff"/><circle cx="150.5" cy="112" r="2.3" fill="#fff"/></g></g></g>
+  </g></g>
+  <g class="k-hap"><path class="ln" d="M82 110Q94 95 106 110M134 110Q146 95 158 110" stroke-width="5.5"/></g>
+  <path class="ink" d="M110.5 124Q120 119.5 129.5 124Q128.5 132.5 120 134.5Q111.5 132.5 110.5 124Z"/>
+  <ellipse cx="116" cy="124.5" rx="3.2" ry="1.6" fill="#fff" opacity=".6"/>
+  <g class="k-mouth m-happy"><path class="ln" d="M120 134V138.5M109 138Q114.5 145 120 138.5Q125.5 145 131 138" stroke-width="3.5"/></g>
+  <g class="k-mouth m-cele"><path d="M120 134V137" class="ln" stroke-width="3.5"/><path d="M106 138Q120 139 134 138Q132 157 120 157Q108 157 106 138Z" fill="#7A2233" stroke="#2A2140" stroke-width="3" stroke-linejoin="round"/><path d="M112 150Q120 144 128 150Q126 155.5 120 155.5Q114 155.5 112 150Z" fill="#FF7A8C"/></g>
+  <g class="k-mouth m-worr"><path class="ln" d="M120 134V138M108 146Q111 140 115 144Q119 148 122 143.5Q125.5 139 128.5 143Q130.5 146 132 145" stroke-width="3.3"/></g>
+  <g class="k-mouth m-think"><path class="ln" d="M120 134V137" stroke-width="3.5"/><ellipse cx="124" cy="143" rx="4.2" ry="3.8" fill="#7A2233" stroke="#2A2140" stroke-width="2.6"/></g>
+  <g class="k-mouth m-brace"><path class="ln" d="M120 134V137" stroke-width="3.5"/><rect x="108" y="138" width="24" height="9.5" rx="4.5" fill="#fff" stroke="#2A2140" stroke-width="3"/><path d="M116 138.5V147M124 138.5V147" stroke="#2A2140" stroke-width="2"/></g>
+  <g class="k-mouth m-tease"><path class="ln" d="M120 134V138M109 139Q116 145 121 140Q127 146 132 136" stroke-width="3.5"/><path d="M121 141Q126 147 129.5 141.5" fill="#FF7A8C" stroke="#2A2140" stroke-width="2.4" stroke-linejoin="round"/></g>
+  <g class="f1"><path fill="url(#${id}fur)" d="M112 40C104 22 122 12 134 22C127 21 121 28 126 38Z"/><path d="M119 36C116 28 119 22 125 21" fill="none" stroke="#FFC08A" stroke-width="2.5" stroke-linecap="round"/></g>
+  <g class="f2">
+   <path d="M52 90Q120 42 188 90" fill="none" stroke="#066B61" stroke-width="8" stroke-linecap="round"/>
+   <path d="M52 88Q120 40 188 88" fill="none" stroke="url(#${id}te)" stroke-width="5" stroke-linecap="round"/>
+   <circle cx="103" cy="61" r="15" fill="#066B61"/><circle cx="137" cy="61" r="15" fill="#066B61"/>
+   <circle cx="103" cy="61" r="11" fill="url(#${id}ln)"/><circle cx="137" cy="61" r="11" fill="url(#${id}ln)"/>
+   <path d="M114 58Q120 54 126 58" fill="none" stroke="#066B61" stroke-width="4.5"/>
+   <path d="M96 58Q98 53 104 52M130 58Q132 53 138 52" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+   <path d="M92 52A15 15 0 0 1 100 46.5M126 52A15 15 0 0 1 134 46.5" fill="none" stroke="#5FD6C6" stroke-width="2.2" stroke-linecap="round"/>
+  </g>
+  <g class="f3">
+   <path d="M56 84Q120 44 184 84" fill="none" stroke="#B07A00" stroke-width="8" stroke-linecap="round"/>
+   <path d="M56 82Q120 42 184 82" fill="none" stroke="url(#${id}au)" stroke-width="5" stroke-linecap="round"/>
+   <path d="M120 48L129 59L120 70L111 59Z" fill="#B42242"/><path d="M120 51L126.5 59L120 67L113.5 59Z" fill="url(#${id}cp)"/><path d="M117 55.5L120 52.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+  </g>
+ </g>
+ <g class="k-arm k-arm-l"><path fill="url(#${id}dk)" d="${ARM}"/><path d="M82 184Q82 176 88 170" fill="none" stroke="#8A5446" stroke-width="2.5" stroke-linecap="round" opacity=".8"/></g>
+ <g transform="matrix(-1 0 0 1 240 0)"><g class="k-arm k-arm-r"><path fill="url(#${id}dk)" d="${ARM}"/><path d="M82 184Q82 176 88 170" fill="none" stroke="#8A5446" stroke-width="2.5" stroke-linecap="round" opacity=".5"/></g></g>
+ <g class="fx k-sweat"><path d="M196 58C196 58 187 71 187 77A9 9 0 0 0 205 77C205 71 196 58 196 58Z" fill="#9CCBFF" stroke="#3D8BFF" stroke-width="2.4"/><path d="M192 76Q192 72 194 70" stroke="#fff" stroke-width="2.4" stroke-linecap="round" fill="none"/></g>
+ <g class="fx k-think"><path d="M184 12H236A12 12 0 0 1 236 40H206L196 50L198 40H184A12 12 0 0 1 184 12Z" fill="#fff" stroke="#F0DFC9" stroke-width="3" stroke-linejoin="round"/><circle class="dot" cx="196" cy="26" r="4.5" fill="#2A2140"/><circle class="dot" cx="210" cy="26" r="4.5" fill="#2A2140"/><circle class="dot" cx="224" cy="26" r="4.5" fill="#2A2140"/></g>
+ <g class="fx k-sparks" fill="#FFC62E" stroke="#D69500" stroke-width="1.5" stroke-linejoin="round"><path d="M34 56l4 10 10 4-10 4-4 10-4-10-10-4 10-4z"/><path d="M200 30l3.5 8 8 3.5-8 3.5-3.5 8-3.5-8-8-3.5 8-3.5z"/><path d="M16 150l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#FF5A70" stroke="#D0324C"/><path d="M190 196l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#0FA898" stroke="#077A6F"/></g>
+</g></g>
+</svg>`;
+}
+
+/* ---------- mount ---------- */
+const mounts={};
+function mount(key,sel,o){const el=$(sel);el.innerHTML=kiko(o||{});mounts[key]=el.querySelector('svg');return mounts[key]}
+mount('hero','#heroM',{label:'Kiko, idle and happy'});
+mount('ex','#exM',{label:'Kiko showing an expression'});
+mount('df','#dfM',{label:'Kiko holding a shield'});
+mount('pop','#popper',{label:'Kiko reacting'});
+$$('#forms .form').forEach(f=>{f.querySelector('.fm').innerHTML=kiko({form:+f.dataset.f,label:'Kiko form '+f.dataset.f+', '+FORMS[f.dataset.f]})});
+
+function setMood(svg,m){if(!svg)return;svg.setAttribute('data-mood','happy');void svg.getBoundingClientRect();svg.setAttribute('data-mood',m)}
+function syncForm(){
+  ['hero','ex','df','pop'].forEach(k=>mounts[k].setAttribute('data-form',S.form));
+  $$('#forms .form').forEach(f=>{const n=+f.dataset.f;f.classList.toggle('cur',n===S.form);f.classList.toggle('locked',n>S.form)});
+  $('#formPill').textContent='Form '+S.form+' · '+FORMS[S.form];
+  $('#evoTxt').textContent=S.form<3?'Evolve to '+FORMS[S.form+1]+'!':'Back to Kit';
+}
+syncForm();
+
+/* ---------- toggles ---------- */
+$('#soundBtn').addEventListener('click',e=>{S.sound=!S.sound;e.currentTarget.setAttribute('aria-pressed',S.sound);$('#sw').setAttribute('opacity',S.sound?1:.25);if(S.sound){actx();sfx.chirp()}});
+$('#rmBtn').addEventListener('click',e=>{S.rm=!S.rm;e.currentTarget.setAttribute('aria-pressed',S.rm);document.documentElement.classList.toggle('rm',S.rm)});
+
+/* ---------- hero lines ---------- */
+const LINES=[
+  {tag:'Explains',c:'#077A6F',mood:'happy',html:'A variable is a labeled box. <code>int hp = 3;</code> makes a box called <b>hp</b> and puts 3 inside. Always give it a starting value!'},
+  {tag:'Cheers',c:'#BF4808',mood:'celebrate',html:'Five right in a row! Your code is getting sturdy. Like a brick wall. A very cute brick wall.'},
+  {tag:'Jokes',c:'#2463C4',mood:'tease',html:'I have 5 tail rings, so I wrote <code>int rings[5];</code> and asked for <code>rings[5]</code>. Oops! The last one is <code>rings[4]</code>. Counting starts at 0.'},
+  {tag:'After a slip',c:'#D0324C',mood:'worried',html:'Hehe, close! <code>=</code> stores a value, <code>==</code> compares. You just gave <b>x</b> a new value instead of checking it. Every hero does that once. Or twice.'}
+];
+let li=0;
+function say(i){const L=LINES[i],b=$('#heroBubble');b.innerHTML=`<span class="tag" style="background:${L.c}">${L.tag}</span><br>${L.html}`;b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');setMood(mounts.hero,L.mood);clearTimeout(say.t);say.t=setTimeout(()=>mounts.hero.setAttribute('data-mood','happy'),L.mood==='celebrate'?2200:3200)}
+say(0);
+$('#talkBtn').addEventListener('click',()=>{li=(li+1)%LINES.length;say(li);sfx.chirp()});
+$('#heroPoke').addEventListener('click',()=>{setMood(mounts.hero,'celebrate');sfx.pop();clearTimeout(say.t);say.t=setTimeout(()=>mounts.hero.setAttribute('data-mood','happy'),1500)});
+
+/* ---------- expressions ---------- */
+const MOODNAME={happy:'Happy',celebrate:'Celebrate',worried:'Worried',thinking:'Thinking',bracing:'Bracing'};
+$$('#moodBtns button').forEach(b=>b.addEventListener('click',()=>{
+  const m=b.dataset.mood;$$('#moodBtns button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  setMood(mounts.ex,m);$('#exLabel').textContent=MOODNAME[m];
+  ({celebrate:sfx.correct,worried:sfx.wrong,bracing:sfx.whoosh}[m]||sfx.tap)();
+  if(m==='celebrate')burst($('#exM'),50);
+}));
+
+/* ---------- defense ---------- */
+const TIERDEF={1:3,2:6,3:9};
+function setTier(t){S.tier=t;['hero','ex','df','pop'].forEach(k=>mounts[k].setAttribute('data-tier',t));$$('#forms .kiko,#evoBig .kiko').forEach(s=>s.setAttribute('data-tier',t));
+  $$('#tierBtns button').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.tier===t));
+  $('#defFill').style.transform='scaleX('+(TIERDEF[t]/9)+')';$('#defNum').textContent=TIERDEF[t];$('#defBar').setAttribute('aria-valuenow',TIERDEF[t]);}
+$$('#tierBtns button').forEach(b=>b.addEventListener('click',()=>{setTier(+b.dataset.tier);sfx.pop();const s=mounts.df;setMood(s,'bracing');clearTimeout(setTier.t);setTier.t=setTimeout(()=>s.setAttribute('data-mood','happy'),700)}));
+setTier(1);
+const ATTACKS=[
+  {v:'-1',msg:'Blocked <code>-1</code>! An age can&rsquo;t be negative, so Kiko checks <code>if (age &lt; 0)</code> first.'},
+  {v:'""',msg:'Blocked <code>""</code>! Empty name. <code>if (name.empty())</code>, ask the player again.'},
+  {v:'nullptr',msg:'Blocked <code>nullptr</code>! Check <code>if (p != nullptr)</code> before using <code>*p</code>.'},
+  {v:'999999999',msg:'Blocked <code>999999999</code>! Way outside 1 to 100, so Kiko rejects it.'}
+];
+let ai=0,busy=false;
+$('#hostTxt').textContent=ATTACKS[0].v;
+$('#blockBtn').addEventListener('click',()=>{
+  if(busy)return;busy=true;const A=ATTACKS[ai];const svg=mounts.df,chip=$('#hostile'),ar=$('#arena');
+  $('#hostTxt').textContent=A.v;setMood(svg,'bracing');sfx.whoosh();
+  const ra=ar.getBoundingClientRect(),rs=svg.getBoundingClientRect(),rc=chip.getBoundingClientRect();
+  const tx=(rs.left+rs.width*0.46+rs.width*0.1)-(rc.left+rc.width/2), ty=(rs.top+rs.height*0.74)-(rc.top+rc.height/2);
+  const fast=reduced();const d=fast?10:520;
+  const anim=chip.animate([{transform:'translate(0,0) rotate(0)'},{transform:`translate(${tx}px,${ty}px) rotate(-14deg)`}],{duration:d,easing:'cubic-bezier(.5,0,.9,.6)',fill:'forwards'});
+  anim.onfinish=()=>{
+    sfx.ding();svg.classList.remove('hit');void svg.getBoundingClientRect();svg.classList.add('hit');
+    const ring=$('#ring');ring.style.left=(tx+rc.left+rc.width/2-ra.left)+'px';ring.style.top=(ty+rc.top+rc.height/2-ra.top)+'px';
+    ring.animate([{transform:'scale(.4)',opacity:1},{transform:'scale(1.6)',opacity:0}],{duration:fast?10:450,easing:'ease-out'});
+    $('#blocked').animate([{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'scale(1.08)',offset:.3},{opacity:1,transform:'scale(1)',offset:.8},{opacity:0,transform:'translateY(-8px)'}],{duration:fast?600:1300,easing:'ease-out'});
+    $('#defNote').innerHTML=A.msg;
+    const b2=chip.animate([{transform:`translate(${tx}px,${ty}px) rotate(-14deg)`,opacity:1},{transform:`translate(${tx+80}px,${ty-150}px) rotate(260deg)`,opacity:0}],{duration:fast?10:620,easing:'cubic-bezier(.2,.7,.4,1)',fill:'forwards'});
+    b2.onfinish=()=>{anim.cancel();b2.cancel();ai=(ai+1)%ATTACKS.length;$('#hostTxt').textContent=ATTACKS[ai].v;
+      chip.animate([{transform:'translateX(60px)',opacity:0},{transform:'none',opacity:1}],{duration:fast?10:350,easing:'cubic-bezier(.34,1.56,.64,1)'});
+      setTimeout(()=>{svg.setAttribute('data-mood','celebrate');setTimeout(()=>{svg.setAttribute('data-mood','happy');busy=false},900)},150);};
+  };
+});
+
+/* ---------- in context ---------- */
+const ICON_OK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#fff" stroke="none"/><path d="M7 12.5l3.2 3.2L17 9"/></svg>';
+const ICON_NO='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#fff" stroke="none"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/></svg>';
+function react(good){
+  const r=$('#result'),p=$('#popper'),svg=mounts.pop;
+  r.classList.remove('show');p.classList.remove('up');
+  $('#a1').className=good?'':'wrong';$('#a2').className='right';
+  setTimeout(()=>{
+    r.className='result '+(good?'good':'bad');
+    $('#rh').innerHTML=(good?ICON_OK+'Correct!':ICON_NO+'Not quite');
+    $('#rp').innerHTML=good?'<b>Kiko:</b> Yes! <code>int / int</code> drops the remainder, so 7 / 2 is 3.':'<b>Kiko:</b> Sneaky one! Both are <code>int</code>, so the .5 gets chopped. Try <code>7.0 / 2</code> for 3.5.';
+    void r.offsetWidth;r.classList.add('show');
+    setTimeout(()=>{p.classList.add('up');setMood(svg,good?'celebrate':'worried');(good?sfx.correct:sfx.wrong)();if(good)burst($('#qcard'),40)},140);
+  },r.classList.contains('show')?60:0);
+}
+$('#okBtn').addEventListener('click',()=>react(true));
+$('#badBtn').addEventListener('click',()=>react(false));
+
+/* ---------- confetti ---------- */
+const cv=$('#confetti'),cx=cv.getContext('2d');let parts=[],raf=0;
+function fit(){cv.width=innerWidth*devicePixelRatio;cv.height=innerHeight*devicePixelRatio}
+fit();addEventListener('resize',fit);
+const COLS=['#F2641B','#FFC62E','#FF5A70','#0FA898','#3D8BFF','#fff'];
+function burst(el,n,big){if(reduced())return;const r=el.getBoundingClientRect();const x=r.left+r.width/2,y=r.top+r.height*(big?.45:.35);
+  for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=(big?7:4)+Math.random()*(big?9:6);parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-(big?6:4),r:Math.random()*6.28,vr:(Math.random()-.5)*.3,w:6+Math.random()*6,h:4+Math.random()*5,c:COLS[i%COLS.length],life:1})}
+  if(!raf)raf=requestAnimationFrame(step)}
+function step(){const d=devicePixelRatio;cx.clearRect(0,0,cv.width,cv.height);
+  parts=parts.filter(p=>p.life>0&&p.y<innerHeight+40);
+  for(const p of parts){p.vy+=.28;p.vx*=.985;p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;p.life-=.008;cx.save();cx.globalAlpha=Math.min(1,p.life*2);cx.translate(p.x*d,p.y*d);cx.rotate(p.r);cx.fillStyle=p.c;cx.fillRect(-p.w*d/2,-p.h*d/2,p.w*d,p.h*d);cx.restore()}
+  raf=parts.length?requestAnimationFrame(step):0;if(!raf)cx.clearRect(0,0,cv.width,cv.height)}
+
+/* ---------- evolution ---------- */
+const evo=$('#evo'),big=$('#evoBig');let T=[],evoTo=0,lastFocus=null;
+function later(ms,fn){T.push(setTimeout(fn,ms))}
+function flash(ms){$('#flashw').animate([{opacity:0},{opacity:1,offset:.25},{opacity:0}],{duration:ms||500,easing:'ease-out'})}
+function finishEvo(){
+  T.forEach(clearTimeout);T=[];
+  big.getAnimations&&big.getAnimations({subtree:true}).forEach(a=>a.cancel());
+  S.form=evoTo;syncForm();
+  big.innerHTML=kiko({form:evoTo,mood:'celebrate',label:'Kiko, now '+FORMS[evoTo]});
+  big.classList.remove('sil','glowing');evo.classList.add('bright');
+  $('#orb').style.opacity=0;
+  $('#evoT1').textContent='Evolution complete!';
+  $('#evoT2').textContent='Kiko became '+FORMS[evoTo]+'!';
+  $('#evoT3').textContent=evoTo===2?'New gear: goggles, scarf and a snack-filled backpack.':'New gear: hero cape, chest plate and a golden circlet.';
+  $('#evoSkip').textContent='Continue';
+  evo.dataset.done='1';
+  sfx.evolve();burst(big,120,true);
+}
+function closeEvo(){evo.classList.remove('open','bright');evo.dataset.done='';T.forEach(clearTimeout);T=[];document.body.style.overflow='';if(lastFocus)lastFocus.focus();
+  ['hero','ex'].forEach(k=>setMood(mounts[k],'celebrate'));setTimeout(()=>['hero','ex'].forEach(k=>mounts[k].setAttribute('data-mood','happy')),1400)}
+function evolve(){
+  if(S.form>=3){S.form=1;syncForm();sfx.pop();$$('#forms .form')[0].animate([{transform:'scale(.9)'},{transform:'translateY(-4px) scale(1.06)'},{transform:'translateY(-4px)'}],{duration:400,easing:'ease-out'});return}
+  const from=S.form;evoTo=from+1;lastFocus=document.activeElement;
+  evo.classList.add('open');evo.classList.remove('bright');evo.dataset.done='';document.body.style.overflow='hidden';
+  $('#evoSkip').textContent='Skip';$('#evoSkip').focus();
+  $('#evoT1').textContent='What? Kiko is evolving!';$('#evoT2').textContent='';$('#evoT3').textContent='Tap anywhere to skip';
+  big.innerHTML=kiko({form:from,mood:'thinking',label:'Kiko evolving'});
+  if(reduced()){later(500,finishEvo);return}
+  big.classList.add('glowing');sfx.rise();
+  const orb=$('#orb');orb.animate([{opacity:0,transform:'scale(.5)'},{opacity:1,transform:'scale(1.3)'}],{duration:1400,fill:'forwards',easing:'ease-in'});
+  big.animate([{transform:'none'},{transform:'translateX(-3px)'},{transform:'translateX(3px)'},{transform:'none'}],{duration:120,iterations:10});
+  later(1100,()=>{big.classList.add('sil');flash(300);});
+  // silhouette flicker between old and new form, accelerating
+  let t=1300,gap=260,f=from;
+  while(t<2700){const ff=(f=f===from?evoTo:from);later(t,()=>{const s=big.querySelector('svg');if(s)s.setAttribute('data-form',ff);big.animate([{transform:'scale(1)'},{transform:'scale(1.12,.92)'},{transform:'scale(1)'}],{duration:Math.max(90,gap-20)});sfx.tap()});t+=gap;gap=Math.max(70,gap*.78)}
+  later(2750,()=>{const s=big.querySelector('svg');if(s)s.setAttribute('data-form',evoTo);big.animate([{transform:'rotateY(0) scale(1)'},{transform:'rotateY(540deg) scale(.6)'},{transform:'rotateY(720deg) scale(1.25)'}],{duration:650,easing:'cubic-bezier(.5,0,.3,1)'});sfx.whoosh()});
+  later(3350,()=>{flash(650);finishEvo();big.animate([{transform:'scale(1.25)'},{transform:'scale(.92)'},{transform:'scale(1)'}],{duration:500,easing:'cubic-bezier(.34,1.56,.64,1)'})});
+}
+$('#evoBtn').addEventListener('click',evolve);
+evo.addEventListener('click',e=>{if(evo.dataset.done)closeEvo();else finishEvo()});
+evo.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!evo.dataset.done)finishEvo();closeEvo()}if(e.key==='Tab'){e.preventDefault();$('#evoSkip').focus()}});
+$('#evoSkip').addEventListener('click',e=>{e.stopPropagation();if(evo.dataset.done)closeEvo();else finishEvo()});
+})();
+</script>
