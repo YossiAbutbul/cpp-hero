@@ -2,11 +2,11 @@
 /*
  * build.js: Cpp Hero build script (node >= 18, no npm dependencies).
  *
- *   node build.js [--src <dir>] [--out <dir>] [--public <dir>]
+ *   node legacy/build.js [--src <dir>] [--out <dir>] [--public <dir>]
  *
- *   --src     source dir holding index.template.html      (default: ./src)
- *   --out     output dir                                   (default: ./dist)
- *   --public  static PWA files (manifest, sw.js, icons/)   (default: ./public)
+ *   --src     source dir holding index.template.html      (default: legacy/src)
+ *   --out     output dir                                   (default: legacy/dist)
+ *   --public  static PWA files (manifest, sw.js, icons/)   (default: legacy/public)
  *
  * Steps:
  *   1. Read <src>/index.template.html and replace inline markers:
@@ -33,7 +33,10 @@ const path = require('path');
 const crypto = require('crypto');
 const { Raster } = require('./tools/icon-raster');
 
+// This script lives in legacy/; src/public/dist default to siblings of it,
+// while package.json and .artifact/ live at the repo root.
 const ROOT = __dirname;
+const REPO = path.join(__dirname, '..');
 const PLACEHOLDER = '__BUILD_VERSION__';
 
 /* ------------------------------------------------------------------ */
@@ -45,7 +48,7 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--help' || a === '-h') {
-      console.log('Usage: node build.js [--src <dir>] [--out <dir>] [--public <dir>]');
+      console.log('Usage: node legacy/build.js [--src <dir>] [--out <dir>] [--public <dir>]');
       process.exit(0);
     }
     const m = /^--(src|out|public)(?:=(.*))?$/.exec(a);
@@ -83,7 +86,7 @@ function readText(file) {
 const fmtBytes = (n) => (n < 1024 ? n + ' B' : (n / 1024).toFixed(1) + ' KB');
 // Repo-relative when inside the repo, absolute otherwise (e.g. --out elsewhere).
 const rel = (f) => {
-  const r = path.relative(ROOT, f);
+  const r = path.relative(REPO, f);
   return r.startsWith('..') || path.isAbsolute(r) ? f : r.split(path.sep).join('/');
 };
 
@@ -148,7 +151,7 @@ function inlineTemplate(srcDir) {
 function computeVersion(html) {
   let pkgVersion = '0.0.0';
   try {
-    pkgVersion = JSON.parse(readText(path.join(ROOT, 'package.json'))).version || pkgVersion;
+    pkgVersion = JSON.parse(readText(path.join(REPO, 'package.json'))).version || pkgVersion;
   } catch (e) {
     console.warn('[build] note: could not read package.json version (' + e.message + '), using 0.0.0');
   }
@@ -327,7 +330,7 @@ function main() {
     .replace(/<\/?body[^>]*>\s*/gi, '')
     .replace(/<link rel="manifest"[^>]*>\s*/i, '');
   const titleMatch = artifact.match(/<title>[\s\S]*?<\/title>/i);
-  writeFile(path.join(__dirname, '.artifact', 'cpp-hero.html'),
+  writeFile(path.join(REPO, '.artifact', 'cpp-hero.html'),
     titleMatch ? titleMatch[0] + '\n' + artifact.replace(titleMatch[0], '') : artifact);
 
   // 6. summary
