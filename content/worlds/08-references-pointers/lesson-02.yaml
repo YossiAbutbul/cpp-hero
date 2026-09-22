@@ -1,0 +1,316 @@
+# World 8 · Lesson 2: Copy or the real thing?
+
+id: w8.l2
+title: Copy or the real thing?
+skill: memory
+shield: false
+concept:
+  short: "By value, a function gets a copy. By reference, it gets the caller's variable. const& reads without copying."
+  analogy: "Passing by value hands over a photocopy of your map; passing by reference hands over the map itself."
+  body:
+    - "**By value** `void heal(int hp)`: the parameter is a fresh copy. Changes inside the function vanish when it returns. Safe, simple, and perfect for small types like `int` and `double`."
+    - "**By reference** `void heal(int& hp)`: the parameter is another name for the caller's variable. Changes stick. Use it when the function's job is to modify its argument, like `swap`."
+    - "**By const reference** `void greet(const std::string& name)`: no copy AND no changes allowed. The default for big things you only read, like `std::string` and `std::vector`."
+    - "A plain `int&` parameter only accepts a real variable: `heal(5)` doesn't compile, because there's no box to change. A `const int&` accepts a temporary like `5`."
+    - "Swapping two values needs references: `void swapHp(int& a, int& b) { int temp = a; a = b; b = temp; }`. (The standard library already has `std::swap` in `<utility>`.)"
+  pitfall: "Common beginner mistake: writing a swap or \"add gold\" function that takes plain `int` parameters. It works on copies, and the caller's variables never change."
+demo:
+  code: |-
+    #include <iostream>
+
+    void healCopy(int hp) {
+        hp += 5;
+    }
+
+    void healRef(int& hp) {
+        hp += 5;
+    }
+
+    int main() {
+        int knight = 10;
+        healCopy(knight);
+        std::cout << knight << '\n';
+        healRef(knight);
+        std::cout << knight << '\n';
+        return 0;
+    }
+  steps:
+    - line: 11
+      vars:
+        knight: "10"
+      note: The knight starts with 10 hp.
+    - line: 12
+      note: Call healCopy with the knight.
+    - line: 2
+      vars:
+        hp: "10 (copy)"
+      note: hp is a brand-new box holding a copy.
+    - line: 3
+      vars:
+        hp: "15 (copy)"
+      note: Only the copy is healed.
+    - line: 13
+      vars:
+        hp: "(gone)"
+      out: |
+        10
+      note: The copy died at the closing brace. Knight still 10.
+    - line: 14
+      note: Now call healRef.
+    - line: 6
+      vars:
+        hp: "→ knight (alias)"
+      note: This hp is another name for knight.
+    - line: 7
+      vars:
+        knight: "15"
+      note: Healing hp heals the real knight.
+    - line: 15
+      out: |
+        15
+      note: The change stuck!
+challenges:
+  - id: w8.l2.c1
+    type: predict
+    tags: [ w8.byvalue, w6.params ]
+    prompt: Someone wrote a swap. What does this print?
+    code: |-
+      #include <iostream>
+
+      void swapHp(int a, int b) {
+          int temp = a;
+          a = b;
+          b = temp;
+      }
+
+      int main() {
+          int knight = 30;
+          int mage = 12;
+          swapHp(knight, mage);
+          std::cout << knight << ' ' << mage << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          30 12
+        why: "Correct: a and b are copies. The copies are swapped, then thrown away."
+      - t: |
+          12 30
+        why: "That's what a swap SHOULD do, but by-value parameters only swap copies."
+      - t: |
+          30 30
+        why: Inside the function, only copies change. Knight and mage are never touched.
+      - t: |
+          12 12
+        why: Nothing outside the function changes at all.
+    answer: 0
+    hints:
+      - Are a and b the caller's variables, or copies?
+      - No & in the parameter list means copies.
+    short: By-value parameters are copies; swapping them changes nothing outside.
+    explain: "`int a, int b` receive copies of 30 and 12. The function swaps its copies and returns; they disappear. knight and mage are unchanged: \"30 12\" and a newline. Fix: `int& a, int& b`."
+  - id: w8.l2.c2
+    type: fill
+    tags: [ w8.byref, w6.params ]
+    prompt: Fix the swap. Fill in the blank so `a` is the caller's variable, not a copy (`b` is already done).
+    code: |-
+      #include <iostream>
+
+      void swapHp(int___ a, int& b) {
+          int temp = a;
+          a = b;
+          b = temp;
+      }
+
+      int main() {
+          int knight = 30;
+          int mage = 12;
+          swapHp(knight, mage);
+          std::cout << knight << ' ' << mage << '\n';   // 12 30
+          return 0;
+      }
+    accept:
+      - "&"
+    placeholder: symbol
+    hints:
+      - Look at how b is declared.
+      - One symbol turns a copy into a reference.
+    short: "`int& a` makes a another name for knight."
+    explain: "With `int& a, int& b`, a names knight and b names mage. Swapping through the references swaps the real variables: 12 30."
+  - id: w8.l2.c3
+    type: order
+    tags: [ w8.byref ]
+    prompt: "a and b are references to the knight's and mage's hp. Order the lines that swap them."
+    prelude: int knight{30}; int mage{12}; int& a = knight; int& b = mage;
+    lines:
+      - int temp = a;
+      - a = b;
+      - b = temp;
+    distractors:
+      - b = a;
+    hints:
+      - Save one value somewhere before you overwrite it.
+      - temp holds a's old value until b needs it.
+    short: Save a in temp, copy b into a, then temp into b.
+    explain: "`int temp = a;` saves 30. `a = b;` puts 12 in a. `b = temp;` puts the saved 30 in b. Using `b = a;` at the end would copy the NEW a (12): both would be 12."
+  - id: w8.l2.c4
+    type: mcq
+    tags: [ w8.constref, w6.const-ref ]
+    prompt: "`printBanner` only reads a long std::string. Which parameter is best?"
+    options:
+      - t: const std::string& text
+        why: "Correct: no copy, and the compiler stops the function from changing the caller's string."
+      - t: std::string text
+        why: Works, but copies the whole string on every call. Wasteful for read-only use.
+      - t: std::string& text
+        why: "No copy, but allows accidental changes, and printBanner(\"Hi\") won't compile."
+      - t: const std::string text
+        why: Still a full copy; const only stops the function changing its own copy.
+    answer: 0
+    hints:
+      - You want no copy AND no accidental changes.
+      - Combine const with &.
+    short: "Read-only big things: pass by const reference."
+    explain: "`const std::string&` avoids the copy and promises not to modify. It also accepts temporaries like `\"Hi\"`, which a plain `std::string&` can't. For small types like int, plain by value is just as good."
+  - id: w8.l2.c5
+    type: bug
+    tags: [ w8.byref, w6.params ]
+    unsafe: true
+    prompt: The chest should gain 25 gold, but the program prints 100. Tap the buggy line, then pick the fix.
+    code: |-
+      #include <iostream>
+
+      void addGold(int purse, int amount) {
+          purse += amount;
+      }
+
+      int main() {
+          int chest = 100;
+          addGold(chest, 25);
+          std::cout << chest << '\n';
+          return 0;
+      }
+    bugLine: 2
+    options:
+      - t: void addGold(int& purse, int amount) {
+        why: "Correct: purse becomes another name for chest, so the change sticks."
+      - t: void addGold(int& purse, int& amount) {
+        why: "amount only needs reading, and int& rejects the literal 25: compile error."
+      - t: void addGold(const int& purse, int amount) {
+        why: const forbids changing purse, so purse += amount won't compile.
+      - t: "    return purse += amount;"
+        why: The function returns void, and nobody uses a return value anyway.
+    answer: 0
+    hints:
+      - Which parameter must change the caller's variable?
+      - A copy can't change the original.
+    short: To change the caller's variable, take it by reference.
+    explain: "purse is a copy of chest, so adding to it does nothing outside. Make it `int& purse`. amount stays by value: it's small and only read (and `int&` couldn't accept the literal 25)."
+    sideBySide:
+      unsafe: |-
+        #include <iostream>
+
+        void addGold(int purse, int amount) {
+            purse += amount;   // changes a copy
+        }
+
+        int main() {
+            int chest = 100;
+            addGold(chest, 25);
+            std::cout << chest << '\n';   // 100
+            return 0;
+        }
+      hardened: |-
+        #include <iostream>
+
+        void addGold(int& purse, int amount) {
+            purse += amount;
+        }
+
+        int main() {
+            int chest = 100;
+            addGold(chest, 25);
+            std::cout << chest << '\n';   // 125
+            return 0;
+        }
+  - id: w8.l2.c6
+    type: speed
+    tags: [ w8.byref, w8.byvalue, w8.constref ]
+    prompt: Speed round! Pick the parameter style.
+    seconds: 45
+    items:
+      - q: The function must change the caller's int.
+        options:
+          - int x
+          - int& x
+          - const int& x
+        answer: 1
+      - q: The function only reads a big std::vector.
+        options:
+          - const std::vector<int>& v
+          - std::vector<int> v
+          - std::vector<int>& v
+        answer: 0
+      - q: The function only reads one int.
+        options:
+          - int& x
+          - int x
+          - int* x
+        answer: 1
+      - q: "Given void f(int& x), does f(5) compile?"
+        options:
+          - "Yes"
+          - "No"
+        answer: 1
+      - q: "Given void f(const int& x), does f(5) compile?"
+        options:
+          - "Yes"
+          - "No"
+        answer: 0
+      - q: A swap function needs...
+        options:
+          - two copies
+          - two references
+          - two const references
+        answer: 1
+    hints:
+      - "Change it: &. Only read something big: const &."
+      - Small and read-only? A plain copy is fine.
+    short: "Change it: &. Read big things: const &. Small reads: by value."
+    explain: "Modify the caller's variable: `T&`. Read-only and big (string, vector): `const T&`. Small read-only values (int, double, char): by value. A plain `int&` can't bind to a literal like 5, but `const int&` can."
+recap:
+  - By value works on a copy.
+  - "By reference (&) changes the caller's variable."
+  - "Read big things by const &."
+vault:
+  - id: w8.passing
+    title: Three ways to pass
+    code: |-
+      #include <string>
+
+      void heal(int hp);                     // copy: changes vanish
+      void healRef(int& hp);                 // alias: changes stick
+      void greet(const std::string& name);   // no copy, read-only
+    note: "Default: small types by value, big read-only types by const &, & only when you must change it."
+    defense: false
+  - id: w8.swap
+    title: Swap by reference
+    code: |-
+      #include <iostream>
+
+      void swapHp(int& a, int& b) {
+          int temp = a;
+          a = b;
+          b = temp;
+      }
+
+      int main() {
+          int knight = 30;
+          int mage = 12;
+          swapHp(knight, mage);
+          std::cout << knight << ' ' << mage << '\n';   // 12 30
+          return 0;
+      }
+    note: "In real code, std::swap(a, b) from <utility> does this for you."
+    defense: false
+reviewTags: [ w3.arith, w1.cout, w8.ref, w8.reseat ]

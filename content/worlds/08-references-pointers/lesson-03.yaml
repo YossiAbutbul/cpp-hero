@@ -1,0 +1,256 @@
+# World 8 · Lesson 3: Pointers: arrows to memory
+
+id: w8.l3
+title: "Pointers: arrows to memory"
+skill: memory
+shield: false
+concept:
+  short: "A pointer stores an address. &x gets x's address, *p follows the arrow, and nullptr means \"points nowhere\"."
+  analogy: "A pointer is a signpost: it isn't the treasure, it tells you where the treasure is, and you can repaint it to point elsewhere."
+  body:
+    - "Every variable lives somewhere in memory, at an **address**. `&hp` (address-of) gives that address."
+    - "`int* p = &hp;` declares a **pointer to int** named p and stores hp's address in it. Think of p as an arrow pointing at hp's box."
+    - "`*p` (dereference) follows the arrow: `*p` reads hp, and `*p = 7;` writes to hp. Without the `*`, you're talking about the arrow itself, not the box."
+    - "Unlike a reference, a pointer **can be reseated**: `p = &mana;` repaints the arrow to point at mana. hp is untouched."
+    - "`nullptr` is the special \"points nowhere\" value: `int* p = nullptr;`. You can test it (`if (p != nullptr)`), but **never dereference it**: `*p` on nullptr is undefined behavior."
+    - "Same symbols, two jobs: in a **declaration**, `*` means \"pointer\" and `&` means \"reference\". In an **expression**, `*p` means \"follow\" and `&x` means \"address of\"."
+  pitfall: "Common beginner mistake: writing `p = 7;` when you meant `*p = 7;`. The first tries to change the arrow (and doesn't compile); the second changes the box it points at."
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        int hp = 5;
+        int mana = 8;
+        int* p = &hp;
+        std::cout << *p << '\n';
+        *p = 7;
+        p = &mana;
+        std::cout << *p << ' ' << hp << '\n';
+        p = nullptr;
+        std::cout << (p == nullptr) << '\n';
+        return 0;
+    }
+  steps:
+    - line: 3
+      vars:
+        hp: "5"
+      note: A box for hp.
+    - line: 4
+      vars:
+        hp: "5"
+        mana: "8"
+      note: Another box for mana.
+    - line: 5
+      vars:
+        p: "→ hp"
+      note: "p stores hp's address: an arrow to hp's box."
+    - line: 6
+      out: |
+        5
+      note: "*p follows the arrow and reads hp: 5."
+    - line: 7
+      vars:
+        hp: "7"
+      note: "*p = 7 writes through the arrow into hp."
+    - line: 8
+      vars:
+        p: "→ mana"
+      note: "Reseat! The arrow now points at mana. hp untouched."
+    - line: 9
+      out: |
+        8 7
+      note: "*p is mana's 8; hp kept the 7."
+    - line: 10
+      vars:
+        p: "nullptr"
+      note: p points nowhere now.
+    - line: 11
+      out: |
+        1
+      note: "Testing for nullptr is safe; following it is not."
+challenges:
+  - id: w8.l3.c1
+    type: predict
+    tags: [ w8.deref, w8.addressof ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int gold = 20;
+          int* p = &gold;
+          *p += 5;
+          std::cout << gold << ' ' << *p << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          25 25
+        why: "Correct: *p is gold, so adding 5 through p changes gold."
+      - t: |
+          20 25
+        why: p isn't a copy of gold; it points at gold's box.
+      - t: |
+          20 20
+        why: "*p += 5 writes through the arrow into gold."
+      - t: |
+          25 20
+        why: "*p reads gold's box, which now holds 25."
+    answer: 0
+    hints:
+      - "*p means \"the box p points at\"."
+      - Which box does p point at?
+    short: "*p is gold, so gold becomes 25 and both print 25."
+    explain: "p holds gold's address. `*p += 5` follows the arrow and adds 5 to gold. Both gold and *p read the same box: \"25 25\" and a newline."
+  - id: w8.l3.c2
+    type: mcq
+    tags: [ w8.addressof, w8.pointer ]
+    prompt: "In the expression `&hp`, what does `&` mean?"
+    options:
+      - t: The address of hp
+        why: "Correct: in an expression, & is the address-of operator."
+      - t: A reference to hp
+        why: "& means reference only in a declaration, like int& r = hp."
+      - t: The value stored in hp
+        why: Just writing hp gives the value. & gives where it lives.
+      - t: Follow the pointer hp
+        why: "Following a pointer is *, not &. And hp isn't a pointer."
+    answer: 0
+    hints:
+      - Declaration or expression?
+      - "int* p = &hp; stores this in a pointer."
+    short: "In an expression, &hp is hp's address."
+    explain: "`&` has two jobs: in a declaration (`int& r = hp;`) it makes a reference; in an expression (`&hp`) it takes the address. `int* p = &hp;` stores hp's address in p."
+  - id: w8.l3.c3
+    type: predict
+    tags: [ w8.pointer, w8.deref ]
+    prompt: The arrow moves. What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int a = 1;
+          int b = 2;
+          int* p = &a;
+          *p = 10;
+          p = &b;
+          *p = 20;
+          std::cout << a << ' ' << b << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          10 20
+        why: "Correct: p wrote 10 into a, then moved to b and wrote 20 there."
+      - t: |
+          20 2
+        why: "p = &b moves the arrow; it doesn't drag a along."
+      - t: |
+          1 20
+        why: "*p = 10 happened while p still pointed at a."
+      - t: |
+          20 20
+        why: A pointer can be reseated. After p = &b, a is left alone.
+    answer: 0
+    hints:
+      - Track where p points before each *p =.
+      - "p = &b repaints the arrow; it's not a write to a."
+    short: p wrote 10 into a, moved to b, wrote 20 there.
+    explain: "p starts at a: `*p = 10` sets a to 10. `p = &b` reseats p (pointers can do that, references can't). `*p = 20` sets b. Output: \"10 20\" and a newline."
+  - id: w8.l3.c4
+    type: fill
+    tags: [ w8.deref ]
+    prompt: Fill in the operator so the line prints hp's value (42), not an address.
+    code: |-
+      int* p = &hp;
+      std::cout << ___p << '\n';   // prints 42
+    prelude: int hp{42};
+    accept:
+      - "*"
+    placeholder: operator
+    hints:
+      - p alone is an address.
+      - You need to follow the arrow.
+    short: "*p follows the arrow to hp's value."
+    explain: "`std::cout << p` prints an address (some hex number that changes between runs). `*p` dereferences: it follows the arrow and gives 42."
+  - id: w8.l3.c5
+    type: write
+    tags: [ w8.pointer, w8.addressof ]
+    prompt: Write one line that declares a pointer to int named `ptr` pointing at the int `mana`.
+    prelude: int mana{8};
+    accept:
+      - int* ptr = &mana;
+      - int* ptr{&mana};
+      - auto* ptr = &mana;
+      - auto ptr = &mana;
+    acceptRe:
+      - ^(int\*|auto\*|auto )ptr(=&mana|\{&mana\});$
+    placeholder: int* ptr ...
+    hints:
+      - "The type is int*: pointer to int."
+      - "Store mana's address: &mana."
+    short: "`int* ptr = &mana;` stores mana's address in ptr."
+    explain: "`int* ptr = &mana;` (or `int* ptr{&mana};`) declares a pointer and initializes it with mana's address in one step. `int *ptr` means the same; spaces around * don't matter."
+  - id: w8.l3.c6
+    type: review
+    tags: [ w8.nullptr, w8.deref, w2.init ]
+    bug: null-deref
+    unsafe: true
+    prompt: Code review! Tap every dangerous line, then submit.
+    code: |-
+      int hp = 10;
+      int* p = &hp;
+      int* q;
+      int* r = nullptr;
+      std::cout << *p << '\n';
+      std::cout << *q << '\n';
+      std::cout << *r << '\n';
+    dangerous: [ 2, 5, 6 ]
+    lineNotes:
+      "0": "Fine: hp is initialized."
+      "1": "Fine: p points at a real, living int."
+      "2": "Danger: q holds a garbage address. Any use of it is a trap."
+      "3": "Fine: nullptr is a known, testable \"nowhere\" value."
+      "4": "Fine: p points at hp, so this prints 10."
+      "5": "UB: following a garbage address. Might crash, might print junk, might seem fine."
+      "6": "UB: dereferencing nullptr. Usually a crash, but not guaranteed."
+    hints:
+      - "Ask of every pointer: where does it point?"
+      - A pointer declared with no value is a problem already.
+    short: Uninitialized and null pointers must never be dereferenced.
+    explain: "q was never initialized, so it holds some leftover address: reading `*q` is UB. r is nullptr, which is fine to hold and test, but `*r` is UB too. UB may crash, print junk, or look fine today and fail tomorrow. Initialize every pointer, and check before following."
+    sideBySide:
+      unsafe: |-
+        int* q;                   // garbage address
+        int* r = nullptr;
+        std::cout << *q << '\n';  // UB
+        std::cout << *r << '\n';  // UB
+      hardened: |-
+        int* q = &hp;             // initialized to a real int
+        int* r = nullptr;
+        std::cout << *q << '\n';
+        if (r != nullptr) {
+            std::cout << *r << '\n';
+        }
+      prelude: int hp{10};
+recap:
+  - "&x is x's address; *p follows the arrow."
+  - A pointer can be pointed somewhere else.
+  - "nullptr means nowhere: test it, never follow it."
+vault:
+  - id: w8.pointer
+    title: Pointer basics
+    code: |-
+      int hp = 5;
+      int mana = 8;
+      int* p = &hp;       // p points at hp
+      *p = 7;             // writes hp
+      p = &mana;          // reseat: now points at mana
+      p = nullptr;        // points nowhere
+      if (p != nullptr) {
+          std::cout << *p << '\n';
+      }
+    note: "Declaration: * = pointer. Expression: &x = address of, *p = follow."
+    defense: false
+reviewTags: [ w2.init, w3.compare, w8.ref, w8.byref ]

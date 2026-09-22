@@ -1,0 +1,226 @@
+# World 8 · Lesson 4: Pointer or reference?
+
+id: w8.l4
+title: Pointer or reference?
+skill: memory
+shield: false
+concept:
+  short: "Use a reference when something always exists. Use a pointer when it might be missing or must switch targets."
+  analogy: "A reference is a tattoo, one name for life; a pointer is a sticky note you can move, or leave blank."
+  body:
+    - "**Reference**: must be bound, can't be null, can't be reseated. Perfect for function parameters that must refer to a real object: `void heal(int& hp)` promises \"there IS an hp to heal\"."
+    - "**Pointer**: can be `nullptr`, can be reseated. Use it when \"nothing\" is a valid answer (a search that may find no match) or when the target must change (the currently active hero)."
+    - "**const and pointers**, read right to left: `const int* p` is a pointer to a const int. You can move p, but not change `*p`. `int* const p` is a const pointer to an int: you can change `*p`, but p can never point elsewhere. `const int* const p` locks both."
+    - "A pointer can point at an element of an array or vector: `int* p = &loot[0];`. Then `p + 1` points at the next element, and `*(p + 1)` reads it. That's **pointer arithmetic**."
+    - "Pointer arithmetic is risky: nothing checks the bounds. Stepping before the first element or reading past the last is undefined behavior. Prefer indexes with `.at()`, or range-for, and keep raw pointer math for rare cases."
+  pitfall: "Common beginner mistake: mixing up `const int*` and `int* const`. Read right to left: the thing just left of `const` is what can't change."
+demo:
+  code: |-
+    #include <array>
+    #include <iostream>
+
+    int main() {
+        std::array<int, 3> loot{10, 20, 30};
+        int* p = &loot[0];
+        std::cout << *p << '\n';
+        ++p;
+        std::cout << *p << '\n';
+        const int* view = &loot[2];
+        std::cout << *view << '\n';
+        return 0;
+    }
+  steps:
+    - line: 4
+      vars:
+        "loot[0]": "10"
+        "loot[1]": "20"
+        "loot[2]": "30"
+      note: Three ints side by side in memory.
+    - line: 5
+      vars:
+        p: "→ loot[0]"
+      note: p points at the first element.
+    - line: 6
+      out: |
+        10
+      note: "*p reads loot[0]."
+    - line: 7
+      vars:
+        p: "→ loot[1]"
+      note: "++p steps the arrow one int forward."
+    - line: 8
+      out: |
+        20
+      note: Now *p reads loot[1].
+    - line: 9
+      vars:
+        view: "→ loot[2] (read-only)"
+      note: "const int*: may read through view, never write."
+    - line: 10
+      out: |
+        30
+      note: Reading is fine. *view = 5 would not compile.
+    - line: 11
+      note: "Two more ++p, and *p reads past the end: UB!"
+challenges:
+  - id: w8.l4.c1
+    type: mcq
+    tags: [ w8.ptr-vs-ref, w6.params ]
+    prompt: "`heal` must always receive a real hero's hp, never \"nothing\". Which parameter says that best?"
+    options:
+      - t: int& hp
+        why: "Correct: a reference can't be null, so the function never needs a nullptr check."
+      - t: int* hp
+        why: A pointer invites nullptr, so every caller and the function must worry about it.
+      - t: int hp
+        why: A copy can't heal the caller's hero; the change would vanish.
+      - t: const int& hp
+        why: No copy, but const forbids changing the hp. Healing IS a change.
+    answer: 0
+    hints:
+      - Which one can never be null?
+      - The function must also change the value.
+    short: "Must exist and must change: take a plain reference."
+    explain: "A reference parameter promises \"there is always a real object here\". Pointers are for when \"nothing\" is a legitimate value (like a search with no result) or the target must switch."
+  - id: w8.l4.c2
+    type: mcq
+    tags: [ w8.const-ptr ]
+    prompt: "Given `const int* p = &hp;`, which line compiles?"
+    options:
+      - t: p = &mana;
+        why: "Correct: p itself isn't const, so it can point elsewhere."
+      - t: "*p = 99;"
+        why: "const int* means the int is read-only through p."
+      - t: "*p += 1;"
+        why: Still writing through a pointer-to-const. Not allowed.
+      - t: None of them
+        why: Moving the pointer is allowed. Only writing through it is blocked.
+    answer: 0
+    hints:
+      - Read the type right to left.
+      - Is the pointer const, or the int it points at?
+    short: "const int*: the arrow can move, the target is read-only."
+    explain: "Right to left: `const int* p` is \"p is a pointer to an int that is const\". You may reseat p, but not modify *p. The opposite, `int* const p`, locks the arrow instead."
+  - id: w8.l4.c3
+    type: fill
+    tags: [ w8.const-ptr ]
+    prompt: "Fill in the keyword so `anchor` can change hp but can never point anywhere else."
+    code: |-
+      int* ___ anchor = &hp;
+      *anchor = 50;   // OK: changes hp
+      // anchor = &mana;  would not compile
+    prelude: int hp{10};
+    accept:
+      - const
+    placeholder: keyword
+    hints:
+      - The keyword goes right after the *.
+      - "Read right to left: anchor is a const pointer to int."
+    short: "`int* const anchor`: the arrow is locked, the int isn't."
+    explain: "`int* const anchor` reads right to left as \"anchor is a const pointer to int\". *anchor can be changed; anchor itself can't be reseated. (A reference behaves a lot like this, minus the `*`.)"
+  - id: w8.l4.c4
+    type: predict
+    tags: [ w8.ptr-arith, w7.vector ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> hp{5, 8, 13, 21};
+          int* p = &hp[1];
+          std::cout << *(p + 2) << ' ' << *p << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          21 8
+        why: "Correct: p points at hp[1] (8); two steps later is hp[3] (21)."
+      - t: |
+          13 5
+        why: p starts at hp[1], not hp[0].
+      - t: |
+          10 8
+        why: "p + 2 moves the arrow two ELEMENTS; it doesn't add 2 to the value."
+      - t: |
+          21 21
+        why: p + 2 is a new address; p itself doesn't move.
+    answer: 0
+    hints:
+      - Which element does p point at first?
+      - p + 2 steps two elements forward without moving p.
+    short: "p + 2 is two elements past hp[1]: hp[3], which is 21."
+    explain: "p points at hp[1] = 8. `p + 2` is the address of hp[3], so `*(p + 2)` is 21. p itself is unchanged, so *p is still 8. Output: \"21 8\" and a newline."
+  - id: w8.l4.c5
+    type: edge
+    tags: [ w8.ptr-arith, w7.at ]
+    bug: out-of-bounds
+    unsafe: true
+    prompt: This peeks at a loot slot using pointer arithmetic. Which offsets cause undefined behavior? Select all.
+    code: |-
+      #include <array>
+
+      std::array<int, 4> loot{10, 20, 30, 40};
+      const int* p = &loot[0];
+      std::cout << *(p + offset) << '\n';
+    prelude: int offset{};
+    options:
+      - t: "0"
+        why: The first element. Fine.
+      - t: "3"
+        why: The last element, loot[3]. Fine.
+      - t: "4"
+        why: "UB: one past the end may be pointed at, but never dereferenced."
+      - t: "-1"
+        why: "UB: before the first element. Nothing stops the pointer from going there."
+      - t: "2"
+        why: loot[2]. Fine.
+    answers: [ 2, 3 ]
+    hints:
+      - Valid offsets are 0 through size - 1.
+      - Test both ends, including negatives.
+    short: Only 0 to 3 are valid; 4 and -1 are out of bounds.
+    explain: "Pointer arithmetic has no bounds check. Offsets 4 and -1 read memory that isn't part of loot: undefined behavior, which may print junk, crash, or seem fine. Check the range first, and prefer `.at()`, which throws on a bad index."
+    sideBySide:
+      unsafe: |-
+        #include <array>
+
+        std::array<int, 4> loot{10, 20, 30, 40};
+        const int* p = &loot[0];
+        std::cout << *(p + offset) << '\n';   // no bounds check
+      hardened: |-
+        #include <array>
+
+        std::array<int, 4> loot{10, 20, 30, 40};
+        if (offset < 0 || offset >= static_cast<int>(loot.size())) {
+            std::cout << "No such slot\n";
+            return 1;
+        }
+        std::cout << loot.at(static_cast<std::size_t>(offset)) << '\n';
+      prelude: int offset{};
+recap:
+  - "Always exists: reference. Might be missing: pointer."
+  - "const int*: can't change the target."
+  - "int* const: can't move the arrow."
+  - Pointer math has no bounds check.
+vault:
+  - id: w8.ptr-or-ref
+    title: Pointer or reference?
+    code: |-
+      // must exist, fixed target:   int& hp
+      // may be missing (nullptr):   int* hp
+      // must switch targets:        int* active
+      // read-only, no copy:         const std::string& name
+    expect: skip
+    note: Prefer references; reach for a pointer only when null or reseating is needed.
+    defense: false
+  - id: w8.const-ptr
+    title: const and pointers
+    code: |-
+      const int* a = &hp;        // *a read-only, a can move
+      int* const b = &hp;        // *b writable, b can't move
+      const int* const c = &hp;  // both locked
+    prelude: int hp{10};
+    note: Read right to left. The thing left of const is what's locked.
+    defense: false
+reviewTags: [ w7.vector, w7.at, w8.pointer, w8.deref, w8.byref ]

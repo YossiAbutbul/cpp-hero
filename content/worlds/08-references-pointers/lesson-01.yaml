@@ -1,0 +1,238 @@
+# World 8 · Lesson 1: References: a second name
+
+id: w8.l1
+title: "References: a second name"
+skill: memory
+shield: false
+concept:
+  short: "A reference is another name for an existing variable. It must be bound at birth and never switches targets."
+  analogy: "A reference is a nickname: calling the Knight \"Sir Tank\" doesn't create a second knight."
+  body:
+    - "`int& life = hp;` makes `life` a **reference** to `hp`: a second name for the very same box. No copy is made. Reading `life` reads `hp`; changing `life` changes `hp`."
+    - "The `&` in a **declaration** means \"reference to\". (Later you'll see `&` in an expression, like `&hp`, which means something else: \"address of\".)"
+    - "A reference **must be initialized** when it's declared: `int& r;` is a compile error. There's nothing for the nickname to belong to."
+    - "A reference **can't be reseated**. After `int& r = a;`, writing `r = b;` doesn't make r refer to b. It copies b's **value** into a."
+    - "`const int& r = hp;` is a read-only name: you can look at hp through r, but not change it. A `const` reference can even bind to a temporary value like `5`."
+  pitfall: "Common beginner mistake: thinking `r = b;` switches the reference to b. It doesn't: it overwrites whatever r already refers to."
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        int hp = 10;
+        int& life = hp;
+        life -= 3;
+        std::cout << hp << '\n';
+        int mana = 50;
+        life = mana;
+        std::cout << hp << ' ' << mana << '\n';
+        return 0;
+    }
+  steps:
+    - line: 3
+      vars:
+        hp: "10"
+      note: One box, named hp, holding 10.
+    - line: 4
+      vars:
+        hp: "10"
+        life: "→ hp (alias)"
+      note: life is a second name for the SAME box.
+    - line: 5
+      vars:
+        hp: "7"
+      note: "Changing life changes hp: there's only one box."
+    - line: 6
+      out: |
+        7
+      note: hp really is 7 now.
+    - line: 7
+      vars:
+        mana: "50"
+      note: A brand-new box for mana.
+    - line: 8
+      vars:
+        hp: "50"
+        life: "→ hp (alias)"
+      note: "No reseating! This copies 50 INTO hp."
+    - line: 9
+      out: |
+        50 50
+      note: life still names hp; hp just got mana's value.
+    - line: 10
+      note: A reference is bound once, for its whole life.
+challenges:
+  - id: w8.l1.c1
+    type: predict
+    tags: [ w8.ref, w3.arith ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int gold = 5;
+          int& purse = gold;
+          purse += 10;
+          std::cout << gold << ' ' << purse << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          15 15
+        why: "Correct: purse IS gold under another name, so both print 15."
+      - t: |
+          5 15
+        why: A reference is not a copy. Changing purse changes gold.
+      - t: |
+          15 5
+        why: There is only one box; both names always show the same value.
+      - t: |
+          5 5
+        why: purse += 10 really changes the value. It just goes through a second name.
+    answer: 0
+    hints:
+      - How many int boxes does this program create?
+      - purse and gold are two names for one box.
+    short: purse is gold's second name, so both show 15.
+    explain: "`int& purse = gold;` creates no new int. `purse += 10` adds 10 to gold itself. Printing either name shows 15: \"15 15\" and a newline."
+  - id: w8.l1.c2
+    type: mcq
+    tags: [ w8.ref-init, w2.init ]
+    prompt: "Which line does NOT compile? (hp is an int.)"
+    options:
+      - t: int& r;
+        why: "Correct: a reference must be bound to something when it's declared."
+      - t: int& r = hp;
+        why: The classic form. Valid.
+      - t: int& r{hp};
+        why: Brace initialization works for references too. Valid.
+      - t: const int& r = 5;
+        why: A const reference may bind to a temporary like 5; its lifetime is extended. Valid.
+    answer: 0
+    hints:
+      - A nickname needs someone to belong to.
+      - One line never says what it refers to.
+    short: "`int& r;` doesn't compile: references must be initialized."
+    explain: "A reference is just another name, so it must name something from the start. `int& r;` is a compile error. `const int& r = 5;` is fine: a const reference can bind to a temporary, and the temporary lives as long as the reference."
+  - id: w8.l1.c3
+    type: predict
+    tags: [ w8.reseat, w8.ref ]
+    prompt: Careful! What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int a = 1;
+          int b = 2;
+          int& r = a;
+          r = b;
+          b = 9;
+          std::cout << a << ' ' << b << ' ' << r << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          2 9 2
+        why: "Correct: r = b copies 2 into a. r still names a, so it shows 2."
+      - t: |
+          1 9 9
+        why: That assumes r switched to b. References can never be reseated.
+      - t: |
+          1 2 2
+        why: r = b does change a, and b = 9 changes b afterward.
+      - t: |
+          2 9 9
+        why: r still refers to a, which holds 2. Changing b later doesn't touch a.
+    answer: 0
+    hints:
+      - Can a reference switch to another variable?
+      - r = b is an assignment to whatever r already names.
+    short: "r = b copies b's value into a; r never switches to b."
+    explain: "r is bound to a forever. `r = b;` means `a = b;`, so a becomes 2. Then b becomes 9, which doesn't affect a. r shows a's value: \"2 9 2\" and a newline."
+  - id: w8.l1.c4
+    type: fill
+    tags: [ w8.ref ]
+    prompt: Fill in the blank so `shield` is another name for `armor` (not a copy).
+    code: |-
+      int ___ shield = armor;
+      shield += 5;   // armor is now 8
+    prelude: int armor{3};
+    accept:
+      - "&"
+    placeholder: symbol
+    hints:
+      - Without anything, shield would be a separate copy.
+      - The reference symbol goes right after the type.
+    short: "`int& shield = armor;` makes shield an alias of armor."
+    explain: "`int& shield = armor;` binds shield to armor, so `shield += 5` changes armor from 3 to 8. Without the &, shield would be a separate int and armor would stay 3."
+  - id: w8.l1.c5
+    type: bug
+    tags: [ w8.ref-init, w1.compile ]
+    prompt: This doesn't compile. Tap the broken line, then pick the fix.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int hp = 30;
+          int& target;
+          target = hp;
+          std::cout << target << '\n';
+          return 0;
+      }
+    expect: error
+    bugLine: 4
+    options:
+      - t: int& target = hp;
+        why: "Correct: bind the reference when it's born; then delete the assignment line."
+      - t: int& target = nullptr;
+        why: References can't be null. nullptr is for pointers.
+      - t: int& target{};
+        why: An empty brace doesn't name any variable, so this still fails.
+      - t: int target;
+        why: Compiles, but now it's an uninitialized copy, not an alias. Worse!
+    answer: 0
+    hints:
+      - The compiler complains about the declaration, not the assignment.
+      - A reference must be bound in the same statement it's declared.
+    short: References must be bound when declared.
+    explain: "g++ says: `'target' declared as reference but not initialized`. A reference has no \"empty\" state, so bind it immediately: `int& target = hp;`. That's a safety feature: a reference always names something real (as long as that something is still alive)."
+    sideBySide:
+      unsafe: |-
+        int& target;      // error: not initialized
+        target = hp;
+      hardened: int& target = hp;
+      expect: error
+      prelude: int hp{30};
+  - id: w8.l1.c6
+    type: write
+    tags: [ w8.ref ]
+    prompt: Write one line that declares a reference named `ref` to the int `score`.
+    prelude: int score{100};
+    accept:
+      - int& ref = score;
+      - int& ref{score};
+      - auto& ref = score;
+    acceptRe:
+      - ^(int|auto)&ref(=score|\{score\});$
+    placeholder: int& ref ...
+    hints:
+      - "Type, then &, then the name."
+      - Bind it to score right away.
+    short: "`int& ref = score;` makes ref another name for score."
+    explain: "`int& ref = score;` (or `int& ref{score};`, or `auto& ref = score;`) binds ref to score. Spaces around & don't matter: `int &ref` means the same."
+recap:
+  - A reference is a second name, not a copy.
+  - References must be bound when declared.
+  - "r = b copies a value; it never reseats r."
+vault:
+  - id: w8.ref
+    title: References
+    code: |-
+      int hp = 10;
+      int& life = hp;        // alias: same box
+      life -= 3;             // hp is 7
+      const int& view = hp;  // read-only name
+      // int& bad;           // error: must be initialized
+    note: Bound once, forever. `r = x;` copies x's value into what r names.
+    defense: false
+reviewTags: [ w2.init, w2.const, w3.incdec ]
