@@ -1,0 +1,419 @@
+# World 7 mini-project: Inventory Bag
+
+id: w7.p
+title: Inventory Bag
+intro: "Build a hero's bag of item names: add items, list them, find one by name and remove one by slot."
+steps:
+  - id: w7.p.s1
+    type: write
+    tags: [ w7.vector, w2.string ]
+    prompt: "First, the bag itself. Write one line that declares an empty vector of strings named `bag`."
+    code: |-
+      #include <string>
+      #include <vector>
+
+      // declare the bag here:
+    accept:
+      - std::vector<std::string> bag;
+      - std::vector<std::string> bag{};
+    acceptRe:
+      - ^std::vector<std::string> ?bag ?(\{ ?\})? ?;$
+    placeholder: std::vector<...> bag ...
+    hints:
+      - "std::vector<element type> name;"
+      - The element type is std::string.
+    short: "std::vector<std::string> bag; starts empty, size 0."
+    explain: "`std::vector<std::string> bag;` is an empty vector of strings: size 0, no garbage, ready to grow. We'll pass it to functions by reference so they can change it."
+  - id: w7.p.s2
+    type: fill
+    tags: [ w7.push-back, w6.params ]
+    prompt: "addItem puts a new item at the end of the bag. Fill in the member function."
+    code: |-
+      #include <string>
+      #include <vector>
+
+      std::vector<std::string> bag;
+      std::string item{"sword"};
+      bag.___(item);
+    accept:
+      - push_back
+      - emplace_back
+    placeholder: member function
+    hints:
+      - It adds to the back.
+      - The vector grows by one each time.
+    short: "bag.push_back(item); adds the item at the end."
+    explain: "`push_back` appends a copy of item and grows the bag by one. In the final program, addItem takes the bag as `std::vector<std::string>&` (so it can change it) and the item as `const std::string&` (read-only, no copy)."
+  - id: w7.p.s3
+    type: order
+    tags: [ w7.bounds, w5.for, w7.size ]
+    prompt: "Order the listing code so it prints every slot number and item: `0: sword`, `1: potion`."
+    lines:
+      - "#include <vector>"
+      - "std::vector<std::string> bag{\"sword\", \"potion\"};"
+      - "for (std::size_t i = 0; i < bag.size(); ++i) {"
+      - "    std::cout << i << \": \" << bag[i] << '\\n';"
+      - "}"
+    distractors:
+      - "for (std::size_t i = 0; i <= bag.size(); ++i) {"
+    hints:
+      - Slots run from 0 to size() - 1.
+      - "Use <, not <=: bag[bag.size()] doesn't exist."
+    short: "Loop std::size_t i from 0 while i < bag.size()."
+    explain: "A classic loop gives us the slot number to print. `i < bag.size()` stops at the last valid slot; the `<=` distractor would read bag[2], one past the end (UB)."
+  - id: w7.p.s4
+    type: fill
+    tags: [ w7.string-compare, w6.return ]
+    prompt: "findItem returns the slot of the item with that exact name. Fill in the comparison."
+    code: |-
+      #include <string>
+      #include <vector>
+
+      std::vector<std::string> bag{"sword", "potion"};
+      std::string name{"potion"};
+      std::size_t slot = bag.size();   // "not found" until we see it
+      for (std::size_t i = 0; i < bag.size(); ++i) {
+          if (bag[i] ___ name) {
+              slot = i;
+              break;
+          }
+      }
+    accept:
+      - "=="
+    placeholder: operator
+    hints:
+      - Strings compare by content.
+      - One = assigns; two compare.
+    short: "bag[i] == name compares the strings' content."
+    explain: "`==` on std::string compares content char by char. The loop stops at the first match. If nothing matches, slot stays bag.size(), a value that is never a valid slot, so callers can check for it (just like npos for find)."
+  - id: w7.p.s5
+    type: fill
+    tags: [ w7.vector, w7.bounds ]
+    prompt: "removeItem erases one slot. `bag.begin() + n` points at slot n. Fill in the blank."
+    code: |-
+      #include <string>
+      #include <vector>
+
+      std::vector<std::string> bag{"sword", "potion", "rope"};
+      std::size_t slot{1};
+      if (slot < bag.size()) {
+          bag.erase(bag.begin() + ___);
+      }
+    accept:
+      - slot
+    placeholder: which slot?
+    hints:
+      - erase needs a position, counted from begin().
+      - We want to remove the slot we were given.
+    short: "bag.erase(bag.begin() + slot); removes that slot."
+    explain: "`bag.erase(bag.begin() + slot)` removes the element at slot and shifts the later ones down by one. It's only valid for slot < size(), so we check first (World 14 digs into begin() and iterators)."
+  - id: w7.p.s6
+    type: predict
+    tags: [ w7.vector, w7.push-back ]
+    prompt: "Test run! What does this print?"
+    code: |-
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          std::vector<std::string> bag{"sword", "potion", "rope"};
+          bag.erase(bag.begin() + 1);
+          bag.push_back("map");
+          for (std::size_t i = 0; i < bag.size(); ++i) {
+              std::cout << i << ": " << bag[i] << '\n';
+          }
+          return 0;
+      }
+    options:
+      - t: |
+          0: sword
+          1: rope
+          2: map
+        why: "Correct: potion (slot 1) is erased, rope slides down to slot 1, map goes on the end."
+      - t: |
+          0: potion
+          1: rope
+          2: map
+        why: "begin() + 1 is slot 1, the SECOND item: potion, not sword."
+      - t: |
+          0: sword
+          2: rope
+          3: map
+        why: Erasing shifts the later items down. Slots are always 0 to size() - 1.
+      - t: |
+          0: sword
+          1: potion
+          2: rope
+          3: map
+        why: erase really removes potion, so only 3 items remain.
+    answer: 0
+    hints:
+      - Which item is at slot 1?
+      - After erase, everything after it moves down one slot.
+    short: "Erase slot 1 (potion), rope slides down, map joins the end."
+    explain: "The bag starts as [sword, potion, rope]. Erasing slot 1 removes potion and slides rope down: [sword, rope]. push_back adds map: [sword, rope, map]."
+program: |-
+  #include <iostream>
+  #include <limits>
+  #include <string>
+  #include <vector>
+
+  void addItem(std::vector<std::string>& bag, const std::string& item) {
+      bag.push_back(item);
+  }
+
+  void listItems(const std::vector<std::string>& bag) {
+      if (bag.empty()) {
+          std::cout << "(the bag is empty)\n";
+          return;
+      }
+      for (std::size_t i = 0; i < bag.size(); ++i) {
+          std::cout << i << ": " << bag[i] << '\n';
+      }
+  }
+
+  // Returns the slot of the first item whose name contains `name`,
+  // or bag.size() (never a valid slot) when there is none.
+  std::size_t findItem(const std::vector<std::string>& bag, const std::string& name) {
+      for (std::size_t i = 0; i < bag.size(); ++i) {
+          if (bag[i].find(name) != std::string::npos) {
+              return i;
+          }
+      }
+      return bag.size();
+  }
+
+  // Returns false (and changes nothing) when the slot doesn't exist.
+  bool removeItem(std::vector<std::string>& bag, std::size_t slot) {
+      if (slot >= bag.size()) {
+          return false;
+      }
+      bag.erase(bag.begin() + slot);
+      return true;
+  }
+
+  int main() {
+      std::vector<std::string> bag;
+      std::string cmd;
+      std::cout << "Commands: add <item>, list, find <name>, remove <slot>, quit\n";
+      while (std::cin >> cmd && cmd != "quit") {
+          if (cmd == "add") {
+              std::string item;
+              if (!(std::cin >> item)) {
+                  break;
+              }
+              addItem(bag, item);
+              std::cout << "Added " << item << '\n';
+          } else if (cmd == "list") {
+              listItems(bag);
+          } else if (cmd == "find") {
+              std::string name;
+              if (!(std::cin >> name)) {
+                  break;
+              }
+              std::size_t slot = findItem(bag, name);
+              if (slot == bag.size()) {
+                  std::cout << "No " << name << " in the bag\n";
+              } else {
+                  std::cout << bag[slot] << " is in slot " << slot << '\n';
+              }
+          } else if (cmd == "remove") {
+              int slot{};
+              if (!(std::cin >> slot)) {
+                  std::cout << "Slot must be a number\n";
+                  std::cin.clear();
+                  std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+              } else if (slot < 0 || !removeItem(bag, static_cast<std::size_t>(slot))) {
+                  std::cout << "No slot " << slot << '\n';
+              } else {
+                  std::cout << "Removed slot " << slot << '\n';
+              }
+          } else {
+              std::cout << "Unknown command: " << cmd << '\n';
+          }
+      }
+      return 0;
+  }
+programStdin: |
+  add sword
+  add potion
+  add rope
+  list
+  find pot
+  find dragon
+  remove 99
+  remove -1
+  remove 1
+  list
+  quit
+stress:
+  intro: Brace yourself! I'll poke your bag with nasty commands. Patch every hole!
+  attacks:
+    - input: remove 99
+      label: Remove slot 99!
+      challenge:
+        id: w7.p.a1
+        type: harden
+        tags: [ w7.bounds, w6.params ]
+        bug: out-of-bounds
+        prompt: "The bag holds 2 items and the player removes slot 99. Pick the guard for removeItem."
+        code: |-
+          #include <string>
+          #include <vector>
+
+          bool removeItem(std::vector<std::string>& bag, std::size_t slot) {
+              if (___) {
+                  return false;
+              }
+              bag.erase(bag.begin() + slot);
+              return true;
+          }
+
+          int main() {
+              std::vector<std::string> bag{"sword", "potion"};
+              bool removed = removeItem(bag, 99);
+              return removed ? 1 : 0;
+          }
+        options:
+          - t: slot >= bag.size()
+            why: "Correct: only 0 to size() - 1 exist, so size() itself and above are rejected."
+          - t: slot > bag.size()
+            why: "Off by one: slot 2 (== size()) gets through and erases past the end."
+          - t: slot < 0
+            why: std::size_t is never negative, so this is always false and 99 gets through.
+          - t: bag.empty()
+            why: Catches an empty bag only. Slot 99 in a 2-item bag still gets through.
+        answer: 0
+        hints:
+          - What is the largest valid slot?
+          - A slot equal to size() is already past the end.
+        short: "Reject slot >= bag.size() before erasing."
+        explain: "erase with a position past the end is undefined behavior: it may corrupt the bag or crash. Valid slots are 0 to size() - 1, so reject `slot >= bag.size()`. Returning false lets the caller tell the player instead of crashing."
+        sideBySide:
+          unsafe: |-
+            #include <string>
+            #include <vector>
+
+            std::vector<std::string> bag{"sword", "potion"};
+            std::size_t slot{99};
+            bag.erase(bag.begin() + slot);   // UB: no slot 99
+          hardened: |-
+            #include <string>
+            #include <vector>
+
+            std::vector<std::string> bag{"sword", "potion"};
+            std::size_t slot{99};
+            if (slot >= bag.size()) {
+                std::cout << "No slot " << slot << '\n';
+            } else {
+                bag.erase(bag.begin() + slot);
+            }
+    - input: find dragon
+      label: Find something that isn't there!
+      challenge:
+        id: w7.p.a2
+        type: harden
+        tags: [ w7.find, w7.npos, w6.return ]
+        prompt: "findItem matches part of a name (\"pot\" finds \"potion\"). Pick the test that is true only on a real match."
+        code: |-
+          #include <string>
+          #include <vector>
+
+          std::size_t findItem(const std::vector<std::string>& bag, const std::string& name) {
+              for (std::size_t i = 0; i < bag.size(); ++i) {
+                  if (___) {
+                      return i;
+                  }
+              }
+              return bag.size();
+          }
+
+          int main() {
+              std::vector<std::string> bag{"sword", "potion"};
+              return findItem(bag, "dragon") == bag.size() ? 0 : 1;
+          }
+        options:
+          - t: bag[i].find(name) != std::string::npos
+            why: "Correct: find returns npos when there's no match, and a real index otherwise."
+          - t: bag[i].find(name)
+            why: "Backwards: npos (no match) counts as true, and a match at index 0 counts as false."
+          - t: bag[i].find(name) > 0
+            why: "npos is greater than 0, so \"dragon\" matches everything. And a match at 0 fails."
+          - t: "!bag[i].find(name)"
+            why: 'Only true for a match at index 0: "tion" would never find "potion".'
+        answer: 0
+        hints:
+          - What does find return when there's no match?
+          - Index 0 is a real match. npos is not.
+        short: "Test find(name) != std::string::npos for a real match."
+        explain: "std::string::find returns the index of the match, or npos when there is none. Only `!= std::string::npos` gets both right. Treating the result as a bool is backwards: \"dragon\" would match slot 0 and the game would claim you own one."
+        sideBySide:
+          unsafe: |-
+            #include <string>
+
+            std::string item{"sword"};
+            if (item.find("dragon")) {   // npos is "true": fake match!
+                std::cout << "Found it\n";
+            }
+          hardened: |-
+            #include <string>
+
+            std::string item{"sword"};
+            if (item.find("dragon") != std::string::npos) {
+                std::cout << "Found it\n";
+            }
+    - input: add potion (while holding a reference)
+      label: Add while holding a reference!
+      challenge:
+        id: w7.p.a3
+        type: bug
+        tags: [ w7.invalidation, w7.push-back ]
+        bug: iterator-invalidation
+        unsafe: true
+        prompt: "UNSAFE: this remembers the first item, adds another, then prints the first. Tap the line that sets the trap, then pick the fix."
+        code: |-
+          #include <iostream>
+          #include <string>
+          #include <vector>
+
+          int main() {
+              std::vector<std::string> bag{"sword"};
+              std::string& first = bag[0];
+              bag.push_back("potion");
+              std::cout << "First item: " << first << '\n';
+              return 0;
+          }
+        bugLine: 6
+        options:
+          - t: "std::size_t first{0};   // then print bag[first]"
+            why: "Correct: an index still works after reallocation. bag[first] finds the element in its new home."
+          - t: const std::string& first = bag[0];
+            why: const stops YOU changing it, not the vector moving it. Still dangles.
+          - t: std::string& first = bag.front();
+            why: Same reference into the vector, just spelled differently. Still dangles.
+          - t: auto& first = bag[0];
+            why: auto& is still a reference into the vector's old memory.
+        answer: 0
+        hints:
+          - What can push_back do to the elements already inside?
+          - Remember WHERE the item is, not a reference to it.
+        short: "Keep an index, not a reference, across push_back."
+        explain: "push_back may reallocate: every element moves to new memory and the old block is freed. `first` then refers to freed memory, and reading it is undefined behavior. It often prints \"sword\" anyway, until one day it doesn't. Keep the index and read `bag[first]` after the push_back (a plain copy, `std::string first = bag[0];`, is also safe if you don't need to change it)."
+        sideBySide:
+          unsafe: |-
+            #include <string>
+            #include <vector>
+
+            std::vector<std::string> bag{"sword"};
+            std::string& first = bag[0];
+            bag.push_back("potion");           // may reallocate
+            std::cout << first << '\n';        // UB: dangling
+          hardened: |-
+            #include <string>
+            #include <vector>
+
+            std::vector<std::string> bag{"sword"};
+            std::size_t first{0};
+            bag.push_back("potion");
+            std::cout << bag[first] << '\n';   // always valid

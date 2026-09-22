@@ -1,0 +1,16 @@
+# World 7: Collections. Lessons are lesson-NN.yaml (played in file order).
+
+id: w7
+num: 7
+title: Collections
+icon: list
+blurb: "Keep many values in one place: arrays, vectors and strings, looped over without ever stepping off the end."
+story:
+  intro:
+    - Our functions hold strong! But the Codebase's storage shelves are a total mess.
+    - "Let's line values up in {collections} and never step off the end!"
+  bossIntro:
+    - Something is oozing past the end of the shelf... the Overflow Blob!
+    - It feeds on bad indexes. Check every bound, hero!
+  victory:
+    - The Blob squished back inside its bounds! Every shelf is tidy again. {:D}

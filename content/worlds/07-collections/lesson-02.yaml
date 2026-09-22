@@ -1,0 +1,265 @@
+# World 7 · Lesson 2: Vectors that grow (std::vector)
+
+id: w7.l2
+title: Vectors that grow
+skill: toolkit
+shield: false
+concept:
+  short: "std::vector is a resizable array: push_back adds to the end, size() counts, [] reaches an element."
+  analogy: "A vector is a stretchy backpack: keep stuffing items in and it makes room."
+  body:
+    - "`#include <vector>`, then `std::vector<int> v{3, 7};` makes a vector holding 3 and 7. `std::vector<std::string> names;` starts empty (size 0), never garbage."
+    - "`v.push_back(9);` adds 9 at the end and the vector grows by one. `v.size()` says how many elements there are. Its type is `std::size_t`, an unsigned whole number. `v.empty()` is true when the size is 0."
+    - "`v[0]` is the first element and `v[v.size() - 1]` the last. `v.front()` and `v.back()` are shortcuts for those two, but only on a vector that isn't empty!"
+    - "`v.pop_back()` removes the last element, and `v.clear()` removes them all (size becomes 0). Both only shrink; neither can fail on a non-empty vector."
+    - "Watch the brackets: `std::vector<int> a{5};` is ONE element, 5. `std::vector<int> b(5);` is FIVE zeros. Parentheses call the \"how many\" constructor."
+  pitfall: "Common beginner mistake: `v[0] = 5;` on an empty vector. [] never creates elements; it only reaches ones that already exist. Use push_back to grow."
+demo:
+  code: |-
+    #include <iostream>
+    #include <vector>
+
+    int main() {
+        std::vector<int> v{3, 7};
+        v.push_back(9);
+        std::cout << v.size() << '\n';
+        std::cout << v.front() << ' ' << v.back() << '\n';
+        v[1] = 8;
+        v.clear();
+        std::cout << v.empty() << '\n';
+        return 0;
+    }
+  steps:
+    - line: 4
+      vars:
+        v: "[3, 7]"
+      note: Two elements to start with.
+    - line: 5
+      vars:
+        v: "[3, 7, 9]"
+      note: push_back adds 9 at the end. The vector grew!
+    - line: 6
+      out: |
+        3
+      note: size() counts the elements.
+    - line: 7
+      out: |
+        3 9
+      note: front() is the first element, back() the last.
+    - line: 8
+      vars:
+        v: "[3, 8, 9]"
+      note: "v[1] is the second element. [] only reaches existing ones."
+    - line: 9
+      vars:
+        v: "[]"
+      note: clear() removes everything. Size is now 0.
+    - line: 10
+      out: |
+        1
+      note: empty() is true, and bools print as 1.
+    - line: 11
+      note: Done. The vector cleans up its memory by itself.
+challenges:
+  - id: w7.l2.c1
+    type: predict
+    tags: [ w7.vector, w7.push-back, w7.size ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{4, 2};
+          v.push_back(6);
+          v.push_back(1);
+          std::cout << v.size() << ' ' << v[2] << ' ' << v.back() << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          4 6 1
+        why: "Correct: v is [4, 2, 6, 1]. Four elements, v[2] is the third (6), the last is 1."
+      - t: |
+          4 2 1
+        why: "v[2] is the THIRD element: indexes start at 0."
+      - t: |
+          2 6 1
+        why: size() counts every element, including the two pushed ones.
+      - t: |
+          4 6 4
+        why: back() is the LAST element, not the first.
+    answer: 0
+    hints:
+      - Write out the vector after both push_backs.
+      - "v[2] is the third element. back() is the last."
+    short: "v becomes [4, 2, 6, 1]: size 4, v[2] is 6, back is 1."
+    explain: "push_back appends, so v is [4, 2, 6, 1]. size() is 4, v[2] (the third element) is 6, and back() is 1. Output: \"4 6 1\" and a newline."
+  - id: w7.l2.c2
+    type: mcq
+    tags: [ w7.vector, w2.init ]
+    prompt: "What does `std::vector<int> v(5);` hold?"
+    options:
+      - t: Five zeros
+        why: "Correct: parentheses mean \"make 5 elements\", and each one is value-initialized to 0."
+      - t: One element, 5
+        why: "That's std::vector<int> v{5}; with braces."
+      - t: Nothing yet, just room for 5
+        why: size() is really 5 here. Reserving room without elements is what reserve() does.
+      - t: Five garbage values
+        why: A vector always initializes its elements. These are 0s.
+    answer: 0
+    hints:
+      - Parentheses and braces mean different things here.
+      - (5) is a count. {5} is a list of values.
+    short: "v(5) is five 0s; v{5} is one element, 5."
+    explain: "`std::vector<int> v(5);` calls the count constructor: five elements, each 0. `std::vector<int> v{5};` is a list with one element, 5. A vector never holds garbage."
+  - id: w7.l2.c3
+    type: write
+    tags: [ w7.push-back ]
+    prompt: "Write one line that adds the value 42 to the end of `scores`."
+    code: |-
+      #include <vector>
+
+      std::vector<int> scores{10, 20};
+      // add 42 to the end of scores:
+    accept:
+      - scores.push_back(42);
+      - scores.emplace_back(42);
+    acceptRe:
+      - ^scores\.(push|emplace)_back\( ?42 ?\) ?;$
+    placeholder: scores...
+    hints:
+      - "It's a member function: scores.something(42);"
+      - The name says it pushes to the back.
+    short: "scores.push_back(42); appends 42, making [10, 20, 42]."
+    explain: "`scores.push_back(42);` adds 42 after the last element; size goes from 2 to 3. (`emplace_back(42)` works too.) Writing `scores[2] = 42;` would be undefined behavior: slot 2 doesn't exist yet."
+  - id: w7.l2.c4
+    type: bug
+    tags: [ w7.vector, w7.index, w7.push-back ]
+    bug: out-of-bounds
+    unsafe: true
+    prompt: "UNSAFE: this should store 100 in a new vector, but slot 0 doesn't exist. Tap the buggy line, then pick the fix."
+    code: |-
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> hp;
+          hp[0] = 100;
+          std::cout << hp.size() << '\n';
+          return 0;
+      }
+    bugLine: 5
+    options:
+      - t: hp.push_back(100);
+        why: "Correct: push_back creates the element. Now size() is 1."
+      - t: hp.at(0) = 100;
+        why: at() checks, so it throws std::out_of_range instead of UB. It still adds nothing.
+      - t: hp.front() = 100;
+        why: front() on an empty vector is UB too. There is no front yet.
+      - t: hp[1] = 100;
+        why: Slot 1 doesn't exist either. Still UB.
+    answer: 0
+    hints:
+      - How many elements does hp have right after it's declared?
+      - "[] reaches elements. Which function creates one?"
+    short: "[] can't create elements. push_back adds them."
+    explain: "An empty vector has no slot 0, so `hp[0] = 100;` writes to memory the vector doesn't own: undefined behavior. It might crash, corrupt something else, or seem to work and print 0. `hp.push_back(100);` actually grows the vector."
+    sideBySide:
+      unsafe: |-
+        #include <vector>
+
+        std::vector<int> hp;
+        hp[0] = 100;         // UB: there is no element 0
+      hardened: |-
+        #include <vector>
+
+        std::vector<int> hp;
+        hp.push_back(100);   // size is now 1
+  - id: w7.l2.c5
+    type: fill
+    tags: [ w7.front-back ]
+    prompt: "Print the LAST element of the queue (13) without writing an index."
+    code: |-
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> queue{5, 8, 13};
+          std::cout << queue.___() << '\n';   // prints 13
+          return 0;
+      }
+    accept:
+      - back
+    placeholder: member function
+    hints:
+      - There's a pair of shortcuts for the first and last element.
+      - The opposite of front().
+    short: back() is the last element; front() is the first.
+    explain: "`queue.back()` is the last element (13), the same as `queue[queue.size() - 1]` but easier to read. Both front() and back() need a non-empty vector."
+  - id: w7.l2.c6
+    type: predict
+    tags: [ w7.vector, w7.empty, w2.bool ]
+    prompt: No spaces are printed between values. What does this print?
+    code: |-
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> bag{1, 2, 3};
+          bag.pop_back();
+          std::cout << bag.size() << bag.empty();
+          bag.clear();
+          std::cout << bag.size() << bag.empty() << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          2001
+        why: "Correct: after pop_back, size 2 and not empty (0). After clear, size 0 and empty (1)."
+      - t: |
+          3001
+        why: pop_back removes the last element, so the size is 2 first.
+      - t: |
+          2010
+        why: empty() is true AFTER clear(), so the last digit is 1.
+      - t: |
+          20 01
+        why: The code never prints a space between the two lines of output.
+    answer: 0
+    hints:
+      - pop_back removes one element. clear removes all of them.
+      - empty() is a bool, printed as 1 or 0.
+    short: "pop_back: size 2, not empty. clear: size 0, empty. Prints 2001."
+    explain: "After pop_back, bag is [1, 2]: size 2, empty() false (0). After clear, bag is []: size 0, empty() true (1). All four print with no spaces: \"2001\" and a newline."
+recap:
+  - "push_back adds at the end; size() counts."
+  - "[] reaches existing elements; it never creates them."
+  - "front()/back(): first and last, non-empty only."
+  - "v{5} is one element; v(5) is five 0s."
+vault:
+  - id: w7.vector
+    title: std::vector basics
+    code: |-
+      #include <vector>
+
+      std::vector<int> v{3, 7};
+      v.push_back(9);          // [3, 7, 9]
+      int first = v.front();   // 3 (non-empty only!)
+      int last = v.back();     // 9
+      v.pop_back();            // [3, 7]
+      v.clear();               // [], v.empty() is true
+    note: "size() is a std::size_t. [] never creates elements: push_back does."
+    defense: false
+  - id: w7.vector-init
+    title: Braces vs parentheses
+    code: |-
+      #include <vector>
+
+      std::vector<int> a{5};   // one element: 5
+      std::vector<int> b(5);   // five 0s
+      std::vector<int> c;      // empty, size 0
+    note: "{} lists the values; () says how many."
+    defense: false
+reviewTags: [ w2.init, w2.bool, w7.std-array, w7.array ]
