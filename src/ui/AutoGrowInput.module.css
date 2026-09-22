@@ -1,0 +1,105 @@
+.input {
+  field-sizing: content;
+  resize: none;
+  overflow: hidden;
+  outline: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-indent: 0;
+  max-width: 100%;
+  display: block;
+}
+
+/* inline code blank */
+.fill {
+  font-family: var(--f-code);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  border: 0;
+  border-bottom: 3px solid var(--tang);
+  background: var(--tang-l);
+  border-radius: 8px 8px 0 0;
+  padding: 2px 6px;
+  color: var(--ink);
+  vertical-align: top;
+  display: inline-block;
+}
+.fill:focus {
+  background: #fff;
+  box-shadow: 0 0 0 3px var(--sky);
+}
+.fill.ok {
+  border-color: var(--teal-d);
+  background: var(--teal-l);
+}
+.fill.bad {
+  border-color: var(--coral-d);
+  background: var(--coral-l);
+  text-decoration: line-through;
+}
+
+/* "write a line" console */
+.consoleBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--console);
+  border-radius: 16px;
+  padding: 10px 14px;
+  margin-top: 10px;
+  transition: box-shadow 0.2s;
+}
+.consoleBox:focus-within {
+  box-shadow: 0 0 0 3px var(--sky);
+}
+.consoleBox.ok {
+  box-shadow: 0 0 0 3px var(--teal);
+}
+.consoleBox.bad {
+  box-shadow: 0 0 0 3px var(--coral);
+}
+.prompt {
+  font-family: var(--f-code);
+  color: var(--sun);
+  font-weight: 500;
+  padding-top: 6px;
+}
+.console {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  color: var(--console-t);
+  font-family: var(--f-code);
+  font-size: 1rem;
+  padding: 6px 0;
+  line-height: 1.45;
+  min-height: calc(1.45em + 12px);
+}
+.console::placeholder {
+  color: #8f86a8;
+}
+.console:focus-visible {
+  outline: none;
+}
+
+/* form field */
+.field {
+  width: 100%;
+  font-weight: 800;
+  font-size: 1.1rem;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 3px 0 var(--line);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.field:focus {
+  border-color: var(--sky);
+  box-shadow: 0 0 0 3px var(--sky-l);
+}

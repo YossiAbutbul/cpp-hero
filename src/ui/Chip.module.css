@@ -1,0 +1,47 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #fff;
+  border-radius: 999px;
+  padding: 5px 10px 5px 7px;
+  font-weight: 900;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  color: var(--ink);
+  box-shadow: 0 2px 0 var(--line);
+  border: 2px solid var(--line);
+  white-space: nowrap;
+  transition:
+    transform 0.15s var(--spring),
+    box-shadow 0.15s var(--spring),
+    background 0.2s;
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn:active {
+  transform: translateY(2px);
+  box-shadow: none;
+}
+.chip :global(.ic) {
+  width: 18px;
+  height: 18px;
+}
+.hot {
+  background: var(--sun);
+  border-color: var(--sun-d);
+  box-shadow: 0 2px 0 var(--sun-d);
+}
+.teal {
+  background: var(--teal-l);
+  border-color: var(--teal);
+  box-shadow: 0 2px 0 var(--teal);
+  color: var(--teal-d);
+}
+.coral {
+  background: var(--coral-l);
+  border-color: var(--coral);
+  box-shadow: 0 2px 0 var(--coral);
+  color: var(--coral-d);
+}

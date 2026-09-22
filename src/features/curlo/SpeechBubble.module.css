@@ -1,0 +1,85 @@
+.bubble {
+  position: relative;
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 20px;
+  padding: 12px 14px;
+  font-weight: 700;
+  font-size: 1rem;
+  box-shadow: 0 4px 0 var(--line);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.bubble b {
+  color: var(--tang-d);
+}
+.tailL::before {
+  content: '';
+  position: absolute;
+  left: -11px;
+  top: 22px;
+  border: 10px solid transparent;
+  border-right-color: var(--line);
+  border-left: 0;
+}
+.tailL::after {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 24px;
+  border: 8px solid transparent;
+  border-right-color: #fff;
+  border-left: 0;
+}
+.tailB::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  margin-left: -9px;
+  border: 9px solid transparent;
+  border-top-color: #fff;
+  border-bottom: 0;
+}
+.tailB::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -13px;
+  margin-left: -11px;
+  border: 11px solid transparent;
+  border-top-color: var(--line);
+  border-bottom: 0;
+}
+.boss {
+  background: var(--coral-l);
+  border-color: var(--coral);
+  box-shadow: 0 4px 0 var(--coral);
+}
+.boss b {
+  color: var(--coral-d);
+}
+.boss.tailL::after {
+  border-right-color: var(--coral-l);
+}
+.boss.tailL::before {
+  border-right-color: var(--coral);
+}
+.qhead {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 8px 0 12px;
+}
+.qhead > .bubble {
+  flex: 1;
+}
+.mini {
+  width: 78px;
+  flex: none;
+}
+@media (max-width: 370px) {
+  .mini {
+    width: 62px;
+  }
+}

@@ -1,0 +1,51 @@
+/* Screen-level effect layer (see effects.ts). Sits inside the app frame. */
+.layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 95;
+  overflow: hidden;
+}
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.flash {
+  position: absolute;
+  inset: 0;
+  background: var(--coral);
+  opacity: 0;
+}
+.floaty {
+  position: absolute;
+  font-family: var(--f-disp);
+  font-weight: 800;
+  font-size: 1.3rem;
+  white-space: nowrap;
+  transform: translate(-50%, 0);
+  text-shadow:
+    0 2px 0 #fff,
+    0 0 8px #fff;
+}
+.pos {
+  color: var(--sun-d);
+}
+.neg {
+  color: var(--coral-d);
+}
+.dmg {
+  color: var(--coral-d);
+  font-size: 1.8rem;
+}
+.shock {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 5px solid var(--sun);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 4;
+}

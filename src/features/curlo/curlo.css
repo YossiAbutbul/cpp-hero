@@ -1,0 +1,198 @@
+/* ==========================================================================
+   MASCOT: copied verbatim from designs/5-springboard.html (via legacy
+   styles.css). Global on purpose: the class names live in the SVG markup
+   string (curloArt.ts). Do not redesign.
+   ========================================================================== */
+.curlo {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.curlo .c-move {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+.curlo .c-body {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: breathe 3.2s ease-in-out infinite;
+}
+@keyframes breathe {
+  50% {
+    transform: translateY(-3px) scale(1.025, 0.975);
+  }
+}
+.curlo .c-eyes {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: blink 4.6s infinite;
+}
+@keyframes blink {
+  0%,
+  93%,
+  100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.08);
+  }
+}
+.curlo .c-pupils {
+  transition: transform 0.35s var(--spring);
+}
+.curlo .bd {
+  fill: var(--tang);
+}
+.curlo .belly {
+  fill: #ffae78;
+}
+.curlo .brace {
+  fill: none;
+  stroke: var(--teal);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.curlo .mth,
+.curlo .brw {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.curlo[data-mood='happy'] .m-happy,
+.curlo[data-mood='celebrate'] .m-cele,
+.curlo[data-mood='worried'] .m-worr,
+.curlo[data-mood='thinking'] .m-think,
+.curlo[data-mood='bracing'] .m-brace {
+  opacity: 1;
+}
+.curlo[data-mood='worried'] .b-worr,
+.curlo[data-mood='thinking'] .b-think,
+.curlo[data-mood='bracing'] .b-brace {
+  opacity: 1;
+}
+.curlo[data-mood='thinking'] .c-pupils {
+  transform: translate(-3px, -5px);
+}
+.curlo[data-mood='worried'] .c-pupils {
+  transform: translate(0, 3px);
+}
+.curlo[data-mood='celebrate'] .c-eyes {
+  animation: none;
+  transform: scaleY(0.55);
+}
+.curlo .c-shield {
+  transform: translate(118px, 120px) rotate(14deg) scale(0.9);
+  transition: transform 0.45s var(--spring);
+}
+.curlo.shield-up .c-shield {
+  transform: translate(80px, 112px) rotate(0) scale(1.45);
+}
+.curlo .sh-face {
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+.curlo .sh-in {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.curlo[data-tier='1'] {
+  --sa: #e8a765;
+  --sb: #9a5a22;
+  --sc: #b8732f;
+}
+.curlo[data-tier='2'] {
+  --sa: #e4ecf4;
+  --sb: #6c87a3;
+  --sc: #3d8bff;
+}
+.curlo[data-tier='3'] {
+  --sa: #ffd447;
+  --sb: #c98c00;
+  --sc: #f2641b;
+}
+.curlo .sh-face {
+  fill: var(--sa);
+  stroke: var(--sb);
+}
+.curlo .sh-in {
+  stroke: var(--sc);
+}
+.curlo .helm {
+  fill: var(--sa);
+  stroke: var(--sb);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.curlo[data-tier='2'] .helm,
+.curlo[data-tier='3'] .helm {
+  opacity: 1;
+}
+.curlo .plume,
+.curlo .gstar {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.curlo[data-tier='3'] .plume,
+.curlo[data-tier='3'] .gstar {
+  opacity: 1;
+}
+.poke {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: block;
+  border-radius: 30px;
+}
+/* ---- end verbatim Curlo block ---- */
+
+/* Additive Curlo layers: color variants, shield skins, gear motion. */
+.curlo[style*='--cv'] .bd {
+  fill: var(--cv);
+}
+.curlo[style*='--cv'] .belly {
+  fill: var(--cvb);
+}
+.curlo[data-shield='shield-circuit'][data-tier] {
+  --sa: #2a2140;
+  --sb: #0fa898;
+  --sc: #7ff0df;
+}
+.curlo[data-shield='shield-brace'][data-tier] {
+  --sa: #c4f1ea;
+  --sb: #077a6f;
+  --sc: #f2641b;
+}
+.curlo .g-scarf-tail {
+  transform-box: fill-box;
+  transform-origin: 20% 0;
+  animation: flutter 1.6s ease-in-out infinite alternate;
+}
+@keyframes flutter {
+  to {
+    transform: rotate(-9deg) skewX(4deg);
+  }
+}
+.curlo .g-cape {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: capewave 2.8s ease-in-out infinite alternate;
+}
+@keyframes capewave {
+  to {
+    transform: scaleX(1.04) skewX(-2deg);
+  }
+}
+.curlo.silhouette .c-body *,
+.curlo.silhouette .c-shield * {
+  fill: #c6bbac !important;
+  stroke: #b3a797 !important;
+}
+.curlo.silhouette .c-eyes {
+  opacity: 0;
+}

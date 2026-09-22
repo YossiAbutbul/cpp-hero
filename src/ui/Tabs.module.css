@@ -1,0 +1,59 @@
+.seg {
+  position: relative;
+  display: flex;
+  background: var(--lock);
+  border-radius: 16px;
+  padding: 4px;
+  gap: 4px;
+  margin-bottom: 12px;
+  isolation: isolate;
+}
+.pill {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 3px 0 var(--line);
+  z-index: -1;
+  transition:
+    transform 0.34s var(--spring),
+    width 0.34s var(--spring),
+    opacity 0.2s;
+}
+.tab {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  border-radius: 12px;
+  padding: 10px 8px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--ink2);
+  transition:
+    color 0.2s,
+    transform 0.2s var(--spring);
+}
+.tab:active {
+  transform: scale(0.96);
+}
+.tab[aria-selected='true'] {
+  color: var(--tang-d);
+}
+.tab :global(.ic) {
+  width: 20px;
+  height: 20px;
+}
+.small {
+  margin: 0;
+  flex: none;
+}
+.small .tab {
+  padding: 6px 12px;
+  font-size: 0.9rem;
+}

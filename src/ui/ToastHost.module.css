@@ -1,0 +1,36 @@
+.region {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 0;
+  z-index: 90;
+  pointer-events: none;
+}
+.toast {
+  position: absolute;
+  left: 50%;
+  top: max(12px, env(safe-area-inset-top));
+  transform: translate(-50%, 0);
+  background: var(--ink);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 10px 16px;
+  border-radius: 16px;
+  max-width: calc(100% - 32px);
+  width: max-content;
+  text-align: center;
+  box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  overflow-wrap: anywhere;
+  cursor: default;
+}
+.toast :global(.ic) {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}

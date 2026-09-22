@@ -1,0 +1,57 @@
+.screen {
+  position: absolute;
+  inset: 0;
+  background: var(--cream);
+}
+.scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 16px 32px;
+  overscroll-behavior: contain;
+}
+.fixed {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.immersive {
+  padding-top: max(12px, env(safe-area-inset-top));
+}
+.titleWrap {
+  margin: 2px 0 14px;
+}
+.title {
+  font-size: 1.6rem;
+}
+.eyebrow {
+  font-weight: 900;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tang-d);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.card {
+  background: var(--card);
+  border-radius: 24px;
+  box-shadow: var(--sh);
+  padding: 16px;
+  margin-bottom: 14px;
+  border: 2px solid #fff;
+  min-width: 0;
+}
+.notice {
+  display: flex;
+  gap: 10px;
+  background: var(--sun-l);
+  border: 2px solid var(--sun);
+  box-shadow: none;
+  border-radius: 18px;
+  padding: 12px 14px;
+  font-weight: 700;
+}

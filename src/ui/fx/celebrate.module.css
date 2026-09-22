@@ -1,0 +1,235 @@
+/* Celebration + evolution overlays (legacy .lvl / .evo). */
+.lvl {
+  position: absolute;
+  inset: 0;
+  z-index: 85;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--sun);
+  cursor: pointer;
+  text-align: center;
+  outline: none;
+}
+.ach {
+  background: var(--teal);
+}
+.bug {
+  background: #3a2d58;
+}
+.cos {
+  background: var(--coral);
+}
+.tier {
+  background: var(--sky);
+}
+.rays {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 1100px;
+  height: 1100px;
+  margin: -550px 0 0 -550px;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.35) 0 10deg, transparent 10deg 20deg);
+  animation: ch-spin 14s linear infinite;
+  border-radius: 50%;
+}
+.bug .rays {
+  background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, 0.1) 0 10deg, transparent 10deg 20deg);
+}
+.inner {
+  position: relative;
+  padding: 20px;
+  max-width: min(360px, 100%);
+}
+.t1 {
+  font-family: var(--f-disp);
+  font-weight: 800;
+  font-size: 1.4rem;
+  letter-spacing: 0.1em;
+  color: var(--tang-d);
+}
+.ach .t1,
+.cos .t1,
+.tier .t1 {
+  color: #fff;
+}
+.bug .t1 {
+  color: var(--sun);
+}
+.big {
+  font-family: var(--f-disp);
+  font-weight: 800;
+  font-size: 6rem;
+  line-height: 0.9;
+  color: #fff;
+  -webkit-text-stroke: 3px var(--tang-d);
+  text-shadow: 0 7px 0 var(--tang-d);
+}
+.mascot {
+  width: 170px;
+  margin: 4px auto 0;
+}
+.t2 {
+  font-weight: 900;
+  font-size: 1.1rem;
+  color: var(--ink);
+  min-height: 52px;
+  margin: 8px 0 14px;
+  overflow-wrap: anywhere;
+}
+.ach .t2,
+.cos .t2,
+.tier .t2,
+.bug .t2 {
+  color: #fff;
+}
+.bug .t2 b,
+.ach .t2 b {
+  color: var(--sun);
+}
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.row > * {
+  flex: 1 1 130px;
+}
+.skip {
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--ink2);
+  margin-top: 10px;
+}
+.ach .skip,
+.cos .skip,
+.tier .skip,
+.bug .skip {
+  color: rgba(255, 255, 255, 0.85);
+}
+.medal {
+  width: 130px;
+  height: 130px;
+  margin: 10px auto;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow:
+    0 8px 0 var(--teal-d),
+    0 0 0 10px rgba(255, 255, 255, 0.3);
+}
+.medal :global(.ic) {
+  width: 80px;
+  height: 80px;
+}
+.achName {
+  font-family: var(--f-disp);
+  font-size: 1.6rem;
+}
+.bugReveal {
+  width: 150px;
+  height: 150px;
+  margin: 10px auto;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 30px;
+  padding: 10px;
+}
+.bugReveal > * {
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- evolution ---------- */
+.evo {
+  position: absolute;
+  inset: 0;
+  z-index: 86;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 45%, #5b35ae, #2a2140 70%);
+  cursor: pointer;
+  text-align: center;
+  color: #fff;
+  outline: none;
+}
+.evoRays {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 1200px;
+  height: 1200px;
+  margin: -600px 0 0 -600px;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 198, 46, 0.22) 0 8deg, transparent 8deg 16deg);
+  animation: ch-spin 8s linear infinite;
+  border-radius: 50%;
+}
+.evoFlash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+.evoT1 {
+  font-family: var(--f-disp);
+  font-weight: 800;
+  font-size: 2.2rem;
+  color: var(--sun);
+  letter-spacing: 0.04em;
+}
+.evoStage {
+  position: relative;
+  width: 200px;
+  height: 215px;
+  margin: 6px auto;
+}
+.evoOld,
+.evoNew {
+  position: absolute;
+  inset: 0;
+}
+.evoGlow {
+  position: absolute;
+  inset: 10%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 237, 176, 0.7), transparent 70%);
+  animation: evoPulse 1s ease-in-out infinite alternate;
+  z-index: -1;
+}
+@keyframes evoPulse {
+  to {
+    transform: scale(1.2);
+    opacity: 0.6;
+  }
+}
+.evoShake {
+  animation: evoShake 0.12s linear infinite;
+}
+@keyframes evoShake {
+  25% {
+    transform: translate(-3px, 1px) rotate(-2deg);
+  }
+  75% {
+    transform: translate(3px, -1px) rotate(2deg);
+  }
+}
+.evoT2 {
+  font-weight: 900;
+  font-size: 1.15rem;
+  min-height: 56px;
+  margin: 8px 0 12px;
+}
+.evoT2 b {
+  color: var(--sun);
+}
+.evoGear {
+  font-size: 0.95rem;
+  font-weight: 800;
+  opacity: 0.9;
+}
+.evo .skip {
+  color: rgba(255, 255, 255, 0.8);
+}
