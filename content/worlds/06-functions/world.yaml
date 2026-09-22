@@ -1,0 +1,15 @@
+# World 6: Functions. Lessons are lesson-NN.yaml (played in file order).
+
+id: w6
+num: 6
+title: Functions
+icon: func
+blurb: "Bundle code into named spells: parameters in, a value out, a fresh stack frame per call, and guards at every door."
+story:
+  intro:
+    - The Loop Hydra is gone, but the Codebase is full of copy-pasted code!
+    - "Let's bundle it into functions: named spells wrapped in cozy {braces}!"
+  bossIntro:
+    - Shh! The Scope Sentinel guards the call stack. It hunts values that outlive their scope!
+  victory:
+    - The Sentinel's visor cracked! Every function returns safely home. I'm {returning} the favor!

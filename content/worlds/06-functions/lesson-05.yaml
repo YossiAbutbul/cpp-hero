@@ -1,0 +1,557 @@
+# World 6 · Lesson 5: Shield: Guard the call (Shield lesson)
+
+id: w6.l5
+title: "Shield: Guard the call"
+skill: defense
+shield: true
+concept:
+  short: "Guard every function: check parameters first, assert your assumptions, return on every path, never return references to locals."
+  analogy: A guard clause is a bouncer at the function's door; bad arguments get turned away before the party starts.
+  body:
+    - "**Validate parameters with guard clauses** at the very top: `if (amount < 0) { return hp; }`. Reject bad input early, then write the happy path without deep nesting. Report problems with a value the caller can check: a `bool` for success, or a clearly documented error value."
+    - "**`[[nodiscard]]`** before a function makes the compiler warn when a caller ignores its result: `[[nodiscard]] bool spend(int mana, int cost);`. Use it for success flags and computed values that are useless if dropped."
+    - "**`assert`** (from `<cassert>`) checks something you believe is always true: `assert(hp >= 0);`. If it's false, the program stops with the file and line. It catches **your bugs** during development. Building with `-DNDEBUG` (typical for release builds) deletes every assert, so never use assert to validate user input, and never put work that must happen inside one."
+    - "**Big parameters by const reference**: `const std::string&` avoids a copy and blocks accidental changes."
+    - "**Never return a reference or pointer to a local.** The local dies when the frame pops, so the caller gets a **dangling reference**, and using it is undefined behavior. g++ warns with `-Wreturn-local-addr`. Return by value instead: the result is safely copied (or moved) out."
+    - "**Every path of a non-void function must return a value.** Falling off the end without `return` is undefined behavior; `-Wreturn-type` (part of `-Wall`) warns. Add a final return for the \"none of the above\" case."
+    - "UB doesn't guarantee a crash: a dangling reference or missing return can pass every test on your machine, then print garbage with another compiler or optimization level. Heed the warnings."
+  pitfall: "Common beginner mistake: `assert(std::cin >> x);`. With NDEBUG the whole read disappears, so the release build never reads input at all. Validate input with if; assert only your own logic."
+demo:
+  code: |-
+    #include <cassert>
+    #include <iostream>
+
+    [[nodiscard]] int applyDamage(int hp, int damage) {
+        if (damage < 0) {
+            return hp;
+        }
+        if (damage >= hp) {
+            return 0;
+        }
+        int result = hp - damage;
+        assert(result > 0);
+        return result;
+    }
+
+    int main() {
+        int hp{10};
+        hp = applyDamage(hp, -4);
+        std::cout << "HP: " << hp << '\n';
+        hp = applyDamage(hp, 3);
+        std::cout << "HP: " << hp << '\n';
+        hp = applyDamage(hp, 25);
+        std::cout << "HP: " << hp << '\n';
+        return 0;
+    }
+  steps:
+    - line: 3
+      note: "[[nodiscard]]: ignoring this result triggers a warning."
+    - line: 16
+      vars:
+        stack: main
+        "main: hp": "10"
+      note: The hero starts with 10 HP.
+    - line: 17
+      vars:
+        stack: main > applyDamage
+        "applyDamage: hp": "10"
+        "applyDamage: damage": "-4"
+      note: "push frame: applyDamage(hp=10, damage=-4)."
+    - line: 4
+      shield: Negative damage blocked!
+      note: "Guard clause: negative damage would secretly heal."
+    - line: 5
+      vars:
+        stack: main
+        "applyDamage: hp": "(gone)"
+        "applyDamage: damage": "(gone)"
+      note: "pop frame: return 10, unchanged."
+    - line: 18
+      out: |
+        HP: 10
+    - line: 19
+      vars:
+        stack: main > applyDamage
+        "applyDamage: hp": "10"
+        "applyDamage: damage": "3"
+      note: "push frame: applyDamage(hp=10, damage=3)."
+    - line: 10
+      vars:
+        "applyDamage: result": "7"
+      note: Both guards pass, so the happy path runs.
+    - line: 11
+      note: "assert documents our belief: result is positive here."
+    - line: 12
+      vars:
+        stack: main
+        "applyDamage: hp": "(gone)"
+        "applyDamage: damage": "(gone)"
+        "applyDamage: result": "(gone)"
+      note: "pop frame: return 7, copied out by value."
+    - line: 20
+      vars:
+        "main: hp": "7"
+      out: |
+        HP: 7
+    - line: 21
+      vars:
+        stack: main > applyDamage
+        "applyDamage: hp": "7"
+        "applyDamage: damage": "25"
+      note: "push frame: applyDamage(hp=7, damage=25)."
+    - line: 7
+      shield: Overkill clamped!
+      note: 25 >= 7, so clamp to 0. HP never goes negative.
+    - line: 8
+      vars:
+        stack: main
+        "applyDamage: hp": "(gone)"
+        "applyDamage: damage": "(gone)"
+      note: "pop frame: return 0."
+    - line: 22
+      vars:
+        "main: hp": "0"
+      out: |
+        HP: 0
+    - line: 23
+      note: Every path returned a value. No UB anywhere.
+challenges:
+  - id: w6.l5.c1
+    type: harden
+    tags: [ w6.validate, w4.guard, w4.if ]
+    prompt: heal(5, -3) would secretly hurt the hero. Pick the guard clause.
+    code: |-
+      #include <iostream>
+
+      [[nodiscard]] int heal(int hp, int amount) {
+          if (___) {
+              return hp;
+          }
+          return hp + amount;
+      }
+
+      int main() {
+          std::cout << heal(5, -3) << '\n';
+          return 0;
+      }
+    options:
+      - t: amount < 0
+        why: "Correct: rejects every negative amount; the hero's hp comes back unchanged."
+      - t: hp < 0
+        why: Checks the wrong parameter. -3 healing walks right through.
+      - t: amount > 0
+        why: "Inverted: refuses every real heal and lets negatives in."
+      - t: amount == -3
+        why: Blocks only this exact value. -4 still hurts.
+    answer: 0
+    hints:
+      - Which parameter carries the bad value?
+      - Block the whole range of bad values, not one number.
+    short: "Guard first: if (amount < 0) return hp unchanged."
+    explain: "A guard clause at the top rejects bad arguments before any work happens. `amount < 0` blocks the whole negative range, so heal(5, -3) returns 5. (Hardened code would also cap huge amounts to avoid overflow; see the project.)"
+    sideBySide:
+      unsafe: |-
+        int result = hp + amount;   // heal(5, -3) gives 2: it hurts!
+      hardened: |-
+        if (amount < 0) {
+            return hp;              // guard: reject bad input first
+        }
+        int result = hp + amount;
+      prelude: int hp{5}; int amount{-3};
+  - id: w6.l5.c2
+    type: mcq
+    tags: [ w6.assert ]
+    prompt: "What happens to this line in a build compiled with -DNDEBUG?"
+    code: |-
+      #include <cassert>
+
+      assert(hp >= 0);
+    prelude: int hp{3};
+    options:
+      - t: It is removed entirely, so the check never runs
+        why: "Correct: NDEBUG turns every assert into nothing. Great for bugs, useless for input."
+      - t: It throws an exception if hp is negative
+        why: assert never throws. When active, it prints a message and aborts.
+      - t: It becomes a compile error if hp could be negative
+        why: The compiler can't know runtime values. assert is a runtime check.
+      - t: It prints a warning but keeps running
+        why: An active failing assert aborts the program. With NDEBUG it does nothing at all.
+    answer: 0
+    hints:
+      - NDEBUG means "no debugging".
+      - Release builds often define it.
+    short: NDEBUG deletes asserts. Use them for bugs, never for input.
+    explain: "assert checks your assumptions while developing. With NDEBUG defined, `assert(x)` expands to nothing, so the condition isn't even evaluated. Validate user input with a real if."
+  - id: w6.l5.c3
+    type: review
+    tags: [ w6.dangling, w6.missing-return, w6.assert ]
+    bug: dangling-ref
+    unsafe: true
+    prompt: "UNSAFE code review: tap every dangerous line, then submit."
+    code: |-
+      #include <cassert>
+      #include <iostream>
+      #include <string>
+
+      const std::string& title(int level) {
+          std::string t = "Lv " + std::to_string(level);
+          return t;
+      }
+
+      int grade(int score) {
+          if (score >= 90) {
+              return 3;
+          }
+          if (score >= 50) {
+              return 2;
+          }
+      }
+
+      int main() {
+          int level{};
+          assert(std::cin >> level);
+          std::cout << title(level) << ' ' << grade(75) << '\n';
+          return 0;
+      }
+    dangerous: [ 6, 16, 20 ]
+    lineNotes:
+      "4": "The & return type sets the trap; line 6 springs it."
+      "6": "Returns a reference to local t, which dies right now: dangling reference, UB."
+      "16": "score below 50 falls off the end without a return: UB (-Wreturn-type)."
+      "20": "With NDEBUG the whole read vanishes. Validate input with if, not assert."
+    hints:
+      - Look for a local escaping by reference, and a path with no return.
+      - What does NDEBUG remove?
+    short: Dangling reference, missing return path, and input checked by assert.
+    explain: "title returns a reference to t, which is destroyed when title returns. grade has no return for scores under 50. The assert swallows the only read in release builds. All three may seem to work in testing; the first two are UB."
+    sideBySide:
+      unsafe: |-
+        #include <cassert>
+        #include <iostream>
+        #include <string>
+
+        const std::string& title(int level) {
+            std::string t = "Lv " + std::to_string(level);
+            return t;                        // dangling!
+        }
+
+        int grade(int score) {
+            if (score >= 90) {
+                return 3;
+            }
+            if (score >= 50) {
+                return 2;
+            }
+        }                                    // no return for < 50
+
+        int main() {
+            int level{};
+            assert(std::cin >> level);       // gone with NDEBUG
+            std::cout << title(level) << ' ' << grade(75) << '\n';
+        }
+      hardened: |-
+        #include <iostream>
+        #include <string>
+
+        std::string title(int level) {       // return by value
+            return "Lv " + std::to_string(level);
+        }
+
+        int grade(int score) {
+            if (score >= 90) {
+                return 3;
+            }
+            if (score >= 50) {
+                return 2;
+            }
+            return 1;                        // every path returns
+        }
+
+        int main() {
+            int level{};
+            if (!(std::cin >> level)) {      // real input check
+                std::cout << "Level must be a number\n";
+                return 1;
+            }
+            std::cout << title(level) << ' ' << grade(75) << '\n';
+        }
+  - id: w6.l5.c4
+    type: breakit
+    tags: [ w6.validate, w3.divzero ]
+    unsafe: true
+    prompt: UNSAFE code. The player types total and count. Pick the input that breaks average().
+    code: |-
+      #include <iostream>
+
+      int average(int total, int count) {
+          return total / count;
+      }
+
+      int main() {
+          int total{};
+          int count{};
+          if (!(std::cin >> total >> count)) {
+              return 1;
+          }
+          std::cout << average(total, count) << '\n';
+          return 0;
+      }
+    options:
+      - t: 10 2
+        why: 10 / 2 = 5. Works fine.
+      - t: 0 5
+        why: 0 / 5 = 0. Only the divisor matters.
+      - t: 9 0
+        why: "Correct: average(9, 0) divides by zero, which is undefined behavior."
+      - t: -8 2
+        why: -8 / 2 = -4. Negatives divide just fine.
+    answer: 2
+    hints:
+      - The read is checked, but is every number a valid count?
+      - Look at the right side of /.
+    short: count 0 divides by zero. Nothing guards the parameter.
+    explain: "The read is validated, but nobody checks that count makes sense. 9 0 reaches total / 0: UB, which may crash or print junk. Validate in the caller and document the precondition with assert."
+    sideBySide:
+      unsafe: |-
+        int average(int total, int count) {
+            return total / count;            // count 0: UB
+        }
+
+        int main() {
+            return average(9, 3);            // fine... until count is 0
+        }
+      hardened: |-
+        #include <cassert>
+        #include <iostream>
+
+        // Precondition: count > 0 (callers must check).
+        int average(int total, int count) {
+            assert(count > 0);               // documents the rule
+            return total / count;
+        }
+
+        int main() {
+            int total{};
+            int count{};
+            if (!(std::cin >> total >> count) || count <= 0) {
+                std::cout << "Count must be a positive number\n";
+                return 1;
+            }
+            std::cout << average(total, count) << '\n';
+        }
+  - id: w6.l5.c5
+    type: edge
+    tags: [ w6.missing-return, w4.if ]
+    unsafe: true
+    prompt: UNSAFE code. Which calls fall off the end without a return? Select all.
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      std::string rank(int score) {
+          if (score >= 100) {
+              return "Gold";
+          }
+          if (score >= 50) {
+              return "Silver";
+          }
+          if (score > 0) {
+              return "Bronze";
+          }
+      }
+
+      int main() {
+          std::cout << rank(75) << '\n';
+          return 0;
+      }
+    options:
+      - t: rank(120)
+        why: Returns "Gold". Safe.
+      - t: rank(0)
+        why: "Exposes it: 0 > 0 is false, so no return runs. UB."
+      - t: rank(-5)
+        why: "Exposes it: negatives skip every if and fall off the end. UB."
+      - t: rank(50)
+        why: "50 >= 50 is true: returns \"Silver\"."
+      - t: rank(1)
+        why: "1 > 0 is true: returns \"Bronze\"."
+    answers: [ 1, 2 ]
+    hints:
+      - Test the boundaries of each if, and below them.
+      - What happens when every condition is false?
+    short: Scores of 0 or less skip every return. Add a final one.
+    explain: 'For score <= 0 every condition is false and the function reaches its closing } without returning: UB, and for std::string often a crash. g++ warns "control reaches end of non-void function". Add `return "Unranked";` at the end.'
+    sideBySide:
+      unsafe: |-
+        #include <string>
+
+        std::string rank(int score) {
+            if (score > 0) {
+                return "Bronze";
+            }
+        }   // score <= 0: no return, UB
+
+        int main() {
+            return rank(5).empty() ? 1 : 0;
+        }
+      hardened: |-
+        #include <string>
+
+        std::string rank(int score) {
+            if (score >= 100) {
+                return "Gold";
+            }
+            if (score >= 50) {
+                return "Silver";
+            }
+            if (score > 0) {
+                return "Bronze";
+            }
+            return "Unranked";   // the "none of the above" path
+        }
+
+        int main() {
+            return rank(0).empty() ? 1 : 0;
+        }
+  - id: w6.l5.c6
+    type: safe
+    tags: [ w6.validate, w6.dangling, w6.nodiscard, w6.missing-return, w6.assert ]
+    prompt: Safe or unsafe? The Sentinel's scouts are coming. Go fast!
+    seconds: 45
+    items:
+      - code: |-
+          if (amount < 0) {
+              return 1;
+          }
+        prelude: int amount{5};
+        safe: true
+        why: "A guard clause: bad input is rejected before any work."
+      - code: |-
+          #include <cassert>
+
+          assert(std::cin >> hp);
+        prelude: int hp{};
+        safe: false
+        why: With NDEBUG the read itself vanishes. Validate input with if.
+      - code: |-
+          std::string title() {
+              std::string t{"Hero"};
+              return t;
+          }
+          int main() { title(); }
+        prelude: "#include <string>"
+        safe: true
+        why: Returned by value, so the caller gets its own copy.
+      - code: |-
+          const std::string& title() {
+              std::string t{"Hero"};
+              return t;
+          }
+          int main() { title(); }
+        prelude: "#include <string>"
+        safe: false
+        why: "Reference to a local that dies at the return: dangling."
+      - code: |-
+          int sign(int x) {
+              if (x > 0) { return 1; }
+              if (x < 0) { return -1; }
+          }
+          int main() { return sign(5); }
+        safe: false
+        why: sign(0) falls off the end without a return. UB.
+      - code: |-
+          [[nodiscard]] bool spend(int cost) { return cost <= 10; }
+          int main() { spend(5); }
+        safe: false
+        why: The success flag is ignored. The compiler warns, and the check is lost.
+      - code: |-
+          void greet(const std::string& name) {
+              std::cout << "Hi, " << name << '\n';
+          }
+          int main() { greet("Curlo"); }
+        prelude: "#include <iostream>\n#include <string>"
+        safe: true
+        why: No copy, and const blocks accidental changes.
+      - code: |-
+          int clampHp(int hp) {
+              if (hp < 0) { return 0; }
+              if (hp > 100) { return 100; }
+              return hp;
+          }
+          int main() { return clampHp(50) == 50 ? 0 : 1; }
+        safe: true
+        why: Every path returns a value in range.
+    hints:
+      - Look for references to locals and paths without a return.
+      - Ignored results and asserts around input are traps too.
+    short: "Safe functions guard inputs, return by value, and return on every path."
+    explain: "Guard clauses, return by value, const references and a return on every path are safe. Asserting on input, ignoring [[nodiscard]] results, dangling references and missing returns are not."
+recap:
+  - "Guard clauses first: reject bad arguments early."
+  - "assert catches bugs; NDEBUG removes it. Not for input."
+  - "[[nodiscard]] makes ignored results warn."
+  - Return by value, and return on every path.
+vault:
+  - id: w6.guard
+    title: Guard clauses + [[nodiscard]]
+    code: |-
+      #include <iostream>
+
+      // Returns false (and leaves mana alone) when the spell can't be cast.
+      [[nodiscard]] bool canCast(int mana, int cost) {
+          if (cost < 0) {
+              return false;          // guard: nonsense cost
+          }
+          if (cost > mana) {
+              return false;          // guard: not enough mana
+          }
+          return true;
+      }
+
+      int main() {
+          if (!canCast(10, 4)) {     // ignoring the result would warn
+              std::cout << "Not enough mana\n";
+          }
+      }
+    note: Check parameters at the top and return early. [[nodiscard]] makes callers look at the result.
+    defense: true
+  - id: w6.assert
+    title: assert is for bugs, not input
+    code: |-
+      #include <cassert>
+      #include <iostream>
+
+      int share(int total, int count) {
+          assert(count > 0);         // precondition: a bug if false
+          return total / count;
+      }
+
+      int main() {
+          int count{};
+          if (!(std::cin >> count) || count <= 0) {   // input: real check
+              return 1;
+          }
+          std::cout << share(100, count) << '\n';
+      }
+    note: "-DNDEBUG deletes every assert. Never put input checks or needed work inside one."
+    defense: true
+  - id: w6.no-dangling
+    title: Return by value, on every path
+    code: |-
+      #include <string>
+
+      std::string title(int level) {       // by value: safe copy out
+          if (level >= 10) {
+              return "Champion";
+          }
+          return "Hero";                   // every path returns
+      }
+      // const std::string& title(...)  -> dangling if it returns a local
+      // missing final return           -> UB (-Wreturn-type)
+
+      int main() {
+          return title(3).empty() ? 1 : 0;
+      }
+    note: A local dies when its frame pops. Never return a reference or pointer to it (-Wreturn-local-addr).
+    defense: true
+reviewTags: [ w3.validate, w4.guard, w5.off-by-one, w6.scope, w6.byvalue, w6.constref ]

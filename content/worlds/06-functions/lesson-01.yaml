@@ -1,0 +1,267 @@
+# World 6 · Lesson 1: Your first spell (declaring and calling functions)
+
+id: w6.l1
+title: Your first spell
+skill: structure
+shield: false
+concept:
+  short: "A function is a named block of code: define it once, then call it by name whenever you need it."
+  analogy: A function is a spell in your spellbook; write the incantation once, then just shout its name.
+  body:
+    - "A **function definition** has a return type, a name, a parameter list in `()` and a body in `{}`: `int doubleIt(int x) { return x * 2; }`."
+    - "To **call** it, write its name followed by parentheses holding the arguments: `doubleIt(21)`. Execution jumps into the function, runs its body, then comes back to the exact spot it left, carrying the result."
+    - "`return` hands a value back to the caller and ends the function **immediately**; nothing after it runs. The value must match the return type (or convert to it)."
+    - "A `void` function returns nothing: it just does a job, like printing. It ends at its closing `}`, or early with a bare `return;`."
+    - "Every call gets its own fresh workspace called a **stack frame**, holding that call's parameters and local variables. The call **pushes** a frame; returning **pops** it, and everything inside is gone."
+    - "The compiler reads top to bottom, so a function must be declared before it's called. For now, put helper functions above `main()`. (Lesson 3 shows prototypes, the other way.)"
+  pitfall: "Common beginner mistake: writing `levelUp;` instead of `levelUp();`. Without the parentheses you only name the function and nothing runs. g++ warns: \"statement is a reference, not call\"."
+demo:
+  code: |-
+    #include <iostream>
+
+    void greet() {
+        std::cout << "Curlo reporting!\n";
+    }
+
+    int doubleIt(int x) {
+        return x * 2;
+    }
+
+    int main() {
+        greet();
+        int power = doubleIt(21);
+        std::cout << "Power: " << power << '\n';
+        return 0;
+    }
+  steps:
+    - line: 10
+      vars:
+        stack: main
+      note: Execution starts in main(), not at the top of the file.
+    - line: 11
+      vars:
+        stack: main > greet
+      note: "push frame: greet(). Jump into its body."
+    - line: 3
+      out: |
+        Curlo reporting!
+      note: greet's body runs and prints.
+    - line: 4
+      vars:
+        stack: main
+      note: "pop frame: void, so nothing comes back. Resume main."
+    - line: 12
+      vars:
+        stack: main > doubleIt
+        x: "21"
+      note: "push frame: doubleIt(x=21)."
+    - line: 7
+      vars:
+        stack: main
+        x: "(gone)"
+      note: "pop frame: return 42. x vanishes with its frame."
+    - line: 12
+      vars:
+        power: "42"
+      note: The returned 42 initializes power.
+    - line: 13
+      out: |
+        Power: 42
+    - line: 14
+      note: return 0 ends main, the very last frame.
+challenges:
+  - id: w6.l1.c1
+    type: predict
+    tags: [ w6.call, w1.cout ]
+    prompt: Functions can call other functions. What does this print?
+    code: |-
+      #include <iostream>
+
+      void a() {
+          std::cout << "A";
+      }
+
+      void b() {
+          std::cout << "B";
+          a();
+      }
+
+      int main() {
+          b();
+          a();
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          BAA
+        why: "Correct: b() prints B then calls a() (A); then main calls a() again (A)."
+      - t: |
+          ABA
+        why: Definition order doesn't matter. Only the order of calls, starting in main, does.
+      - t: |
+          BA
+        why: a() runs twice, once from inside b() and once from main.
+      - t: |
+          AAB
+        why: main calls b() first, and b prints B before calling a().
+    answer: 0
+    hints:
+      - Start in main and follow each call like a detour.
+      - When b() calls a(), finish a() before continuing in b().
+    short: "Follow the calls from main: B, then A inside b(), then A again."
+    explain: 'Execution starts in main. b() prints "B" and calls a(), which prints "A" and returns into b(), which returns into main. main then calls a() again: "A". Output: "BAA" and a newline.'
+  - id: w6.l1.c2
+    type: mcq
+    tags: [ w6.return ]
+    prompt: What does `return` do inside a function?
+    code: |-
+      #include <iostream>
+
+      int doubleIt(int x) {
+          return x * 2;
+          std::cout << "never printed\n";
+      }
+
+      int main() {
+          std::cout << doubleIt(4) << '\n';
+      }
+    options:
+      - t: Hands a value back to the caller and ends the function right away
+        why: "Correct: the caller receives x * 2, and the line after return never runs."
+      - t: Prints the value on the screen
+        why: return only hands the value back. Printing is std::cout's job.
+      - t: Ends the whole program
+        why: Only return in main() ends the program. Elsewhere it ends just that function.
+      - t: Saves the value for the next call of the function
+        why: Nothing is saved. Each call starts fresh with a brand-new frame.
+    answer: 0
+    hints:
+      - Where does the value of x * 2 go?
+      - Does the cout line ever run?
+    short: return sends the value back to the caller and exits the function.
+    explain: "return ends the function immediately and gives its value to whoever called it: `int y = doubleIt(4);` stores 8. Code after a return in the same block never runs."
+  - id: w6.l1.c3
+    type: fill
+    tags: [ w6.void ]
+    prompt: cheer() only prints and returns nothing. Fill in its return type.
+    code: |-
+      #include <iostream>
+
+      ___ cheer() {
+          std::cout << "Go, hero!\n";
+      }
+
+      int main() {
+          cheer();
+          return 0;
+      }
+    accept:
+      - void
+    placeholder: return type
+    hints:
+      - The function hands nothing back.
+      - The return type that means "nothing" has four letters.
+    short: void means the function returns nothing.
+    explain: "A function that only does a job and hands nothing back has return type `void`. With `int` instead, the missing return value would be undefined behavior (more in the Shield lesson)."
+  - id: w6.l1.c4
+    type: bug
+    tags: [ w6.call ]
+    prompt: '"Level up!" never prints. Tap the buggy line, then pick the fix.'
+    code: |-
+      #include <iostream>
+
+      void levelUp() {
+          std::cout << "Level up!\n";
+      }
+
+      int main() {
+          std::cout << "Quest done.\n";
+          levelUp;
+          return 0;
+      }
+    expect: warn
+    bugLine: 8
+    options:
+      - t: levelUp();
+        why: "Correct: the parentheses make it a call, so the body runs."
+      - t: void levelUp();
+        why: That's a declaration. It announces the function but still doesn't call it.
+      - t: return levelUp;
+        why: main must return an int, not a function. Compile error.
+      - t: std::cout << levelUp;
+        why: Prints 1 (the function's address converted to bool). Still no call.
+    answer: 0
+    hints:
+      - How does a call look different from just the name?
+      - g++ warns that this statement is "a reference, not call".
+    short: A call needs parentheses, levelUp(), even with no arguments.
+    explain: "`levelUp;` just names the function, so nothing happens and g++ warns about it. `levelUp();` calls it. Always read your warnings: this one points straight at the bug."
+    sideBySide:
+      unsafe: levelUp;     // names it, never calls it
+      hardened: levelUp();   // calls it
+      prelude: 'auto levelUp = [] { std::cout << "Level up!\n"; };'
+  - id: w6.l1.c5
+    type: order
+    tags: [ w6.call, w6.return, w1.include ]
+    prompt: "Order the program: add() must be defined before main() calls it."
+    lines:
+      - "#include <iostream>"
+      - "int add(int a, int b) {"
+      - "    return a + b;"
+      - "}"
+      - "int main() {"
+      - "    std::cout << add(2, 3) << '\\n';"
+      - "}"
+    distractors:
+      - "int add(a, b) {"
+    hints:
+      - The compiler reads top to bottom.
+      - Every parameter needs a type.
+    short: Include, define add(), then main() can call it.
+    explain: "The compiler must know add() before main() calls it, so its definition comes first. `int add(a, b)` is invalid: every parameter needs its type."
+  - id: w6.l1.c6
+    type: write
+    tags: [ w6.call, w6.return, w2.init ]
+    prompt: Write one line that declares an int named `big` and initializes it with the result of `doubleIt(7)`.
+    prelude: "auto doubleIt = [](int x) { return x * 2; };"
+    accept:
+      - int big = doubleIt(7);
+      - int big{doubleIt(7)};
+      - auto big = doubleIt(7);
+    acceptRe:
+      - ^(int|auto) big ?(= ?doubleIt ?\( ?7 ?\)|\{ ?doubleIt ?\( ?7 ?\) ?\}) ?;$
+    placeholder: int big ...
+    hints:
+      - A call is an expression; its value can initialize a variable.
+      - "int big = ...; with the call on the right."
+    short: int big = doubleIt(7); stores the returned 14.
+    explain: "A call to a non-void function is an expression with a value, so it can initialize a variable: `int big = doubleIt(7);` (or `int big{doubleIt(7)};`). big holds 14."
+recap:
+  - "Define once, call by name with ()."
+  - return hands back a value and exits.
+  - void functions do a job, return nothing.
+  - Each call gets its own stack frame.
+vault:
+  - id: w6.function
+    title: Anatomy of a function
+    code: |-
+      #include <iostream>
+
+      // return type, name, (parameters), { body }
+      int doubleIt(int x) {
+          return x * 2;
+      }
+
+      void cheer() {               // void: returns nothing
+          std::cout << "Go!\n";
+      }
+
+      int main() {
+          cheer();                 // a call needs ()
+          int big = doubleIt(21);  // use the returned value
+          std::cout << big << '\n';
+      }
+    note: Define (or declare) a function before calling it. Each call pushes a frame; return pops it.
+    defense: false
+reviewTags: [ w1.cout, w2.init, w3.arith ]

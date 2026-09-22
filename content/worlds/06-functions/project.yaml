@@ -1,0 +1,328 @@
+# World 6 mini-project: Spell Library
+
+id: w6.p
+title: Spell Library
+intro: "Write small spells, damage(), heal() and clampHp(), then chain them into one safe battle turn."
+steps:
+  - id: w6.p.s1
+    type: write
+    tags: [ w6.prototype ]
+    prompt: "Start the library's table of contents: write the prototype of damage, which takes int hp and int amount and returns an int."
+    accept:
+      - int damage(int hp, int amount);
+      - "[[nodiscard]] int damage(int hp, int amount);"
+    acceptRe:
+      - ^(\[\[nodiscard\]\])?int damage\(int( hp)?,int( amount)?\);$
+    placeholder: int damage(...);
+    hints:
+      - Return type, name, parameters with types.
+      - A prototype has no body and ends with a semicolon.
+    short: "int damage(int hp, int amount); promises the function exists."
+    explain: "A prototype is the signature plus `;`. With all prototypes at the top, main() can call the spells, and their bodies can come later in the file."
+  - id: w6.p.s2
+    type: fill
+    tags: [ w6.return, w4.guard, w4.if ]
+    prompt: clampHp keeps hp between 0 and 100. Fill in the first guard's condition.
+    code: |-
+      #include <iostream>
+
+      [[nodiscard]] int clampHp(int hp) {
+          if (___) {
+              return 0;
+          }
+          if (hp > 100) {
+              return 100;
+          }
+          return hp;
+      }
+
+      int main() {
+          std::cout << clampHp(-7) << '\n';
+          return 0;
+      }
+    accept:
+      - hp < 0
+      - 0 > hp
+      - hp <= 0
+    placeholder: condition
+    hints:
+      - Which values are below the valid range?
+      - The body returns 0 for them.
+    short: "if (hp < 0) return 0; clamps the low end."
+    explain: "Values below 0 are clamped to 0, values above 100 to 100, and everything else passes through. Every path returns, so there's no UB. (hp <= 0 also works: returning 0 for 0 changes nothing.)"
+  - id: w6.p.s3
+    type: order
+    tags: [ w6.validate, w4.guard ]
+    prompt: "Order heal()'s body: the guard clause first, then the happy path."
+    prelude: "auto clampHp = [](int v) { return v < 0 ? 0 : (v > 100 ? 100 : v); }; int hp{50}; int amount{20};"
+    lines:
+      - "if (amount < 0) {"
+      - "    return hp;"
+      - "}"
+      - return clampHp(hp + amount);
+    distractors:
+      - return hp - amount;
+    hints:
+      - Reject bad input before doing the work.
+      - Healing adds; the result is clamped.
+    short: Guard against negative amounts, then return the clamped sum.
+    explain: "Guard clauses go first: a negative amount returns hp untouched. Then the happy path adds and clamps. (The final program also caps the amount before adding, so a huge potion can't overflow.)"
+  - id: w6.p.s4
+    type: predict
+    tags: [ w6.return, w6.call ]
+    prompt: "Test the clamp: what does this print?"
+    code: |-
+      #include <iostream>
+
+      int clampHp(int hp) {
+          if (hp < 0) {
+              return 0;
+          }
+          if (hp > 100) {
+              return 100;
+          }
+          return hp;
+      }
+
+      int main() {
+          std::cout << clampHp(-7) << ' ' << clampHp(55) << ' ' << clampHp(250) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          0 55 100
+        why: "Correct: -7 clamps up to 0, 55 passes through, 250 clamps down to 100."
+      - t: |
+          -7 55 250
+        why: The guards change out-of-range values before they're returned.
+      - t: |
+          0 55 250
+        why: The second guard catches anything above 100.
+      - t: |
+          0 0 100
+        why: 55 is in range, so it reaches the final return hp.
+    answer: 0
+    hints:
+      - Which guard does each value hit, if any?
+      - In-range values reach the last line.
+    short: "-7 becomes 0, 55 stays, 250 becomes 100."
+    explain: 'Each call gets its own frame: -7 hits the first guard (0), 55 passes both (55), 250 hits the second (100). Output: "0 55 100" and a newline.'
+  - id: w6.p.s5
+    type: write
+    tags: [ w6.return, w6.nodiscard ]
+    prompt: "battleTurn(hp, hit, potion) returns the new hp. Write the line that runs a turn with hit 30 and potion 10 and keeps the result."
+    prelude: "auto battleTurn = [](int h, int hit, int potion) { return h - hit + potion; }; int hp{100};"
+    accept:
+      - hp = battleTurn(hp, 30, 10);
+    placeholder: hp = ...
+    hints:
+      - The function can't change hp itself.
+      - Store the returned value back into hp.
+    short: hp = battleTurn(hp, 30, 10); keeps the new hp.
+    explain: "Every spell returns a new value instead of changing the caller's variable, so the caller stores it: `hp = battleTurn(hp, 30, 10);`. [[nodiscard]] on battleTurn makes forgetting the `hp =` a warning."
+program: |-
+  #include <cassert>
+  #include <iostream>
+
+  [[nodiscard]] int clampHp(int hp);
+  [[nodiscard]] int damage(int hp, int amount);
+  [[nodiscard]] int heal(int hp, int amount);
+  [[nodiscard]] int battleTurn(int hp, int hit, int potion);
+
+  int main() {
+      int hp{100};
+      hp = battleTurn(hp, 30, 10);
+      std::cout << "After turn 1: " << hp << '\n';    // 80
+      hp = battleTurn(hp, -20, 50);
+      std::cout << "After turn 2: " << hp << '\n';    // 100
+      hp = battleTurn(hp, 150, 10);
+      std::cout << "After turn 3: " << hp << '\n';    // 0
+      return 0;
+  }
+
+  // Keeps hp in the valid range 0..100.
+  int clampHp(int hp) {
+      if (hp < 0) {
+          return 0;
+      }
+      if (hp > 100) {
+          return 100;
+      }
+      return hp;
+  }
+
+  // Precondition: hp is 0..100. Negative damage is ignored.
+  int damage(int hp, int amount) {
+      assert(hp >= 0 && hp <= 100);
+      if (amount < 0) {
+          return hp;
+      }
+      return clampHp(hp - amount);    // hp - amount can't overflow here
+  }
+
+  // Precondition: hp is 0..100. Negative healing is ignored.
+  int heal(int hp, int amount) {
+      assert(hp >= 0 && hp <= 100);
+      if (amount < 0) {
+          return hp;
+      }
+      if (amount >= 100 - hp) {
+          return 100;                 // capped BEFORE adding: no overflow
+      }
+      return hp + amount;
+  }
+
+  // One turn: take a hit, then drink a potion if still standing.
+  int battleTurn(int hp, int hit, int potion) {
+      hp = clampHp(hp);
+      hp = damage(hp, hit);
+      if (hp == 0) {
+          return 0;                   // knocked out: no potion
+      }
+      return heal(hp, potion);
+  }
+stress:
+  intro: Brace yourself! I'll cast cursed arguments at your Spell Library. Patch every crack!
+  attacks:
+    - input: damage(hp, -20)
+      label: Negative damage heals the enemy!
+      challenge:
+        id: w6.p.a1
+        type: harden
+        tags: [ w6.validate, w4.guard ]
+        prompt: "damage(80, -20) returns 100: the attack HEALS! Pick the guard."
+        prelude: |-
+          int clampHp(int hp) {
+              return hp < 0 ? 0 : (hp > 100 ? 100 : hp);
+          }
+        code: |-
+          #include <iostream>
+
+          [[nodiscard]] int damage(int hp, int amount) {
+              if (___) {
+                  return hp;
+              }
+              return clampHp(hp - amount);
+          }
+
+          int main() {
+              std::cout << damage(80, -20) << '\n';
+              return 0;
+          }
+        options:
+          - t: amount < 0
+            why: "Correct: negative damage is rejected and hp comes back unchanged."
+          - t: amount > hp
+            why: That's overkill, which clampHp already handles. -20 still slips through.
+          - t: hp < 0
+            why: Wrong parameter. The attack is in amount.
+          - t: amount == 0
+            why: Zero damage is harmless. Negatives are the problem.
+        answer: 0
+        hints:
+          - Which parameter carries the curse?
+          - Subtracting a negative number adds.
+        short: Guard amount < 0 so damage can never heal.
+        explain: "hp - (-20) is hp + 20, so unguarded negative damage heals. The guard `amount < 0` rejects the whole negative range before the math runs."
+        sideBySide:
+          unsafe: return clampHp(hp - amount);   // damage(80, -20) gives 100!
+          hardened: |-
+            if (amount < 0) {
+                return hp;                    // guard: damage can't heal
+            }
+            return clampHp(hp - amount);
+          prelude: "auto clampHp = [](int v) { return v < 0 ? 0 : (v > 100 ? 100 : v); }; int hp{80}; int amount{-20};"
+    - input: heal(hp, 10);
+      label: Result thrown away!
+      challenge:
+        id: w6.p.a2
+        type: bug
+        tags: [ w6.nodiscard, w6.return ]
+        prompt: The potion does nothing, and g++ warns "ignoring return value". Tap the buggy line, then pick the fix.
+        code: |-
+          #include <iostream>
+
+          [[nodiscard]] int heal(int hp, int amount) {
+              if (amount < 0) {
+                  return hp;
+              }
+              return hp + amount;
+          }
+
+          int main() {
+              int hp{40};
+              heal(hp, 10);
+              std::cout << "HP: " << hp << '\n';
+              return 0;
+          }
+        expect: warn
+        bugLine: 11
+        options:
+          - t: hp = heal(hp, 10);
+            why: "Correct: the healed value is stored, and the warning goes away for the right reason."
+          - t: (void)heal(hp, 10);
+            why: Silences the warning but still throws the healing away.
+          - t: int healed = heal(hp, 10);
+            why: Stores it in a new variable, but hp is still printed unchanged.
+          - t: heal(hp, 10 + 0);
+            why: Changes the argument, not the problem. The result is still dropped.
+        answer: 0
+        hints:
+          - The function returns the new hp. Who keeps it?
+          - "[[nodiscard]] is telling you exactly this."
+        short: "Store the result: hp = heal(hp, 10);. [[nodiscard]] flagged it."
+        explain: "heal() works on a copy and returns the result. Calling it without using the value does nothing. Because heal is [[nodiscard]], g++ warns; treat that warning as a bug report."
+        sideBySide:
+          unsafe: "heal(hp, 10);        // warning: result ignored, hp stays 40"
+          hardened: hp = heal(hp, 10);   // hp is 50
+          prelude: "auto heal = [](int h, int a) { return a < 0 ? h : h + a; }; int hp{40};"
+    - input: const std::string& spell = spellName(80);
+      label: Dangling reference!
+      challenge:
+        id: w6.p.a3
+        type: harden
+        tags: [ w6.dangling, w6.lifetime ]
+        bug: dangling-ref
+        prompt: "The Spell Library returns spell names. Pick the return type that can't dangle."
+        code: |-
+          #include <iostream>
+          #include <string>
+
+          ___ spellName(int power) {
+              std::string name = power > 50 ? "Meteor" : "Spark";
+              return name;
+          }
+
+          int main() {
+              std::cout << spellName(80) << '\n';
+              return 0;
+          }
+        options:
+          - t: std::string
+            why: "Correct: returns by value, so the caller gets its own string. Nothing dangles."
+          - t: const std::string&
+            why: "A reference to local name, which dies at the return: dangling, UB."
+          - t: std::string&
+            why: Same dangling reference, minus the const.
+          - t: void
+            why: A void function can't return a value. Compile error.
+        answer: 0
+        hints:
+          - name dies when spellName returns.
+          - Hand back a copy, not a reference.
+        short: Return std::string by value; a reference to local name dangles.
+        explain: 'name lives in spellName''s frame and is destroyed at the return. A reference to it points at dead memory: UB that may print "Meteor" today and garbage tomorrow. g++ warns with -Wreturn-local-addr. By value is safe and cheap (the string is moved out).'
+        sideBySide:
+          unsafe: |-
+            const std::string& spellName(int power) {
+                std::string name = power > 50 ? "Meteor" : "Spark";
+                return name;          // name dies here: dangling!
+            }
+            int main() { return spellName(80).empty() ? 1 : 0; }
+          hardened: |-
+            std::string spellName(int power) {
+                std::string name = power > 50 ? "Meteor" : "Spark";
+                return name;          // copied (moved) out: safe
+            }
+            int main() { return spellName(80).empty() ? 1 : 0; }
+          prelude: "#include <string>"

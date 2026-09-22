@@ -1,0 +1,277 @@
+# World 6 · Lesson 2: Parameters in, values out
+
+id: w6.l2
+title: Parameters in, values out
+skill: structure
+shield: false
+concept:
+  short: Parameters are a function's inputs. By default each one is a fresh copy of the argument you pass.
+  analogy: Passing by value is handing the wizard a photocopy; scribble on it all you like, your original stays clean.
+  body:
+    - "**Parameters** are listed in the parentheses with their types: `int heal(int hp, int amount)`. The values in a call are the **arguments**: `heal(3, 5)`. They match up by position: first to first, second to second."
+    - "By default C++ passes **by value**: each parameter is a brand-new copy living in the function's frame. Changing it inside the function never changes the caller's variable."
+    - "To get a result out, `return` it and let the caller store it: `hp = heal(hp, 5);`. Calling `heal(hp, 5);` alone computes the answer and throws it away."
+    - "The number of arguments must match, and each must convert to its parameter's type. `heal(3)` doesn't compile when two parameters are required (unless one has a default, see lesson 3)."
+    - "Copying an `int` is free. Copying a big `std::string` isn't: every call duplicates all its characters. For text you only read, take a **const reference**: `void greet(const std::string& name)`. The `&` means no copy is made, and `const` promises the function won't change it. (References get a whole world later; for now, use this for read-only strings.)"
+  pitfall: "Common beginner mistake: expecting `void addGold(int gold) { gold += 10; }` to change the caller's gold. It changes the copy, which vanishes when the function returns. Return the new value instead."
+demo:
+  code: |-
+    #include <iostream>
+
+    int heal(int hp, int amount) {
+        hp = hp + amount;
+        return hp;
+    }
+
+    int main() {
+        int hp{3};
+        heal(hp, 5);
+        std::cout << hp << '\n';
+        hp = heal(hp, 5);
+        std::cout << hp << '\n';
+        return 0;
+    }
+  steps:
+    - line: 8
+      vars:
+        "main: hp": "3"
+      note: main's hp starts at 3.
+    - line: 9
+      vars:
+        "heal: hp": "3"
+        "heal: amount": "5"
+      note: "push frame: heal(hp=3, amount=5). Both are copies!"
+    - line: 3
+      vars:
+        "heal: hp": "8"
+      note: Only the copy changes. main's hp is still 3.
+    - line: 4
+      vars:
+        "heal: hp": "(gone)"
+        "heal: amount": "(gone)"
+      note: "pop frame: return 8. Nobody stores it!"
+    - line: 10
+      out: |
+        3
+      note: main's hp never changed.
+    - line: 11
+      vars:
+        "heal: hp": "3"
+        "heal: amount": "5"
+      note: "push frame again: heal(hp=3, amount=5)."
+    - line: 4
+      vars:
+        "heal: hp": "(gone)"
+        "heal: amount": "(gone)"
+      note: "pop frame: return 8."
+    - line: 11
+      vars:
+        "main: hp": "8"
+      note: This time main stores the result in hp.
+    - line: 12
+      out: |
+        8
+    - line: 13
+      note: "Lesson: values go in as copies; results come back via return."
+challenges:
+  - id: w6.l2.c1
+    type: predict
+    tags: [ w6.byvalue, w6.params ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+
+      void addGold(int gold) {
+          gold += 10;
+          std::cout << gold << ' ';
+      }
+
+      int main() {
+          int gold{5};
+          addGold(gold);
+          std::cout << gold << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          15 5
+        why: "Correct: the function's copy becomes 15; main's gold is untouched at 5."
+      - t: |
+          15 15
+        why: The parameter is a copy. Changing it can't reach main's gold.
+      - t: |
+          5 5
+        why: Inside the function the copy really does become 15, and that's what it prints.
+      - t: |
+          10 5
+        why: "+= adds to the existing value: 5 + 10 = 15."
+    answer: 0
+    hints:
+      - The two variables named gold live in different frames.
+      - The parameter starts as a copy of 5.
+    short: The parameter is a copy; main's gold stays 5.
+    explain: 'addGold gets a copy of 5 and makes the copy 15, printing "15 ". main''s gold is a different variable and still 5. Output: "15 5" and a newline.'
+  - id: w6.l2.c2
+    type: mcq
+    tags: [ w6.params, w6.call ]
+    prompt: "Which call matches this function?"
+    code: int damage(int attack, int armor);
+    options:
+      - t: damage(10, 3)
+        why: "Correct: two int arguments, matched by position to attack and armor."
+      - t: damage(10)
+        why: "Too few arguments: armor has no default, so this doesn't compile."
+      - t: damage(int 10, int 3)
+        why: Types belong in the declaration, not in the call.
+      - t: damage[10, 3]
+        why: Calls use parentheses, not square brackets.
+    answer: 0
+    hints:
+      - Count the parameters.
+      - A call lists values only, no types.
+    short: damage(10, 3) passes two ints, matched by position.
+    explain: A call passes one argument per parameter, in order, without types. 10 goes to attack, 3 goes to armor.
+  - id: w6.l2.c3
+    type: fill
+    tags: [ w6.return, w6.params ]
+    prompt: Complete heal() so it hands back hp plus amount.
+    code: |-
+      #include <iostream>
+
+      int heal(int hp, int amount) {
+          ___
+      }
+
+      int main() {
+          std::cout << heal(7, 3) << '\n';
+          return 0;
+      }
+    accept:
+      - return hp + amount;
+      - return amount + hp;
+      - return (hp + amount);
+    placeholder: one statement
+    hints:
+      - The result has to go back to the caller.
+      - "return ...; with the sum after it."
+    short: return hp + amount; hands the sum back.
+    explain: "`return hp + amount;` computes the sum and gives it to the caller, so heal(7, 3) is 10. Without a return, an int function is UB (Shield lesson!)."
+  - id: w6.l2.c4
+    type: mcq
+    tags: [ w6.constref, w2.string ]
+    prompt: A function only reads a long player name. Which parameter is best?
+    options:
+      - t: const std::string& name
+        why: "Correct: no copy is made, and const stops the function from changing it."
+      - t: std::string name
+        why: Works, but copies every character on every call.
+      - t: std::string& name
+        why: "No copy, but the function could change the caller's string, and it rejects literals like \"Curlo\"."
+      - t: const std::string name
+        why: The const is nice, but it's still a full copy.
+    answer: 0
+    hints:
+      - You want no copy AND no accidental changes.
+      - "& means \"refer to the original\"; const means \"read-only\"."
+    short: const std::string& reads the original without copying or changing it.
+    explain: "Passing a std::string by value copies it. `const std::string&` refers to the caller's string (no copy) and `const` forbids changes. It also accepts literals like \"Curlo\". Small types like int: just pass by value."
+  - id: w6.l2.c5
+    type: bug
+    tags: [ w6.return, w6.byvalue ]
+    prompt: The level should go from 4 to 5, but it prints "Level 4". Tap the buggy line, then pick the fix.
+    code: |-
+      #include <iostream>
+
+      int levelUp(int level) {
+          return level + 1;
+      }
+
+      int main() {
+          int level{4};
+          levelUp(level);
+          std::cout << "Level " << level << '\n';
+          return 0;
+      }
+    bugLine: 8
+    options:
+      - t: level = levelUp(level);
+        why: "Correct: the returned 5 is stored back into main's level."
+      - t: levelUp(level + 1);
+        why: Computes 6 and still throws the result away.
+      - t: int level = levelUp(level);
+        why: Redeclares level in the same scope. Compile error.
+      - t: levelUp(&level);
+        why: That passes an address, and levelUp takes an int. Compile error.
+    answer: 0
+    hints:
+      - levelUp returns a value. Where does it go?
+      - A result you don't store is lost.
+    short: Store the returned value, level = levelUp(level);, or it's lost.
+    explain: "levelUp works on a copy and returns the new value. Calling it without storing the result throws that value away. `level = levelUp(level);` keeps it. (The Shield lesson shows how [[nodiscard]] makes the compiler catch this.)"
+    sideBySide:
+      unsafe: levelUp(level);            // result thrown away
+      hardened: level = levelUp(level);    // result stored
+      prelude: "auto levelUp = [](int lv) { return lv + 1; }; int level{4};"
+  - id: w6.l2.c6
+    type: predict
+    tags: [ w6.constref, w6.return, w2.string ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      std::string title(const std::string& name, int level) {
+          return name + " (Lv " + std::to_string(level) + ")";
+      }
+
+      int main() {
+          std::cout << title("Curlo", 3) << '!' << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          Curlo (Lv 3)!
+        why: "Correct: the pieces are glued exactly as written, spaces included."
+      - t: |
+          Curlo(Lv 3)!
+        why: 'The second piece starts with a space: " (Lv ".'
+      - t: |
+          Curlo (Lv3)!
+        why: '"(Lv " ends with a space before the number.'
+      - t: |
+          name (Lv level)!
+        why: name and level are variables, so their values are used, not their names.
+    answer: 0
+    hints:
+      - Look closely at the spaces inside the quotes.
+      - std::to_string(3) gives the text "3".
+    short: 'The function returns "Curlo (Lv 3)", then main adds the "!".'
+    explain: 'title glues "Curlo", " (Lv ", "3" and ")" into "Curlo (Lv 3)" and returns it by value. main prints it, then "!" and a newline.'
+recap:
+  - Arguments match parameters by position.
+  - "By value: the function gets a copy."
+  - Return the result; the caller must store it.
+  - "Read-only strings: const std::string&."
+vault:
+  - id: w6.params
+    title: Parameters and return values
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      int heal(int hp, int amount) {         // copies in
+          return hp + amount;                 // one value out
+      }
+
+      void greet(const std::string& name) {  // no copy, read-only
+          std::cout << "Hi, " << name << "!\n";
+      }
+
+      int main() {
+          int hp{3};
+          hp = heal(hp, 5);                   // store the result!
+          greet("Curlo");
+      }
+    note: Parameters are copies; changes inside never reach the caller. Return the new value instead.
+    defense: false
+reviewTags: [ w2.string, w3.compare, w4.if, w6.call ]

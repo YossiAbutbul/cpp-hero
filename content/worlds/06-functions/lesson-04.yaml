@@ -1,0 +1,304 @@
+# World 6 · Lesson 4: Scope and lifetime (stack frames)
+
+id: w6.l4
+title: Scope and lifetime
+skill: memory
+shield: false
+concept:
+  short: A local variable lives only inside its block. When the function returns, its frame and locals vanish.
+  analogy: "A stack frame is a hotel room: you get it at check-in (the call), and it's emptied at check-out (the return)."
+  body:
+    - "**Scope** is where a name can be used. A variable declared inside `{ }` is visible from its declaration to that block's closing `}`. Parameters are in scope for their whole function."
+    - "**Lifetime** is when the variable actually exists. A local is created when execution reaches it and destroyed at the end of its block. Every call gets **fresh** locals: a local does not remember its value from the previous call."
+    - "Each call **pushes** a stack frame holding its parameters and locals, and `return` **pops** it. That's why two calls of the same function get independent variables, and why one function can't see another's locals."
+    - "Two functions can both have a local named `hp` without clashing: they're different variables in different frames."
+    - "An inner block may declare a name that **shadows** an outer one. It compiles, but the outer variable is hidden until the inner `}`, which confuses readers. Prefer distinct names (`-Wshadow` warns)."
+    - "Global variables (declared outside every function) live for the whole program and any function can change them, which makes bugs hard to trace. Pass values in and return results out instead."
+  pitfall: "Common beginner mistake: counting calls with a local `int count{0}; ++count;` and expecting it to keep growing. It restarts at 0 every call, because every call gets a brand-new frame."
+demo:
+  code: |-
+    #include <iostream>
+
+    int roll(int sides) {
+        int result = sides / 2 + 1;
+        return result;
+    }
+
+    int main() {
+        int total{0};
+        total += roll(6);
+        total += roll(4);
+        std::cout << "Total: " << total << '\n';
+        return 0;
+    }
+  steps:
+    - line: 8
+      vars:
+        stack: main
+        "main: total": "0"
+      note: main's frame holds total.
+    - line: 9
+      vars:
+        stack: main > roll
+        "roll: sides": "6"
+      note: "push frame: roll(sides=6)."
+    - line: 3
+      vars:
+        "roll: result": "4"
+      note: "result is a local: it lives only in roll's frame."
+    - line: 4
+      vars:
+        stack: main
+        "roll: sides": "(gone)"
+        "roll: result": "(gone)"
+      note: "pop frame: return 4. sides and result vanish."
+    - line: 9
+      vars:
+        "main: total": "4"
+      note: Back in main, total is now 4.
+    - line: 10
+      vars:
+        stack: main > roll
+        "roll: sides": "4"
+      note: "push frame: roll(sides=4). A brand-new frame."
+    - line: 3
+      vars:
+        "roll: result": "3"
+      note: A fresh result. Nothing is left over from the last call.
+    - line: 4
+      vars:
+        stack: main
+        "roll: sides": "(gone)"
+        "roll: result": "(gone)"
+      note: "pop frame: return 3."
+    - line: 10
+      vars:
+        "main: total": "7"
+      note: total is now 7.
+    - line: 11
+      out: |
+        Total: 7
+    - line: 12
+      note: main's frame pops last. Everything is cleaned up.
+challenges:
+  - id: w6.l4.c1
+    type: mcq
+    tags: [ w6.scope ]
+    prompt: Can main() print `result` like this?
+    code: |-
+      #include <iostream>
+
+      int roll(int sides) {
+          int result = sides / 2 + 1;
+          return result;
+      }
+
+      int main() {
+          roll(6);
+          std::cout << result << '\n';
+          return 0;
+      }
+    expect: error
+    options:
+      - t: "No: compile error, result isn't in scope in main"
+        why: "Correct: result belongs to roll's body. main can only see its own names."
+      - t: Yes, it prints 4
+        why: The 4 was returned and thrown away. The name result never exists in main.
+      - t: Yes, but it prints garbage
+        why: It never gets that far. The compiler rejects the unknown name.
+      - t: Only because roll(6) was called first
+        why: Calling roll doesn't make its locals visible. Scope is about where code is written.
+    answer: 0
+    hints:
+      - Where is result declared?
+      - A local is visible only inside its own braces.
+    short: "result is local to roll; main can't name it. Compile error."
+    explain: "Scope is decided by the braces: result is declared inside roll, so only roll's body can use it. g++ says \"'result' was not declared in this scope\". To use the value, store the return: `int r = roll(6);`."
+  - id: w6.l4.c2
+    type: predict
+    tags: [ w6.lifetime, w6.call ]
+    prompt: A call counter with a local variable. What does this print?
+    code: |-
+      #include <iostream>
+
+      int countCall() {
+          int count{0};
+          ++count;
+          return count;
+      }
+
+      int main() {
+          std::cout << countCall() << countCall() << countCall() << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          111
+        why: "Correct: every call gets a brand-new count that starts at 0 and becomes 1."
+      - t: |
+          123
+        why: A local doesn't survive between calls. Each frame starts from scratch.
+      - t: |
+          321
+        why: Since C++17 the chain runs left to right, and every call returns 1 anyway.
+      - t: |
+          000
+        why: ++count runs before the return, so each call returns 1.
+    answer: 0
+    hints:
+      - Does count remember anything after the function returns?
+      - Each call pushes a fresh frame.
+    short: Each call gets a fresh count, so every call returns 1.
+    explain: 'count is created at 0 on every call and destroyed on return, so each call returns 1. Output: "111" and a newline. To keep a running count, pass it in and return the new value.'
+  - id: w6.l4.c3
+    type: predict
+    tags: [ w6.scope ]
+    prompt: An inner block reuses a name. What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int hp{10};
+          {
+              int hp{3};
+              std::cout << hp << ' ';
+          }
+          std::cout << hp << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          3 10
+        why: "Correct: the inner hp shadows the outer one until its }, then the outer 10 is back."
+      - t: |
+          3 3
+        why: The inner hp is a separate variable. The outer hp was never changed.
+      - t: |
+          10 10
+        why: Inside the block, the name hp means the inner variable (3).
+      - t: Compile error
+        why: Shadowing in an inner block is legal. Confusing, but legal.
+    answer: 0
+    hints:
+      - The inner block declares a second hp.
+      - "After the inner }, which hp is left?"
+    short: The inner hp hides the outer one only until its closing brace.
+    explain: 'The inner `int hp{3};` is a new variable that shadows the outer hp inside its block. At the }, it dies, and hp means the outer 10 again. Output: "3 10" and a newline. Legal, but prefer distinct names.'
+  - id: w6.l4.c4
+    type: write
+    tags: [ w6.return, w6.lifetime ]
+    prompt: nextTurn(t) returns t + 1. Write one line that makes main's `turn` go up by one using it.
+    prelude: "auto nextTurn = [](int t) { return t + 1; }; int turn{0};"
+    accept:
+      - turn = nextTurn(turn);
+    placeholder: turn = ...
+    hints:
+      - The function can't change turn itself; it works on a copy.
+      - Store the returned value back into turn.
+    short: turn = nextTurn(turn); passes a copy in and stores the result.
+    explain: "The function receives a copy, so it can't touch main's turn directly. It returns the new value, and main stores it: `turn = nextTurn(turn);`. No globals needed."
+  - id: w6.l4.c5
+    type: bug
+    tags: [ w6.scope, w5.while ]
+    prompt: "This doesn't compile: \"lastHit was not declared in this scope\". Tap the buggy line, then pick the fix."
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int turn{0};
+          while (turn < 3) {
+              int lastHit = turn * 2;
+              ++turn;
+          }
+          std::cout << "Last hit: " << lastHit << '\n';
+          return 0;
+      }
+    expect: error
+    bugLine: 5
+    options:
+      - t: "lastHit = turn * 2;   // with int lastHit{0}; declared before the loop"
+        why: "Correct: declared outside, it lives past the loop; the body just updates it."
+      - t: int lastHit{turn * 2};
+        why: Still declared inside the loop body, so it still dies at the loop's }.
+      - t: int lastHit = turn * 2; return lastHit;
+        why: Returns from main on the first pass and never prints.
+      - t: "int lastHit = (turn * 2);"
+        why: Parentheses don't change scope. Still gone after the loop.
+    answer: 0
+    hints:
+      - Where does a variable declared inside the loop's braces die?
+      - Declare it where the print can still see it.
+    short: Declare lastHit before the loop so it's still alive after it.
+    explain: "A variable declared inside the loop body is destroyed at the body's } on every pass. Declare `int lastHit{0};` before the loop and assign inside it; then the print after the loop can see the last value (4)."
+    sideBySide:
+      unsafe: |-
+        while (turn < 3) {
+            int lastHit = turn * 2;   // dies at }
+            ++turn;
+        }
+        std::cout << lastHit;         // error: not in scope
+      expect: error
+      hardened: |-
+        int lastHit{0};
+        while (turn < 3) {
+            lastHit = turn * 2;
+            ++turn;
+        }
+        std::cout << "Last hit: " << lastHit << '\n';
+      prelude: int turn{0};
+  - id: w6.l4.c6
+    type: mcq
+    tags: [ w6.scope, w6.lifetime ]
+    prompt: "Two functions each declare `int hp`. What happens?"
+    code: |-
+      int heal(int x) {
+          int hp = x + 5;
+          return hp;
+      }
+
+      int hurt(int x) {
+          int hp = x - 5;
+          return hp;
+      }
+
+      int main() {
+          return heal(1) + hurt(9);
+      }
+    options:
+      - t: They are two separate variables that never clash
+        why: "Correct: each hp lives in its own function's frame."
+      - t: "Compile error: hp is defined twice"
+        why: Different scopes can reuse a name. Only the same scope forbids it.
+      - t: They share one variable, so the second overwrites the first
+        why: Locals are never shared between functions. Each call gets its own.
+      - t: The one in the later function hides the earlier one everywhere
+        why: Neither hp is visible outside its own function body.
+    answer: 0
+    hints:
+      - Where does each hp live?
+      - Scope ends at the closing brace of each function.
+    short: Same name, different functions, different frames, different variables.
+    explain: Each hp is local to its function and lives in that call's frame. They can't see or overwrite each other. main returns 6 + 4 = 10.
+recap:
+  - "Scope: a name works until its block's }."
+  - Locals are born fresh on every call.
+  - return pops the frame; its locals vanish.
+  - Same name in two functions means two variables.
+vault:
+  - id: w6.scope
+    title: Scope and lifetime
+    code: |-
+      #include <iostream>
+
+      int roll(int sides) {        // sides lives in roll's frame
+          int result = sides / 2;  // local: created on every call
+          return result;           // value copied out, frame popped
+      }
+
+      int main() {
+          int r = roll(6);         // store it: result itself is gone
+          std::cout << r << '\n';
+      }
+    note: A local lives from its declaration to its block's }. Nothing survives between calls.
+    defense: false
+reviewTags: [ w5.while, w5.for, w6.params, w6.return ]
