@@ -1,34 +1,20 @@
-/* Placeholder map styles (Phase A). */
-.map-ph {
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 16px 16px 48px;
-  height: 100%;
-  overflow-y: auto;
-}
-.map-ph__top h1 {
-  font-family: var(--f-disp);
+/* Placeholder map styles (replaced by the real map). */
+.map-ph__title {
   color: var(--tang-d);
-  margin: 8px 0 0;
-}
-.map-ph__hud {
-  margin: 0 0 16px;
-  color: var(--ink2);
-  font-weight: 700;
+  margin: 6px 0 12px;
 }
 .map-ph__world {
   background: var(--card);
   border-radius: var(--r-l);
   box-shadow: var(--sh);
-  padding: 16px 20px;
+  padding: 16px 16px;
   margin-bottom: 16px;
 }
 .map-ph__world.is-locked {
   opacity: 0.6;
 }
 .map-ph__world h2 {
-  font-family: var(--f-disp);
-  margin: 0;
+  font-size: 1.3rem;
 }
 .map-ph__blurb {
   color: var(--muted);
@@ -36,10 +22,25 @@
 }
 .map-ph__world ol {
   margin: 0;
-  padding-left: 1.4em;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
 }
-.map-ph__world li {
-  padding: 3px 0;
+.map-ph__node {
+  width: 100%;
+  text-align: left;
+  border: 2px solid var(--line);
+  background: #fff;
+  border-radius: 14px;
+  padding: 8px 10px;
+  font-weight: 800;
+  box-shadow: 0 3px 0 var(--line);
+  transition: transform 0.15s var(--spring);
+}
+.map-ph__node:active {
+  transform: translateY(3px);
+  box-shadow: none;
 }
 .map-ph__state {
   display: inline-block;
@@ -49,10 +50,10 @@
   text-transform: uppercase;
   color: var(--muted);
 }
-.is-done > .map-ph__state {
+.is-done .map-ph__state {
   color: var(--teal-d);
 }
-.is-open > .map-ph__state {
+.is-open .map-ph__state {
   color: var(--tang-d);
 }
 .map-ph__badge,
@@ -62,6 +63,7 @@
   font-weight: 800;
   border-radius: 999px;
   padding: 1px 8px;
+  white-space: nowrap;
 }
 .map-ph__badge {
   background: var(--teal-l);
@@ -70,9 +72,4 @@
 .map-ph__here {
   background: var(--tang);
   color: #fff;
-}
-.map-ph__meta {
-  margin-left: 8px;
-  font-size: 0.75rem;
-  color: var(--muted);
 }

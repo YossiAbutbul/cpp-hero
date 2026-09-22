@@ -1,9 +1,10 @@
 /**
  * Boots the engine once: loads the save (localStorage with in-memory
  * fallback), creates the game over the current content and keeps it in sync
- * with content hot reloads. Phase B adds finer-grained subscriptions.
+ * with content hot reloads. Re-renders consumers whenever the save changes.
  */
-import { useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import type { SaveV1 } from '@/engine/save';
 import { getContent } from '@/content';
 import { useContent } from '@/content/useContent';
 import { createGame, type Game } from '@/engine/game';
@@ -33,9 +34,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setShownContent(content);
   }
 
+  const update = useCallback(
+    (fn: (state: SaveV1) => void) => {
+      fn(store.state);
+      store.save();
+      setVersion((v) => v + 1);
+    },
+    [store],
+  );
+
   useEffect(() => {
     const bump = () => setVersion((v) => v + 1);
-    const offs = [store.subscribe(bump), game.events.on('xp', bump), game.events.on('hearts', bump)];
+    const offs = [
+      store.subscribe(bump),
+      ...(['xp', 'hearts', 'quests', 'streak', 'equip', 'stats', 'combo'] as const).map((e) => game.events.on(e, bump)),
+    ];
     // Flush pending writes when the page is hidden or closed.
     const flush = () => void store.saveNow();
     const onVisibility = () => {
@@ -51,12 +64,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [store, game]);
 
   return (
-    <GameContext.Provider value={{ store, game, version, content }}>
-      {notice && (
-        <p role="status" className="save-notice">
-          {notice}
-        </p>
-      )}
+    <GameContext.Provider value={{ store, game, version, content, notice, update }}>
       {children}
     </GameContext.Provider>
   );

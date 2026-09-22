@@ -1,25 +1,32 @@
 /**
- * PLACEHOLDER map (Phase A): lists the worlds and lessons straight from the
- * YAML content with their lock/done state from the engine, to prove the
- * content → engine → UI pipeline. The real Pop Path map arrives in Phase B.
+ * PLACEHOLDER map: lists the worlds and nodes straight from the YAML
+ * content with their lock/done state. The real Pop Path map (winding path,
+ * node sheets, "you are here", parallax) replaces this file.
+ *
+ * Already wired to the shell's transition system: open nodes expand into
+ * their session (navigate(..., { dir: 'expand', origin: el })) and the
+ * session collapses back into the same node (data-origin-id = node.id).
  */
 import { useGame } from '@/app/gameContext';
+import { navigate } from '@/app/navigation';
+import { toast } from '@/ui/toast';
+import { wiggle } from '@/ui/fx/motion';
+import { Screen } from '@/ui/Layout';
+import type { MapNode } from '@/engine/game';
 import './map.css';
 
+function pathFor(n: MapNode): string {
+  if (n.kind === 'lesson') return `/lesson/${n.id}`;
+  return n.kind === 'project' ? `/project/${n.world.id}` : `/boss/${n.world.id}`;
+}
+
 export function MapScreen() {
-  const { game, store } = useGame();
-  const s = store.state;
-  const lvl = game.levelInfo();
+  const { game } = useGame();
   const current = game.currentNode();
 
   return (
-    <main className="map-ph">
-      <header className="map-ph__top">
-        <h1>Cpp Hero</h1>
-        <p className="map-ph__hud">
-          Level {lvl.level} · {s.xp} XP · {s.hearts.n}/{s.hearts.max} hearts · {s.streak.days}-day streak
-        </p>
-      </header>
+    <Screen label="World map">
+      <h1 className="map-ph__title">Hi, hero!</h1>
       {game.worlds().map((w) => (
         <section
           key={w.id}
@@ -33,22 +40,35 @@ export function MapScreen() {
           <ol>
             {game.nodes(w).map((n) => (
               <li key={n.id} className={n.done ? 'is-done' : n.open ? 'is-open' : 'is-locked'}>
-                <span className="map-ph__state">{n.done ? 'done' : n.open ? 'open' : 'locked'}</span>
-                {n.kind === 'lesson' && (
-                  <>
-                    {n.lesson.title}
-                    {n.lesson.shield && <span className="map-ph__badge">Shield</span>}
-                    <span className="map-ph__meta">{n.lesson.challenges.length} challenges</span>
-                  </>
-                )}
-                {n.kind === 'project' && <>Project: {w.project.title}</>}
-                {n.kind === 'boss' && <>Boss: {w.boss.name}</>}
-                {current?.id === n.id && <span className="map-ph__here">you are here</span>}
+                <button
+                  type="button"
+                  className="map-ph__node"
+                  data-origin-id={n.id}
+                  onClick={(e) => {
+                    if (!n.open) {
+                      void wiggle(e.currentTarget);
+                      toast('Finish the earlier steps first.', { icon: 'lock' });
+                      return;
+                    }
+                    navigate(pathFor(n), { dir: 'expand', origin: e.currentTarget });
+                  }}
+                >
+                  <span className="map-ph__state">{n.done ? 'done' : n.open ? 'open' : 'locked'}</span>
+                  {n.kind === 'lesson' && (
+                    <>
+                      {n.lesson.title}
+                      {n.lesson.shield && <span className="map-ph__badge">Shield</span>}
+                    </>
+                  )}
+                  {n.kind === 'project' && <>Project: {w.project.title}</>}
+                  {n.kind === 'boss' && <>Boss: {w.boss.name}</>}
+                  {current?.id === n.id && <span className="map-ph__here">you are here</span>}
+                </button>
               </li>
             ))}
           </ol>
         </section>
       ))}
-    </main>
+    </Screen>
   );
 }

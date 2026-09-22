@@ -1,0 +1,65 @@
+.goalRow {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.ring {
+  --p: 0;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: conic-gradient(var(--teal) calc(var(--p) * 360deg), var(--lock) 0);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.ring span {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  font-family: var(--f-disp);
+  font-weight: 800;
+  font-size: 1.2rem;
+}
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+  display: grid;
+  gap: 10px;
+}
+.list li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: var(--bg);
+  border-radius: 18px;
+  padding: 10px 12px;
+}
+.list li.done {
+  background: var(--teal-l);
+}
+.qi :global(.ic) {
+  width: 28px;
+  height: 28px;
+}
+.qb {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+.qx {
+  text-align: right;
+  font-weight: 900;
+  font-size: 0.85rem;
+}
+.qx small {
+  display: block;
+  color: var(--muted);
+  font-weight: 800;
+}
