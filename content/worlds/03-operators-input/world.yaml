@@ -7,6 +7,7 @@ icon: calc
 blurb: Make your program do math, compare things, make logical calls, and listen to the player, without letting bad input in.
 story:
   intro:
+    - The Blob is just a puddle of zeros, and every box holds a real value.
     - Brace yourself! Bugs are sneaking in through the input gate. Let's guard it!
   bossIntro:
     - Uh-oh! The Input Golem, made of bad input. Only validated input can crack it!

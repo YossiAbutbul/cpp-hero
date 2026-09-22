@@ -106,7 +106,7 @@ rounds:
     explain: "a and b hold x's and y's addresses, so `*a` and `*b` are x and y. The swap trades them: \"7 3\" and a newline. A reference version is simpler and can't be handed nullptr."
   - id: w8.boss.r4
     type: fill
-    tags: [ w8.constref, w6.const-ref ]
+    tags: [ w8.constref, w6.constref ]
     prompt: "`chant` only reads a long spell. Fill in the parameter type: no copy, no changes."
     code: |-
       #include <iostream>

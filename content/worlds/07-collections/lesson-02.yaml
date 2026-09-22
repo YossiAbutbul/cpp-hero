@@ -262,4 +262,4 @@ vault:
       std::vector<int> c;      // empty, size 0
     note: "{} lists the values; () says how many."
     defense: false
-reviewTags: [ w2.init, w2.bool, w7.std-array, w7.array ]
+reviewTags: [ w6.params, w2.init, w2.bool, w7.std-array, w7.array ]

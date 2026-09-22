@@ -310,4 +310,4 @@ vault:
       }
     note: Stops on the sentinel 0, on bad text, and at the end of input.
     defense: false
-reviewTags: [ w3.cin, w3.validate, w3.logic, w5.while ]
+reviewTags: [ w4.guard, w3.cin, w3.validate, w3.logic, w5.while ]

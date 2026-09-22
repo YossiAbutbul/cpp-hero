@@ -7,7 +7,8 @@ icon: list
 blurb: "Keep many values in one place: arrays, vectors and strings, looped over without ever stepping off the end."
 story:
   intro:
-    - Our functions hold strong! But the Codebase's storage shelves are a total mess.
+    - The Scope Sentinel is gone, and every function returns home!
+    - But the Codebase's storage shelves are a total mess.
     - "Let's line values up in {collections} and never step off the end!"
   bossIntro:
     - Something is oozing past the end of the shelf... the Overflow Blob!

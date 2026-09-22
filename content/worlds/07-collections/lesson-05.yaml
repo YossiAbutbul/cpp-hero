@@ -130,7 +130,7 @@ challenges:
     explain: "v.at(1) is 5 and prints \"5 \". v.at(3) is out of range, so it throws std::out_of_range before printing anything; the rest of the try block (\"done \") is skipped and the catch prints \"caught\". Output: \"5 caught\" and a newline. With v[3] instead, it would be undefined behavior: no guarantee of anything."
   - id: w7.l5.c2
     type: bug
-    tags: [ w7.bounds, w5.off-by-one, w5.for ]
+    tags: [ w7.bounds, w5.offbyone, w5.for ]
     bug: out-of-bounds
     unsafe: true
     prompt: "UNSAFE: this sums the damage list but reads past the end. Tap the buggy line, then pick the fix."
@@ -490,4 +490,4 @@ vault:
       }
     note: "npos is the largest std::size_t, not -1 or 0. Never use it as an index."
     defense: true
-reviewTags: [ w5.off-by-one, w5.signed-unsigned, w3.validate, w7.vector, w7.find, w7.ref-loop ]
+reviewTags: [ w4.guard, w5.offbyone, w5.signed-unsigned, w3.validate, w7.vector, w7.find, w7.ref-loop ]

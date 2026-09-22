@@ -1,0 +1,50 @@
+.story {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.curlo {
+  background: none;
+  border: 0;
+  padding: 0;
+  display: block;
+}
+.tap {
+  width: 100%;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.bubble {
+  min-height: 4.4em;
+  display: grid;
+  place-items: center;
+  font-size: 1.02rem;
+}
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+.dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--lock-d);
+  transition:
+    transform 0.3s var(--spring),
+    background 0.2s;
+}
+.dots i.on {
+  background: var(--tang);
+  transform: scale(1.2);
+}
+.skip {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-weight: 800;
+  text-decoration: underline;
+  padding: 4px 10px;
+}

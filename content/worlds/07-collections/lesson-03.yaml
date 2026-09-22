@@ -75,7 +75,7 @@ demo:
 challenges:
   - id: w7.l3.c1
     type: predict
-    tags: [ w7.range-for, w5.range ]
+    tags: [ w7.range-for, w5.for ]
     prompt: "Trying to reset every hp to 0. What does this print? (g++ warns here. Why?)"
     expect: warn
     code: |-
@@ -134,7 +134,7 @@ challenges:
     explain: "Only a non-const reference (`int& s` or `auto& s`) lets the loop body change the elements. `int s` doubles a copy, and `const int& s` refuses to compile when you assign."
   - id: w7.l3.c3
     type: fill
-    tags: [ w7.range-for, w6.const-ref ]
+    tags: [ w7.range-for, w6.constref ]
     prompt: Print every name without copying any strings, and without being able to change them.
     code: |-
       #include <iostream>
@@ -239,7 +239,7 @@ challenges:
         }
   - id: w7.l3.c6
     type: predict
-    tags: [ w7.ref-loop, w5.range ]
+    tags: [ w7.ref-loop, w5.for ]
     prompt: What does this print?
     code: |-
       #include <iostream>
@@ -294,4 +294,4 @@ vault:
       for (int& x : v) { x *= 2; }         // change in place
     note: Don't add to or erase from a vector while range-for looping over it.
     defense: false
-reviewTags: [ w5.range, w6.const-ref, w7.vector, w7.push-back ]
+reviewTags: [ w5.for, w6.constref, w7.vector, w7.push-back ]

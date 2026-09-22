@@ -138,7 +138,7 @@ challenges:
     explain: "The header comes first, the array must exist before you change it, and you print after the change. `std::array<char>` doesn't compile: the size is part of the type."
   - id: w7.l1.c5
     type: bug
-    tags: [ w7.array, w5.off-by-one, w5.for ]
+    tags: [ w7.array, w5.offbyone, w5.for ]
     bug: out-of-bounds
     unsafe: true
     prompt: "UNSAFE: this should add up four loot values but reads one slot too many. Tap the buggy line, then pick the fix."

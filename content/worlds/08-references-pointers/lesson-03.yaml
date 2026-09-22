@@ -253,4 +253,4 @@ vault:
       }
     note: "Declaration: * = pointer. Expression: &x = address of, *p = follow."
     defense: false
-reviewTags: [ w2.init, w3.compare, w8.ref, w8.byref ]
+reviewTags: [ w4.guard, w2.init, w3.compare, w8.ref, w8.byref ]

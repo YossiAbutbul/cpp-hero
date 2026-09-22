@@ -201,7 +201,7 @@ challenges:
     explain: "The loop checks each of the 6 chars and counts 3 a's. size() is the number of chars, 6 (the last index is 5). Output: \"3 6\" and a newline."
   - id: w7.l4.c5
     type: write
-    tags: [ w7.string-append, w3.compound ]
+    tags: [ w7.string-append, w3.arith ]
     prompt: "Write one line that adds an exclamation mark to the end of `shout`."
     code: |-
       #include <string>
@@ -285,4 +285,4 @@ vault:
       s += "fly";                          // "dragonfly"
     note: "substr(pos) throws if pos > size(). find says \"not found\" with npos."
     defense: false
-reviewTags: [ w2.string, w3.getline, w7.range-for, w7.size, w7.index ]
+reviewTags: [ w6.return, w2.string, w3.getline, w7.range-for, w7.size, w7.index ]
