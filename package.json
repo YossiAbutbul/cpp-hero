@@ -1,0 +1,10 @@
+{
+  "name": "cpp-hero",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Learn C++ from zero. Defend your code. A game-like PWA that teaches modern C++ with a focus on safe, defensive programming.",
+  "scripts": {
+    "build": "node build.js",
+    "serve": "python -m http.server 8765"
+  }
+}
