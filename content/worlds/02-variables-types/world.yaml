@@ -1,0 +1,14 @@
+# World 2: Variables & Types. Lessons are lesson-NN.yaml (played in file order).
+
+id: w2
+num: 2
+title: Variables & Types
+icon: box
+blurb: "Give your data a home: labelled boxes for numbers, letters, true/false and text, and how values change shape between them."
+story:
+  intro:
+    - Bugs raided the Codebase pantry and ripped off every box label! Help me {sort} them!
+  bossIntro:
+    - That squelch? The Garbage Blob, made of uninitialized values! Stay behind my braces!
+  victory:
+    - The Blob is a puddle of zeros! Every box has a real value. {:D}

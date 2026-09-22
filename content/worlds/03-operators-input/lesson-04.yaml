@@ -1,0 +1,258 @@
+# World 3 · Lesson 4: Listening with std::cin
+
+id: w3.l4
+title: Listening with std::cin
+skill: toolkit
+shield: false
+concept:
+  short: std::cin >> x reads one value or word; std::getline reads a whole line.
+  analogy: "`std::cin` is a conveyor belt: `>>` grabs one item, `std::getline` scoops the whole line."
+  body:
+    - "`std::cin >> x;` reads the next value into x. It **skips leading whitespace** (spaces, tabs, newlines), then reads until the value ends. Needs `#include <iostream>`."
+    - "You can chain reads: `std::cin >> a >> b;` reads two values, separated by any whitespace."
+    - "Reading a `std::string` with `>>` gets only **one word**: it stops at the first space. Input `Curlo the Brave` gives just `Curlo`."
+    - To read a whole line with spaces, use `std::getline(std::cin, line);` (needs `#include <string>`). It reads up to the newline and throws the newline away.
+    - "**The leftover newline trap**: after `std::cin >> age;` the Enter key's `'\\n'` is still on the belt. A following `std::getline` sees it immediately and reads an empty line. Fix it by discarding the rest of the line first: `std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\\n');` (needs `#include <limits>`)."
+  pitfall: "Common beginner mistake: typing `std::cin << x` (arrows the wrong way). Think of it as data flowing FROM cin INTO x: `cin >> x`, and FROM x INTO cout: `cout << x`."
+demo:
+  code: |-
+    #include <iostream>
+    #include <limits>
+    #include <string>
+
+    int main() {
+        int age{};
+        std::string name;
+        std::cout << "Age? ";
+        std::cin >> age;
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << "Full name? ";
+        std::getline(std::cin, name);
+        std::cout << name << " is " << age << '\n';
+        return 0;
+    }
+  stdin: |
+    12
+    Ada Lovelace
+  steps:
+    - line: 5
+      vars:
+        age: "0"
+      note: "age{} starts at 0: always initialize!"
+    - line: 6
+      vars:
+        age: "0"
+        name: '""'
+      note: A std::string starts empty on its own.
+    - line: 7
+      out: "Age? "
+      note: No newline, so the answer is typed on this line.
+    - line: 8
+      vars:
+        age: "12"
+        name: '""'
+      note: "Input: `12` + Enter. >> reads 12, leaves the '\\n' behind."
+    - line: 9
+      note: ignore() throws away everything up to and including that leftover '\n'.
+    - line: 10
+      out: "Full name? "
+    - line: 11
+      vars:
+        age: "12"
+        name: '"Ada Lovelace"'
+      note: "Input: `Ada Lovelace` + Enter. getline keeps the space."
+    - line: 12
+      out: |
+        Ada Lovelace is 12
+      note: 'Without ignore(), name would be empty: " is 12".'
+    - line: 13
+      note: Done. Both inputs heard loud and clear!
+challenges:
+  - id: w3.l4.c1
+    type: predict
+    tags: [ w3.cin, w2.string ]
+    prompt: The player types `Curlo the Brave` and presses Enter. What does this print?
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string word;
+          std::cin >> word;
+          std::cout << "[" << word << "]\n";
+          return 0;
+      }
+    stdin: |
+      Curlo the Brave
+    options:
+      - t: |
+          [Curlo]
+        why: "Correct: >> into a string reads one word and stops at the first space."
+      - t: |
+          [Curlo the Brave]
+        why: That's what std::getline would read. >> stops at whitespace.
+      - t: |
+          [Curlo ]
+        why: ">> doesn't include the space it stops at."
+      - t: |
+          []
+        why: ">> skips leading whitespace and reads the first word, so word isn't empty."
+    answer: 0
+    hints:
+      - ">> reads a string until what?"
+      - Spaces end a >> read.
+    short: ">> into a string reads one word only."
+    explain: 'std::cin >> word reads "Curlo" and stops at the space. " the Brave" stays on the belt. Output: "[Curlo]" and a newline.'
+  - id: w3.l4.c2
+    type: predict
+    tags: [ w3.getline, w3.cin ]
+    prompt: The player types `5`, Enter, `Dragon Slayer`, Enter. What does this print?
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          int level{};
+          std::string title;
+          std::cin >> level;
+          std::getline(std::cin, title);
+          std::cout << level << ":" << title << "!\n";
+          return 0;
+      }
+    stdin: |
+      5
+      Dragon Slayer
+    options:
+      - t: |
+          5:!
+        why: "Correct: getline reads the rest of the first line, which is just the leftover '\\n'. title is empty."
+      - t: |
+          5:Dragon Slayer!
+        why: That's what you'd get with a cin.ignore(...) between the two reads. Here, getline eats the leftover newline.
+      - t: |
+          5: Dragon Slayer!
+        why: getline never gets to the second line, and there's no extra space printed.
+      - t: |
+          0:!
+        why: Reading 5 into level succeeds; the problem is only the string.
+    answer: 0
+    hints:
+      - After >> reads 5, what character is still waiting?
+      - getline stops at the first '\n' it sees.
+    short: getline read the leftover newline, so title is empty.
+    explain: ">> reads 5 and leaves '\\n'. getline immediately hits that '\\n' and returns an empty string. Output: \"5:!\" and a newline. \"Dragon Slayer\" is still unread."
+  - id: w3.l4.c3
+    type: fill
+    tags: [ w3.cin ]
+    prompt: Fill in the operator that reads a value from the keyboard into hp.
+    code: |-
+      int hp{};
+      std::cout << "Enter HP: ";
+      std::cin ___ hp;
+    accept:
+      - ">>"
+    placeholder: operator
+    hints:
+      - Data flows FROM cin INTO hp.
+      - It's the opposite arrows of cout's <<.
+    short: "Data flows from cin into hp: std::cin >> hp."
+    explain: "std::cin >> hp: the arrows point toward where the data goes."
+  - id: w3.l4.c4
+    type: mcq
+    tags: [ w3.getline ]
+    prompt: Which line reads a whole line of text (spaces included) into `std::string line`?
+    options:
+      - t: std::getline(std::cin, line);
+        why: "Correct: the stream comes first, then the string. Reads up to the newline."
+      - t: std::cin >> line;
+        why: "Only reads one word: it stops at the first space."
+      - t: std::getline(line, std::cin);
+        why: "Arguments are swapped: the stream goes first. Compile error."
+      - t: std::cin.getline(line);
+        why: The member cin.getline works with char arrays and a size, not std::string. Compile error.
+    answer: 0
+    hints:
+      - It's a free function, not a member of cin.
+      - "Order: where from, then where to."
+    short: std::getline(std::cin, line) reads the whole line.
+    explain: std::getline(std::cin, line) reads everything up to '\n' into line and discards the '\n'.
+  - id: w3.l4.c5
+    type: predict
+    tags: [ w3.cin, w3.arith, w3.modulo ]
+    prompt: The input is `  8` on one line and `  3` on the next (with leading spaces). What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int a{};
+          int b{};
+          std::cin >> a >> b;
+          std::cout << a - b << ' ' << a % b << '\n';
+          return 0;
+      }
+    stdin: |2
+        8
+        3
+    options:
+      - t: |
+          5 2
+        why: "Correct: >> skips whitespace, so a = 8, b = 3: 5 and 2."
+      - t: |
+          0 0
+        why: "Leading whitespace doesn't make >> fail: it's skipped automatically."
+      - t: |
+          5 2.67
+        why: "% on ints gives a whole-number remainder."
+      - t: |
+          53
+        why: This prints a - b and a % b, separated by a space, not a and b.
+    answer: 0
+    hints:
+      - ">> skips leading whitespace, including newlines."
+      - "8 % 3: how much is left after taking out 3s?"
+    short: ">> skips whitespace: a = 8, b = 3, printing 5 and 2."
+    explain: '>> skips all whitespace before each number: a = 8, b = 3. 8 - 3 = 5, 8 % 3 = 2. Output: "5 2" and a newline.'
+  - id: w3.l4.c6
+    type: write
+    tags: [ w3.getline ]
+    prompt: Write one line that reads a whole line of input into the std::string named `quest`.
+    prelude: std::string quest;
+    accept:
+      - std::getline(std::cin, quest);
+      - std::getline(std::cin >> std::ws, quest);
+    acceptRe:
+      - ^std::getline ?\( ?std::cin ?(>> ?std::ws ?)?, ?quest ?\) ?;$
+    placeholder: std::getline(...);
+    hints:
+      - It's std::getline with two arguments.
+      - Stream first, then the string. End with ;
+    short: std::getline(std::cin, quest); reads the whole line.
+    explain: std::getline(std::cin, quest); reads everything up to the newline. (std::cin >> std::ws first skips leading whitespace, another fix for the leftover-newline trap.)
+recap:
+  - std::cin >> x skips spaces, then reads one value.
+  - std::getline(std::cin, s) reads a whole line, spaces included.
+  - After >>, ignore the leftover '\n' before getline.
+vault:
+  - id: w3.cin
+    title: Reading with >>
+    code: |-
+      int a{};
+      int b{};
+      std::string word;
+      std::cin >> a >> b;   // two numbers
+      std::cin >> word;     // ONE word
+    note: ">> skips leading whitespace and stops at the next whitespace."
+    defense: false
+  - id: w3.getline
+    title: Reading a whole line
+    code: |-
+      #include <limits>
+      #include <string>
+
+      std::cin >> age;
+      std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+      std::getline(std::cin, fullName);
+    prelude: int age{}; std::string fullName;
+    note: Mixing >> and getline? Ignore the leftover newline first.
+    defense: false
+reviewTags: [ w2.string, w1.include, w2.init ]

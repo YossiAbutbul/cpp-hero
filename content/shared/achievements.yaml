@@ -1,0 +1,118 @@
+# Achievements. test = kind:arg, e.g. lessons:5, combo:10, bestiary:<bug id>, world:w3.
+
+- id: hello-universe
+  name: Hello, Universe
+  desc: Finish your very first lesson.
+  test: lessons:1
+- id: brace-yourself
+  name: Brace Yourself
+  desc: Finish 5 lessons.
+  test: lessons:5
+- id: semicolon-marathon
+  name: Semicolon Marathon
+  desc: Finish 25 lessons.
+  test: lessons:25
+- id: full-stack-of-braces
+  name: Full Stack of Braces
+  desc: Finish 75 lessons.
+  test: lessons:75
+- id: on-a-roll
+  name: On a Roll
+  desc: Get 5 answers right in a row.
+  test: combo:5
+- id: combo-breaker
+  name: Combo Breaker
+  desc: Hit a 10-answer combo. The meter can barely keep up!
+  test: combo:10
+- id: infinite-loop-of-wins
+  name: Infinite Loop (the Good Kind)
+  desc: Hit a 25-answer combo.
+  test: combo:25
+- id: warming-up
+  name: Warming Up the Compiler
+  desc: Keep a 3-day streak.
+  test: streak:3
+- id: week-long-build
+  name: Week-Long Build
+  desc: Keep a 7-day streak.
+  test: streak:7
+- id: long-term-support
+  name: Long-Term Support
+  desc: Keep a 30-day streak.
+  test: streak:30
+- id: zero-warnings
+  name: Zero Warnings
+  desc: Finish a lesson with 100% accuracy.
+  test: perfect:1
+- id: werror-approved
+  name: -Werror Approved
+  desc: Finish 10 lessons with 100% accuracy.
+  test: perfect:10
+- id: shield-apprentice
+  name: Shield Apprentice
+  desc: Harden 3 snippets.
+  test: hardened:3
+- id: fortress-builder
+  name: Fortress Builder
+  desc: Harden 25 snippets.
+  test: hardened:25
+- id: citadel-architect
+  name: Citadel Architect
+  desc: Harden 100 snippets.
+  test: hardened:100
+- id: spaced-out
+  name: Spaced Out
+  desc: Complete 10 review items.
+  test: reviews:10
+- id: memory-palace
+  name: Memory Palace
+  desc: Complete 50 review items.
+  test: reviews:50
+- id: syntax-slayer
+  name: Syntax Slayer
+  desc: Defeat the Syntax Gremlin (beat World 1).
+  test: world:w1
+- id: input-inspector
+  name: Input Inspector
+  desc: "Beat World 3: no bad input gets past you."
+  test: world:w3
+- id: pointer-pilot
+  name: Pointer Pilot
+  desc: "Beat World 8: references and pointers mastered."
+  test: world:w8
+- id: citadel-keeper
+  name: Citadel Keeper
+  desc: Beat World 12, the Citadel of defensive programming.
+  test: world:w12
+- id: cpp-hero
+  name: Cpp Hero
+  desc: Beat the Final Boss. The Codebase is safe!
+  test: world:w16
+- id: semicolon-savior
+  name: Semicolon Savior
+  desc: Defeat the Semicolon Snatcher.
+  test: bestiary:missing-semicolon
+- id: always-initialized
+  name: Always Initialized
+  desc: Defeat the Garbage Blob.
+  test: bestiary:uninit-var
+- id: off-by-none
+  name: Off-by-None
+  desc: Defeat the Off-by-One Imp.
+  test: bestiary:off-by-one
+- id: bounds-keeper
+  name: Bounds Keeper
+  desc: Defeat the Bounds Breaker.
+  test: bestiary:out-of-bounds
+- id: null-and-void
+  name: Null and Void
+  desc: Defeat the Null Void.
+  test: bestiary:null-deref
+- id: leak-proof
+  name: Leak-Proof
+  desc: Defeat the Leaky Slime.
+  test: bestiary:memory-leak
+- id: moved-on
+  name: Moved On
+  desc: Defeat the Hollow Husk.
+  test: bestiary:use-after-move

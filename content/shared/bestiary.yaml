@@ -1,0 +1,212 @@
+# Bug Bestiary: every bug type the learner can defeat (all 16 worlds).
+
+- id: missing-semicolon
+  name: Semicolon Snatcher
+  world: w1
+  art: gremlin
+  color: "#F2641B"
+  how: A statement loses its ; so the compiler runs into the next line. Errors often point just past the mistake.
+  prevent: End every statement with ;. When an error says "expected ';' before ...", check the end of the previous line.
+- id: typo-gremlin
+  name: Typo Gremlin
+  world: w1
+  art: gremlin
+  color: "#FFC62E"
+  how: A misspelled name or header (std::cuot, <iostrem>, std:cout) that the compiler can't find.
+  prevent: "Read the whole error message: it quotes the unknown name and often suggests the right one (\"did you mean 'cout'?\")."
+- id: uninit-var
+  name: Garbage Blob
+  world: w2
+  art: slime
+  color: "#0FA898"
+  how: "A variable is read before it's given a value. That's undefined behavior: you might see 0, garbage, or something that changes between runs."
+  prevent: "Always initialize: int score{0};. Build with -Wall -Wextra to get warnings about uninitialized use."
+- id: narrowing
+  name: Narrowing Worm
+  world: w2
+  art: worm
+  color: "#8FD9CF"
+  how: "A value squeezes into a smaller type and silently loses data: int x = 3.9; stores 3."
+  prevent: "Use brace initialization: int x{3.9}; is a compile error, so the loss can't sneak by. Convert explicitly with static_cast when you mean it."
+- id: div-by-zero
+  name: Zero-Void Moth
+  world: w3
+  art: moth
+  color: "#2A2140"
+  how: Integer division or % by zero is undefined behavior. It may crash, or it may not; nothing is guaranteed.
+  prevent: "Check the divisor before dividing: if (d == 0) { handle it } else { use n / d }."
+- id: overflow
+  name: Overflow Ooze
+  world: w3
+  art: slime
+  color: "#FF5A70"
+  how: "Signed integer math goes past the type's limit. That's undefined behavior: it often wraps negative, but nothing is guaranteed."
+  prevent: Check against std::numeric_limits before the operation, or use a wider type like long long when values can get big.
+- id: cin-fail
+  name: Stuck-Stream Golem
+  world: w3
+  art: bug
+  color: "#3D8BFF"
+  how: std::cin >> n gets text, not a number. The stream fails, n becomes 0, and later reads fail too.
+  prevent: "Test the read: if (!(std::cin >> n)) { std::cin.clear(); std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\\n'); }."
+- id: float-equality
+  name: Float Phantom
+  world: w4
+  art: ghost
+  color: "#9DC3FF"
+  how: Comparing floating-point results with ==. 0.1 + 0.2 == 0.3 is false because of tiny rounding errors.
+  prevent: "Compare with a tolerance: std::abs(a - b) < 1e-9 (scaled to your values)."
+- id: missing-default
+  name: Fallthrough Spider
+  world: w4
+  art: spider
+  color: "#FFC62E"
+  how: A switch without break falls through into the next case, or without default silently ignores values nobody expected.
+  prevent: End each case with break (or mark intentional fallthrough with [[fallthrough]]), and always add a default.
+- id: off-by-one
+  name: Off-by-One Imp
+  world: w5
+  art: imp
+  color: "#F2641B"
+  how: A loop runs one time too many or too few, like i <= size instead of i < size.
+  prevent: Use half-open ranges (start at 0, stop at < size), or a range-for loop that can't miscount.
+- id: infinite-loop
+  name: Loop-de-Loop Worm
+  world: w5
+  art: worm
+  color: "#0FA898"
+  how: The loop's condition never becomes false, often because the counter is never updated, or is updated the wrong way.
+  prevent: Make sure every path through the loop moves toward the exit condition; prefer for loops with the update in the header.
+- id: signed-unsigned
+  name: Sign-Flip Spider
+  world: w5
+  art: spider
+  color: "#3D8BFF"
+  how: "Comparing a signed int with an unsigned size: -1 < v.size() can be false because -1 converts to a huge unsigned number."
+  prevent: Heed -Wsign-compare. Use std::size_t for sizes, or std::ssize (C++20) when you need signed.
+- id: dangling-ref
+  name: Echo Wraith
+  world: w6
+  art: ghost
+  color: "#2A2140"
+  how: A function returns a reference to a local variable that's destroyed when the function ends. Using it is undefined behavior.
+  prevent: Return by value. Only return references to things that outlive the call.
+- id: out-of-bounds
+  name: Bounds Breaker
+  world: w7
+  art: bug
+  color: "#FF5A70"
+  how: "Accessing v[10] in a vector of 10 elements. [] doesn't check, so it's undefined behavior: garbage, a crash, or silent corruption."
+  prevent: Use .at() (throws std::out_of_range) or check the index against size() first; prefer range-for.
+- id: iterator-invalidation
+  name: Iterator Moth
+  world: w7
+  art: moth
+  color: "#FFC62E"
+  how: Adding to a vector (push_back) can move its elements, leaving existing iterators, pointers and references dangling.
+  prevent: Don't hold iterators across modifications; re-fetch them, use indexes, or use the iterator returned by erase/insert.
+- id: null-deref
+  name: Null Void
+  world: w8
+  art: ghost
+  color: "#3D8BFF"
+  how: Dereferencing a pointer that is nullptr. Undefined behavior, usually a crash, but not guaranteed.
+  prevent: Check if (p != nullptr) before *p, or use references when something must always exist.
+- id: dangling-pointer
+  name: Dangling Spider
+  world: w8
+  art: spider
+  color: "#0FA898"
+  how: A pointer still holds the address of something that no longer exists (a local that went out of scope, or freed memory).
+  prevent: Never keep pointers to locals beyond their scope; set pointers to nullptr after the object is gone; prefer smart pointers.
+- id: memory-leak
+  name: Leaky Slime
+  world: w9
+  art: slime
+  color: "#8FD9CF"
+  how: Memory from new is never deleted, so the program keeps using more and more memory.
+  prevent: "Use RAII: std::unique_ptr / std::make_unique and containers own memory and free it automatically (Rule of Zero)."
+- id: double-delete
+  name: Double-Delete Imp
+  world: w9
+  art: imp
+  color: "#FF5A70"
+  how: The same memory is deleted twice. Undefined behavior that can corrupt the heap and crash much later.
+  prevent: Give each resource exactly one owner (std::unique_ptr). Never delete memory you don't own.
+- id: use-after-free
+  name: Afterlife Wisp
+  world: w9
+  art: ghost
+  color: "#F2641B"
+  how: Memory is used after it was deleted. It may even seem to work, then fail later. That's the danger of undefined behavior.
+  prevent: Let smart pointers manage lifetimes; don't keep raw pointers to objects someone else may delete.
+- id: broken-invariant
+  name: Invariant Gremlin
+  world: w10
+  art: gremlin
+  color: "#3D8BFF"
+  how: Public data members let any code put an object into an impossible state, like a Health with hp = -50.
+  prevent: Make data private, validate in constructors and setters, and keep the class's rules true after every public function.
+- id: object-slicing
+  name: Slicer Bug
+  world: w11
+  art: bug
+  color: "#FFC62E"
+  how: A Derived object is copied into a Base by value, slicing off the derived part, so virtual calls use the base version.
+  prevent: Pass and store polymorphic objects by reference or (smart) pointer, never by value.
+- id: missing-virtual-dtor
+  name: Hollow Destructor
+  world: w11
+  art: moth
+  color: "#2A2140"
+  how: Deleting a Derived through a Base* when Base's destructor isn't virtual is undefined behavior; the derived part is typically never cleaned up.
+  prevent: "Give every polymorphic base class a virtual destructor: virtual ~Base() = default;."
+- id: uncaught-exception
+  name: Runaway Throw
+  world: w12
+  art: imp
+  color: "#FF5A70"
+  how: An exception is thrown and nobody catches it, so std::terminate ends the program abruptly.
+  prevent: Catch exceptions where you can actually handle them (by const reference), and use RAII so cleanup happens either way.
+- id: unconstrained-template
+  name: Template Hydra
+  world: w13
+  art: worm
+  color: "#0FA898"
+  how: A template accepts any type, then fails deep inside with a huge error message when the type doesn't fit.
+  prevent: "Constrain it: static_assert on the type, or a C++20 concept like template <std::integral T>."
+- id: map-bracket-insert
+  name: Phantom Key Ghost
+  world: w14
+  art: ghost
+  color: "#9DC3FF"
+  how: Reading m[key] on a std::map inserts a default value when the key is missing, silently growing the map.
+  prevent: Use find() and compare with end(), or contains() (C++20), or at() when the key must exist.
+- id: unchecked-find
+  name: End-Iterator Imp
+  world: w14
+  art: imp
+  color: "#FFC62E"
+  how: The result of find() is dereferenced without checking it against end(). Dereferencing end() is undefined behavior.
+  prevent: "Always write: if (auto it = m.find(k); it != m.end()) { use it->second }."
+- id: use-after-move
+  name: Hollow Husk
+  world: w15
+  art: slime
+  color: "#F2641B"
+  how: An object is used after std::move handed its contents away. It's valid but in an unspecified state, often empty.
+  prevent: "Treat a moved-from object as empty: don't read it again until you assign it a new value."
+- id: dangling-capture
+  name: Lambda Leech
+  world: w15
+  art: worm
+  color: "#2A2140"
+  how: A lambda captures a local by reference [&] and is called after that local has gone out of scope.
+  prevent: Capture by value ([=] or [x]) for lambdas that outlive the current scope.
+- id: ub-hydra
+  name: Undefined Hydra
+  world: w16
+  art: spider
+  color: "#FF5A70"
+  how: Undefined behavior of every kind at once. It can seem to work today and fail tomorrow, on another compiler, or with optimizations on.
+  prevent: "Defense in depth: warnings as errors, sanitizers (ASan, UBSan), tests for edge cases, and the safe habits from every world."

@@ -1,0 +1,382 @@
+# World 1 boss: The Syntax Gremlin
+
+id: w1.boss
+name: The Syntax Gremlin
+art: gremlin
+hp: 6
+intro: Hee hee HEE! I eat semicolons! Your programs will NEVER compile again!
+taunt:
+  - Missing something? Like... a semicolon? Hee hee!
+  - I misspelled cout while you blinked!
+  - Warnings? Just ignore them. Everyone does! (Don't.)
+  - Your braces look lonely. Want me to steal one?
+rounds:
+  - id: w1.boss.r1
+    type: mcq
+    tags: [ w1.main ]
+    prompt: 'The Gremlin cackles: "What ends almost every C++ statement? Bet you forgot!"'
+    options:
+      - t: A period .
+        why: Periods are for member access, not ending statements.
+      - t: A semicolon ;
+        why: Correct! The Gremlin can't steal what you remember.
+      - t: A new line
+        why: C++ ignores line breaks between statements.
+      - t: A closing brace }
+        why: "} closes a block like main's body, not a statement."
+    answer: 1
+    hints:
+      - It's the Gremlin's favorite snack.
+      - Looks like a comma wearing a hat.
+    short: Statements end with ;. Line breaks mean nothing to the compiler.
+    explain: Statements end with ;. Line breaks mean nothing to the compiler, which is why a missing ; often shows up as an error on the NEXT line.
+  - id: w1.boss.r2
+    type: predict
+    tags: [ w1.cout, w1.comments ]
+    prompt: The Gremlin growls in pieces. What exactly does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << "Gr";
+          std::cout << "r" << "r!\n";
+          // std::cout << "Grrr!\n";
+          return 0;
+      }
+    options:
+      - t: |
+          Grrr!
+          Grrr!
+        why: The last cout is commented out, so it never runs.
+      - t: |
+          Gr
+          rr!
+        why: Nothing prints a newline after "Gr".
+      - t: |
+          Gr r r!
+        why: cout adds no spaces between items.
+      - t: |
+          Grrr!
+        why: Correct! "Gr" + "r" + "r!\n" makes one growl.
+    answer: 3
+    hints:
+      - Glue all the pieces together in order.
+      - Comments don't run.
+    short: The pieces join into one Grrr!; the comment never runs.
+    explain: '"Gr", then "r", then "r!\n": Grrr! and a newline. The commented-out line is invisible to the compiler.'
+  - id: w1.boss.r3
+    type: bug
+    tags: [ w1.cout, w1.compile ]
+    prompt: "Intentionally broken: the Gremlin swapped one character. The build fails with \"'cout' was not declared in this scope\". Tap the line, then pick the fix."
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std:cout << "Gremlin was here\n";
+          return 0;
+      }
+    expect: error
+    unsafe: true
+    bugLine: 3
+    options:
+      - t: std.cout << "Gremlin was here\n";
+        why: The dot is for object members. Namespaces use ::.
+      - t: cout << "Gremlin was here\n";
+        why: Plain cout isn't declared. It lives inside std.
+      - t: std::cout << "Gremlin was here\n";
+        why: Correct! Two colons reach into the std namespace.
+      - t: std;cout << "Gremlin was here\n";
+        why: std alone isn't a statement. Still an error.
+    answer: 2
+    bug: typo-gremlin
+    hints:
+      - Count the colons.
+      - The scope resolution operator has two of them.
+    short: "One colon makes std: a label. You need std::cout."
+    explain: "With one colon, std: is read as a label (a jump target), so what's left is plain cout, which isn't declared. The fix is std::cout. Sneaky, and exactly why reading the message matters."
+    sideBySide:
+      unsafe: std:cout << "Gremlin was here\n";   // one colon
+      hardened: std::cout << "Gremlin was here\n";
+      expect: error
+  - id: w1.boss.r4
+    type: speed
+    tags: [ w1.cout, w1.include, w1.comments, w1.compile, w1.warnings ]
+    prompt: Rapid fire! Answer as many as you can before time runs out!
+    seconds: 45
+    items:
+      - q: Which header provides std::cout?
+        options:
+          - <string>
+          - <iostream>
+          - <cout>
+          - <stdout>
+        answer: 1
+      - q: A single-line comment starts with…
+        options:
+          - "#"
+          - --
+          - //
+          - /*
+        answer: 2
+      - q: What does \n print?
+        options:
+          - A new line
+          - The letter n
+          - Nothing
+          - A tab
+        answer: 0
+      - q: "Which build stage handles #include?"
+        options:
+          - The linker
+          - The CPU
+          - The debugger
+          - The preprocessor
+        answer: 3
+      - q: What does this print?
+        code: std::cout << "a" << "b";
+        options:
+          - a b
+          - ab
+          - a\nb
+          - ba
+        answer: 1
+      - q: A compiler warning should be…
+        options:
+          - Read and fixed
+          - Ignored if it runs
+          - Silenced with -w
+          - Deleted from the log
+        answer: 0
+      - q: Where does execution start?
+        options:
+          - "The first #include"
+          - main()
+          - The last line
+          - A random function
+        answer: 1
+      - q: Which flag turns warnings into errors?
+        options:
+          - -w
+          - -o
+          - -Werror
+          - -O2
+        answer: 2
+    hints:
+      - Go with your first instinct; you know this!
+      - Quick, confident answers win speed rounds.
+    short: "World 1 in a nutshell: headers, comments, builds and warnings."
+    explain: "Quick recap: <iostream> for cout, // for comments, \\n for new lines, the preprocessor handles #include, cout adds no spaces, warnings get fixed, main() starts it all, and -Werror makes warnings fatal."
+  - id: w1.boss.r5
+    type: fill
+    tags: [ w1.comments ]
+    prompt: The Gremlin opened a block comment and ran off. Close it so the rest of the program isn't swallowed!
+    code: |-
+      #include <iostream>
+
+      int main() {
+          /* Gremlin trap: disarmed ___
+          std::cout << "Trap safe\n";
+          return 0;
+      }
+    accept:
+      - "*/"
+    placeholder: comment end
+    hints:
+      - Block comments close with the mirror image of /*.
+      - Star first, then slash.
+    short: "*/ closes a block comment."
+    explain: '*/ closes a block comment. Leave it out and the comment swallows everything after it, and the build fails with "unterminated comment".'
+  - id: w1.boss.r6
+    type: review
+    tags: [ w1.warnings, w1.compile ]
+    prompt: "Code review: the Gremlin sabotaged this report (intentionally broken). Tap every line that causes an error or warning."
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << "Gremlin report\n";
+          std::cout << "Bugs: " << 3 << '\n'
+          std::cout << 'Run!\n';
+          std::cout << "Over.\n";
+          return 0;
+      }
+    expect: error
+    unsafe: true
+    dangerous: [ 4, 5 ]
+    lineNotes:
+      "3": Fine.
+      "4": "Missing ; at the end: compile error, \"expected ';' before 'std'\"."
+      "5": 'Text in single quotes: "character constant too long" warning, prints a number.'
+      "6": Fine.
+    hints:
+      - Check the end of every statement.
+      - Check which kind of quotes wrap the text.
+    short: Line 5 lacks its ;, line 6 uses single quotes.
+    explain: Line 5 lacks its ; (an error), and line 6 wraps text in single quotes (a warning that means garbage output). A good reviewer catches both, not just the one that stops the build.
+    sideBySide:
+      unsafe: |-
+        std::cout << "Bugs: " << 3 << '\n'
+        std::cout << 'Run!\n';
+      hardened: |-
+        std::cout << "Bugs: " << 3 << '\n';
+        std::cout << "Run!\n";
+      expect: error
+  - id: w1.boss.r7
+    type: order
+    tags: [ w1.main, w1.cout ]
+    prompt: Rebuild the program the Gremlin scattered. It should print "Gremlin defeated?" and then "Not yet!".
+    lines:
+      - "#include <iostream>"
+      - int main() {
+      - '    std::cout << "Gremlin defeated?\n";'
+      - '    std::cout << "Not yet!\n";'
+      - "    return 0;"
+      - "}"
+    distractors:
+      - '    std::cout << "Not yet!\n"'
+      - int Main() {
+    hints:
+      - Statements run top to bottom, so cout order matters.
+      - "Two decoys: one lacks a ;, one has a capital letter."
+    short: Include, main, both prints in order, return 0;, }.
+    explain: "Include, main, the two prints in the order you want them to appear, return 0;, closing brace. The decoys: a statement missing its ; and a capitalized Main."
+  - id: w1.boss.r8
+    type: edge
+    tags: [ w1.warnings, w1.compile ]
+    prompt: This program is supposed to print Go!. Which checks would EXPOSE the problem? Select all that apply.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << 'Go!\n';
+          return 0;
+      }
+    unsafe: true
+    options:
+      - t: Build with g++ -Wall -Wextra and read the warnings
+        why: 'Exposes it: "multi-character character constant" warning.'
+      - t: Build with g++ -w
+        why: -w silences ALL warnings. The alarm is unplugged.
+      - t: Build with g++ -Wall -Werror
+        why: "Exposes it: the warning becomes an error and the build stops."
+      - t: "Read the code quickly: it says Go!, so it's fine"
+        why: The single quotes are easy to miss at a glance.
+      - t: Run it and compare the output with Go!
+        why: "Exposes it: it prints a number, not Go!."
+    answers: [ 0, 2, 4 ]
+    hints:
+      - Which options keep the compiler's alarm switched on?
+      - Actually testing the output counts too.
+    short: Warnings and real testing expose it; silencing and glancing don't.
+    explain: "Warnings (-Wall, or -Werror to make them fatal) and real testing both expose the bug. Silencing warnings or trusting a quick glance don't. Fix: std::cout << \"Go!\\n\";."
+    sideBySide:
+      unsafe: "std::cout << 'Go!\\n';   // multi-char constant: prints a number"
+      hardened: 'std::cout << "Go!\n";   // string literal: prints Go!'
+defense:
+  - attack: std::cout << "Codebase safe\n"
+    label: Semicolon snatched!
+    challenge:
+      id: w1.boss.d1
+      type: harden
+      tags: [ w1.main, w1.compile ]
+      prompt: The Gremlin snatches a semicolon mid-battle! Pick what fills the blank so the program builds.
+      code: |-
+        #include <iostream>
+
+        int main() {
+            std::cout << "Codebase safe\n"___
+            return 0;
+        }
+      options:
+        - t: ":"
+          why: A colon doesn't end a statement. Still fails.
+        - t: ","
+          why: "A comma tries to join this with return 0: error."
+        - t: "(nothing: the line break is enough)"
+          why: C++ ignores line breaks. It needs a real ;.
+        - t: ;
+          why: Correct! Semicolon restored, statement complete.
+      answer: 3
+      hints:
+        - The Gremlin's favorite snack.
+        - Statements end with it.
+      short: Only ; ends a statement.
+      explain: Only ; ends a statement. Line breaks don't count, and look-alike punctuation doesn't either.
+      sideBySide:
+        unsafe: |-
+          std::cout << "Codebase safe\n"
+              return 0;
+        hardened: |-
+          std::cout << "Codebase safe\n";
+              return 0;
+        expect: error
+  - attack: "#include <iostreem>"
+    label: Header scrambled!
+    challenge:
+      id: w1.boss.d2
+      type: breakit
+      tags: [ w1.include, w1.compile ]
+      prompt: The Gremlin tries four sabotages on this program. Which one actually breaks the build? Block it!
+      code: |-
+        #include <iostream>
+
+        int main() {
+            std::cout << "Shield holds!\n";
+            return 0;
+        }
+      options:
+        - t: Adding the comment // gremlins rule on line 2
+          why: Comments are ignored. The build is fine.
+        - t: Adding three blank lines inside main()
+          why: Whitespace doesn't matter to the compiler.
+        - t: "Changing line 1 to #include <iostreem>"
+          why: 'Correct! "fatal error: iostreem: No such file or directory".'
+        - t: Changing "Shield holds!\n" to "Shield holds!!\n"
+          why: Different text, still perfectly valid code.
+      answer: 2
+      hints:
+        - Which change affects something the compiler actually needs?
+        - A misspelled header can't be found.
+      short: A misspelled header is fatal; comments and whitespace are harmless.
+      explain: "A misspelled header name is fatal: the preprocessor can't find the file and the build stops right there. The other sabotages are harmless to the compiler."
+      sideBySide:
+        unsafe: "#include <iostreem>   // fatal error: file not found"
+        hardened: "#include <iostream>"
+        expect: error
+  - attack: "'Gremlin rules!\\n'"
+    label: Quotes swapped!
+    challenge:
+      id: w1.boss.d3
+      type: harden
+      tags: [ w1.warnings, w1.cout ]
+      prompt: "Final attack: the Gremlin swaps your quotes! Pick what fills the blank for a clean build and the right text."
+      code: |-
+        #include <iostream>
+
+        int main() {
+            std::cout << ___;
+            return 0;
+        }
+      options:
+        - t: '"Gremlin drools!\n"'
+          why: Correct! A proper string, clean build, and a well-deserved burn.
+        - t: "'Gremlin drools!\\n'"
+          why: "Single quotes around many characters: a warning, and a number prints."
+        - t: "\"Gremlin drools!\\n'"
+          why: "Mismatched quotes: the string never closes. Error."
+        - t: Gremlin drools!\n
+          why: "No quotes: the compiler reads these as names. Error."
+      answer: 0
+      hints:
+        - Text needs matching double quotes.
+        - Single quotes are for exactly one character.
+      short: Matching double quotes. Single quotes compile with a warning, then print garbage.
+      explain: "Strings use matching double quotes. The single-quoted version is the sneakiest: it compiles with only a warning, then prints garbage. Warnings on, always!"
+      sideBySide:
+        unsafe: std::cout << 'Gremlin drools!\n';   // warning + garbage number
+        hardened: std::cout << "Gremlin drools!\n";
+victory: Nooo! My semicolons! Fine, you can read errors. The Garbage Blob won't be so easy!
+reward:
+  xp: 150
+  cosmetic: gremlin-horns
+  bug: missing-semicolon

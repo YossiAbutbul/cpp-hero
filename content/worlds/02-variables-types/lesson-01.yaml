@@ -1,0 +1,181 @@
+# World 2 · Lesson 1: Boxes with names: int & double
+
+id: w2.l1
+title: "Boxes with names: int & double"
+skill: structure
+shield: false
+concept:
+  short: "A variable is a named box with a type: int for whole numbers, double for fractions."
+  analogy: "A variable is a labelled box in Curlo's pantry: the label is its name, the box's shape is its type, and what's inside is its value."
+  body:
+    - "A **variable** is a named piece of memory. You declare it with a type, a name and a starting value: `int hp{10};`"
+    - "`int` holds whole numbers like `42` or `-7`. `double` holds numbers with a fractional part like `2.5` or `-0.75`."
+    - The braces `{}` are **brace initialization**. `int hp = 10;` also works, but braces are pickier in a good way (see the Shield Lesson).
+    - "Change a value later with `=`: `hp = 7;` replaces what was inside. The type never changes: an `int` box stays an `int` box forever."
+    - "`std::cout << hp;` prints the **value** inside the box, not its name."
+  pitfall: "Writing `int ratio = 0.75;` compiles, but the box is int-shaped, so it keeps only the whole part: ratio becomes 0. Pick the type that fits your data, and prefer braces: `int ratio{0.75};` refuses to compile instead of silently losing data."
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        int hp{10};
+        double speed{2.5};
+        hp = hp - 3;
+        std::cout << "HP: " << hp << '\n';
+        std::cout << "Speed: " << speed << '\n';
+        return 0;
+    }
+  steps:
+    - line: 2
+      note: Execution starts at main(), just like in World 1.
+    - line: 3
+      vars:
+        hp: "10"
+      note: A new int box named hp appears, filled with 10.
+    - line: 4
+      vars:
+        hp: "10"
+        speed: "2.5"
+      note: A double box can hold the fractional value 2.5.
+    - line: 5
+      vars:
+        hp: "7"
+        speed: "2.5"
+      note: "Right side first: 10 - 3 = 7, then stored in hp."
+    - line: 6
+      vars:
+        hp: "7"
+        speed: "2.5"
+      out: |
+        HP: 7
+      note: cout prints the value inside hp, not the letters h-p.
+    - line: 7
+      vars:
+        hp: "7"
+        speed: "2.5"
+      out: |
+        Speed: 2.5
+      note: "Doubles print without extra zeros: 2.5, not 2.500000."
+    - line: 8
+      note: "return 0: the program ends successfully."
+challenges:
+  - id: w2.l1.c1
+    type: mcq
+    tags: [ w2.double ]
+    short: "Type first, then name, then value: a double holds 3.5."
+    prompt: Which line correctly creates a variable holding 3.5?
+    options:
+      - t: double ratio{3.5};
+        why: "Correct: type, then name, then the value in braces. A double can hold 3.5."
+      - t: int ratio{3.5};
+        why: An int holds whole numbers only. With braces this is a compile error (narrowing), which is the compiler protecting you.
+      - t: ratio double{3.5};
+        why: "The order is wrong: the type comes first, then the name."
+      - t: double{3.5} ratio;
+        why: The value goes after the name, not between the type and the name.
+    answer: 0
+    hints:
+      - 3.5 has a fractional part. Which type can hold that?
+      - "The pattern is: type name{value};"
+    explain: "A declaration reads type, name, initializer: `double ratio{3.5};`. `double` is the type for numbers with fractional parts."
+  - id: w2.l1.c2
+    type: predict
+    tags: [ w2.int ]
+    short: "Each line updates coins in order: 5, 7, then 21."
+    prompt: What does this print?
+    code: |-
+      int coins{5};
+      coins = coins + 2;
+      coins = coins * 3;
+      std::cout << coins << '\n';
+    options:
+      - t: |
+          21
+        why: "Correct: 5 + 2 = 7 is stored first, then 7 * 3 = 21."
+      - t: |
+          11
+        why: That's 5 + 2 * 3 in one expression. Here each line stores its result first.
+      - t: |
+          7
+        why: "The third line runs too: coins is multiplied by 3 after becoming 7."
+      - t: |
+          coins
+        why: cout prints the value inside the variable, not its name.
+    answer: 0
+    hints:
+      - Update the box after each line, top to bottom.
+      - After line 2, coins is 7.
+    explain: "Statements run top to bottom and each assignment replaces the value: 5, then 7, then 21."
+  - id: w2.l1.c3
+    type: fill
+    tags: [ w2.double ]
+    short: Fractional numbers go in a double.
+    prompt: A potion costs 9.99 gold. Fill in the type that can hold that price.
+    code: |-
+      ___ price{9.99};
+      std::cout << price << '\n';
+    accept:
+      - double
+      - float
+      - long double
+    placeholder: type
+    hints:
+      - 9.99 is not a whole number.
+      - The usual type for fractional numbers starts with d.
+    explain: "`double` stores numbers with fractional parts. (`float` works too but is less precise; `double` is the everyday choice.)"
+  - id: w2.l1.c4
+    type: predict
+    tags: [ w2.double, w2.int ]
+    short: "cout drops trailing zeros: 7.0 prints as 7."
+    prompt: What does this print? Watch how cout shows doubles.
+    code: |-
+      double a{7.0};
+      double b{2.5};
+      std::cout << a << ' ' << b << '\n';
+    options:
+      - t: |
+          7 2.5
+        why: "Correct: by default cout drops trailing zeros, so 7.0 prints as 7."
+      - t: |
+          7.0 2.5
+        why: Default formatting doesn't show a trailing .0; 7.0 prints as 7.
+      - t: |
+          72.5
+        why: The ' ' prints a space between the two numbers.
+      - t: |
+          7.000000 2.500000
+        why: That's what std::fixed (or printf's %f) would show, not the default.
+    answer: 0
+    hints:
+      - Default cout shows up to 6 significant digits and no trailing zeros.
+      - "' ' is a single space character."
+    explain: "With default formatting, a double that happens to be whole prints with no decimal point: 7.0 shows as `7`, 2.5 as `2.5`."
+  - id: w2.l1.c5
+    type: write
+    tags: [ w2.int, w2.init ]
+    short: int score{0}; makes an int box holding 0.
+    prompt: Write one line that declares an int named score starting at 0, using braces.
+    accept:
+      - int score{0};
+      - int score{};
+    placeholder: int ...
+    hints:
+      - type name{value};
+      - int score{0};
+    explain: "`int score{0};` creates an int box holding 0. Empty braces, `int score{};`, also give 0."
+recap:
+  - "A variable = type + name + value: `int hp{10};`"
+  - "`int` for whole numbers, `double` for fractional ones."
+  - "`=` replaces the value; the type never changes."
+  - "cout prints doubles without trailing zeros: 7.0 shows as 7."
+vault:
+  - id: w2.vars
+    title: Declaring variables
+    code: |-
+      int hp{10};         // whole number
+      double speed{2.5};  // fractional number
+      hp = hp - 3;        // hp is now 7
+    note: Type, name, starting value. Prefer braces {}.
+    defense: false
+reviewTags: [ w1.cout, w1.main ]

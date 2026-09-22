@@ -1,0 +1,255 @@
+# World 3 · Lesson 3: Compare and decide
+
+id: w3.l3
+title: Compare and decide
+skill: logic
+shield: false
+concept:
+  short: Comparisons give true or false; && means both, || means either, ! flips it.
+  analogy: "Logic operators are a bouncer's checklist: has a ticket AND is on the list."
+  body:
+    - "Comparison operators produce a `bool`: `==` equal, `!=` not equal, `<`, `<=`, `>`, `>=`. Printed with `std::cout`, true shows as `1` and false as `0` (use `std::boolalpha` to see `true`/`false`)."
+    - "`=` assigns, `==` compares. Mixing them up still compiles, which is exactly why it's dangerous."
+    - "Logic: `a && b` (and) is true only if both are; `a || b` (or) if at least one is; `!a` (not) flips it. `and`, `or`, `not` are valid spellings too."
+    - "**Precedence**: `!` binds tightest, then comparisons, then `&&`, then `||`. So `a || b && c` means `a || (b && c)`."
+    - "**Short-circuiting**: `&&` stops as soon as the left side is false; `||` stops as soon as the left side is true. The right side isn't evaluated at all. That's a superpower: put the safety check on the left."
+    - "When printing a comparison, wrap it in parentheses: `std::cout << (a < b);`. Without them, `<<` grabs the operands first."
+  pitfall: "Common beginner mistake: `bool isBoss = (level = 10);`. That ASSIGNS 10 to level and gives true. Turn on warnings (World 1!) and compilers will flag it."
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        int hp = 0;
+        int potions = 2;
+        bool alive = hp > 0;
+        bool canHeal = potions > 0 && !alive;
+        std::cout << alive << ' ' << canHeal << '\n';
+        std::cout << std::boolalpha << canHeal << '\n';
+        return 0;
+    }
+  steps:
+    - line: 3
+      vars:
+        hp: "0"
+      note: Our hero is down to 0 hp.
+    - line: 4
+      vars:
+        hp: "0"
+        potions: "2"
+      note: But has 2 potions.
+    - line: 5
+      vars:
+        hp: "0"
+        potions: "2"
+        alive: "false"
+      note: 0 > 0 is false.
+    - line: 6
+      vars:
+        hp: "0"
+        potions: "2"
+        alive: "false"
+        canHeal: "true"
+      note: "!alive is true, potions > 0 is true, so && gives true."
+    - line: 7
+      out: |
+        0 1
+      note: Without boolalpha, bools print as 0 and 1.
+    - line: 8
+      out: |
+        true
+      note: std::boolalpha switches bool printing to words (and it stays on).
+    - line: 9
+      note: Done. Drink that potion!
+challenges:
+  - id: w3.l3.c1
+    type: predict
+    tags: [ w3.compare, w2.bool ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int a = 3;
+          int b = 7;
+          std::cout << (a < b) << (a == b) << (a != b) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          101
+        why: "Correct: true, false, true print as 1, 0, 1, glued together."
+      - t: |
+          truefalsetrue
+        why: Without std::boolalpha, bools print as 1 and 0.
+      - t: |
+          1 0 1
+        why: "No spaces are printed: there's no ' ' in the chain."
+      - t: |
+          010
+        why: 3 < 7 is true, so the first digit is 1.
+    answer: 0
+    hints:
+      - Each comparison gives a bool.
+      - How does std::cout print a bool by default? Any spaces?
+    short: Bools print as 1 and 0, with nothing between them here.
+    explain: '(3 < 7) is true → 1, (3 == 7) is false → 0, (3 != 7) is true → 1. Output: "101" and a newline.'
+  - id: w3.l3.c2
+    type: mcq
+    tags: [ w3.logic, w3.precedence ]
+    prompt: What is r?
+    code: bool r = true || true && false;
+    expect: warn
+    options:
+      - t: "true"
+        why: "Correct: && binds tighter, so it's true || (true && false) = true || false = true."
+      - t: "false"
+        why: "That's reading left to right: (true || true) && false. But && is grouped first."
+      - t: It doesn't compile
+        why: Mixing && and || is legal (compilers may suggest parentheses, which is a good idea).
+      - t: It's undefined behavior
+        why: Nothing is modified here; it's a well-defined expression.
+    answer: 0
+    hints:
+      - "Which binds tighter: && or ||?"
+      - Group the && part first, like * before +.
+    short: "&& binds tighter than ||, so it's true || (true && false)."
+    explain: "&& has higher precedence than ||, like * over +. true || (true && false) is true. g++ -Wall even warns \"suggest parentheses around '&&' within '||'\": take the hint and write true || (true && false)."
+  - id: w3.l3.c3
+    type: predict
+    tags: [ w3.logic, w3.incdec ]
+    prompt: Short-circuit time! What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int count = 0;
+          bool r = (count > 5) && (++count > 0);
+          std::cout << r << ' ' << count << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          0 0
+        why: "Correct: count > 5 is false, so && stops right there. ++count never runs."
+      - t: |
+          0 1
+        why: "&& short-circuits: once the left side is false, the right side isn't evaluated, so count stays 0."
+      - t: |
+          1 1
+        why: The left side is false, so the whole && is false.
+      - t: |
+          false 0
+        why: Without std::boolalpha, false prints as 0.
+    answer: 0
+    hints:
+      - If the left side of && is false, can the result ever be true?
+      - C++ skips the right side when the answer is already known.
+    short: The left side is false, so && skips ++count entirely.
+    explain: '0 > 5 is false, so && short-circuits: ++count is skipped. r is false (prints 0), count is still 0. Output: "0 0" and a newline.'
+  - id: w3.l3.c4
+    type: bug
+    tags: [ w3.compare, w1.warnings ]
+    prompt: Expected "0 3", but it prints "1 10". Tap the buggy line, then pick the fix.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int level = 3;
+          bool isBoss = (level = 10);
+          std::cout << isBoss << ' ' << level << '\n';
+          return 0;
+      }
+    bugLine: 4
+    options:
+      - t: bool isBoss = (level == 10);
+        why: "Correct: == compares without changing level. 3 == 10 is false."
+      - t: bool isBoss = (level === 10);
+        why: "=== is JavaScript. C++ has no such operator: compile error."
+      - t: bool isBoss = level = 10;
+        why: "Same bug without parentheses: it still assigns 10."
+      - t: bool isBoss = (10 = level);
+        why: "You can't assign to the literal 10: compile error. (The \"Yoda\" trick is written 10 == level.)"
+    answer: 0
+    hints:
+      - Which line changes level when it shouldn't?
+      - One = assigns. How many = do you need to compare?
+    short: = assigns, == compares. Warnings catch this mix-up.
+    explain: "level = 10 assigns 10 and the expression's value (10) converts to true. Use == to compare. Compiling with -Wall warns about this: warnings are your friend!"
+    sideBySide:
+      unsafe: bool isBoss = (level = 10);   // assigns! always true
+      hardened: bool isBoss = (level == 10);  // compares
+      prelude: int level = 3;
+  - id: w3.l3.c5
+    type: fill
+    tags: [ w3.logic, w3.compare ]
+    prompt: Fill in the operator so inRange is true only when age is between 0 and 120 (inclusive).
+    code: |-
+      int age = 30;
+      bool inRange = (age >= 0) ___ (age <= 120);
+    accept:
+      - "&&"
+      - and
+    placeholder: operator
+    hints:
+      - Both conditions must hold at the same time.
+      - The AND operator is two ampersands.
+    short: Both conditions must hold, so use &&.
+    explain: (age >= 0) && (age <= 120) is true only if both are true. With ||, every age would pass, since every number is either >= 0 or <= 120.
+  - id: w3.l3.c6
+    type: edge
+    tags: [ w3.logic, w3.compare ]
+    unsafe: true
+    prompt: validRoll should be true only for a die roll from 1 to 6. Which test inputs expose the bug? Select all that apply.
+    code: |-
+      int roll = 0;
+      std::cin >> roll;
+      bool validRoll = (roll >= 1) || (roll <= 6);
+    options:
+      - t: "0"
+        why: "Exposes it: 0 <= 6 is true, so || says valid. It shouldn't be."
+      - t: "7"
+        why: "Exposes it: 7 >= 1 is true, so || says valid. It shouldn't be."
+      - t: "3"
+        why: 3 really is valid, and the code says valid. This test can't tell right from wrong.
+      - t: "-2"
+        why: "Exposes it: -2 <= 6 is true, so it's wrongly accepted."
+      - t: "6"
+        why: 6 is valid and gets accepted. Correct result, so no bug exposed.
+    answers: [ 0, 1, 3 ]
+    hints:
+      - Good tests use values that SHOULD be rejected.
+      - With ||, one true side is enough. Can any number fail both?
+    short: "|| makes it always true; only out-of-range inputs reveal that."
+    explain: "Every integer is either >= 1 or <= 6, so || makes validRoll always true. Only out-of-range inputs (0, 7, -2) reveal it. Fix: use &&."
+    sideBySide:
+      unsafe: bool validRoll = (roll >= 1) || (roll <= 6);   // always true
+      hardened: bool validRoll = (roll >= 1) && (roll <= 6);   // 1..6 only
+      prelude: int roll = 0;
+recap:
+  - == compares, = assigns. Compile with warnings to catch mix-ups.
+  - Bools print as 1/0 unless you use std::boolalpha.
+  - "! first, then comparisons, then &&, then ||."
+  - "&& and || short-circuit: the right side may never run."
+vault:
+  - id: w3.compare
+    title: Comparison operators
+    code: |-
+      a == b   a != b
+      a <  b   a <= b
+      a >  b   a >= b
+      std::cout << (a < b);   // parentheses needed!
+    expect: skip
+    note: "Results are bool: printed as 1/0, or true/false with std::boolalpha."
+    defense: false
+  - id: w3.logic
+    title: Logic & short-circuit
+    code: |-
+      bool ok = (x >= 1) && (x <= 6);  // both
+      bool any = hurt || poisoned;      // at least one
+      bool no = !ready;                 // flip
+      // && stops at the first false, || at the first true
+    prelude: int x{3}; bool hurt{}; bool poisoned{}; bool ready{};
+    note: a || b && c means a || (b && c). Put cheap safety checks on the left.
+    defense: false
+reviewTags: [ w2.bool, w1.cout, w3.precedence ]

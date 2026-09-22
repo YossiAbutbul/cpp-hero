@@ -1,0 +1,258 @@
+# World 1 · Lesson 6: Shield: warnings are your friend (Shield lesson)
+
+id: w1.l6
+title: "Shield: warnings are your friend"
+skill: defense
+shield: true
+concept:
+  short: Turn warnings on, read the first error first, and fix every warning. They're free bug reports.
+  analogy: An error is a locked door; a warning is a smoke alarm you should never unplug.
+  body:
+    - "Build with warnings on: `g++ -std=c++20 -Wall -Wextra -pedantic main.cpp -o hero` (MSVC: `/W4`). `-Werror` turns warnings into errors."
+    - "Messages read `file:line:column: error: message`, counting lines from 1. Fix the **first** error first: one missing `;` can cause a cascade."
+    - The reported spot is where the compiler **noticed** the problem, sometimes just after it. For a missing `;`, check the previous line.
+    - "Some warnings flag **undefined behavior** (UB), like dividing by zero. UB doesn't guarantee a crash: it may seem fine today and fail tomorrow."
+  pitfall: Ignoring warnings because "it still runs". The warnings you ignore are the ones that bite later.
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        std::cout << "Shields: ";
+        std::cout << 'ON\n';
+        return 0;
+    }
+  steps:
+    - line: 4
+      note: "Warning at line 5: multi-character character constant [-Wmultichar]."
+    - line: 2
+      note: Only a warning, so it builds and runs.
+    - line: 3
+      out: "Shields: "
+      note: This line is fine.
+    - line: 4
+      crash: Prints 5197322 (on GCC) instead of ON!
+      note: Single quotes hold ONE character. This became a number.
+    - line: 4
+      shield: 'Warning heeded: "ON\n" prints ON'
+      note: Double quotes for text, single quotes for one character.
+    - line: 5
+      note: "Rule: warnings on, and treat each one as a bug."
+challenges:
+  - id: w1.l6.c1
+    type: mcq
+    tags: [ w1.warnings, w1.compile ]
+    prompt: "The build fails with: hero.cpp:12:5: error: 'cot' is not a member of 'std'. Where should you look first?"
+    options:
+      - t: Line 5, column 12
+        why: "The format is file:line:column: line 12 first, then column 5."
+      - t: "Line 12 of hero.cpp, around column 5, for a misspelled std:: name"
+        why: "Correct! And cot doesn't exist in std: you meant cout."
+      - t: The last line of the file
+        why: The message gives the exact line. No need to guess.
+      - t: "Nowhere: reinstall the compiler"
+        why: The compiler is fine! It's pointing straight at a typo.
+    answer: 1
+    hints:
+      - The numbers come in the order line, then column.
+      - The message quotes the name it couldn't find.
+    short: "file:line:column: line 12, column 5, a typo for cout."
+    explain: "Error format: file:line:column: error: message. Here: hero.cpp, line 12, column 5, and the name cot isn't in std. It's a typo for cout. Compilers often even suggest \"did you mean 'cout'?\"."
+  - id: w1.l6.c2
+    type: review
+    tags: [ w1.warnings, w1.cout ]
+    prompt: Code review! This compiles, but with warnings. Tap every dangerous line, then submit.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << "Status: ";
+          std::cout << 'OK\n';
+          std::cout << "Power: " << 100 / 0 << '\n';
+          std::cout << "Done\n";
+          return 0;
+      }
+    unsafe: true
+    dangerous: [ 4, 5 ]
+    lineNotes:
+      "3": "Fine: text in double quotes."
+      "4": "Warning: 'OK\\n' in single quotes prints a number, not OK."
+      "5": "Warning: division by zero is undefined behavior. Crash, garbage, or seems fine."
+      "6": Fine.
+    hints:
+      - Look for single quotes around more than one character.
+      - Also look for math no computer can do.
+    short: "Single-quoted text and division by zero: both warnings, both real bugs."
+    explain: "Both warnings are real bugs. 'OK\\n' should be \"OK\\n\", and 100 / 0 is undefined behavior: the compiler warns, the program may even run, but its behavior is unpredictable. Don't ship code with warnings."
+    sideBySide:
+      unsafe: |-
+        std::cout << 'OK\n';                       // multi-char constant
+        std::cout << "Power: " << 100 / 0 << '\n';  // UB: divide by zero
+      hardened: |-
+        std::cout << "OK\n";
+        std::cout << "Power: " << 100 << '\n';
+  - id: w1.l6.c3
+    type: harden
+    tags: [ w1.warnings, w1.cout ]
+    prompt: The compiler warned about this line. Pick what fills the blank so it builds cleanly and prints the right text.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << ___;
+          return 0;
+      }
+    options:
+      - t: "'Shields up!\\n'"
+        why: "Single quotes around many characters: a warning, and a number prints."
+      - t: Shields up!\n
+        why: "No quotes: the compiler reads Shields as a name. Error."
+      - t: '"Shields up!\n"'
+        why: "Correct! Double quotes make a string: clean build, right output."
+      - t: '"Shields up!\n'
+        why: 'Missing the closing quote: error: missing terminating " character.'
+    answer: 2
+    hints:
+      - Text is a string, and strings use one kind of quote.
+      - Make sure the quotes are balanced, too.
+    short: Text goes in double quotes; single quotes are for one character.
+    explain: "Strings go in double quotes, single characters in single quotes. The single-quote version compiles with only a warning, which is exactly why you must read warnings: it silently prints garbage."
+    sideBySide:
+      unsafe: std::cout << 'Shields up!\n';   // warning, prints a number
+      hardened: std::cout << "Shields up!\n";   // clean
+  - id: w1.l6.c4
+    type: safe
+    tags: [ w1.warnings, w1.compile ]
+    prompt: Speed round! Each line sits inside main() with <iostream>, built with -Wall -Wextra. Safe = clean build.
+    seconds: 30
+    items:
+      - code: std::cout << "Hi\n";
+        safe: true
+        why: Double-quoted string, semicolon present. Clean.
+      - code: std::cout << 'Hi\n';
+        safe: false
+        why: "Multi-character constant: warning, prints a number."
+      - code: std::cout << "Hi\n"
+        expect: error
+        safe: false
+        why: "Missing semicolon: compile error."
+      - code: std::cout << 7 / 0;
+        safe: false
+        why: "Division by zero: warning, and undefined behavior."
+      - code: // std::cout << 'oops';
+        safe: true
+        why: A comment. The compiler ignores it.
+      - code: std::cout << "50% done\q";
+        safe: false
+        why: "\\q isn't a real escape: \"unknown escape sequence\" warning."
+      - code: std::cout << "a" << "b" << '\n';
+        safe: true
+        why: Clean chaining; '\n' is one character.
+      - code: std:cout << "Hi\n";
+        expect: error
+        safe: false
+        why: "One colon: std: becomes a label, and cout is undeclared."
+    hints:
+      - Check the quotes, the semicolon and the colons.
+      - Watch for dividing by zero and unfamiliar backslash sequences.
+    short: Clean means no errors AND no warnings.
+    explain: A clean build means no errors AND no warnings. Missing ;, single-colon std:, multi-character single quotes, unknown escapes and division by zero all set off the alarm.
+  - id: w1.l6.c5
+    type: bug
+    tags: [ w1.warnings, w1.compile ]
+    prompt: "Intentionally broken: \"error: expected ';' before 'std'\", pointing at the \"line A\" line. Tap the mistake, then pick the fix."
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << "Error log:\n";
+          std::cout << "line A\n"
+          std::cout << "line B\n";
+          std::cout << "line C\n";
+          return 0;
+      }
+    expect: error
+    unsafe: true
+    bugLine: 4
+    options:
+      - t: 'Delete std:: from the "line B" statement'
+        why: Then cout is unknown, and the ; is still missing.
+      - t: Add ; at the end of the "line A" statement
+        why: Correct! The statement before the next std was unfinished.
+      - t: Change "line A\n" to 'line A\n'
+        why: That adds a warning and still no semicolon.
+      - t: "Add #include <string> at the top"
+        why: No include is missing. The message is about a ;.
+    answer: 1
+    bug: missing-semicolon
+    hints:
+      - The std in the message starts the "line B" statement.
+      - So which statement never got its full stop?
+    short: '"Expected ; before std": the statement before std needs its ;.'
+    explain: "Read the message literally: the compiler expected a ; but found std (the start of the next statement). The fix goes at the end of the statement before it. Fix the first error and rebuild; follow-up errors often vanish."
+    sideBySide:
+      unsafe: |-
+        std::cout << "line A\n"
+        std::cout << "line B\n";
+      hardened: |-
+        std::cout << "line A\n";
+        std::cout << "line B\n";
+      expect: error
+  - id: w1.l6.c6
+    type: breakit
+    tags: [ w1.compile, w1.warnings ]
+    prompt: "Think like the Gremlin: which single edit would BREAK this working program?"
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << "Stable\n";
+          return 0;
+      }
+    options:
+      - t: Delete the whole return 0; line
+        why: "Still compiles: main() returns 0 automatically."
+      - t: Add // all good at the end of the cout line
+        why: Trailing comments are ignored. Still compiles.
+      - t: Add a blank line between the two statements
+        why: Blank lines don't matter to the compiler.
+      - t: Delete the ; after "Stable\n"
+        why: Correct! The statement runs into return 0 and the build fails.
+    answer: 3
+    hints:
+      - Whitespace and comments are ignored by the compiler.
+      - main() has a special rule about return 0;.
+    short: Only deleting the ; breaks it. Whitespace and comments don't matter.
+    explain: Only removing the semicolon breaks the build. Knowing what the compiler does and doesn't care about helps you spot real problems fast.
+    sideBySide:
+      unsafe: |-
+        std::cout << "Stable\n"    // ; deleted: error
+            return 0;
+      hardened: |-
+        std::cout << "Stable\n";
+            return 0;
+      expect: error
+recap:
+  - Build with -Wall -Wextra; -Werror blocks warnings.
+  - Errors read file:line:column. Fix the first first.
+  - Missing ;? Check the previous line.
+  - UB may not crash. Heed the warning.
+vault:
+  - id: w1.warnings
+    title: Warnings on, always
+    code: |-
+      g++ -std=c++20 -Wall -Wextra -pedantic main.cpp -o hero
+      # strict mode: every warning becomes an error
+      g++ -std=c++20 -Wall -Wextra -Werror main.cpp -o hero
+    expect: skip
+    note: A warning is a free bug report. Never silence it with -w; fix the code.
+    defense: true
+  - id: w1.errors
+    title: Reading error messages
+    code: |-
+      main.cpp:5:28: error: expected ';' before 'std'
+      // file : line : column : kind : message
+    expect: skip
+    note: 'Fix the FIRST error first. For "expected ;", check the line before. UB may not crash: "it seemed to work" proves nothing.'
+    defense: true
+reviewTags: [ w1.compile, w1.cout ]

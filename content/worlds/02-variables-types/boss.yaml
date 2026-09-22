@@ -1,0 +1,363 @@
+# World 2 boss: The Garbage Blob
+
+id: w2.boss
+name: The Garbage Blob
+art: blob
+hp: 6
+intro: Blorp! I'm made of every variable you forgot to fill!
+taunt:
+  - Go on, read me. I might be 0. I might be 21980. Blorp!
+  - It worked on your machine? Heh heh. Wait until release mode.
+  - Seven divided by two is three, little hero. Squelch!
+rounds:
+  - id: w2.boss.r1
+    type: mcq
+    tags: [ w2.init ]
+    bug: uninit-var
+    short: An uninitialized int holds garbage; reading it is UB.
+    prompt: The Blob oozes out of `int x;` inside main(). What's in x?
+    options:
+      - t: An indeterminate garbage value; reading it is undefined behavior
+        why: "Correct: nothing was stored, so reading it is UB."
+      - t: Always 0
+        why: Local ints are not zeroed for you. It might happen to be 0, which is the sneaky part.
+      - t: "Nothing: reading it just prints an empty line"
+        why: An int always has some bit pattern; you just don't know which, and reading it is UB.
+      - t: A random number the compiler picks on purpose
+        why: "Nothing is picked on purpose: it's leftover memory, and the rules don't define what you get."
+    answer: 0
+    hints:
+      - Was anything ever put in the box?
+      - The Shield Lesson called it UB.
+    explain: "An uninitialized local int holds an indeterminate value. Reading it is undefined behavior: it may look fine, then fail later. Initialize it: `int x{};`."
+  - id: w2.boss.r2
+    type: predict
+    tags: [ w2.int, w2.convert ]
+    short: 9 / 4 is 2 with ints; 9 % 4 is 1.
+    prompt: What does this print?
+    code: |-
+      int a{9};
+      int b{4};
+      std::cout << a / b << ' ' << a % b << '\n';
+    options:
+      - t: |
+          2 1
+        why: "Correct: 9 / 4 is 2 (integer division), 9 % 4 is 1."
+      - t: |
+          2.25 1
+        why: Both are ints, so / drops the fraction.
+      - t: |
+          2 0.25
+        why: "% is the integer remainder: 9 = 4 * 2 + 1."
+      - t: |
+          21
+        why: The ' ' prints a space between the two numbers.
+    answer: 0
+    hints:
+      - int / int drops the fraction.
+      - 9 = 4 * 2 + ?
+    explain: 9 / 4 = 2 with ints, and the remainder 9 % 4 = 1.
+  - id: w2.boss.r3
+    type: speed
+    tags: [ w2.auto, w2.convert, w2.bool, w2.char, w2.init ]
+    short: 3.0 is double, 7 / 2 is 3, -2.8 truncates to -2.
+    prompt: The Blob splits into six blobs! Speed round!
+    seconds: 45
+    items:
+      - q: What type is v?
+        code: auto v{3.0};
+        options:
+          - int
+          - double
+          - char
+        answer: 1
+      - q: What does this print?
+        code: std::cout << 7 / 2;
+        options:
+          - "3"
+          - "3.5"
+          - "4"
+        answer: 0
+      - q: What value does t hold?
+        code: int t{static_cast<int>(-2.8)};
+        options:
+          - "-3"
+          - "3"
+          - "-2"
+        answer: 2
+      - q: What does this print?
+        code: std::cout << true;
+        options:
+          - "1"
+          - "true"
+          - T
+        answer: 0
+      - q: What type is 'A' + 1?
+        options:
+          - char
+          - int
+          - std::string
+        answer: 1
+      - q: What does n hold?
+        code: int n{};
+        options:
+          - garbage
+          - nothing
+          - "0"
+        answer: 2
+    hints:
+      - A decimal point means double; int / int drops fractions.
+      - Truncation goes toward zero; empty braces mean zero.
+    explain: 3.0 is double; 7 / 2 is 3; -2.8 truncates to -2; true prints 1; char + int is int; `int n{};` is 0.
+  - id: w2.boss.r4
+    type: bug
+    tags: [ w2.init ]
+    bug: uninit-var
+    unsafe: true
+    short: blobHp - 1 reads garbage; initialize it where it's declared.
+    prompt: The Blob's own HP counter is garbage! Tap the buggy line, then pick the fix.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int blobHp;
+          blobHp = blobHp - 1;
+          std::cout << blobHp << '\n';
+          return 0;
+      }
+    bugLine: 3
+    options:
+      - t: int blobHp{6};
+        why: "Correct: now line 4 computes 6 - 1 = 5, every time."
+      - t: "int blobHp;  // TODO: set this"
+        why: A TODO doesn't fill the box; blobHp - 1 still reads garbage.
+      - t: unsigned blobHp;
+        why: "Changing the type doesn't initialize it: still garbage, still UB."
+    answer: 0
+    hints:
+      - Line 4 reads blobHp. Did it ever get a value?
+      - Initialize at the declaration.
+    explain: "`blobHp - 1` reads an uninitialized variable: UB. The fix is on the declaration line: give it a value."
+    sideBySide:
+      unsafe: |-
+        int blobHp;
+        blobHp = blobHp - 1;   // UB: reads garbage
+      hardened: |-
+        int blobHp{6};
+        blobHp = blobHp - 1;   // 5
+  - id: w2.boss.r5
+    type: predict
+    tags: [ w2.char, w2.convert ]
+    short: c + 1 is int 67, stored back into a char as 'C'.
+    prompt: What does this print? (Compare with char + int from Lesson 2.)
+    code: |-
+      char c{'B'};
+      c = c + 1;
+      std::cout << c << '\n';
+    options:
+      - t: |
+          C
+        why: "Correct: c + 1 is int 67, but storing it in a char makes it 'C'."
+      - t: |
+          67
+        why: c + 1 is an int, but it's stored back into c, a char, so cout prints a character.
+      - t: |
+          B1
+        why: + on a char does arithmetic on its code, not text joining.
+      - t: |
+          66
+        why: c is printed after the update, and it's printed as a character.
+    answer: 0
+    hints:
+      - What type is c after the assignment?
+      - "'B' is 66, so 66 + 1 is 67, which is 'C'."
+    explain: "`c + 1` is int 67, then it's converted back to char when assigned to c. A char prints as a character: `C`."
+  - id: w2.boss.r6
+    type: safe
+    tags: [ w2.init, w2.narrowing, w2.const, w2.auto ]
+    bug: uninit-var
+    short: Initialize everything; only std::string starts safely empty on its own.
+    prompt: The Blob spits code at you. Safe or unsafe? Hurry!
+    seconds: 30
+    items:
+      - code: double d{5};
+        safe: true
+        why: "5 is a constant that fits a double exactly, so braces allow it: d is 5.0."
+      - code: |-
+          int total;
+          total += 5;
+        safe: false
+        why: "+= reads total first, and total was never initialized: UB."
+      - code: const int k{3};
+        safe: true
+        why: "A const with a value: can't be garbage, can't change."
+      - code: auto ratio{0.5};
+        safe: true
+        why: auto deduces double from 0.5 and it's initialized.
+      - code: |-
+          int hp{};
+          hp = hp + 1;
+        safe: true
+        why: hp starts at 0, so hp + 1 is 1.
+      - code: |-
+          char c;
+          std::cout << c;
+        safe: false
+        why: c holds garbage; reading it is UB.
+      - code: |-
+          std::string s;
+          std::cout << s.size();
+        safe: true
+        why: "A std::string starts empty: prints 0."
+      - code: int hits = 4.9;
+        safe: false
+        why: "Compiles, but silently becomes 4: lost data the compiler would have caught with braces."
+    hints:
+      - Is every variable filled before it's read?
+      - Silent double-to-int with = is a hidden bug.
+    explain: Initialize everything, prefer braces, and remember std::string is the one type here that starts safely empty on its own.
+  - id: w2.boss.r7
+    type: order
+    tags: [ w2.init, w1.main ]
+    short: Declare blobHp with a value before subtracting.
+    prompt: Rebuild the Blob's HP counter safely so it prints 5. One line doesn't belong.
+    lines:
+      - "#include <iostream>"
+      - int main() {
+      - "    int blobHp{6};"
+      - "    blobHp = blobHp - 1;"
+      - "    std::cout << blobHp << '\\n';"
+      - "    return 0;"
+      - "}"
+    distractors:
+      - "    int blobHp;"
+    hints:
+      - Declare with a value before you subtract.
+      - The uninitialized declaration is the Blob's trick.
+    explain: Include, open main, declare blobHp with a real value, subtract, print 5, return. `int blobHp;` would bring the garbage back.
+  - id: w2.boss.r8
+    type: edge
+    tags: [ w2.convert, w2.int ]
+    unsafe: true
+    short: Any odd sum loses its .5; divide by 2.0 instead.
+    prompt: The Blob hid a bug in this average. Which test values expose it? Select all that apply.
+    code: |-
+      int a{/* test */};
+      int b{/* test */};
+      double avg = (a + b) / 2;
+      std::cout << avg << '\n';
+    options:
+      - t: a = 4, b = 6
+        why: "(4 + 6) / 2 = 5 exactly: the bug stays hidden."
+      - t: a = 3, b = 4
+        why: "Exposes it: prints 3 instead of 3.5."
+      - t: a = 1, b = 2
+        why: "Exposes it: prints 1 instead of 1.5."
+      - t: a = 10, b = 10
+        why: "20 / 2 = 10 exactly: hidden."
+      - t: a = -3, b = 0
+        why: "Exposes it: -3 / 2 truncates toward zero to -1, instead of -1.5."
+    answers: [ 1, 2, 4 ]
+    hints:
+      - The bug shows whenever a + b is odd.
+      - "Negative odd sums count too: truncation goes toward zero."
+    explain: "`(a + b) / 2` is integer division, so any odd sum loses its .5. Divide by `2.0` so the division is done in double."
+    sideBySide:
+      unsafe: double avg = (a + b) / 2;     // int division
+      hardened: double avg{(a + b) / 2.0};    // real division
+      prelude: int a{7}; int b{8};
+defense:
+  - attack: "?"
+    label: Garbage value!
+    challenge:
+      id: w2.boss.d1
+      type: harden
+      tags: [ w2.init, w2.bool ]
+      bug: uninit-var
+      short: bool isShielded{false}; starts the switch in a known position.
+      prompt: "The Blob fires a glob of garbage at isShielded. Block it: make isShielded start as false."
+      code: |-
+        bool isShielded___;
+        std::cout << std::boolalpha << isShielded << '\n';
+      options:
+        - t: "{false}"
+          why: "Correct: the switch starts in a known position."
+        - t: = isShielded
+          why: "Self-initialization reads the garbage it's supposed to replace: UB."
+        - t: "{maybe}"
+          why: "There is no maybe: bools are true or false, and maybe is an undeclared name, so it won't compile."
+      answer: 0
+      hints:
+        - A bool must start as true or false.
+        - Put the value in braces.
+      explain: An uninitialized bool is garbage like any other; reading it is UB. `bool isShielded{false};` prints `false` every time.
+      sideBySide:
+        unsafe: |-
+          bool isShielded;   // garbage
+          std::cout << std::boolalpha << isShielded << '\n';
+        hardened: |-
+          bool isShielded{false};
+          std::cout << std::boolalpha << isShielded << '\n';   // false
+  - attack: "0.9"
+    label: Narrowing slime!
+    challenge:
+      id: w2.boss.d2
+      type: breakit
+      tags: [ w2.narrowing, w2.convert ]
+      unsafe: true
+      short: "0.9 silently truncates to 0: no armor at all."
+      prompt: The Blob tries different armor values. Which one slips through and wipes out the armor?
+      code: |-
+        double blobArmor{/* value */};
+        int armor = blobArmor;   // silent double to int
+        std::cout << "Armor: " << armor << '\n';
+      options:
+        - t: "4.0"
+          why: "Becomes 4: nothing lost."
+        - t: "0.9"
+          why: "Correct: silently truncated to 0. No armor at all!"
+        - t: "10.0"
+          why: "Becomes 10: nothing lost."
+      answer: 1
+      hints:
+        - Truncation chops the fraction.
+        - What's left of 0.9 without its fraction?
+      explain: "`int armor = blobArmor;` silently truncates, so 0.9 becomes 0. Brace init (`int armor{blobArmor};`) is ill-formed narrowing that the compiler flags (an error on Clang/MSVC, a narrowing warning on GCC), forcing you to keep a double or convert on purpose."
+      sideBySide:
+        unsafe: int armor = blobArmor;   // 0.9 becomes 0
+        hardened: double armor{blobArmor};   // keeps 0.9
+        prelude: double blobArmor{0.9};
+  - attack: 7 / 2
+    label: Division drip!
+    challenge:
+      id: w2.boss.d3
+      type: harden
+      tags: [ w2.convert, w2.narrowing ]
+      short: Cast blobs to double before dividing to get 3.5.
+      prompt: 7 blobs split between 2 squads. Make perSquad exactly 3.5.
+      code: |-
+        int blobs{7};
+        int squads{2};
+        double perSquad{___};
+        std::cout << perSquad << '\n';
+      options:
+        - t: static_cast<double>(blobs) / squads
+          why: "Correct: blobs becomes 7.0 first, so the division is real: 3.5."
+        - t: blobs / squads
+          why: Gives 3, and braces flag int-to-double narrowing (error on Clang/MSVC, warning on GCC).
+        - t: static_cast<double>(blobs / squads)
+          why: "Too late: 7 / 2 is already 3 before the cast, so perSquad is 3."
+      answer: 0
+      hints:
+        - Convert before dividing.
+        - Cast an operand, not the result.
+      explain: Only a double operand makes the division real. `static_cast<double>(blobs) / squads` is 3.5.
+      sideBySide:
+        unsafe: double perSquad = blobs / squads;   // 3
+        hardened: double perSquad{static_cast<double>(blobs) / squads};   // 3.5
+        prelude: int blobs{7}; int squads{2};
+victory: Blorrrp... my garbage... it's all zeros now... So... tidy... *splat*
+reward:
+  xp: 150
+  cosmetic: blob-bowtie
+  bug: uninit-var

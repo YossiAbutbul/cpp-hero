@@ -1,0 +1,240 @@
+# World 2 · Lesson 3: Sealed jars & smart labels: const and auto
+
+id: w2.l3
+title: "Sealed jars & smart labels: const and auto"
+skill: toolkit
+shield: false
+concept:
+  short: const values can never change; auto lets the compiler pick the type.
+  analogy: "`const` is a jar with a glued lid, and `auto` is a label maker that reads the contents for you."
+  body:
+    - "`const int maxHp{100};` creates a value that can never change. Writing `maxHp = 50;` later is a **compile error**, and that's the point: the compiler guards it for you."
+    - A `const` must get its value when it's declared. There's no later chance to fill a sealed jar.
+    - "`auto` lets the compiler deduce the type from the initializer: `auto lives{3};` is an `int`, `auto ratio{0.5};` is a `double`, `auto initial{'C'};` is a `char`."
+    - "Careful: `auto name{\"Curlo\"};` is **not** a `std::string`. It's a `const char*` (a pointer to raw text, World 8 stuff). Write `std::string` when you want a string."
+    - "`auto` is still strict typing: the type is fixed at compile time. Use it when the type is obvious."
+  pitfall: Thinking `auto` means "any type, can change later". After `auto hp{10};`, hp is an int forever, so `hp = 2.7;` stores 2.
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        const int maxHp{100};
+        auto hp{maxHp};
+        auto regen{0.5};
+        hp = hp - 30;
+        std::cout << hp << '/' << maxHp << '\n';
+        std::cout << regen * 10 << '\n';
+        return 0;
+    }
+  steps:
+    - line: 2
+      note: main() starts.
+    - line: 3
+      vars:
+        maxHp: "100"
+      note: "maxHp is const: sealed at 100 forever."
+    - line: 4
+      vars:
+        maxHp: "100"
+        hp: "100"
+      note: "auto copies maxHp's type, int, but not const: hp can change."
+    - line: 5
+      vars:
+        maxHp: "100"
+        hp: "100"
+        regen: "0.5"
+      note: 0.5 has a decimal point, so auto deduces double.
+    - line: 6
+      vars:
+        maxHp: "100"
+        hp: "70"
+        regen: "0.5"
+      note: hp changes to 70. Trying this on maxHp would not compile.
+    - line: 7
+      vars:
+        maxHp: "100"
+        hp: "70"
+        regen: "0.5"
+      out: |
+        70/100
+      note: "'/' is a char, printed as the character /."
+    - line: 8
+      vars:
+        maxHp: "100"
+        hp: "70"
+        regen: "0.5"
+      out: |
+        5
+      note: 0.5 * 10 is the double 5.0, which cout prints as 5.
+    - line: 9
+      note: Done!
+challenges:
+  - id: w2.l3.c1
+    type: mcq
+    tags: [ w2.const, w1.compile ]
+    short: Assigning to a const is a compile error.
+    prompt: What happens when you try to compile this?
+    code: |-
+      const int maxLevel{50};
+      maxLevel = 60;
+    expect: error
+    options:
+      - t: "Compile error: you can't assign to a const variable"
+        why: "Correct: the compiler refuses to change a const. That's the protection working."
+      - t: It compiles and maxLevel becomes 60
+        why: const means the value can never change after initialization.
+      - t: It compiles, but maxLevel silently stays 50
+        why: "C++ doesn't silently ignore it: the compiler stops with an error."
+      - t: It compiles, then crashes when that line runs
+        why: The problem is caught at compile time, so the program is never built.
+    answer: 0
+    hints:
+      - What does const promise?
+      - "Who enforces the promise: the compiler or the running program?"
+    explain: Assigning to a const is a compile-time error ("assignment of read-only variable"). Mistakes caught by the compiler never reach players.
+  - id: w2.l3.c2
+    type: speed
+    tags: [ w2.auto ]
+    short: auto copies the initializer's type; "hi" gives const char*.
+    prompt: Speed round! What type does auto deduce?
+    seconds: 45
+    items:
+      - q: What type is a?
+        code: auto a{42};
+        options:
+          - int
+          - double
+          - char
+        answer: 0
+      - q: What type is b?
+        code: auto b{4.0};
+        options:
+          - int
+          - bool
+          - double
+        answer: 2
+      - q: What type is c?
+        code: auto c{'x'};
+        options:
+          - std::string
+          - char
+          - int
+        answer: 1
+      - q: What type is d?
+        code: auto d{true};
+        options:
+          - bool
+          - int
+          - char
+        answer: 0
+      - q: What type is e?
+        code: auto e{"hi"};
+        options:
+          - std::string
+          - char
+          - const char*
+        answer: 2
+      - q: What type is g?
+        code: |-
+          const int m{5};
+          auto g{m};
+        options:
+          - const int
+          - int
+          - double
+        answer: 1
+    hints:
+      - auto copies the type of the initializer.
+      - A decimal point means double; auto drops a top-level const.
+    explain: 42 is int, 4.0 is double, 'x' is char, true is bool. "hi" is a raw text literal, so auto gives const char*, not std::string. auto drops a top-level const, so g is a plain int.
+  - id: w2.l3.c3
+    type: fill
+    tags: [ w2.const ]
+    short: const seals a value so it can't change.
+    prompt: Make kMaxLives impossible to change after this line.
+    code: ___ int kMaxLives{3};
+    accept:
+      - const
+      - constexpr
+    placeholder: keyword
+    hints:
+      - It's the sealed-jar keyword.
+      - Five letters, starts with c.
+    explain: "`const int kMaxLives{3};` can't be changed later. (`constexpr` also works and means \"known at compile time\".)"
+  - id: w2.l3.c4
+    type: predict
+    tags: [ w2.auto, w2.convert ]
+    short: hp became an int on line 1, so 2.7 truncates to 2.
+    prompt: What does this print?
+    code: |-
+      auto hp{10};
+      hp = 2.7;
+      std::cout << hp << '\n';
+    options:
+      - t: |
+          2
+        why: "Correct: auto made hp an int at its declaration. Storing 2.7 into an int drops the fraction."
+      - t: |
+          2.7
+        why: auto doesn't change the type later. hp became an int on line 1, forever.
+      - t: |
+          3
+        why: Converting a double to an int truncates, it doesn't round.
+      - t: |
+          10
+        why: The assignment on line 2 does happen; hp gets the int part of 2.7.
+    answer: 0
+    hints:
+      - What type did auto pick on line 1?
+      - double to int drops everything after the decimal point.
+    explain: "`auto hp{10};` makes hp an int. `hp = 2.7;` converts 2.7 to int by truncating: 2. (Assignment with = allows this silently; the braces rule only applies when initializing.)"
+  - id: w2.l3.c5
+    type: write
+    tags: [ w2.const, w2.double ]
+    short: const double kGravity{9.8}; is a sealed double.
+    prompt: Write one line declaring a constant double named kGravity equal to 9.8, using braces.
+    accept:
+      - const double kGravity{9.8};
+      - constexpr double kGravity{9.8};
+      - double const kGravity{9.8};
+    placeholder: const ...
+    hints:
+      - const, then the type, then the name.
+      - const double kGravity{...};
+    explain: "`const double kGravity{9.8};` makes a sealed double. Nothing can change it by accident."
+  - id: w2.l3.c6
+    type: order
+    tags: [ w2.const, w2.auto, w1.main ]
+    short: Declare before use; a const can't be reassigned.
+    prompt: Put the lines in order to build a program that prints 100. One line doesn't belong.
+    lines:
+      - "#include <iostream>"
+      - int main() {
+      - "    const int maxHp{100};"
+      - "    auto hp{maxHp};"
+      - "    std::cout << hp << '\\n';"
+      - "    return 0;"
+      - "}"
+    distractors:
+      - "    maxHp = 120;"
+    hints:
+      - A variable must exist before you use it.
+      - Can you assign to a const?
+    explain: Include, open main, declare maxHp, copy it into hp, print, return. `maxHp = 120;` would be a compile error because maxHp is const.
+recap:
+  - "`const` values can't change; the compiler enforces it."
+  - A const must be initialized when declared.
+  - "`auto` deduces the type once; it never changes."
+  - '`auto x{"hi"};` is const char*, not std::string.'
+vault:
+  - id: w2.const-auto
+    title: const and auto
+    code: |-
+      const int maxHp{100};   // can never change
+      auto lives{3};          // int
+      auto ratio{0.5};        // double
+      std::string name{"Curlo"};  // spell out std::string
+    note: Make values const unless they need to change. Use auto when the type is obvious from the right side.
+    defense: false
+reviewTags: [ w1.comments, w2.int, w2.string ]

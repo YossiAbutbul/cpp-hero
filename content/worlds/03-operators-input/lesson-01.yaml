@@ -1,0 +1,239 @@
+# World 3 · Lesson 1: Math machines
+
+id: w3.l1
+title: Math machines
+skill: logic
+shield: false
+concept:
+  short: Integer division drops the fraction; % gives the remainder; * and / happen before + and -.
+  analogy: "Integer division is splitting 17 cookies among 5 friends: 3 each, and `%` counts the 2 leftovers."
+  body:
+    - "C++ has the usual arithmetic operators: `+`, `-`, `*`, `/`, and `%` (remainder, also called modulo)."
+    - "When **both** sides of `/` are integers, the result is an integer: the fraction is chopped off (truncated toward zero). `17 / 5` is `3`, and `-7 / 2` is `-3`, not `-4`."
+    - "`%` gives the remainder and only works on integers: `17 % 5` is `2`. Its sign follows the left side, so `-7 % 2` is `-1`. Handy trick: `n % 2 == 0` means n is even."
+    - "Want a real fraction? Make one side a `double`: `17.0 / 5` or `static_cast<double>(a) / b` gives `3.4`."
+    - "**Precedence**: `*`, `/`, `%` happen before `+` and `-`, just like school math. Operators of the same level go left to right. When in doubt, add parentheses: they're free and make intent obvious."
+  pitfall: "Common beginner mistake: `double avg = total / count;` with two ints gives 3, not 3.5. The division happens in int land first."
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        int gold = 17;
+        int players = 5;
+        std::cout << gold / players << '\n';
+        std::cout << gold % players << '\n';
+        std::cout << 2 + 3 * 4 << '\n';
+        std::cout << 7.0 / 2 << '\n';
+        return 0;
+    }
+  steps:
+    - line: 2
+      note: Execution starts in main().
+    - line: 3
+      vars:
+        gold: "17"
+      note: 17 gold coins in the chest.
+    - line: 4
+      vars:
+        gold: "17"
+        players: "5"
+      note: 5 heroes want a share.
+    - line: 5
+      out: |
+        3
+      note: "int / int stays int: 3.4 is chopped to 3."
+    - line: 6
+      out: |
+        2
+      note: "% gives the leftover: 17 - 15 = 2."
+    - line: 7
+      out: |
+        14
+      note: "* before +: 2 + 12 = 14, not 20."
+    - line: 8
+      out: |
+        3.5
+      note: "7.0 is a double, so this is real division: 3.5."
+    - line: 9
+      note: "return 0: success. Math machine powered down!"
+challenges:
+  - id: w3.l1.c1
+    type: predict
+    tags: [ w3.arith, w3.modulo ]
+    prompt: What does this print? (Watch the space.)
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << 7 / 2 << ' ' << 7 % 2 << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          3 1
+        why: "Correct: 7 / 2 with ints is 3 (fraction dropped) and the remainder is 1."
+      - t: |
+          3.5 1
+        why: Both operands are ints, so / does integer division. No .5 survives.
+      - t: |
+          4 1
+        why: Integer division truncates; it never rounds up.
+      - t: |
+          3 0.5
+        why: "% gives the whole-number remainder (1), not a fraction."
+    answer: 0
+    hints:
+      - Both numbers are ints. What happens to the fraction?
+      - 2 goes into 7 three times. What's left over?
+    short: 7 / 2 is 3 with ints; the remainder 7 % 2 is 1.
+    explain: '7 / 2 is integer division: 3. 7 % 2 is the remainder: 7 - 3 * 2 = 1. Output: "3 1" and a newline.'
+  - id: w3.l1.c2
+    type: mcq
+    tags: [ w3.precedence, w3.arith ]
+    prompt: What value does x hold?
+    code: int x = 10 - 4 / 2 * 3;
+    options:
+      - t: "4"
+        why: "Correct: 4 / 2 = 2, 2 * 3 = 6, then 10 - 6 = 4."
+      - t: "9"
+        why: That evaluates 10 - 4 first. Subtraction waits until / and * are done.
+      - t: "10"
+        why: That treats it as 4 / (2 * 3). Same-level operators go left to right, so / comes before *.
+      - t: "1"
+        why: That's (10 - 4) / (2 * 3). Without parentheses, C++ doesn't group it that way.
+    answer: 0
+    hints:
+      - Do / and * before -.
+      - "/ and * are the same level: go left to right."
+    short: "/ and * first, left to right: 10 - 6 = 4."
+    explain: "Precedence: / and * before -. Same level: left to right. So 4 / 2 = 2, 2 * 3 = 6, 10 - 6 = 4."
+  - id: w3.l1.c3
+    type: predict
+    tags: [ w3.arith, w3.modulo ]
+    prompt: Negative numbers! What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << -7 / 2 << ' ' << -7 % 2 << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          -3 -1
+        why: "Correct: -3.5 truncates toward zero to -3; the remainder takes the left side's sign."
+      - t: |
+          -4 1
+        why: That's rounding down (floor), which Python does. Since C++11, integer division always truncates toward zero.
+      - t: |
+          -3 1
+        why: "Quotient right, remainder wrong: (a / b) * b + a % b must equal a."
+      - t: |
+          -3.5 -1
+        why: Both operands are ints, so no fraction is kept.
+    answer: 0
+    hints:
+      - Integer division chops toward zero, even for negatives.
+      - "Check with: (a / b) * b + a % b must equal a."
+    short: Division truncates toward zero; % takes the left side's sign.
+    explain: '-7 / 2 is -3.5 truncated toward zero: -3. Then -7 % 2 = -7 - (-3 * 2) = -1. Output: "-3 -1" and a newline.'
+  - id: w3.l1.c4
+    type: fill
+    tags: [ w3.modulo ]
+    prompt: Fill in the operator so isEven is true for even numbers.
+    code: |-
+      int n = 14;
+      bool isEven = (n ___ 2) == 0;
+    accept:
+      - "%"
+    placeholder: operator
+    hints:
+      - Even numbers leave nothing over when split into pairs.
+      - You want the remainder operator.
+    short: n % 2 == 0 means n is even.
+    explain: "n % 2 is the remainder after dividing by 2: 0 for even numbers, 1 (or -1 for negatives) for odd ones."
+  - id: w3.l1.c5
+    type: bug
+    tags: [ w3.arith, w2.convert ]
+    prompt: This should print 3.5, but prints 3. Tap the buggy line, then pick the fix.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int total = 7;
+          int count = 2;
+          double avg = total / count;
+          std::cout << avg << '\n';
+          return 0;
+      }
+    bugLine: 5
+    options:
+      - t: double avg = static_cast<double>(total) / count;
+        why: "Correct: total becomes a double before dividing, so the division is real division: 3.5."
+      - t: double avg = static_cast<double>(total / count);
+        why: Too late! total / count is already 3 (int division) before the cast.
+      - t: double avg = total / count + 0.5;
+        why: "A hack: prints 3.5 here by luck, but gives 4.5 for 8 / 2. Wrong math."
+      - t: float avg = total / count;
+        why: Still int / int = 3. Changing the variable's type doesn't change how the division is done.
+    answer: 0
+    hints:
+      - The type of the variable on the left doesn't matter. What types are being divided?
+      - Convert one operand to double BEFORE the division happens.
+    short: int / int divides first; cast one operand to double before dividing.
+    explain: "int / int is computed as an int (3), then converted to 3.0. Cast one operand first: static_cast<double>(total) / count gives 3.5."
+    sideBySide:
+      unsafe: "double avg = total / count;   // 3.0: int division happened first"
+      hardened: double avg = static_cast<double>(total) / count;   // 3.5
+      prelude: int total = 7; int count = 2;
+  - id: w3.l1.c6
+    type: write
+    tags: [ w3.modulo, w2.init ]
+    prompt: Write one line that declares an int named `leftover` and initializes it to the remainder of `coins` divided by 4.
+    prelude: int coins{10};
+    accept:
+      - int leftover = coins % 4;
+      - int leftover{coins % 4};
+      - int leftover = (coins % 4);
+      - int leftover{(coins % 4)};
+    acceptRe:
+      - ^int leftover ?(= ?\(? ?coins ?% ?4 ?\)?|\{ ?\(? ?coins ?% ?4 ?\)? ?\}) ?;$
+    placeholder: int leftover ...
+    hints:
+      - "Start with the type and name: int leftover"
+      - The remainder operator is %. Don't forget the ;
+    short: int leftover = coins % 4; stores the remainder.
+    explain: "`int leftover = coins % 4;` (or `int leftover{coins % 4};`) stores what's left after splitting coins into groups of 4."
+recap:
+  - "Integer division drops the fraction: 7 / 2 == 3."
+  - "% is the remainder: 17 % 5 == 2."
+  - Multiply, divide, remainder before add and subtract.
+  - Need a fraction? Make one operand a double before dividing.
+vault:
+  - id: w3.intdiv
+    title: Integer division & remainder
+    code: |-
+      int q = 17 / 5;        // 3  (fraction dropped)
+      int r = 17 % 5;        // 2  (leftover)
+      int nq = -7 / 2;       // -3 (toward zero)
+      int nr = -7 % 2;       // -1 (sign of left side)
+      double d = 17.0 / 5;   // 3.4
+    note: (a / b) * b + a % b == a, always. Use a double operand for real division.
+    defense: false
+  - id: w3.precedence
+    title: Operator precedence (so far)
+    code: |-
+      // high to low:
+      // ++x --x !x -x      (unary)
+      // *  /  %
+      // +  -
+      // <  <=  >  >=
+      // ==  !=
+      // &&
+      // ||
+      // =  +=  -=  *=  /=  %=
+    expect: skip
+    note: "Same level: left to right (assignment goes right to left). Parentheses beat everything."
+    defense: false
+reviewTags: [ w2.int, w2.double, w2.convert ]

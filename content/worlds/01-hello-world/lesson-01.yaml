@@ -1,0 +1,183 @@
+# World 1 · Lesson 1: Your first program
+
+id: w1.l1
+title: Your first program
+skill: structure
+shield: false
+concept:
+  short: Every C++ program starts running at the first line inside main(), and statements end with ;.
+  analogy: "A program is like a recipe card: tools listed at the top, cooking starts at **main**."
+  body:
+    - Every program has exactly one `main()`. Execution starts at the first line inside its braces `{ }` and runs down, statement by statement.
+    - Most statements end with a semicolon `;`, like a full stop. The braces group the statements that belong to `main()`.
+    - '`return 0;` tells the operating system "all good". Only in `main()` may you leave it out (0 is returned for you).'
+  pitfall: Writing `Main()`. C++ is case-sensitive, so the linker can't find `main` and your program has no starting point.
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        std::cout << "Hello, Codebase!\n";
+        return 0;
+    }
+  steps:
+    - line: 0
+      note: Brings in the printing tools.
+    - line: 2
+      note: The program starts here, at main().
+    - line: 3
+      out: |
+        Hello, Codebase!
+      note: std::cout prints the text; \n ends the line.
+    - line: 4
+      note: return 0; reports success.
+    - line: 5
+      note: The closing } ends the program. Balanced braces!
+challenges:
+  - id: w1.l1.c1
+    type: mcq
+    tags: [ w1.main ]
+    prompt: When you run a C++ program, where does execution begin?
+    options:
+      - t: At the very first line of the file
+        why: "Those are usually #include lines, handled while building, not run as steps."
+      - t: At the first statement inside main()
+        why: Correct! main() is every program's one starting point.
+      - t: At whichever function is written last
+        why: File order doesn't matter. main() is the start, wherever it is.
+      - t: At the line with return 0;
+        why: return 0; is where main() finishes, not where it begins.
+    answer: 1
+    hints:
+      - Every program needs one clearly marked starting point.
+      - Four letters, followed by ().
+    short: Execution always begins inside main().
+    explain: "Execution always begins inside main(). Everything else in the file is either setup for the compiler (like #include) or code that main() eventually uses."
+  - id: w1.l1.c2
+    type: predict
+    tags: [ w1.cout, w1.main ]
+    prompt: What exactly does this program print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << "Hi";
+          std::cout << "!\n";
+          return 0;
+      }
+    options:
+      - t: |
+          Hi
+          !
+        why: cout never starts a new line by itself. Only the \n does.
+      - t: |
+          Hi !
+        why: No space appears unless it's inside the quotes.
+      - t: |
+          Hi!
+        why: Correct! "Hi", then "!", then the newline.
+      - t: Hi!
+        why: "The \\n at the end really is printed: it ends the line."
+    answer: 2
+    hints:
+      - Two cout statements still share one line unless \n says otherwise.
+      - Glue the two strings together exactly, including the \n.
+    short: "cout prints exactly what you give it: no extra spaces or line breaks."
+    explain: "cout prints exactly what you give it, in order: \"Hi\", then \"!\", then a newline. Splitting text across two statements doesn't add spaces or line breaks."
+  - id: w1.l1.c3
+    type: order
+    tags: [ w1.main ]
+    prompt: Put the lines in order to build a complete program that prints Hello!
+    lines:
+      - "#include <iostream>"
+      - int main() {
+      - '    std::cout << "Hello!\n";'
+      - "    return 0;"
+      - "}"
+    distractors:
+      - int Main() {
+    hints:
+      - "The #include line comes before the code that uses it."
+      - Open main with {, print, return 0;, close with }. Watch capitals!
+    short: Include, main() {, statements, return 0;, }. And main is lowercase.
+    explain: 'Includes first, then main() with its opening brace, the statements in the order they should run, and finally the closing brace. "int Main()" is a trap: C++ is case-sensitive, and the program needs a lowercase main.'
+  - id: w1.l1.c4
+    type: fill
+    tags: [ w1.main ]
+    prompt: Fill in the blank so this program has a proper starting point.
+    code: |-
+      #include <iostream>
+
+      int ___() {
+          std::cout << "Ready for launch!\n";
+          return 0;
+      }
+    accept:
+      - main
+    placeholder: function name
+    hints:
+      - Every program starts at a function with a very specific name.
+      - "Lowercase, four letters: m _ _ _."
+    short: The starting function must be named exactly main.
+    explain: The starting function must be named exactly main, all lowercase. Any other name compiles, but the linker won't find a starting point.
+  - id: w1.l1.c5
+    type: bug
+    tags: [ w1.main, w1.compile ]
+    prompt: This program does NOT compile (intentionally broken). Tap the buggy line, then pick the fix.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << "Launch!\n"
+          return 0;
+      }
+    expect: error
+    unsafe: true
+    bugLine: 3
+    options:
+      - t: Add ; at the end of the std::cout line
+        why: Correct! Without it, the compiler reads straight into return 0.
+      - t: Add another ; after return 0;
+        why: return 0; is already fine. The missing ; is on the line above.
+      - t: "Remove the #include line"
+        why: Then std::cout is unknown too. Worse, not better.
+      - t: Change \n to std::endl
+        why: The newline isn't the problem. The semicolon is still missing.
+    answer: 0
+    bug: missing-semicolon
+    hints:
+      - Look at the end of each statement inside main().
+      - One line is missing its full stop.
+    short: Missing ; on the cout line. Errors often point at the next line.
+    explain: The std::cout line is missing its ;. The compiler usually reports this at the end of that line, or at the start of the next one ("expected ';' before 'return'"). When an error points at a line that looks fine, check the line above it.
+    sideBySide:
+      unsafe: |-
+        int main() {
+            std::cout << "Launch!\n"   // missing ;
+            return 0;
+        }
+      hardened: |-
+        int main() {
+            std::cout << "Launch!\n";
+            return 0;
+        }
+      expect: error
+      prelude: "#include <iostream>"
+recap:
+  - Programs start at the first line inside main().
+  - Statements end with ; and main lives in { }.
+  - "C++ is case-sensitive: main is not Main."
+  - return 0; means success.
+vault:
+  - id: w1.hello
+    title: Hello World skeleton
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << "Hello, World!\n";
+          return 0;
+      }
+    note: The smallest useful program. Execution starts inside main(); every statement ends with ;.
+    defense: false
+reviewTags: []

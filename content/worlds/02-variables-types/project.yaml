@@ -1,0 +1,252 @@
+# World 2 mini-project: Hero Profile Card
+
+id: w2.p
+title: Hero Profile Card
+intro: Let's build your Hero Profile Card from well-typed, initialized boxes! {:)}
+steps:
+  - id: w2.p.s1
+    type: fill
+    tags: [ w2.string, w2.const ]
+    short: "A name is text: const std::string."
+    prompt: "Step 1: the hero's name never changes. Fill in the type."
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          const ___ name{"Ada"};
+          std::cout << "Name: " << name << '\n';
+          return 0;
+      }
+    accept:
+      - std::string
+    placeholder: type
+    hints:
+      - A name is text.
+      - "Don't forget the std:: prefix."
+    explain: "`const std::string name{\"Ada\"};` stores text that can't be changed by accident."
+  - id: w2.p.s2
+    type: write
+    tags: [ w2.const, w2.int ]
+    short: const int maxHp{120}; can't change by accident.
+    prompt: "Step 2: add a line declaring a constant int named maxHp equal to 120."
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          const std::string name{"Ada"};
+          int level{7};
+          // your line here
+          int hp{90};
+          return 0;
+      }
+    expect: warn
+    accept:
+      - const int maxHp{120};
+      - constexpr int maxHp{120};
+      - const int maxHp = 120;
+      - int const maxHp{120};
+    placeholder: const int ...
+    hints:
+      - Sealed-jar keyword, then the type, then the name.
+      - const int maxHp{...};
+    explain: "`const int maxHp{120};` is the ceiling for hp, and nothing can change it by accident."
+  - id: w2.p.s3
+    type: fill
+    tags: [ w2.convert ]
+    short: Convert hp first so 90 / 120 gives 0.75, not 0.
+    prompt: "Step 3: compute the HP ratio (90 out of 120 should be 0.75, not 0). Convert hp first."
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          const std::string name{"Ada"};
+          int level{7};
+          const int maxHp{120};
+          int hp{90};
+          char rank{'B'};
+          bool shielded{true};
+          double hpRatio{___(hp) / maxHp};
+          return 0;
+      }
+    expect: warn
+    accept:
+      - static_cast<double>
+      - double
+    placeholder: conversion
+    hints:
+      - "int / int would be integer division: 0."
+      - static_cast<...>(hp)
+    explain: "`static_cast<double>(hp) / maxHp` is 90.0 / 120 = 0.75. Without the cast, 90 / 120 would be 0."
+  - id: w2.p.s4
+    type: predict
+    tags: [ w2.double, w2.convert ]
+    short: Real division gives 0.75, printed without trailing zeros.
+    prompt: "Step 4: before printing the card, predict the ratio line."
+    code: |-
+      int hp{90};
+      const int maxHp{120};
+      double hpRatio{static_cast<double>(hp) / maxHp};
+      std::cout << "HP ratio: " << hpRatio << '\n';
+    options:
+      - t: |
+          HP ratio: 0.75
+        why: "Correct: 90.0 / 120 = 0.75, printed without trailing zeros."
+      - t: |
+          HP ratio: 0
+        why: That's what integer division would give, but hp was converted to double first.
+      - t: |
+          HP ratio: 0.750000
+        why: Default cout doesn't pad with zeros; that needs std::fixed.
+      - t: |
+          HP ratio: 75
+        why: Nothing multiplies by 100 here.
+    answer: 0
+    hints:
+      - Is the division int or double?
+      - "Default cout: no trailing zeros."
+    explain: "The cast makes it a real division: 0.75, printed as `0.75`."
+  - id: w2.p.s5
+    type: order
+    tags: [ w2.bool, w2.char, w1.cout ]
+    short: Print in card order; hp / maxHp with ints prints 0.
+    prompt: "Step 5: order the print lines so the card reads top to bottom: title, name, level, HP, ratio, shield. One line doesn't belong."
+    prelude: const std::string name{"Ada"}; int level{7}; const int maxHp{120}; int hp{90}; char rank{'B'}; bool shielded{true}; double hpRatio{static_cast<double>(hp) / maxHp};
+    lines:
+      - '    std::cout << "=== Hero Profile ===\n";'
+      - "    std::cout << \"Name: \" << name << '\\n';"
+      - '    std::cout << "Level: " << level << " (rank " << rank << ")\n";'
+      - "    std::cout << \"HP: \" << hp << '/' << maxHp << '\\n';"
+      - "    std::cout << \"HP ratio: \" << hpRatio << '\\n';"
+      - "    std::cout << std::boolalpha << \"Shielded: \" << shielded << '\\n';"
+    distractors:
+      - "    std::cout << \"HP ratio: \" << hp / maxHp << '\\n';"
+    hints:
+      - Follow the order in the prompt.
+      - One ratio line uses integer division.
+    explain: The card prints in the order listed. The distractor computes `hp / maxHp` with ints, which prints 0.
+program: |-
+  #include <iostream>
+  #include <string>
+
+  int main() {
+      const std::string name{"Ada"};
+      int level{7};
+      const int maxHp{120};
+      int hp{90};
+      char rank{'B'};
+      bool shielded{true};
+      double hpRatio{static_cast<double>(hp) / maxHp};
+
+      std::cout << "=== Hero Profile ===\n";
+      std::cout << "Name: " << name << '\n';
+      std::cout << "Level: " << level << " (rank " << rank << ")\n";
+      std::cout << "HP: " << hp << '/' << maxHp << '\n';
+      std::cout << "HP ratio: " << hpRatio << '\n';
+      std::cout << std::boolalpha << "Shielded: " << shielded << '\n';
+      return 0;
+  }
+stress:
+  intro: Stress Test! I'll throw bad values at your card. Brace yourself!
+  attacks:
+    - input: int hp;
+      label: Uninitialized variable!
+      challenge:
+        id: w2.p.a1
+        type: bug
+        tags: [ w2.init ]
+        bug: uninit-var
+        unsafe: true
+        short: Reading uninitialized hp is UB; give it a value when declared.
+        prompt: A bug erased hp's starting value. Tap the dangerous line, then pick the fix.
+        code: |-
+          #include <iostream>
+
+          int main() {
+              const int maxHp{120};
+              int hp;
+              std::cout << "HP: " << hp << '/' << maxHp << '\n';
+              return 0;
+          }
+        bugLine: 4
+        options:
+          - t: int hp{90};
+            why: "Correct: hp gets a real starting value before it's read."
+          - t: int hp;  // set later
+            why: A comment doesn't fill the box; the read on the next line is still UB.
+          - t: int hp = hp;
+            why: "Copies hp's own garbage into itself: still UB."
+        answer: 0
+        hints:
+          - Which variable is read before it has a value?
+          - Give it a value where it's declared.
+        explain: "Printing an uninitialized hp is UB: the card might show 0, 32767 or anything else, and might differ between runs. Initialize it where you declare it."
+        sideBySide:
+          unsafe: |-
+            int hp;   // garbage
+            std::cout << "HP: " << hp << '/' << maxHp << '\n';
+          hardened: |-
+            int hp{90};
+            std::cout << "HP: " << hp << '/' << maxHp << '\n';
+          prelude: const int maxHp{120};
+    - input: "119.5"
+      label: A fractional max HP from the config!
+      challenge:
+        id: w2.p.a2
+        type: harden
+        tags: [ w2.narrowing, w2.convert ]
+        short: static_cast makes dropping the .5 a visible decision.
+        prompt: The config file says max HP is 119.5, but maxHp must be a whole number, rounded down on purpose. Pick the safest initializer.
+        code: |-
+          double configMaxHp{119.5};   // value from a config file
+          const int maxHp___;
+        options:
+          - t: "{static_cast<int>(configMaxHp)}"
+            why: "Correct: an explicit, visible conversion. Anyone reading it sees that rounding down is intentional (119)."
+          - t: = configMaxHp
+            why: "Also gives 119, but silently: nobody can tell whether dropping the .5 was intended, and braces would have flagged it."
+          - t: "{configMaxHp}"
+            why: "Ill-formed narrowing: Clang/MSVC reject it, GCC warns. You still must decide about the .5."
+          - t: "{119.5}"
+            why: Also a narrowing compile error, and it hardcodes the config value.
+        answer: 0
+        hints:
+          - Braces reject silent double-to-int conversions.
+          - Say what you mean with static_cast.
+        explain: Brace init makes the compiler flag a lossy conversion, and `static_cast<int>` is how you say "yes, drop the fraction, on purpose". The data loss is now a decision, not an accident.
+        sideBySide:
+          unsafe: const int maxHp = configMaxHp;   // silently 119
+          hardened: const int maxHp{static_cast<int>(configMaxHp)};   // 119, on purpose
+          prelude: double configMaxHp{119.9};
+    - input: hp = 45
+      label: Integer division surprise!
+      challenge:
+        id: w2.p.a3
+        type: breakit
+        tags: [ w2.convert, w2.int ]
+        unsafe: true
+        short: 45 / 120 with ints is 0, not 0.375.
+        prompt: Someone "simplified" the ratio line. Which hp value breaks it? (maxHp is 120.)
+        code: |-
+          const int maxHp{120};
+          int hp{/* value */};
+          double hpRatio = hp / maxHp;
+          std::cout << "HP ratio: " << hpRatio << '\n';
+        options:
+          - t: hp = 120
+            why: "120 / 120 = 1: the right answer, so it hides the bug."
+          - t: hp = 0
+            why: "0 / 120 = 0: correct by luck."
+          - t: hp = 45
+            why: "Correct: 45 / 120 is integer division, 0, instead of 0.375."
+        answer: 2
+        hints:
+          - Which value gives a fractional true ratio?
+          - int / int drops the fraction.
+        explain: "`hp / maxHp` is int / int, so any hp below 120 gives 0. Convert hp to double before dividing."
+        sideBySide:
+          unsafe: double hpRatio = hp / maxHp;   // 45 / 120 = 0
+          hardened: double hpRatio{static_cast<double>(hp) / maxHp};   // 0.375
+          prelude: int hp{45}; const int maxHp{120};

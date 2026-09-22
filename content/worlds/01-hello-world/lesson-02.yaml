@@ -1,0 +1,174 @@
+# World 1 · Lesson 2: #include and std::
+
+id: w1.l2
+title: "#include and std::"
+skill: toolkit
+shield: false
+concept:
+  short: "#include <iostream> brings in the printing tools; std::cout means the cout from the standard library."
+  analogy: "#include borrows a toolbox, and `std::` is the label on the shelf it came from."
+  body:
+    - "`#include <iostream>` is a **preprocessor directive**: before compiling, it pastes in the declarations for `std::cout`. Directives start with `#` and take **no** semicolon."
+    - The standard library lives in the **namespace** `std`. `std::cout` = "the `cout` in `std`". `::` is the scope resolution operator.
+    - "Skip `using namespace std;`: it dumps hundreds of names into your code and invites clashes. `std::` is short and clear."
+    - "Rule: **include what you use**."
+  pitfall: Leaving out `#include <iostream>` and getting lucky because another header pulled it in. It breaks on another compiler.
+demo:
+  code: |-
+    #include <iostream>   // the input/output toolbox
+
+    int main() {
+        std::cout << "Toolbox loaded.\n";
+        std::cout << "std::cout found!\n";
+        return 0;
+    }
+  steps:
+    - line: 0
+      note: Before compiling, <iostream>'s contents get pasted here. No semicolon!
+    - line: 2
+      note: Execution starts in main().
+    - line: 3
+      out: |
+        Toolbox loaded.
+      note: "std:: means: the cout from the standard library."
+    - line: 4
+      out: |
+        std::cout found!
+      note: Inside quotes, std::cout is just text.
+    - line: 5
+      note: "Done: return 0; means success."
+challenges:
+  - id: w1.l2.c1
+    type: mcq
+    tags: [ w1.include ]
+    prompt: "What does #include <iostream> do?"
+    options:
+      - t: It prints the word iostream on the screen
+        why: "Nothing is printed. #include works before the program even exists."
+      - t: It makes the program run faster
+        why: Headers don't speed things up. They make names like std::cout available.
+      - t: It creates a variable called iostream
+        why: No variables here. It pastes in a header file's contents.
+      - t: Before compiling, it pastes in the declarations for input/output tools like std::cout
+        why: Correct! The compiler then knows what std::cout is.
+    answer: 3
+    hints:
+      - "Lines starting with # are handled before real compiling begins."
+      - 'Think "borrow a toolbox": what tools live in iostream?'
+    short: It pastes in the input/output declarations before compiling.
+    explain: "#include is a preprocessor directive. It pastes the header's contents into your file before compiling, so the compiler knows about std::cout and the other input/output tools."
+  - id: w1.l2.c2
+    type: write
+    tags: [ w1.include ]
+    prompt: Write the line that gives your program access to std::cout.
+    accept:
+      - "#include <iostream>"
+      - "# include <iostream>"
+    placeholder: "#..."
+    hints:
+      - "It's a preprocessor directive, so it starts with #."
+      - The header is iostream, inside angle brackets.
+    short: "#include <iostream>, with no semicolon."
+    explain: "#include <iostream> is the one. Note there's no semicolon: preprocessor directives end at the end of the line."
+  - id: w1.l2.c3
+    type: mcq
+    tags: [ w1.include, w1.cout ]
+    prompt: "In std::cout, what does the std:: part mean?"
+    options:
+      - t: "\"Standard output\": it's what makes cout print"
+        why: 'No: std names the namespace. The "out" in cout is the output part.'
+      - t: It's the cout that lives in the standard library's namespace, std
+        why: "Correct! :: picks a name out of the std namespace."
+      - t: It's optional decoration the compiler ignores
+        why: Not ignored! Without std::, the compiler says cout is not declared.
+      - t: It marks cout as a comment
+        why: Comments use // or /* */, not std::.
+    answer: 1
+    hints:
+      - The library keeps its names in a labelled box to avoid clashes.
+      - "The :: operator reaches into a namespace to pick one name."
+    short: "std:: means \"from the standard library's namespace\"."
+    explain: 'std is the namespace holding the standard library, and :: is the scope resolution operator. std::cout = "the cout from std". Writing it out keeps your code clear and avoids name clashes.'
+  - id: w1.l2.c4
+    type: bug
+    tags: [ w1.include, w1.compile ]
+    prompt: 'Intentionally broken: the build fails with "fatal error: iostrem: No such file or directory". Tap the buggy line, then pick the fix.'
+    code: |-
+      #include <iostrem>
+
+      int main() {
+          std::cout << "Where is my toolbox?\n";
+          return 0;
+      }
+    expect: error
+    unsafe: true
+    bugLine: 0
+    options:
+      - t: "#include <iostrem>;"
+        why: Directives take no semicolon, and it's still misspelled.
+      - t: "#import <iostream>"
+        why: "#import isn't standard C++. Use #include."
+      - t: "#include <iostream>"
+        why: "Correct! i-o-s-t-r-e-a-m: input/output stream."
+      - t: '#include "iostrem"'
+        why: Quotes change where it searches, but the name is still misspelled.
+    answer: 2
+    bug: typo-gremlin
+    hints:
+      - The error message names the file it couldn't find.
+      - "Spell it out: i-o-s-t-r-e-a-m."
+    short: A misspelled header can't be found, so the build stops.
+    explain: One missing letter and the preprocessor can't find the header, so the build stops immediately (a "fatal" error). Error messages often quote the exact thing that's wrong. Read them!
+    sideBySide:
+      unsafe: "#include <iostrem>    // typo: header not found"
+      hardened: "#include <iostream>"
+      expect: error
+  - id: w1.l2.c5
+    type: predict
+    tags: [ w1.cout, w1.include ]
+    prompt: What exactly does this program print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << "std::cout";
+          std::cout << " works\n";
+          return 0;
+      }
+    options:
+      - t: |
+          cout works
+        why: "Text inside quotes prints exactly, std:: included."
+      - t: |
+          std::cout works
+        why: Correct! The second string starts with a space.
+      - t: |
+          std::coutworks
+        why: "Look closely: the second string begins with a space."
+      - t: |
+          std::cout
+           works
+        why: Nothing prints a newline after the first string.
+    answer: 1
+    hints:
+      - Inside quotes, code-looking text is just text.
+      - Check the very first character of the second string.
+    short: Quoted text prints as-is, even if it looks like code.
+    explain: 'Quotes make a string literal: its contents are printed character by character, even if they look like code. The space at the start of " works" separates the two words.'
+recap:
+  - "#include <iostream> brings in std::cout."
+  - "Directives start with # and take no semicolon."
+  - "std:: means from the standard library."
+  - Include what you use; don't rely on luck.
+vault:
+  - id: w1.include
+    title: Include what you use
+    code: |-
+      #include <iostream>   // std::cout, std::cin
+
+      int main() {
+          std::cout << "Tools ready\n";
+      }
+    note: "Directives start with # and take no ;. Standard names live in std, reached with ::."
+    defense: false
+reviewTags: [ w1.main ]

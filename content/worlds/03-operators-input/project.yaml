@@ -1,0 +1,249 @@
+# World 3 mini-project: Loot Splitter
+
+id: w3.p
+title: Loot Splitter
+intro: "Split the treasure fairly: read gold and party size, print shares and leftovers."
+steps:
+  - id: w3.p.s1
+    type: write
+    tags: [ w2.init, w3.cin ]
+    prompt: First, a place to store the loot. Write one line that declares an int named `gold` and initializes it to 0.
+    accept:
+      - int gold{};
+      - int gold{0};
+      - int gold = 0;
+    acceptRe:
+      - ^int gold ?(\{ ?0? ?\}|= ?0|= ?\{ ?0? ?\}) ?;$
+    placeholder: int gold ...
+    hints:
+      - Type, then name, then the starting value.
+      - int gold{}; works, and so does int gold = 0;
+    short: int gold{}; starts gold at a known 0.
+    explain: "`int gold{};` value-initializes gold to 0. Never leave it uninitialized: reading garbage is UB (World 2!). Do the same for `int party{};`."
+  - id: w3.p.s2
+    type: order
+    tags: [ w3.cin, w1.cout ]
+    prompt: "Order the input section: ask for the gold, read it, then ask for the party size and read it."
+    prelude: int gold{}; int party{};
+    lines:
+      - 'std::cout << "Total gold: ";'
+      - std::cin >> gold;
+      - 'std::cout << "Party size: ";'
+      - std::cin >> party;
+    distractors:
+      - std::cin << gold;
+    hints:
+      - Always prompt before you read.
+      - cin uses >>, not <<.
+    short: Prompt, read, prompt, read. cin uses >>.
+    explain: Prompt, read, prompt, read. `std::cin << gold` has the arrows backward and won't compile.
+  - id: w3.p.s3
+    type: fill
+    tags: [ w3.arith ]
+    prompt: Each hero gets an equal whole number of coins. Fill in the operator.
+    code: int share = gold ___ party;
+    prelude: int gold{17}; int party{5};
+    accept:
+      - /
+    placeholder: operator
+    hints:
+      - Splitting equally means dividing.
+      - "int / int drops the fraction: exactly what we want for whole coins."
+    short: gold / party gives each hero's whole coins.
+    explain: "gold / party is integer division: each hero gets the whole coins, and the fraction is dropped."
+  - id: w3.p.s4
+    type: fill
+    tags: [ w3.modulo ]
+    prompt: Now the coins that can't be split evenly. Fill in the operator.
+    code: int leftover = gold ___ party;
+    prelude: int gold{17}; int party{5};
+    accept:
+      - "%"
+    placeholder: operator
+    hints:
+      - You want what's left over after dividing.
+      - The remainder operator.
+    short: gold % party gives the coins left over.
+    explain: "gold % party is the remainder: the coins that stay in the chest."
+  - id: w3.p.s5
+    type: predict
+    tags: [ w3.arith, w3.modulo, w1.cout ]
+    prompt: "Test run: the player enters 17 gold and a party of 5. What do the last two output lines say?"
+    code: |-
+      std::cout << "Each hero gets " << share << " gold.\n";
+      std::cout << "Left in the chest: " << leftover << " gold.\n";
+    prelude: int gold{17}; int party{5}; int share = gold / party; int leftover = gold % party;
+    options:
+      - t: |
+          Each hero gets 3 gold.
+          Left in the chest: 2 gold.
+        why: "Correct: 17 / 5 = 3 and 17 % 5 = 2."
+      - t: |
+          Each hero gets 3.4 gold.
+          Left in the chest: 2 gold.
+        why: "share is an int computed with int division: no .4."
+      - t: |
+          Each hero gets 3 gold.
+          Left in the chest: 3 gold.
+        why: The remainder is 17 - 5 * 3 = 2, not 3.
+      - t: |
+          Each hero gets 3 gold.Left in the chest: 2 gold.
+        why: Each line ends with \n, so they print on separate lines.
+    answer: 0
+    hints:
+      - 5 goes into 17 how many whole times?
+      - What's left after 3 coins each for 5 heroes?
+    short: 17 / 5 = 3 each, 17 % 5 = 2 left.
+    explain: share = 17 / 5 = 3, leftover = 17 % 5 = 2. Each string ends with \n, giving two lines.
+program: |-
+  #include <iostream>
+
+  int main() {
+      int gold{};
+      int party{};
+
+      std::cout << "Total gold: ";
+      if (!(std::cin >> gold) || gold < 0) {
+          std::cout << "Gold must be a whole number, 0 or more.\n";
+          return 1;
+      }
+
+      std::cout << "Party size: ";
+      if (!(std::cin >> party) || party <= 0) {
+          std::cout << "Party size must be a whole number above 0.\n";
+          return 1;
+      }
+
+      int share = gold / party;
+      int leftover = gold % party;
+
+      std::cout << "Each hero gets " << share << " gold.\n";
+      std::cout << "Left in the chest: " << leftover << " gold.\n";
+      return 0;
+  }
+stress:
+  intro: Brace for impact! I'll throw nasty input at your Loot Splitter. Patch every crack!
+  attacks:
+    - input: "0"
+      label: A party of zero!
+      challenge:
+        id: w3.p.a1
+        type: harden
+        tags: [ w3.divzero, w3.validate ]
+        prompt: "Party size 0 means gold / 0: undefined behavior! Pick the guard."
+        code: |-
+          std::cout << "Party size: ";
+          if (!(std::cin >> party) || ___) {
+              std::cout << "Party size must be a whole number above 0.\n";
+              return 1;
+          }
+          int share = gold / party;
+        prelude: int gold{17}; int party{};
+        options:
+          - t: party <= 0
+            why: "Correct: blocks zero (UB) and negative sizes (nonsense shares), in one check."
+          - t: party == 0
+            why: Stops this attack, but -3 heroes would still produce negative shares. <= 0 covers both.
+          - t: party < 0
+            why: "Misses exactly the attack: 0 is not less than 0, so gold / 0 still happens."
+          - t: gold == 0
+            why: Wrong variable. 0 gold split among 5 is fine (everyone gets 0); the divisor is the danger.
+        answer: 0
+        hints:
+          - What values of party make no sense?
+          - Zero is dangerous, negatives are nonsense. One comparison can catch both.
+        short: party <= 0 blocks zero and negative party sizes.
+        explain: Only a positive party size makes sense. `party <= 0` rejects 0 (division by zero is UB) and negatives, before the division runs.
+        sideBySide:
+          unsafe: |-
+            std::cin >> party;
+            int share = gold / party;   // party 0: UB
+          hardened: |-
+            if (!(std::cin >> party) || party <= 0) {
+                std::cout << "Party size must be a whole number above 0.\n";
+                return 1;
+            }
+            int share = gold / party;
+          prelude: int gold{17}; int party{};
+    - input: abc
+      label: Text instead of a number!
+      challenge:
+        id: w3.p.a2
+        type: bug
+        tags: [ w3.validate, w3.cin ]
+        bug: cin-fail
+        unsafe: true
+        prompt: Typing `abc` for the gold sets gold to 0 AND jams cin, so party can't be read either. It stays 0, and gold / party divides by zero! Tap the line that needs protection, then pick the fix.
+        code: |-
+          int gold{};
+          int party{};
+          std::cout << "Total gold: ";
+          std::cin >> gold;
+          std::cout << "Party size: ";
+          std::cin >> party;
+        bugLine: 3
+        options:
+          - t: if (!(std::cin >> gold)) { std::cout << "Not a number!\n"; return 1; }
+            why: "Correct: checks the read and exits before the jammed stream can cause more damage."
+          - t: std::cin >> gold; std::cin.clear();
+            why: Unjams cin, but "abc" is still waiting, so reading party fails again. Also never tells the player.
+          - t: std::cin >> std::ws >> gold;
+            why: std::ws only skips whitespace. "abc" still fails.
+          - t: std::string gold;
+            why: Reading into a string accepts "abc", but then gold can't be used in math at all.
+        answer: 0
+        hints:
+          - The first failed read is where everything goes wrong.
+          - Check the read itself with !(std::cin >> ...).
+        short: Check each read right away; a failed read jams all later reads.
+        explain: A failed read sets gold to 0 and puts cin in the fail state, so every later read also fails. Check each read right away and stop on failure.
+        sideBySide:
+          unsafe: |-
+            std::cin >> gold;    // "abc": gold = 0, cin jammed
+            std::cin >> party;   // fails too: party stays 0
+          hardened: |-
+            if (!(std::cin >> gold)) {
+                std::cout << "Not a number!\n";
+                return 1;
+            }
+          prelude: int gold{}; int party{};
+    - input: "-50"
+      label: Negative gold!
+      challenge:
+        id: w3.p.a3
+        type: harden
+        tags: [ w3.validate, w3.compare ]
+        prompt: -50 gold split among 3 gives each hero -16 and leaves -2 in the chest. Nonsense! Pick the check.
+        code: |-
+          std::cout << "Total gold: ";
+          if (!(std::cin >> gold) || ___) {
+              std::cout << "Gold must be a whole number, 0 or more.\n";
+              return 1;
+          }
+        prelude: int gold{};
+        options:
+          - t: gold < 0
+            why: "Correct: rejects negatives but still allows an empty chest (0 gold is sad, but valid)."
+          - t: gold <= 0
+            why: "Rejects a legitimately empty chest. 0 / party is fine: everyone gets 0."
+          - t: gold > 0
+            why: "Inverted: rejects every real haul and lets negatives in."
+          - t: gold == -50
+            why: Only blocks this exact attack. -51 walks right through.
+        answer: 0
+        hints:
+          - Which values are impossible for a pile of coins?
+          - Is 0 gold impossible, or just disappointing?
+        short: gold < 0 rejects negatives but allows an empty chest.
+        explain: "Negative gold isn't UB, but it's garbage in, garbage out: -50 / 3 = -16 and -50 % 3 = -2. Validate the range: `gold < 0` is invalid."
+        sideBySide:
+          unsafe: |-
+            if (!(std::cin >> gold)) {
+                return 1;
+            }   // -50 slips through
+          hardened: |-
+            if (!(std::cin >> gold) || gold < 0) {
+                std::cout << "Gold must be a whole number, 0 or more.\n";
+                return 1;
+            }
+          prelude: int gold{};

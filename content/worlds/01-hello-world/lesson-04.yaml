@@ -1,0 +1,201 @@
+# World 1 · Lesson 4: Comments
+
+id: w1.l4
+title: Comments
+skill: structure
+shield: false
+concept:
+  short: Comments are notes for humans. // lasts to the end of the line; /* */ can span lines.
+  analogy: Comments are sticky notes that the compiler peels off before building.
+  body:
+    - "`//` comments out the rest of the line. `/* ... */` can span many lines but does **not** nest: the first `*/` ends it."
+    - "Good comments explain **why**, not what. `// retry: the network is flaky` helps; `// print hello` is noise."
+    - "Debugging trick: put `//` in front of a line to switch it off."
+    - 'Inside a string, `//` is just text: `"http://site"` prints the slashes.'
+  pitfall: "Nesting block comments: `/* a /* b */ oops */` ends at the first `*/`, so `oops */` becomes code and the build fails."
+demo:
+  code: |-
+    #include <iostream>
+
+    // Mission log, day 1
+    int main() {
+        std::cout << "Systems online\n"; // status line
+        /* std::cout << "Self-destruct\n"; */
+        std::cout << "All quiet\n";
+        return 0;
+    }
+  steps:
+    - line: 2
+      note: A // comment. The compiler skips it.
+    - line: 3
+      note: Execution starts in main().
+    - line: 4
+      out: |
+        Systems online
+      note: The code runs; the trailing comment is ignored.
+    - line: 5
+      note: Inside /* */, so it never runs. Phew, no self-destruct!
+    - line: 6
+      out: |
+        All quiet
+      note: Back to normal code.
+    - line: 7
+      note: return 0; means success.
+challenges:
+  - id: w1.l4.c1
+    type: predict
+    tags: [ w1.comments, w1.cout ]
+    prompt: What exactly does this program print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          // std::cout << "one\n";
+          std::cout << "two\n"; // std::cout << "three\n";
+          /* std::cout << "four\n"; */
+          std::cout << "five\n";
+          return 0;
+      }
+    options:
+      - t: |
+          one
+          two
+          five
+        why: The "one" line starts with //, so it's all comment.
+      - t: |
+          two
+          three
+          five
+        why: // hides the rest of its line, including the second cout.
+      - t: |
+          two
+          five
+        why: Correct! Only the two statements outside comments run.
+      - t: |
+          two
+          four
+          five
+        why: '"four" is wrapped in /* */, so it never runs.'
+    answer: 2
+    hints:
+      - // hides the REST of its line, even after real code.
+      - /* */ hides everything between the markers.
+    short: "Only code outside comments runs: two and five."
+    explain: 'Only "two" and "five" are outside comments. Note that the // on line 5 only hides the part after it: the first cout on that line still runs.'
+  - id: w1.l4.c2
+    type: mcq
+    tags: [ w1.comments ]
+    prompt: Which comment is the most helpful to a future reader?
+    options:
+      - t: // print the text
+        why: It repeats what the code already says. Just noise.
+      - t: // Report goes to a log reader that only understands plain text, so no tabs
+        why: Correct! It explains WHY, which the code alone can't tell you.
+      - t: // cout
+        why: One word, no information. The code already shows cout.
+      - t: // TODO
+        why: A TODO with no details helps nobody.
+    answer: 1
+    hints:
+      - The code already shows WHAT it does.
+      - The best comment explains a reason the reader couldn't guess.
+    short: Good comments explain why, not what.
+    explain: Good comments capture intent and reasons ("why"), which code can't express. Comments that restate the code just go stale.
+  - id: w1.l4.c3
+    type: predict
+    tags: [ w1.comments, w1.cout ]
+    prompt: Tricky one! What exactly does this program print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << "http://codebase.dev\n";
+          return 0;
+      }
+    options:
+      - t: "http:"
+        why: Inside a string, // is just two slashes, not a comment.
+      - t: |
+          http://codebase.dev
+        why: Correct! Comment markers inside strings are ordinary text.
+      - t: |
+          http:/codebase.dev
+        why: Both slashes are printed; nothing is swallowed.
+      - t: "\n"
+        why: The whole string is printed, not just the newline.
+    answer: 1
+    hints:
+      - Does the compiler look for comments inside quotes?
+      - Strings are printed character by character.
+    short: // inside a string is just text.
+    explain: Comments are only recognized in code, never inside string literals. "http://..." prints its slashes just fine.
+  - id: w1.l4.c4
+    type: bug
+    tags: [ w1.comments, w1.compile ]
+    prompt: "Intentionally broken: this doesn't compile. Tap the buggy line, then pick the fix."
+    code: |-
+      #include <iostream>
+
+      int main() {
+          /* turn off the alarm /* for now */ please */
+          std::cout << "Quiet mode\n";
+          return 0;
+      }
+    expect: error
+    unsafe: true
+    bugLine: 3
+    options:
+      - t: Move the comment below the std::cout line
+        why: Position doesn't matter. It still ends early, leaving please */ as code.
+      - t: /* turn off the alarm /* for now */ please */;
+        why: "A semicolon doesn't help: \"please */\" is still code."
+      - t: /* turn off the alarm /* for now */ please /*
+        why: That opens a comment that never closes and swallows the file.
+      - t: /* turn off the alarm (for now) please */
+        why: "Correct! One /* and one */: the whole note is inside."
+    answer: 3
+    hints:
+      - Block comments end at the FIRST */ they meet.
+      - After the first */, what's left over on that line?
+    short: "Block comments don't nest: the first */ ends them."
+    explain: Block comments don't nest. The comment ends at the first */, leaving "please */" as code, which the compiler can't understand. GCC and Clang can also warn about a /* inside a comment (-Wcomment, part of -Wall).
+    sideBySide:
+      unsafe: /* turn off the alarm /* for now */ please */
+      hardened: /* turn off the alarm (for now) please */
+      expect: error
+  - id: w1.l4.c5
+    type: fill
+    tags: [ w1.comments ]
+    prompt: Turn this line into a single-line comment so the compiler ignores it.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          ___ TODO: add the mission stats here
+          std::cout << "Mission log\n";
+          return 0;
+      }
+    accept:
+      - //
+    placeholder: comment marker
+    hints:
+      - It's the short kind of comment, for one line.
+      - Two forward slashes.
+    short: // comments out the rest of the line.
+    explain: // comments out the rest of the line. /* would also start a comment, but it would need a matching */.
+recap:
+  - // to end of line; /* */ spans lines.
+  - Block comments don't nest.
+  - Comment the why, not the what.
+  - // inside a string is just text.
+vault:
+  - id: w1.comments
+    title: Comment styles
+    code: |-
+      // single line: until end of line
+      std::cout << "hi\n"; // after code, too
+      /* block comment,
+         can span lines */
+    note: Block comments do NOT nest. Comment the why, not the what.
+    defense: false
+reviewTags: [ w1.cout ]

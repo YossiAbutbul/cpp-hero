@@ -1,0 +1,181 @@
+# World 1 · Lesson 3: Printing with std::cout
+
+id: w1.l3
+title: Printing with std::cout
+skill: structure
+shield: false
+concept:
+  short: std::cout << prints items in order, adding nothing extra. \n ends a line.
+  analogy: "std::cout is a conveyor belt to the screen: each `<<` adds one item, in order."
+  body:
+    - "`<<` is the **insertion operator**. Chain as many as you like: `std::cout << \"HP: \" << 3 << '\\n';`"
+    - cout adds no spaces or new lines. Put spaces inside the quotes; end lines with `'\n'` or a `\n` in the string.
+    - '**Escape sequences**: `\n` new line, `\t` tab, `\"` double quote, `\\` backslash.'
+    - "`std::endl` ends the line **and** flushes (slower). Prefer `'\\n'` unless you need the flush."
+  pitfall: Expecting `std::cout << "Level" << 1;` to print `Level 1`. It prints `Level1`.
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        std::cout << "HP: " << 3 << '\n';
+        std::cout << "Shield:\t" << "wood" << '\n';
+        std::cout << "Curlo says \"hi!\"\n";
+        return 0;
+    }
+  steps:
+    - line: 2
+      note: Start at main().
+    - line: 3
+      out: |
+        HP: 3
+      note: "Three items: text, the number 3, a newline."
+    - line: 4
+      out: "Shield:\twood\n"
+      note: "\\t is a tab: it jumps to the next tab stop."
+    - line: 5
+      out: |
+        Curlo says "hi!"
+      note: \" prints a quote without ending the string.
+    - line: 6
+      note: All printed. return 0; means success.
+challenges:
+  - id: w1.l3.c1
+    type: predict
+    tags: [ w1.cout ]
+    prompt: What exactly does this program print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << "Level" << 1 << '\n';
+          std::cout << "XP: " << 20 << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          Level 1
+          XP: 20
+        why: cout doesn't insert a space between "Level" and 1.
+      - t: |
+          Level1XP: 20
+        why: The first '\n' ends the first line.
+      - t: |
+          Level1
+          XP:20
+        why: '"XP: " has a space inside its quotes, so it prints.'
+      - t: |
+          Level1
+          XP: 20
+        why: "Correct! No space after Level, one after XP: (inside the quotes)."
+    answer: 3
+    hints:
+      - Spaces only appear if they're inside the quotes.
+      - 'Compare "Level" and "XP: " character by character.'
+    short: Spaces appear only where they're inside the quotes.
+    explain: 'Every item is printed exactly as-is: "Level" then 1 (no gap), newline; then "XP: " (with its space) then 20, newline.'
+  - id: w1.l3.c2
+    type: predict
+    tags: [ w1.cout ]
+    prompt: What exactly does this program print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << "A\n";
+          std::cout << "B";
+          std::cout << "C\n";
+          return 0;
+      }
+    options:
+      - t: |
+          A
+          BC
+        why: Correct! B has no newline, so C lands right next to it.
+      - t: |
+          A
+          B
+          C
+        why: Statements aren't lines. "B" has no \n after it.
+      - t: |
+          ABC
+        why: '"A\n" ends with a newline, so B starts a new line.'
+      - t: |
+          A
+          B C
+        why: There's no space anywhere between B and C.
+    answer: 0
+    hints:
+      - Find every \n. Those are the only line breaks.
+      - '"B" has no \n after it.'
+    short: Only \n breaks lines, so B and C share a line.
+    explain: "Line breaks come only from \\n. After \"A\\n\" we're on line 2; \"B\" and \"C\\n\" both land there: BC, then the line ends."
+  - id: w1.l3.c3
+    type: fill
+    tags: [ w1.cout ]
+    prompt: Fill in the missing operator so both items go onto the output belt.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << "Ready" ___ '\n';
+          return 0;
+      }
+    accept:
+      - <<
+    placeholder: operator
+    hints:
+      - It's the same operator used right after std::cout.
+      - Two less-than signs pointing toward cout.
+    short: Every item needs its own << in front.
+    explain: Each item needs its own << in front of it. Chaining std::cout << a << b; sends a, then b.
+  - id: w1.l3.c4
+    type: write
+    tags: [ w1.cout ]
+    prompt: Write one statement that prints Hello! and then ends the line.
+    accept:
+      - std::cout << "Hello!\n";
+      - std::cout << "Hello!" << '\n';
+      - std::cout << "Hello!" << "\n";
+      - std::cout << "Hello!" << std::endl;
+    placeholder: std::cout << ...
+    hints:
+      - Start with std::cout << and put the text in double quotes.
+      - End the line with \n, then finish with ;.
+    short: std::cout << "Hello!\n"; does it.
+    explain: std::cout << "Hello!\n"; is the classic. std::cout << "Hello!" << '\n'; works just as well. std::endl also works but flushes too, which is slower.
+  - id: w1.l3.c5
+    type: mcq
+    tags: [ w1.cout ]
+    prompt: What's the difference between '\n' and std::endl?
+    options:
+      - t: No difference at all
+        why: "There is one: std::endl also flushes the stream."
+      - t: "'\\n' only works on Windows"
+        why: "'\\n' works everywhere; the system handles line endings."
+      - t: Both end the line, but std::endl also flushes the output, which is slower
+        why: Correct! Default to '\n'; use std::endl only when you need a flush.
+      - t: std::endl adds a blank line; '\n' doesn't
+        why: Both end the current line exactly once.
+    answer: 2
+    hints:
+      - Both of them move to a new line.
+      - "One does an extra job: forcing output out right away."
+    short: Both end the line; std::endl also flushes, which is slower.
+    explain: Both end the line. std::endl also flushes, forcing buffered output to the screen right away. That extra work adds up in loops, so prefer '\n'.
+recap:
+  - << pushes items onto the output, in order.
+  - cout adds no spaces and no new lines.
+  - 'Escapes: \n new line, \t tab, \" quote.'
+  - Prefer '\n' over std::endl.
+vault:
+  - id: w1.cout
+    title: std::cout cheat sheet
+    code: |-
+      std::cout << "HP: " << 3 << '\n';   // HP: 3
+      std::cout << "A\tB\n";              // tab between A and B
+      std::cout << "Say \"hi\"\n";        // Say "hi"
+      std::cout << "C:\\temp\n";          // C:\temp
+    note: "cout prints exactly what you give it. Escapes: \\n \\t \\\" \\\\. Prefer '\\n' over std::endl."
+    defense: false
+reviewTags: [ w1.main, w1.include ]

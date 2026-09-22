@@ -1,0 +1,414 @@
+# World 3 · Lesson 5: Shield: Guard the input gate (Shield lesson)
+
+id: w3.l5
+title: "Shield: Guard the input gate"
+skill: defense
+shield: true
+concept:
+  short: "Never trust input: check every read, check divisors before dividing, check limits before adding."
+  analogy: '`std::cin` is a gate guard: hand it "abc" and it slams the gate until you clear the alarm.'
+  body:
+    - "**Never trust input.** If `std::cin >> x` gets `abc`, x becomes `0` (since C++11) and cin enters a **fail state**: every later read fails until you fix it."
+    - "Check every read: `if (!(std::cin >> x)) { ... }`. The stream is false after a failed read. A number too big for an int fails too."
+    - "To recover: `std::cin.clear();` resets the fail state, then `std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\\n');` throws away the bad line. Order matters: clear first, or ignore does nothing. Needs `#include <limits>`."
+    - "**Division by zero**: for integers, `x / 0` and `x % 0` are **undefined behavior**. Always check the divisor first: `if (count <= 0) { ... }` when only positive values make sense. (Sneaky extra: the smallest int divided by `-1` overflows too.)"
+    - "**Signed overflow**: going past the largest `int` (usually 2147483647) is also UB. Check **before** adding: `if (b > 0 && a > std::numeric_limits<int>::max() - b)`. Checking afterward is too late: the UB already happened."
+    - "UB doesn't guarantee a crash: it can pass every test, then break on another compiler. Guard, don't hope."
+  pitfall: "Common beginner mistake: `ignore()` without `clear()` first (a failed stream ignores nothing), or testing `x == 0` for bad input, which rejects a valid 0."
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        int gold{};
+        int party{};
+        std::cout << "Gold and party size? ";
+        if (!(std::cin >> gold >> party)) {
+            std::cout << "That's not a number!\n";
+            return 1;
+        }
+        if (party <= 0) {
+            std::cout << "Party size must be positive.\n";
+            return 1;
+        }
+        std::cout << "Each gets " << gold / party << '\n';
+        return 0;
+    }
+  stdin:
+    - |
+      abc
+    - |
+      100 0
+  steps:
+    - line: 3
+      vars:
+        gold: "0"
+      note: "Initialized with {}: 0, never garbage."
+    - line: 4
+      vars:
+        gold: "0"
+        party: "0"
+    - line: 5
+      out: "Gold and party size? "
+      note: "Run 1. Simulated input: `abc`"
+    - line: 6
+      vars:
+        gold: "0"
+        party: "0"
+      shield: Fail state caught!
+      note: "`abc` fails: gold becomes 0, cin enters the fail state."
+    - line: 7
+      out: |
+        That's not a number!
+    - line: 8
+      note: "return 1: leave early with an error code. No garbage math."
+    - line: 5
+      out: "Gold and party size? "
+      note: "Run 2. Simulated input: `100 0`"
+    - line: 6
+      vars:
+        gold: "100"
+        party: "0"
+      note: Both reads succeed. They're numbers... but is 0 a sane party size?
+    - line: 14
+      crash: "100 / 0: undefined behavior!"
+      note: "Without the party check, 100 / 0 runs here: UB!"
+    - line: 10
+      shield: Divisor checked!
+      note: "Back to reality: the guard runs first. party <= 0 is true."
+    - line: 11
+      out: |
+        Party size must be positive.
+    - line: 12
+      note: Exit safely. The division never runs with a bad divisor.
+challenges:
+  - id: w3.l5.c1
+    type: breakit
+    tags: [ w3.divzero, w3.cin ]
+    unsafe: true
+    prompt: UNSAFE code. The player types two numbers. Pick the input that breaks it.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int a{};
+          int b{};
+          std::cin >> a >> b;
+          std::cout << a / b << '\n';
+          return 0;
+      }
+    options:
+      - t: 10 2
+        why: 10 / 2 = 5. Works fine.
+      - t: 0 5
+        why: 0 / 5 = 0. A zero on top is harmless; only the divisor matters.
+      - t: 7 0
+        why: "Correct: 7 / 0 is integer division by zero: undefined behavior."
+      - t: -9 3
+        why: -9 / 3 = -3. Negative numbers divide just fine.
+    answer: 2
+    hints:
+      - Which number can never be a divisor?
+      - Look at b, the right side of /.
+    short: Dividing by 0 is UB. Check the divisor first.
+    explain: "Integer division by zero is UB. It often crashes, but it isn't guaranteed to: the program might print junk or seem fine. Check the input and the divisor first."
+    sideBySide:
+      unsafe: |-
+        int a{};
+        int b{};
+        std::cin >> a >> b;
+        std::cout << a / b << '\n';
+      hardened: |-
+        #include <limits>
+
+        int a{};
+        int b{};
+        if (!(std::cin >> a >> b)) {
+            std::cout << "Numbers only!\n";
+            return 1;
+        }
+        if (b == 0 || (a == std::numeric_limits<int>::min() && b == -1)) {
+            std::cout << "Can't divide that!\n";
+            return 1;
+        }
+        std::cout << a / b << '\n';
+  - id: w3.l5.c2
+    type: harden
+    tags: [ w3.validate, w3.cin ]
+    bug: cin-fail
+    prompt: Pick the condition that catches bad input like `abc`.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int x{};
+          std::cout << "Enter a number: ";
+          if (___) {
+              std::cout << "Invalid input\n";
+              return 1;
+          }
+          std::cout << "You typed " << x << '\n';
+          return 0;
+      }
+    options:
+      - t: "!(std::cin >> x)"
+        why: "Correct: reads x AND checks whether the read worked, in one step."
+      - t: x == 0
+        why: Nothing is ever read! And a valid 0 would be rejected too.
+      - t: std::cin >> x
+        why: 'Inverted: this says "invalid" every time the read SUCCEEDS.'
+      - t: "!x"
+        why: Also never reads input; it just checks the starting 0.
+    answer: 0
+    hints:
+      - The read itself can tell you if it worked.
+      - std::cin >> x gives back the stream, which is false after a failed read.
+    short: "!(std::cin >> x) reads and detects failure in one step."
+    explain: "`std::cin >> x` returns std::cin, which converts to false if the read failed. `!(...)` flips it, so the if runs exactly when input is bad."
+    sideBySide:
+      unsafe: |-
+        std::cin >> x;
+        std::cout << "You typed " << x << '\n';   // "abc" prints 0
+      hardened: |-
+        if (!(std::cin >> x)) {
+            std::cout << "Invalid input\n";
+            return 1;
+        }
+        std::cout << "You typed " << x << '\n';
+      prelude: int x{};
+  - id: w3.l5.c3
+    type: harden
+    tags: [ w3.validate, w3.cin ]
+    bug: cin-fail
+    prompt: The first read failed. cin is cleared, but the junk is still waiting. What goes in the blank so the retry can work?
+    code: |-
+      #include <iostream>
+      #include <limits>
+
+      int main() {
+          int x{};
+          std::cout << "Number: ";
+          if (!(std::cin >> x)) {
+              std::cin.clear();
+              ___;
+              std::cout << "Try again: ";
+              if (!(std::cin >> x)) {
+                  return 1;
+              }
+          }
+          std::cout << "Got " << x << '\n';
+          return 0;
+      }
+    options:
+      - t: std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n')
+        why: 'Correct: throws away everything up to and including the newline, so "abc" is gone.'
+      - t: std::cin.ignore()
+        why: 'Discards just ONE character: "abc" becomes "bc", and the retry fails again.'
+      - t: std::cin.clear()
+        why: Already cleared. Clearing again doesn't remove the junk characters.
+      - t: std::cin.flush()
+        why: "Input streams have no flush(): compile error. (And fflush(stdin) is UB, never use it.)"
+    answer: 0
+    hints:
+      - The bad characters are still sitting on the belt.
+      - You need to skip everything up to the end of the line.
+    short: After clear(), ignore the rest of the bad line.
+    explain: "Recovery is two steps: clear() resets the fail state, then ignore(max, '\\n') discards the rest of the bad line. Now the next read sees fresh input."
+    sideBySide:
+      unsafe: |-
+        if (!(std::cin >> x)) {
+            std::cin.clear();          // junk still there!
+            std::cin >> x;             // reads "abc" again: fails
+        }
+      hardened: |-
+        if (!(std::cin >> x)) {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            if (!(std::cin >> x)) {
+                return 1;
+            }
+        }
+      prelude: int x{};
+  - id: w3.l5.c4
+    type: mcq
+    tags: [ w3.overflow ]
+    prompt: On a typical system where int is 32 bits, what happens here?
+    code: |-
+      int hp = 2147483647;   // the largest int
+      hp += 1;
+    options:
+      - t: "Undefined behavior: anything can happen, including seeming to work"
+        why: "Correct: signed integer overflow is UB. The compiler is allowed to assume it never happens."
+      - t: hp becomes -2147483648, guaranteed
+        why: Wrapping around is common in practice, but NOT guaranteed for signed ints. Optimizers can and do produce other results.
+      - t: hp stays at 2147483647
+        why: C++ doesn't clamp ints to their maximum.
+      - t: Compile error
+        why: The compiler can't generally know values at compile time; it compiles (maybe with a warning).
+    answer: 0
+    hints:
+      - Is there a rule for what happens past the maximum?
+      - Signed overflow is one of the classic sources of UB.
+    short: Signed overflow is UB, even if it seems to wrap.
+    explain: Going past std::numeric_limits<int>::max() is undefined behavior. It may appear to wrap to a negative number today and do something else tomorrow. Check before the math, not after.
+  - id: w3.l5.c5
+    type: harden
+    tags: [ w3.overflow, w3.validate ]
+    prompt: bonus is already checked to be a number and not negative. Pick the check that stops score from overflowing.
+    code: |-
+      #include <iostream>
+      #include <limits>
+
+      int main() {
+          int score{2'000'000'000};
+          int bonus{};
+          if (!(std::cin >> bonus) || bonus < 0) {
+              std::cout << "Bonus must be a number, 0 or more.\n";
+              return 1;
+          }
+          if (___) {
+              std::cout << "Too big! Score would overflow.\n";
+              return 1;
+          }
+          score += bonus;
+          std::cout << score << '\n';
+          return 0;
+      }
+    options:
+      - t: bonus > std::numeric_limits<int>::max() - score
+        why: "Correct: max - score can't overflow (score is positive), and it tells you exactly how much room is left."
+      - t: score + bonus > std::numeric_limits<int>::max()
+        why: The addition itself overflows (UB) before the comparison, and no int is ever bigger than max anyway.
+      - t: score + bonus < 0
+        why: Relies on overflow wrapping around. It's UB, so the optimizer may delete this check entirely.
+      - t: bonus > std::numeric_limits<int>::max()
+        why: An int can never be bigger than the largest int, so this is always false.
+    answer: 0
+    hints:
+      - Don't do the risky addition to find out if it's risky.
+      - "Rearrange a + b > max as b > max - a: no overflow."
+    short: Check bonus > max - score before adding; that side can't overflow.
+    explain: "Move the math to the safe side: bonus > max - score. Since score is positive, max - score can't overflow. Input 147483648 is rejected; 147483647 exactly reaches max, which is fine."
+    sideBySide:
+      unsafe: |-
+        score += bonus;              // may overflow: UB
+        if (score < 0) { /* ... */ } // too late, and may be optimized away
+      hardened: |-
+        if (bonus > std::numeric_limits<int>::max() - score) {
+            std::cout << "Too big! Score would overflow.\n";
+            return 1;
+        }
+        score += bonus;
+      prelude: int score{2'000'000'000}; int bonus{};
+  - id: w3.l5.c6
+    type: safe
+    tags: [ w3.validate, w3.divzero, w3.overflow ]
+    prompt: Safe or unsafe? The Input Golem's minions are coming. Go fast!
+    seconds: 30
+    items:
+      - code: |-
+          if (count > 0) {
+              avg = total / count;
+          }
+        prelude: int count{2}; int total{7}; int avg{}; (void)avg;
+        safe: true
+        why: The divisor is checked before dividing.
+      - code: int r = x % 0;
+        prelude: int x{5};
+        safe: false
+        why: Remainder by zero is UB, just like division by zero.
+      - code: |-
+          std::cin >> n;
+          std::cout << 100 / n;
+        prelude: int n{};
+        safe: false
+        why: 'Unchecked: typing 0 (or "abc", which sets n to 0) divides by zero.'
+      - code: |-
+          if (!(std::cin >> n)) {
+              return 1;
+          }
+        prelude: int n{};
+        safe: true
+        why: The read is checked; bad input exits cleanly.
+      - code: |-
+          int big = std::numeric_limits<int>::max();
+          ++big;
+        safe: false
+        why: "Going past the largest int is signed overflow: UB."
+      - code: |-
+          std::cin.clear();
+          std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        safe: true
+        why: "The standard recovery: reset the fail state, then drop the bad line."
+      - code: long long sum = static_cast<long long>(a) + b;
+        prelude: int a{}; int b{};
+        safe: true
+        why: long long is at least 64 bits, so two ints can always be added in it without overflow.
+      - code: |-
+          std::cin >> age;
+          int days = age * 365;
+        prelude: int age{};
+        safe: false
+        why: Unchecked read, and a huge age makes the multiplication overflow.
+    hints:
+      - Look for any divisor that isn't checked.
+      - Look for reads that aren't checked and math that could go past the largest int.
+    short: Safe code checks reads, divisors, and limits before the math.
+    explain: Safe code checks the read, checks the divisor, and makes sure math can't pass the int limits. Everything else is an open gate.
+    sideBySide:
+      unsafe: |-
+        std::cin >> n;
+        std::cout << 100 / n;
+      hardened: |-
+        if (!(std::cin >> n) || n == 0) {
+            std::cout << "Need a non-zero number\n";
+            return 1;
+        }
+        std::cout << 100 / n;
+      prelude: int n{};
+recap:
+  - "Check every read: if (!(std::cin >> x)) { ... }."
+  - Recover with std::cin.clear(), then std::cin.ignore(max, '\n').
+  - "Integer / 0 and % 0 are UB: check first."
+  - "Signed overflow is UB: check against std::numeric_limits BEFORE the math."
+vault:
+  - id: w3.cinguard
+    title: Validate every read
+    code: |-
+      #include <limits>
+
+      int x{};
+      if (!(std::cin >> x)) {
+          std::cin.clear();
+          std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+          // report the problem, retry or exit
+      }
+    note: A failed read sets x to 0 and blocks all later reads until clear().
+    defense: true
+  - id: w3.divguard
+    title: Check the divisor
+    code: |-
+      if (count <= 0) {
+          std::cout << "Need a positive count\n";
+          return 1;
+      }
+      int share = total / count;
+      int rest  = total % count;
+    prelude: int count{}; int total{};
+    note: "x / 0 and x % 0 are UB for integers. It may not crash: it may lie."
+    defense: true
+  - id: w3.overflowguard
+    title: Check before adding
+    code: |-
+      #include <limits>
+
+      if (b > 0 && a > std::numeric_limits<int>::max() - b) {
+          // a + b would overflow
+      }
+      if (b < 0 && a < std::numeric_limits<int>::min() - b) {
+          // a + b would underflow
+      }
+    prelude: int a{}; int b{};
+    note: Signed overflow is UB. Test on the safe side before doing the math.
+    defense: true
+reviewTags: [ w2.init, w2.narrowing, w3.cin, w1.warnings ]

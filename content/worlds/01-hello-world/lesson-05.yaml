@@ -1,0 +1,152 @@
+# World 1 · Lesson 5: What compiling means
+
+id: w1.l5
+title: What compiling means
+skill: structure
+shield: false
+concept:
+  short: The compiler translates your C++ into a program the computer can run. Rebuild after every change.
+  analogy: Compiling is translating a book once, so the CPU can read it as often as you like.
+  body:
+    - "Building has stages: the **preprocessor** handles `#include`, the **compiler** turns code into machine code (an object file), and the **linker** joins it with library code into an **executable**."
+    - "Typical: `g++ -std=c++20 -Wall -Wextra main.cpp -o hero`, then `./hero`. `-o hero` names the output."
+    - "**Compile-time errors** (like a missing `;`) stop the build: no program at all. **Run-time** problems happen later, in a program that built fine."
+    - Changed the source? Compile again, or you run the old code.
+  pitfall: Editing the .cpp, forgetting to rebuild, and wondering why nothing changed. The executable is a snapshot of the last build.
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        std::cout << "Compiled at last!\n";
+        return 0;
+    }
+  steps:
+    - line: 0
+      note: "Preprocessor: pastes in the contents of <iostream>."
+    - line: 2
+      note: "Compiler: checks the code, turns it into machine code."
+    - line: 3
+      note: "Linker: connects std::cout to the library, writes the executable."
+    - line: 2
+      note: Now you RUN it. Execution begins at main().
+    - line: 3
+      out: |
+        Compiled at last!
+      note: The machine code prints the text.
+    - line: 4
+      note: "main() returns 0: success."
+challenges:
+  - id: w1.l5.c1
+    type: order
+    tags: [ w1.compile ]
+    prompt: Put the journey from source code to running program in order.
+    expect: skip
+    lines:
+      - Write source code in main.cpp
+      - "Preprocessor handles the #include lines"
+      - Compiler translates the code into machine code (object file)
+      - Linker combines it with library code into an executable
+      - Run the executable
+    hints:
+      - "#include lines are dealt with before anything else."
+      - Linking comes after compiling; running comes last.
+    short: Source, preprocessor, compiler, linker, then run.
+    explain: Source → preprocessor (#include) → compiler (machine code) → linker (joins library code, makes the executable) → run. Tools like g++ do the first three for you in one command.
+  - id: w1.l5.c2
+    type: mcq
+    tags: [ w1.compile ]
+    prompt: You fixed a typo in the text of main.cpp, then ran ./hero again, but the OLD text still appears. Why?
+    options:
+      - t: The computer caches text for a day
+        why: No such cache. The executable itself holds the old code.
+      - t: You didn't recompile, so ./hero is still the old build
+        why: Correct! Rebuild after every change.
+      - t: std::cout remembers old output
+        why: cout doesn't remember anything between runs.
+      - t: Typos can't be fixed after the first compile
+        why: "Of course they can: edit, rebuild, run."
+    answer: 1
+    hints:
+      - Where does ./hero come from?
+      - Did anything turn the new source into a new executable?
+    short: No rebuild, so you ran the old executable.
+    explain: Running a program doesn't read your .cpp file at all. It runs the machine code from the last successful build. Edit → compile → run, every time.
+  - id: w1.l5.c3
+    type: mcq
+    tags: [ w1.compile ]
+    prompt: "Intentionally broken code: line 5 is missing its semicolon. What happens when you try to build and run it?"
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << "Step 1\n";
+          std::cout << "Step 2\n"
+          std::cout << "Step 3\n";
+          return 0;
+      }
+    expect: error
+    unsafe: true
+    options:
+      - t: It prints Step 1, then stops at the broken line
+        why: C++ doesn't run half a program. The build fails first.
+      - t: "It prints all three steps: the compiler adds the ; itself"
+        why: Compilers never guess missing semicolons. They report an error.
+      - t: The build fails with an error, so there's no program to run
+        why: Correct! No executable is produced.
+      - t: It prints Step 1 and Step 2, then crashes
+        why: It never runs. This is a compile-time error, not a run-time one.
+    answer: 2
+    hints:
+      - Is a missing ; noticed while building or while running?
+      - If the build fails, is there an executable at all?
+    short: A compile error means no program is built, so nothing runs.
+    explain: Syntax errors are caught at compile time. The build fails and no new executable is produced (if an old one exists, it's stale!). Nothing gets partially run.
+  - id: w1.l5.c4
+    type: fill
+    tags: [ w1.compile ]
+    prompt: Fill in the flag that names the output file "hero".
+    code: g++ -std=c++20 -Wall -Wextra main.cpp ___ hero
+    expect: skip
+    accept:
+      - -o
+    placeholder: flag
+    hints:
+      - A dash and one letter.
+      - The letter stands for "output".
+    short: -o names the output file.
+    explain: -o hero tells g++ to write the executable as "hero" (hero.exe on Windows). Without it, g++ picks a default name like a.out.
+  - id: w1.l5.c5
+    type: mcq
+    tags: [ w1.compile, w1.warnings ]
+    prompt: Which problem can the compiler catch for you BEFORE the program ever runs?
+    options:
+      - t: The report prints "Helo" instead of "Hello"
+        why: A typo inside a string is valid C++. The compiler can't know your intent.
+      - t: A missing ; after a statement
+        why: Correct! Broken syntax is caught at compile time.
+      - t: The user wanted the report in French
+        why: That's a requirements question, not something a compiler checks.
+      - t: The program's logic gives a wrong total
+        why: Wrong logic in valid code compiles fine. Testing catches it.
+    answer: 1
+    hints:
+      - The compiler checks language rules, not your intentions.
+      - Which option breaks a grammar rule of C++?
+    short: Compilers catch broken rules, like a missing ;, not wrong intentions.
+    explain: "Compilers enforce the language's rules: syntax, names, types. Valid code that does the wrong thing (like a typo in a message) compiles happily, which is why testing matters too."
+recap:
+  - "Build: preprocess, compile, link, get an executable."
+  - Compile error means no program at all.
+  - Always rebuild after editing.
+  - Compilers check rules, not intentions.
+vault:
+  - id: w1.compile
+    title: Build & run
+    code: |-
+      g++ -std=c++20 -Wall -Wextra main.cpp -o hero
+      ./hero
+    expect: skip
+    note: Preprocessor (#include) → compiler (machine code) → linker (executable). Edit? Rebuild!
+    defense: false
+reviewTags: [ w1.cout, w1.comments ]

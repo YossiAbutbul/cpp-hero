@@ -1,0 +1,273 @@
+# World 3 · Lesson 2: Shortcuts: += and ++
+
+id: w3.l2
+title: "Shortcuts: += and ++"
+skill: logic
+shield: false
+concept:
+  short: x += 5 is shorthand for x = x + 5. x++ hands back the old value, ++x the new.
+  analogy: "Compound assignment is a shortcut button: press `hp -= 3` instead of spelling out `hp = hp - 3`."
+  body:
+    - "`x += 5` means `x = x + 5`. The same works for `-=`, `*=`, `/=`, and `%=`. The right side is computed first: `x *= 2 + 1` means `x = x * (2 + 1)`."
+    - "`++x` and `x++` both add 1 to x (and `--` subtracts 1). The difference is the **value of the expression**:"
+    - "**Prefix** `++x`: add first, then give back the new value. **Postfix** `x++`: give back the old value, then add."
+    - "On its own line (`++lives;` or `lives++;`) there's no difference. Prefer `++x` by habit: it says exactly what you mean."
+    - "**Golden rule**: never modify a variable twice in one expression, or modify and read it there. `i++ + i++` is **undefined behavior** (UB): compilers really do disagree."
+  pitfall: "Common beginner mistake: thinking `int a = x++;` gives a the new value. It gets the OLD one. And don't cram several ++ into one line."
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        int hp = 10;
+        hp -= 3;
+        hp *= 2;
+        int a = hp++;
+        int b = ++hp;
+        std::cout << a << ' ' << b << ' ' << hp << '\n';
+        return 0;
+    }
+  steps:
+    - line: 3
+      vars:
+        hp: "10"
+      note: Start with 10 hp.
+    - line: 4
+      vars:
+        hp: "7"
+      note: "hp -= 3 is hp = hp - 3: now 7."
+    - line: 5
+      vars:
+        hp: "14"
+      note: "hp *= 2 doubles it: 14."
+    - line: 6
+      vars:
+        hp: "15"
+        a: "14"
+      note: "Postfix: a gets the OLD value 14, then hp becomes 15."
+    - line: 7
+      vars:
+        hp: "16"
+        a: "14"
+        b: "16"
+      note: "Prefix: hp becomes 16 FIRST, then b gets 16."
+    - line: 8
+      out: |
+        14 16 16
+      note: a, b, and hp, separated by spaces.
+    - line: 9
+      note: Each line changed hp at most once. Clean and predictable!
+challenges:
+  - id: w3.l2.c1
+    type: predict
+    tags: [ w3.incdec ]
+    prompt: What does this print? (Look closely at what's between the values.)
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int x = 5;
+          int y = x++;
+          int z = ++x;
+          std::cout << x << y << z << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          757
+        why: "Correct: y gets the old 5; x ends at 7, z is 7. No separators."
+      - t: |
+          7 5 7
+        why: "The values are right, but no spaces are printed: there's no ' ' in the output chain."
+      - t: |
+          767
+        why: Postfix x++ hands back the OLD value, so y is 5, not 6.
+      - t: |
+          656
+        why: Both ++ really change x, so x ends at 7. And z comes from ++x, which uses the new value.
+    answer: 0
+    hints:
+      - x++ gives the old value, then increments.
+      - ++x increments, then gives the new value. And check for spaces!
+    short: y gets x's old 5; z gets the new 7; no spaces printed.
+    explain: 'x = 5. y = x++ gives y = 5, x = 6. z = ++x makes x = 7, z = 7. Printing x, y, z with nothing between: "757" and a newline.'
+  - id: w3.l2.c2
+    type: mcq
+    tags: [ w3.incdec, w3.arith ]
+    prompt: What does `x *= 2 + 1;` do when x is 3?
+    options:
+      - t: x becomes 9
+        why: "Correct: the right side goes first: x = 3 * (2 + 1)."
+      - t: x becomes 7
+        why: That's x * 2 + 1. But *= groups the whole right side first.
+      - t: x becomes 6
+        why: That ignores the + 1 entirely.
+      - t: It doesn't compile
+        why: Any expression can sit on the right of *=. It's perfectly valid.
+    answer: 0
+    hints:
+      - x op= expr means x = x op (expr).
+      - Put parentheses around everything to the right of *=.
+    short: x *= 2 + 1 means x = x * (2 + 1) = 9.
+    explain: x *= 2 + 1 is x = x * (2 + 1). With x = 3, that's 9.
+  - id: w3.l2.c3
+    type: fill
+    tags: [ w3.arith, w3.incdec ]
+    prompt: Fill in the compound operator so coins ends up tripled.
+    code: |-
+      int coins = 4;
+      coins ___ 3;   // coins is now 12
+    accept:
+      - "*="
+    placeholder: operator
+    hints:
+      - Tripling means multiplying by 3.
+      - Combine * with = into one operator.
+    short: coins *= 3 means coins = coins * 3.
+    explain: "coins *= 3 means coins = coins * 3: 4 * 3 = 12."
+  - id: w3.l2.c4
+    type: review
+    tags: [ w3.incdec ]
+    unsafe: true
+    prompt: Code review! Tap every line with undefined behavior, then submit.
+    code: |-
+      int i = 1;
+      int a = i++;
+      int b = i++ + i++;
+      i += 2;
+      int c = i + ++i;
+      std::cout << a << ' ' << i << '\n';
+    dangerous: [ 2, 4 ]
+    lineNotes:
+      "0": "Fine: i is initialized to 1."
+      "1": "Fine: i is modified once. a gets 1, i becomes 2."
+      "2": "UB: i is modified twice with no ordering between the two ++. Compilers may give different results, or worse."
+      "3": "Fine: one modification of i."
+      "4": "UB: the left `i` reads i while `++i` modifies it, and the two sides of + are unsequenced."
+      "5": Fine by itself (though after UB, nothing in the program can be trusted).
+    hints:
+      - Look for a variable that's changed AND used again in the same expression.
+      - Two lines have i appearing twice with a ++ in the mix.
+    short: Changing i twice, or changing and reading it, in one expression is UB.
+    explain: "Lines 3 and 5 modify i and also touch it again in the same expression, unsequenced: undefined behavior. UB doesn't promise a crash: it might print something that looks fine today and different numbers on another compiler. Split it into separate statements."
+    sideBySide:
+      unsafe: |-
+        int b = i++ + i++;   // UB
+        int c = i + ++i;     // UB
+      hardened: |-
+        int b = i + (i + 1);  // what you meant
+        i += 2;
+        ++i;                  // change i on its own line
+        int c = i + i;
+      prelude: int i = 1;
+  - id: w3.l2.c5
+    type: speed
+    tags: [ w3.arith, w3.modulo, w3.incdec, w3.precedence ]
+    prompt: Speed round! Assume all numbers are ints.
+    seconds: 45
+    items:
+      - q: What is the value?
+        code: 17 % 5
+        options:
+          - "2"
+          - "3"
+          - "3.4"
+        answer: 0
+      - q: What is x now?
+        code: |-
+          int x = 3;
+          x *= 2 + 1;
+        options:
+          - "7"
+          - "9"
+          - "6"
+        answer: 1
+      - q: What is the value?
+        code: 10 / 4
+        options:
+          - "2.5"
+          - "3"
+          - "2"
+        answer: 2
+      - q: What is m?
+        code: |-
+          int n = 4;
+          int m = n--;
+        options:
+          - "4"
+          - "3"
+          - "5"
+        answer: 0
+      - q: What is the value?
+        code: 2 + 3 * 2
+        options:
+          - "10"
+          - "8"
+          - "7"
+        answer: 1
+      - q: What is k now?
+        code: |-
+          int k = 6;
+          k /= 4;
+        options:
+          - "1.5"
+          - "2"
+          - "1"
+        answer: 2
+      - q: What is the value?
+        code: -9 % 4
+        options:
+          - "-1"
+          - "3"
+          - "1"
+        answer: 0
+    hints:
+      - Integer division drops the fraction; % keeps the leftover.
+      - Postfix gives the old value; compound ops compute the right side first.
+    short: Ints drop fractions, postfix gives the old value, right side goes first.
+    explain: 17 % 5 = 2; x = 3 * (2 + 1) = 9; 10 / 4 = 2; m gets n's old value 4; 2 + 6 = 8; 6 / 4 = 1; -9 % 4 = -1 (sign of the left side).
+  - id: w3.l2.c6
+    type: order
+    tags: [ w3.incdec, w1.main ]
+    prompt: Order the lines so the program prints 2.
+    lines:
+      - "#include <iostream>"
+      - int main() {
+      - "    int lives = 3;"
+      - "    --lives;"
+      - "    std::cout << lives << '\\n';"
+      - "    return 0;"
+      - "}"
+    distractors:
+      - "    int lives;"
+    hints:
+      - You must create lives before you can change it.
+      - "One line declares lives with no value: that's a trap from World 2!"
+    short: Declare with a value, decrement, then print. Never leave lives uninitialized.
+    explain: "Include, open main, declare and initialize lives to 3, decrement to 2, print, return, close. `int lives;` leaves it uninitialized: reading it would be UB."
+recap:
+  - x += 5 means x = x + 5.
+  - x++ gives the old value; ++x gives the new.
+  - Change a variable only once per expression.
+vault:
+  - id: w3.compound
+    title: Compound assignment
+    code: |-
+      hp += 5;   // hp = hp + 5
+      hp -= 3;   // hp = hp - 3
+      hp *= 2;   // hp = hp * 2
+      hp /= 4;   // hp = hp / 4
+      hp %= 3;   // hp = hp % 3
+    prelude: int hp{10};
+    note: x op= a + b means x = x op (a + b).
+    defense: false
+  - id: w3.incdec
+    title: Prefix vs postfix
+    code: |-
+      int x = 5;
+      int a = x++;   // a = 5, x = 6 (old value)
+      int b = ++x;   // x = 7, b = 7 (new value)
+      // NEVER: x++ + x++  (UB)
+    note: One change per variable per expression. Prefer ++x on its own line.
+    defense: false
+reviewTags: [ w2.init, w2.int, w3.arith ]

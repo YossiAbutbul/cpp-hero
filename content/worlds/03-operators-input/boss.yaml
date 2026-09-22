@@ -1,0 +1,522 @@
+# World 3 boss: The Input Golem
+
+id: w3.boss
+name: The Input Golem
+art: golem
+hp: 7
+intro: RUMBLE. I AM THE INPUT GOLEM. I EAT NEGATIVES, HUGE NUMBERS, AND "abc".
+taunt:
+  - YOU FORGOT TO CHECK cin. I CAN FEEL IT.
+  - DIVIDE BY ME. I AM ZERO.
+  - 2147483647 PLUS ONE. WHAT COULD GO WRONG?
+  - I HAVE A NEWLINE LEFT OVER JUST FOR YOUR getline.
+rounds:
+  - id: w3.boss.r1
+    type: predict
+    tags: [ w3.arith, w3.modulo ]
+    prompt: The Golem hurls a division. What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          std::cout << 20 % 6 << ' ' << 20 / 6 << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          2 3
+        why: "Correct: 20 % 6 is 2, 20 / 6 is 3, printed in that order."
+      - t: |
+          3 2
+        why: "The order is swapped: % comes first in the chain."
+      - t: |
+          2 3.33
+        why: "int / int is integer division: 3."
+      - t: |
+          2 4
+        why: Integer division truncates; 3.33 never rounds up to 4.
+    answer: 0
+    hints:
+      - "Read the chain left to right: which comes first?"
+      - 6 * 3 = 18. What's left from 20?
+    short: 20 % 6 = 2 prints first, then 20 / 6 = 3.
+    explain: '20 % 6 = 2, 20 / 6 = 3. Printed in that order with a space: "2 3" and a newline.'
+  - id: w3.boss.r2
+    type: mcq
+    tags: [ w3.precedence, w3.arith ]
+    prompt: What value does this expression have? (All ints.)
+    code: 2 + 10 / 4 * 2
+    options:
+      - t: "6"
+        why: "Correct: 10 / 4 = 2 (int), 2 * 2 = 4, then 2 + 4 = 6."
+      - t: "7"
+        why: That uses real division (2.5 * 2 = 5). With ints, 10 / 4 is 2.
+      - t: "3"
+        why: That's 2 + 10 / (4 * 2). Left to right, / happens before *.
+      - t: "8"
+        why: That rounds 10 / 4 up to 3. Integer division truncates.
+    answer: 0
+    hints:
+      - / and * before +, left to right.
+      - 10 / 4 with ints is 2, not 2.5.
+    short: 10 / 4 = 2, times 2 is 4, plus 2 is 6.
+    explain: "Precedence: 10 / 4 = 2, then 2 * 2 = 4, then 2 + 4 = 6."
+  - id: w3.boss.r3
+    type: predict
+    tags: [ w3.incdec, w3.arith ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int a = 2;
+          int b = a++ * 3;
+          std::cout << a << ' ' << b << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          3 6
+        why: "Correct: a++ hands over the old value 2 (so b = 6), then a becomes 3."
+      - t: |
+          3 9
+        why: "Postfix uses the OLD value in the expression: 2 * 3, not 3 * 3."
+      - t: |
+          2 6
+        why: a++ really does increment a, so it prints 3.
+      - t: |
+          3 7
+        why: The ++ adds to a, not to the product.
+    answer: 0
+    hints:
+      - "Postfix: old value now, increment afterward."
+      - a is modified once here, so this is well-defined.
+    short: a++ gives the old 2, so b = 6; then a = 3.
+    explain: 'b = (old a) * 3 = 2 * 3 = 6, and a becomes 3. Output: "3 6" and a newline.'
+  - id: w3.boss.r4
+    type: predict
+    tags: [ w3.logic, w3.incdec ]
+    prompt: The Golem tests your short-circuit skills. What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int keys = 0;
+          bool open = (keys > 0) || (++keys > 0);
+          std::cout << open << keys << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          11
+        why: "Correct: left is false, so || runs ++keys: keys is 1, and 1 > 0."
+      - t: |
+          10
+        why: "|| only skips the right side when the LEFT side is true. Here it's false, so ++keys runs."
+      - t: |
+          01
+        why: The right side is true, so open is true (1).
+      - t: |
+          true1
+        why: Without std::boolalpha, true prints as 1.
+    answer: 0
+    hints:
+      - When does || skip its right side?
+      - 0 > 0 is false, so the right side has to run.
+    short: "Left side false, so || runs ++keys: prints 1 and 1."
+    explain: '0 > 0 is false, so || evaluates the right: keys becomes 1, 1 > 0 is true. open prints 1, keys prints 1: "11" and a newline.'
+  - id: w3.boss.r5
+    type: predict
+    tags: [ w3.cin, w3.validate ]
+    bug: cin-fail
+    prompt: The Golem types `abc`. What does this print? (Modern C++.)
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int n = 7;
+          std::cin >> n;
+          std::cout << n << ' ' << std::cin.fail() << '\n';
+          return 0;
+      }
+    stdin: |
+      abc
+    options:
+      - t: |
+          0 1
+        why: "Correct: since C++11, a failed number read stores 0, and cin.fail() is true (prints 1)."
+      - t: |
+          7 1
+        why: That was the old C++98 behavior. Since C++11, a failed read overwrites n with 0.
+      - t: |
+          7 0
+        why: The read definitely failed, so fail() is true.
+      - t: |
+          abc 1
+        why: n is an int; it can't hold text.
+    answer: 0
+    hints:
+      - What does a failed int read store, since C++11?
+      - fail() returns a bool; how do bools print?
+    short: A failed int read stores 0 and sets the fail state.
+    explain: "\"abc\" can't be parsed as an int, so n is set to 0 and the failbit is set. Output: \"0 1\" and a newline. Never use a value from a failed read."
+  - id: w3.boss.r6
+    type: speed
+    tags: [ w3.arith, w3.logic, w3.compare, w3.incdec, w3.cin ]
+    prompt: SPEED ROUND! The Golem is charging. Answer fast!
+    seconds: 45
+    items:
+      - q: What is the value? (ints)
+        code: 7 / 2 * 2
+        options:
+          - "7"
+          - "6"
+          - "3"
+        answer: 1
+      - q: What does this print?
+        code: std::cout << (true || false && false);
+        expect: warn
+        options:
+          - "1"
+          - "0"
+          - "true"
+        answer: 0
+      - q: What is h now?
+        code: |-
+          int h = 9;
+          h %= 4;
+        options:
+          - "2"
+          - "2.25"
+          - "1"
+        answer: 2
+      - q: Input is `42abc`. What is n after the read?
+        code: |-
+          int n{};
+          std::cin >> n;
+        options:
+          - "42"
+          - "0"
+          - abc
+        answer: 0
+      - q: What does this print?
+        code: std::cout << !(3 > 2);
+        options:
+          - "1"
+          - "0"
+          - "-1"
+        answer: 1
+      - q: What is w?
+        code: |-
+          int v = 5;
+          int w = --v;
+        options:
+          - "5"
+          - "4"
+          - "6"
+        answer: 1
+      - q: What does this print?
+        code: std::cout << (5 != 5 || 2 < 3);
+        options:
+          - "1"
+          - "0"
+          - "false"
+        answer: 0
+    hints:
+      - Ints drop fractions; bools print as 1/0.
+      - ">> reads as much of a number as it can, then stops."
+    short: Ints drop fractions, bools print 1/0, >> stops at the first non-digit.
+    explain: 7 / 2 * 2 = 3 * 2 = 6; && first gives true; 9 % 4 = 1; >> reads 42 and leaves "abc" for later (no failure yet); !(true) is 0; prefix gives 4; false || true is 1.
+  - id: w3.boss.r7
+    type: bug
+    tags: [ w3.incdec ]
+    unsafe: true
+    prompt: "UNSAFE: the Golem snuck undefined behavior into the turn counter. Tap the buggy line, then pick the fix. (Goal: add this turn and the next, then advance two turns.)"
+    code: |-
+      int turn = 1;
+      int next = turn++ + turn++;
+      std::cout << next << ' ' << turn << '\n';
+    bugLine: 1
+    options:
+      - t: int next = turn + (turn + 1); turn += 2;
+        why: "Correct: reads turn without changing it, then modifies it once in its own statement. next = 3, turn = 3."
+      - t: int next = ++turn + ++turn;
+        why: "Still two unsequenced modifications of turn: still UB."
+      - t: int next = (turn++) + (turn++);
+        why: Parentheses group, they don't sequence. Still UB.
+      - t: int next = turn++ + turn;
+        why: "Modifies turn and reads it again, unsequenced: still UB."
+    answer: 0
+    hints:
+      - How many times is turn modified in one expression?
+      - Split the reading and the changing into separate statements.
+    short: Two ++ on turn in one expression is UB. Split it up.
+    explain: "Two ++ on the same variable in one expression is undefined behavior: different compilers print different results, and none are wrong. Read first, modify on a separate statement."
+    sideBySide:
+      unsafe: int next = turn++ + turn++;   // UB
+      hardened: |-
+        int next = turn + (turn + 1);
+        turn += 2;
+      prelude: int turn = 1;
+  - id: w3.boss.r8
+    type: harden
+    tags: [ w3.validate, w3.logic ]
+    bug: cin-fail
+    prompt: "Pick the condition that rejects bad text AND impossible ages (valid: 0 to 150)."
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int age{};
+          std::cout << "Age: ";
+          if (___) {
+              std::cout << "Invalid age\n";
+              return 1;
+          }
+          std::cout << "Age accepted: " << age << '\n';
+          return 0;
+      }
+    options:
+      - t: "!(std::cin >> age) || age < 0 || age > 150"
+        why: 'Correct: reads first; if the read fails, || short-circuits straight to "invalid". Otherwise the range is checked.'
+      - t: "!(std::cin >> age) && age < 0"
+        why: "&& needs BOTH: \"abc\" gives 0, 0 < 0 is false, so it's accepted."
+      - t: std::cin >> age || age < 0
+        why: "Inverted: a successful read makes the whole thing true, so every good age is rejected."
+      - t: age < 0 || age > 150 || !(std::cin >> age)
+        why: Checks age BEFORE reading it (it's still 0). Then -5 is read successfully and never range-checked.
+    answer: 0
+    hints:
+      - You must read before you can check the value.
+      - "|| short-circuits: put the read on the far left."
+    short: Read first, then check the range; || short-circuits on failure.
+    explain: "Order matters with short-circuiting: the read goes first, then the range checks run only on a successfully read value."
+    sideBySide:
+      unsafe: |-
+        std::cin >> age;
+        std::cout << "Age accepted: " << age << '\n';
+      hardened: |-
+        if (!(std::cin >> age) || age < 0 || age > 150) {
+            std::cout << "Invalid age\n";
+            return 1;
+        }
+        std::cout << "Age accepted: " << age << '\n';
+      prelude: int age{};
+  - id: w3.boss.r9
+    type: edge
+    tags: [ w3.overflow ]
+    unsafe: true
+    prompt: This adds a bonus to a score (both ints, 32-bit). Which test inputs expose overflow? Select all that apply.
+    code: int total = score + bonus;
+    prelude: int score{}; int bonus{};
+    options:
+      - t: score 2147483647, bonus 1
+        why: "Exposes it: one past the largest int is signed overflow (UB)."
+      - t: score -2147483648, bonus -1
+        why: "Exposes it: one below the smallest int overflows the other way (UB)."
+      - t: score 100, bonus 50
+        why: 150 fits easily. No problem.
+      - t: score 2000000000, bonus 2000000000
+        why: "Exposes it: 4 billion is far beyond the largest int (about 2.1 billion)."
+      - t: score 0, bonus -5
+        why: -5 fits fine. Negative isn't the problem; crossing the limits is.
+    answers: [ 0, 1, 3 ]
+    hints:
+      - The largest 32-bit int is 2147483647 and the smallest is -2147483648.
+      - "Test both ends: too big AND too small."
+    short: "Test both int limits: too big and too small."
+    explain: Good edge tests push against BOTH limits. Check before adding, on the safe side of the math.
+    sideBySide:
+      unsafe: int total = score + bonus;
+      hardened: |-
+        #include <limits>
+
+        if ((bonus > 0 && score > std::numeric_limits<int>::max() - bonus) ||
+            (bonus < 0 && score < std::numeric_limits<int>::min() - bonus)) {
+            std::cout << "Score out of range!\n";
+            return 1;
+        }
+        int total = score + bonus;
+      prelude: int score{}; int bonus{};
+defense:
+  - attack: "-5"
+    label: Negative number!
+    challenge:
+      id: w3.boss.d1
+      type: harden
+      tags: [ w3.validate, w3.compare ]
+      prompt: The Golem orders -5 potions to get paid 125 gold! Pick the check.
+      code: |-
+        int potions{};
+        if (!(std::cin >> potions) || ___) {
+            std::cout << "Invalid amount\n";
+            return 1;
+        }
+        int cost = potions * 25;
+      options:
+        - t: potions < 0
+          why: "Correct: rejects every negative amount; 0 potions is a valid (if boring) order."
+        - t: potions > 0
+          why: "Inverted: rejects every real order and lets negatives through."
+        - t: potions == -5
+          why: Only blocks this exact attack. The Golem just tries -6.
+        - t: potions != 0
+          why: Rejects every non-empty order, valid or not.
+      answer: 0
+      hints:
+        - What values are impossible for a quantity?
+        - Block a whole range, not one value.
+      short: "Reject the whole negative range: potions < 0."
+      explain: "Validate the range, not specific values: potions < 0 is always invalid."
+      sideBySide:
+        unsafe: |-
+          std::cin >> potions;
+          int cost = potions * 25;   // -5 potions = -125 cost
+        hardened: |-
+          if (!(std::cin >> potions) || potions < 0) {
+              std::cout << "Invalid amount\n";
+              return 1;
+          }
+          int cost = potions * 25;
+        prelude: int potions{};
+  - attack: "2147483647"
+    label: Huge value!
+    challenge:
+      id: w3.boss.d2
+      type: breakit
+      tags: [ w3.overflow, w3.validate ]
+      unsafe: true
+      prompt: "UNSAFE: this checks bad text and negatives. Which input still breaks it? (32-bit int.)"
+      code: |-
+        int potions{};
+        if (!(std::cin >> potions) || potions < 0) {
+            std::cout << "Invalid amount\n";
+            return 1;
+        }
+        int cost = potions * 25;
+      options:
+        - t: "2147483647"
+          why: "Correct: it's a valid int, so the read succeeds, but potions * 25 overflows: UB."
+        - t: abc
+          why: "Caught: the read fails and the program exits."
+        - t: "-5"
+          why: Caught by potions < 0.
+        - t: "0"
+          why: 0 * 25 = 0. Perfectly fine.
+      answer: 0
+      hints:
+        - Which input passes both checks?
+        - What happens when a big number is multiplied?
+      short: 2147483647 passes validation, but * 25 overflows.
+      explain: "The largest int fits, so it passes validation, but multiplying by 25 goes way past the limit: signed overflow is UB. Cap the input so the math can't overflow."
+      sideBySide:
+        unsafe: "int cost = potions * 25;   // huge potions: UB"
+        hardened: |-
+          #include <limits>
+
+          if (!(std::cin >> potions) || potions < 0 ||
+              potions > std::numeric_limits<int>::max() / 25) {
+              std::cout << "Invalid amount\n";
+              return 1;
+          }
+          int cost = potions * 25;
+        prelude: int potions{};
+  - attack: abc
+    label: Text instead of a number!
+    challenge:
+      id: w3.boss.d3
+      type: harden
+      tags: [ w3.validate, w3.cin ]
+      bug: cin-fail
+      prompt: The Golem types `abc`. Pick the condition that detects it so we can recover.
+      code: |-
+        #include <iostream>
+        #include <limits>
+
+        int main() {
+            int damage{};
+            std::cin >> damage;
+            if (___) {
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                std::cout << "Numbers only, Golem!\n";
+                return 1;
+            }
+            std::cout << "Damage: " << damage << '\n';
+            return 0;
+        }
+      options:
+        - t: std::cin.fail()
+          why: 'Correct: fail() is true after a failed read, exactly when "abc" was typed.'
+        - t: damage == 0
+          why: A real 0 would trigger it too; the value alone can't tell "0" from "abc". Check the stream.
+        - t: std::cin.eof()
+          why: eof() means input ended. "abc" sets the failbit, not eof.
+        - t: "!std::cin.clear()"
+          why: clear() returns nothing (void), so this doesn't compile. And clearing isn't checking.
+      answer: 0
+      hints:
+        - The stream remembers whether the last read worked.
+        - Ask the stream, not the variable.
+      short: "Ask the stream: std::cin.fail() is true after a bad read."
+      explain: After a failed extraction, cin.fail() is true. Then clear() + ignore() restore the stream. (Writing `if (!(std::cin >> damage))` does the read and check in one step.)
+      sideBySide:
+        unsafe: |-
+          std::cin >> damage;
+          std::cout << "Damage: " << damage << '\n';   // "abc" shows 0
+        hardened: |-
+          std::cin >> damage;
+          if (std::cin.fail()) {
+              std::cin.clear();
+              std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+              std::cout << "Numbers only, Golem!\n";
+              return 1;
+          }
+        prelude: int damage{};
+  - attack: "0"
+    label: Zero golems to split among!
+    challenge:
+      id: w3.boss.d4
+      type: harden
+      tags: [ w3.divzero, w3.validate ]
+      prompt: Split crystal shards among golems. The Golem enters 0 golems. Pick the guard.
+      code: |-
+        int shards{};
+        int golems{};
+        if (!(std::cin >> shards >> golems)) {
+            return 1;
+        }
+        if (___) {
+            std::cout << "Need at least one golem!\n";
+            return 1;
+        }
+        std::cout << shards / golems << ' ' << shards % golems << '\n';
+      options:
+        - t: golems <= 0
+          why: "Correct: blocks division by zero, and negatives too (which also closes the sneaky smallest-int / -1 overflow)."
+        - t: shards == 0
+          why: "Wrong variable: 0 / 3 is fine. The divisor is what matters."
+        - t: golems > 0
+          why: "Inverted: rejects every valid split and lets 0 through."
+        - t: golems == 0 && shards == 0
+          why: Only blocks when BOTH are 0. 10 shards / 0 golems still divides by zero.
+      answer: 0
+      hints:
+        - Which variable is the divisor?
+        - Only positive counts make sense here.
+      short: "Check the divisor: golems <= 0 means no split."
+      explain: "Both / and % by zero are UB. Check the divisor before either one runs: golems <= 0 means no split."
+      sideBySide:
+        unsafe: std::cout << shards / golems << ' ' << shards % golems << '\n';
+        hardened: |-
+          if (golems <= 0) {
+              std::cout << "Need at least one golem!\n";
+              return 1;
+          }
+          std::cout << shards / golems << ' ' << shards % golems << '\n';
+        prelude: int shards{12}; int golems{};
+victory: CRACK... CRUMBLE... "input... validated..." The Golem falls apart into neat integers.
+reward:
+  xp: 200
+  cosmetic: golem-helm
+  bug: cin-fail

@@ -1,0 +1,57 @@
+# Daily quests. event = engine event name (see src/engine/questEvents.ts).
+
+- id: lessons2
+  text: Complete 2 lessons
+  goal: 2
+  event: lesson.done
+  xp: 20
+- id: lessons3
+  text: Complete 3 lessons
+  goal: 3
+  event: lesson.done
+  xp: 35
+- id: correct10
+  text: Answer 10 challenges correctly
+  goal: 10
+  event: answer.correct
+  xp: 20
+- id: combo5
+  text: Get 5 correct in a row
+  goal: 5
+  event: combo
+  xp: 25
+- id: harden3
+  text: Harden 3 snippets
+  goal: 3
+  event: defensive.correct
+  xp: 25
+- id: review3
+  text: Review 3 old concepts
+  goal: 3
+  event: review.done
+  xp: 20
+- id: xp100
+  text: Earn 100 XP
+  goal: 100
+  event: xp
+  xp: 20
+- id: xp50
+  text: Earn 50 XP
+  goal: 50
+  event: xp
+  xp: 10
+- id: boss3
+  text: Land 3 hits in boss battles
+  goal: 3
+  event: boss.round
+  xp: 30
+- id: nohint3
+  text: Answer 3 challenges without hints
+  goal: 3
+  event: hint.none
+  xp: 15
+- id: nohint8
+  text: Answer 8 challenges without hints
+  goal: 8
+  event: hint.none
+  xp: 30

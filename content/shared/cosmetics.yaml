@@ -1,0 +1,64 @@
+# Cosmetics. slot = hat | color | shield; source = how it is earned (display text).
+
+- id: classic
+  slot: color
+  name: Classic Tangerine
+  color: "#F2641B"
+  source: Owned from the start
+- id: gremlin-horns
+  slot: hat
+  name: Gremlin Horns
+  source: Defeat the Syntax Gremlin (World 1)
+- id: blob-bowtie
+  slot: hat
+  name: Blob Bow Tie
+  source: Defeat the Garbage Blob (World 2)
+- id: golem-helm
+  slot: hat
+  name: Golem Helm
+  source: Defeat the Stuck-Stream Golem (World 3)
+- id: party-hat
+  slot: hat
+  name: Semicolon Party Hat
+  source: Reach a 7-day streak
+- id: wizard-hat
+  slot: hat
+  name: Template Wizard Hat
+  source: Beat World 13
+- id: crown
+  slot: hat
+  name: Crown of Braces
+  source: Beat the Final Boss
+- id: berry
+  slot: color
+  name: Berry Pop
+  color: "#FF5A70"
+  source: Finish 10 lessons
+- id: mint
+  slot: color
+  name: Mint Syntax
+  color: "#0FA898"
+  source: Finish 25 lessons
+- id: sky
+  slot: color
+  name: Sky Compiler
+  color: "#3D8BFF"
+  source: Hit a 10-answer combo
+- id: sunny
+  slot: color
+  name: Sunny Semicolon
+  color: "#FFC62E"
+  source: Keep a 3-day streak
+- id: midnight
+  slot: color
+  name: Midnight Debugger
+  color: "#2A2140"
+  source: Complete 50 reviews
+- id: shield-circuit
+  slot: shield
+  name: Circuit Shield
+  source: Harden 25 snippets
+- id: shield-brace
+  slot: shield
+  name: Double-Brace Shield
+  source: Beat World 12

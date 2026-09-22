@@ -1,0 +1,286 @@
+# World 2 · Lesson 5: Shield: No empty boxes (Shield lesson)
+
+id: w2.l5
+title: "Shield: No empty boxes"
+skill: defense
+shield: true
+concept:
+  short: "Always give variables a value: reading an empty one is UB. Braces block lossy conversions."
+  analogy: An uninitialized variable is an attic box still full of old junk, and braces `{}` are a gate that rejects anything that doesn't fit.
+  body:
+    - "`int hp;` inside a function creates a box but puts nothing in it. It holds an **indeterminate** value: leftover bits from whatever used that memory before."
+    - 'Reading it (`std::cout << hp;`, `hp + 1`) is **undefined behavior (UB)**: it might print 0, print garbage, crash, or seem fine today and break on another compiler. "It worked on my machine" proves nothing.'
+    - "The fix: **always initialize**. `int hp{100};` or `int hp{};` (empty braces give 0). A `std::string` starts empty on its own; ints, doubles, chars and bools don't."
+    - "Braces also block **narrowing** (conversions that lose data): `int hp{3.7};` is a **compile error**, while `int hp = 3.7;` silently stores 3. A compile error is a gift: the bug never ships."
+    - "Narrowing from a **variable** (`int n{someDouble};`) is just as illegal: Clang and MSVC reject it, GCC only warns by default. Treat that warning as an error."
+    - Keep compiler warnings on (`-Wall -Wextra`, from World 1). They often catch "may be used uninitialized".
+  pitfall: "\"It printed 0, so it's fine.\" Memory is often zero by luck in tiny programs. UB doesn't guarantee a crash, which is what makes it dangerous."
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        int damage;               // UNSAFE: no value!
+        int total = damage + 5;   // reads garbage: UB
+        std::cout << total << '\n';
+
+        int shield{};             // SAFE: empty braces give 0
+        int armor{10};            // SAFE: explicit value
+        std::cout << shield + armor << '\n';
+        return 0;
+    }
+  steps:
+    - line: 2
+      note: main() starts.
+    - line: 3
+      vars:
+        damage: "?"
+      note: A box is created but never filled. Its contents are garbage.
+    - line: 4
+      vars:
+        damage: "?"
+        total: "?"
+      crash: "Reading garbage! Undefined behavior: the rules of C++ no longer apply."
+      note: damage + 5 reads the garbage. total is garbage too.
+    - line: 5
+      vars:
+        damage: "?"
+        total: "?"
+      out: |
+        21980
+      note: This run printed 21980. Another might print 5, or crash.
+    - line: 7
+      vars:
+        damage: "?"
+        total: "?"
+        shield: "0"
+      shield: "Empty braces: shield is guaranteed to be 0."
+      note: int shield{}; value-initializes to 0.
+    - line: 8
+      vars:
+        damage: "?"
+        total: "?"
+        shield: "0"
+        armor: "10"
+      note: "An explicit starting value: the safest and clearest."
+    - line: 9
+      vars:
+        damage: "?"
+        total: "?"
+        shield: "0"
+        armor: "10"
+      out: |
+        10
+      note: 0 + 10 = 10, every time, on every compiler.
+    - line: 10
+      note: "Moral: never read a box you didn't fill."
+challenges:
+  - id: w2.l5.c1
+    type: safe
+    tags: [ w2.init, w2.narrowing ]
+    bug: uninit-var
+    short: Read only what you've filled; braces stop silent truncation.
+    prompt: Safe or unsafe? Go fast!
+    seconds: 30
+    items:
+      - code: |-
+          int hp{};
+          std::cout << hp;
+        safe: true
+        why: Empty braces value-initialize hp to 0.
+      - code: |-
+          int hp;
+          std::cout << hp;
+        safe: false
+        why: hp was never given a value; reading it is UB.
+      - code: double ratio{0.75};
+        safe: true
+        why: Initialized with a value that fits its type.
+      - code: |-
+          int x;
+          x = x + 1;
+        safe: false
+        why: "x + 1 reads x before it has a value: UB."
+      - code: |-
+          std::string name;
+          std::cout << name.size();
+        safe: true
+        why: std::string's default is an empty string, so this prints 0. (ints, doubles, chars and bools get no such default.)
+      - code: int level = 7.9;
+        safe: false
+        why: "It compiles, but silently truncates to 7: hidden data loss. Braces would have refused it."
+      - code: char grade{'A'};
+        safe: true
+        why: Initialized with a char literal.
+      - code: |-
+          bool done;
+          std::cout << done;
+        safe: false
+        why: An uninitialized bool is garbage too; reading it is UB (it might not even be a valid 0 or 1).
+    hints:
+      - Is every variable given a value before it's read?
+      - Watch for silent double-to-int conversions with =.
+    explain: Read a variable only after it has a value, and prefer braces so the compiler flags lossy conversions instead of silently truncating.
+  - id: w2.l5.c2
+    type: review
+    tags: [ w2.init, w2.string ]
+    bug: uninit-var
+    unsafe: true
+    short: "int xp; holds garbage, and xp + 10 reads it: UB."
+    prompt: "Code review: tap the line that creates garbage AND the line that reads it, then submit."
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          int level{1};
+          int xp;
+          std::string title;
+          double bonus{1.5};
+          std::cout << title << level << '\n';
+          std::cout << xp + 10 << '\n';
+          std::cout << bonus << '\n';
+          return 0;
+      }
+    dangerous: [ 5, 9 ]
+    lineNotes:
+      "4": "Safe: level starts at 1."
+      "5": "Dangerous: xp is declared with no value, so it holds garbage."
+      "6": "Safe: a std::string with no initializer is an empty string, not garbage."
+      "7": "Safe: bonus starts at 1.5."
+      "9": "Dangerous: xp + 10 reads the uninitialized xp: undefined behavior."
+    hints:
+      - Which variable was never given a value?
+      - "std::string is the exception: it starts empty on its own."
+    explain: "`int xp;` leaves garbage in the box and `xp + 10` reads it: UB. It might print 10, a huge number, or misbehave only in release builds. `std::string title;` is fine because strings start empty."
+    sideBySide:
+      unsafe: |-
+        int xp;
+        std::cout << xp + 10 << '\n';   // UB
+      hardened: |-
+        int xp{};
+        std::cout << xp + 10 << '\n';   // always 10
+  - id: w2.l5.c3
+    type: harden
+    tags: [ w2.init ]
+    bug: uninit-var
+    short: int potions{}; guarantees 0 and never parses as a function.
+    prompt: Harden this so potions always starts at 0.
+    code: |-
+      int potions___;
+      std::cout << "Potions: " << potions << '\n';
+    options:
+      - t: "{}"
+        why: "Correct: empty braces value-initialize potions to 0."
+      - t: = potions
+        why: "Initializing a variable from itself still reads garbage: UB."
+      - t: ()
+        why: Trap! `int potions();` declares a function named potions, not a variable (the "most vexing parse"). Braces never have this problem.
+      - t: "{0.0}"
+        why: "0.0 is a double, and braces refuse to narrow double to int: compile error."
+    answer: 0
+    hints:
+      - Braces with nothing inside mean "the zero value".
+      - Parentheses after a name can look like a function declaration.
+    explain: "`int potions{};` guarantees 0. Braces are the safest initializer: they zero-fill when empty, never parse as a function, and refuse narrowing."
+    sideBySide:
+      unsafe: |-
+        int potions;   // garbage
+        std::cout << "Potions: " << potions << '\n';
+      hardened: |-
+        int potions{};   // 0
+        std::cout << "Potions: " << potions << '\n';
+  - id: w2.l5.c4
+    type: mcq
+    tags: [ w2.narrowing, w1.compile ]
+    short: = silently truncates; braces reject narrowing at compile time.
+    prompt: "Intentionally broken snippet: what does the compiler do with these two lines?"
+    code: |-
+      int a = 3.7;
+      int b{3.7};
+    expect: error
+    options:
+      - t: "Line 1 compiles (a becomes 3); line 2 is a compile error: narrowing"
+        why: "Correct: = silently truncates, but braces refuse any conversion that can lose data."
+      - t: Both compile; a and b are both 3
+        why: "Brace initialization doesn't allow narrowing: double to int is rejected."
+      - t: Both compile; a and b are both 4
+        why: Double-to-int never rounds, and line 2 doesn't compile anyway.
+      - t: Both lines are compile errors
+        why: Line 1 is legal C++ (maybe with a warning), which is why it's sneaky.
+    answer: 0
+    hints:
+      - One of these syntaxes is picky about lost data.
+      - Braces are the picky ones.
+    explain: "`int a = 3.7;` quietly stores 3. `int b{3.7};` is ill-formed (narrowing), so the compiler stops you. Prefer braces: they turn silent data loss into an error you can fix."
+  - id: w2.l5.c5
+    type: breakit
+    tags: [ w2.narrowing, w2.convert ]
+    unsafe: true
+    short: "0.9 silently truncates to 0: the shield vanishes."
+    prompt: The shield strength comes from a double. Which value breaks this code the worst?
+    code: |-
+      double boost{/* value */};
+      int shieldPower = boost;   // silent double to int
+      std::cout << shieldPower << '\n';
+    options:
+      - t: "2.0"
+        why: "Becomes 2: nothing lost."
+      - t: "5.0"
+        why: "Becomes 5: nothing lost."
+      - t: "0.9"
+        why: "Correct: truncates to 0. The hero's shield silently drops to nothing!"
+      - t: "3.0"
+        why: "Becomes 3: nothing lost."
+    answer: 2
+    hints:
+      - Which value has a fractional part?
+      - What's 0.9 with the fraction chopped off?
+    explain: "`int shieldPower = boost;` silently truncates. With 0.9 the shield becomes 0. Writing `int shieldPower{boost};` is ill-formed narrowing (an error on Clang/MSVC, a narrowing warning on GCC by default), forcing you to choose: keep a double, or convert on purpose with static_cast."
+    sideBySide:
+      unsafe: int shieldPower = boost;   // 0.9 becomes 0, silently
+      hardened: |-
+        double shieldPower{boost};  // keeps 0.9
+        // or, if you truly want a whole number, say so:
+        // int shieldPower{static_cast<int>(boost)};
+      prelude: double boost{0.9};
+  - id: w2.l5.c6
+    type: write
+    tags: [ w2.init ]
+    bug: uninit-var
+    short: int gold{}; starts gold at a known 0.
+    prompt: "`int gold;` is an empty box. Rewrite the declaration so gold starts at zero."
+    accept:
+      - int gold{};
+      - int gold{0};
+      - int gold = 0;
+    placeholder: int gold...
+    hints:
+      - Add an initializer.
+      - "Braces work: int gold{...};"
+    explain: "`int gold{};` (or `int gold{0};`) guarantees a known starting value. Initialize every variable where you declare it."
+recap:
+  - "Reading an uninitialized variable is UB: always initialize."
+  - "`int x{};` gives 0; std::string starts empty on its own."
+  - "Braces refuse narrowing: `int x{3.7};` is a compile error."
+  - UB can seem fine, then break later.
+vault:
+  - id: w2.always-init
+    title: Always initialize
+    code: |-
+      int hp;          // UNSAFE: garbage, reading it is UB
+      int hp{};        // SAFE: 0
+      int hp{100};     // SAFE: explicit value
+      std::string s;   // OK: strings start empty
+    expect: skip
+    note: Give every variable a value the moment it exists. UB doesn't promise a crash; it can look fine and fail later.
+    defense: true
+  - id: w2.brace-narrowing
+    title: Braces catch narrowing
+    code: |-
+      int a = 3.7;                        // compiles, silently 3
+      // int b{3.7};                      // compile error: narrowing
+      int c{static_cast<int>(3.7)};       // explicit: 3 on purpose
+    note: "Prefer {} so the compiler flags lossy conversions (from a variable, GCC only warns by default: treat it as an error). Convert on purpose with static_cast."
+    defense: true
+reviewTags: [ w1.warnings, w2.int, w2.double, w2.convert ]

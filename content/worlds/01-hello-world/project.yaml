@@ -1,0 +1,298 @@
+# World 1 mini-project: Mission Log
+
+id: w1.p
+title: Mission Log
+intro: Every hero needs a status report! Let's build a Mission Log, brace by brace.
+steps:
+  - id: w1.p.s1
+    type: order
+    tags: [ w1.main, w1.include ]
+    prompt: "Start with the skeleton: put the lines in order."
+    lines:
+      - "#include <iostream>"
+      - int main() {
+      - "    return 0;"
+      - "}"
+    distractors:
+      - "#include <iostream>;"
+      - int Main() {
+    hints:
+      - Includes go first, then main().
+      - "Watch out: directives have no semicolon, and main is lowercase."
+    short: Include, then main() with return 0; inside its braces.
+    explain: Include first, then main() with return 0; inside its braces. The decoys were a directive with a stray ; and a capitalized Main.
+  - id: w1.p.s2
+    type: fill
+    tags: [ w1.cout ]
+    prompt: Print the header, and end the line so the next part starts on a new line.
+    code: |-
+      #include <iostream>
+
+      // Mission Log: daily status report for the Codebase
+      int main() {
+          std::cout << "=== MISSION LOG ===___";
+          return 0;
+      }
+    accept:
+      - \n
+    placeholder: escape
+    hints:
+      - You need the escape sequence for a new line.
+      - A backslash followed by the letter n.
+    short: \n ends the header line.
+    explain: \n inside the string ends the line. Without it, the next output would be glued to the header.
+  - id: w1.p.s3
+    type: write
+    tags: [ w1.cout ]
+    prompt: Write the statement that prints Hero:, then a tab, then Curlo, then ends the line. (Use \t and \n.)
+    accept:
+      - std::cout << "Hero:\tCurlo\n";
+      - std::cout << "Hero:\t" << "Curlo\n";
+      - std::cout << "Hero:\tCurlo" << '\n';
+      - std::cout << "Hero:" << '\t' << "Curlo" << '\n';
+    placeholder: std::cout << ...
+    hints:
+      - One std::cout; the tab and newline can live inside the string.
+      - "\"Hero:\\tCurlo\\n\", and don't forget the ;"
+    short: std::cout << "Hero:\tCurlo\n"; prints it.
+    explain: std::cout << "Hero:\tCurlo\n"; prints Hero:, a tab, Curlo and a newline. \t lines things up nicely in reports.
+  - id: w1.p.s4
+    type: fill
+    tags: [ w1.cout ]
+    prompt: Chain the day number onto the output.
+    code: |-
+      #include <iostream>
+
+      // Mission Log: daily status report for the Codebase
+      int main() {
+          std::cout << "=== MISSION LOG ===\n";
+          std::cout << "Hero:\tCurlo\n";
+          std::cout << "Day:\t" ___ 1 << '\n';
+          return 0;
+      }
+    accept:
+      - <<
+    placeholder: operator
+    hints:
+      - Every item on the output belt needs one of these in front.
+      - Two less-than signs.
+    short: Each item gets its own <<.
+    explain: "Each item is inserted with its own <<: the text, then the number 1, then '\\n'."
+  - id: w1.p.s5
+    type: mcq
+    tags: [ w1.cout ]
+    prompt: 'The status line must print: Status: "All braces balanced" (with the double quotes). Which statement does it?'
+    options:
+      - t: 'std::cout << "Status: "All braces balanced"\n";'
+        why: 'The second " ends the string early: compile error.'
+      - t: "std::cout << 'Status: \"All braces balanced\"\\n';"
+        why: "Single quotes are for one character: a warning, and a number prints."
+      - t: 'std::cout << "Status: \"All braces balanced\"\n";'
+        why: Correct! \" puts a real double quote inside the string.
+      - t: "std::cout << \"Status: ''All braces balanced''\\n\";"
+        why: Compiles, but prints pairs of single quotes, not double quotes.
+    answer: 2
+    hints:
+      - A plain " inside a string would end it.
+      - Escape it with a backslash.
+    short: \" prints a double quote inside a string.
+    explain: \" is the escape sequence for a double quote inside a string literal. The string stays open and the quote is printed.
+  - id: w1.p.s6
+    type: predict
+    tags: [ w1.cout, w1.comments ]
+    prompt: Here's the finished Mission Log. What exactly does it print?
+    code: |-
+      #include <iostream>
+
+      // Mission Log: daily status report for the Codebase
+      int main() {
+          std::cout << "=== MISSION LOG ===\n";
+          std::cout << "Hero:\tCurlo\n";
+          std::cout << "Day:\t" << 1 << '\n';
+          std::cout << "Status: \"All braces balanced\"\n";
+          std::cout << "===================\n";
+          return 0;
+      }
+    options:
+      - t: |
+          === MISSION LOG ===
+          Hero:\tCurlo
+          Day:\t1
+          Status: "All braces balanced"
+          ===================
+        why: \t prints a tab, not a backslash and a t.
+      - t: "=== MISSION LOG ===
+
+          Hero:\tCurlo
+
+          Day:\t1
+
+          Status: \\\"All braces balanced\\\"
+
+          ===================\n"
+        why: \" prints just the quote; the backslash isn't shown.
+      - t: "=== MISSION LOG ===
+
+          Hero:\tCurlo
+
+          Day:\t1
+
+          Status: \"All braces balanced\"
+
+          ===================\n"
+        why: Correct! Tabs, real quotes, and every line ends with a newline.
+      - t: "=== MISSION LOG ===Hero:\tCurlo
+
+          Day:\t1
+
+          Status: \"All braces balanced\"
+
+          ===================\n"
+        why: "The header ends with \\n, so Hero: starts a new line."
+    answer: 2
+    hints:
+      - 'Escapes become single characters: \t is a tab, \" a quote.'
+      - The comment line prints nothing.
+    short: Escapes become real tabs and quotes; the comment prints nothing.
+    explain: The comment is ignored; each cout prints one line. \t becomes a tab, \" becomes ", and every line ends with a newline (from \n or '\n').
+program: |-
+  #include <iostream>
+
+  // Mission Log: daily status report for the Codebase
+  int main() {
+      std::cout << "=== MISSION LOG ===\n";
+      std::cout << "Hero:\tCurlo\n";
+      std::cout << "Day:\t" << 1 << '\n';
+      std::cout << "Status: \"All braces balanced\"\n";
+      std::cout << "===================\n";
+      return 0;
+  }
+stress:
+  intro: Uh-oh! The Syntax Gremlin sabotaged our Mission Log. Read each clue and fix it!
+  attacks:
+    - input: std::cout << "Hero:\tCurlo\n"
+      label: Semicolon stolen!
+      challenge:
+        id: w1.p.a1
+        type: bug
+        tags: [ w1.compile, w1.warnings ]
+        prompt: "Intentionally broken: the build fails with \"expected ';' before 'std'\". Tap the sabotaged line, then pick the fix."
+        code: |-
+          #include <iostream>
+
+          // Mission Log: daily status report for the Codebase
+          int main() {
+              std::cout << "=== MISSION LOG ===\n";
+              std::cout << "Hero:\tCurlo\n"
+              std::cout << "Day:\t" << 1 << '\n';
+              return 0;
+          }
+        expect: error
+        unsafe: true
+        bugLine: 5
+        options:
+          - t: Add ; after "Hero:\tCurlo\n"
+            why: Correct! The statement gets its full stop back.
+          - t: Remove \t from the Hero line
+            why: The tab is fine. The missing ; is the problem.
+          - t: Add ; at the end of the Day line
+            why: The Day line already ends with ;.
+          - t: Put the Hero line in a comment
+            why: That hides the symptom and deletes part of your report.
+        answer: 0
+        bug: missing-semicolon
+        hints:
+          - "\"before 'std'\": the compiler hit the start of the next statement."
+          - Check the end of the Hero line.
+        short: The Hero line lost its ;. Check the line before the error.
+        explain: The Hero statement lost its ;. The compiler only notices at the next std, which is why the message says "before 'std'". Always check the end of the previous line.
+        sideBySide:
+          unsafe: |-
+            std::cout << "Hero:\tCurlo\n"
+            std::cout << "Day:\t" << 1 << '\n';
+          hardened: |-
+            std::cout << "Hero:\tCurlo\n";
+            std::cout << "Day:\t" << 1 << '\n';
+          expect: error
+    - input: "#include removed"
+      label: Toolbox stolen!
+      challenge:
+        id: w1.p.a2
+        type: harden
+        tags: [ w1.include, w1.compile ]
+        prompt: The Gremlin deleted the first line! The build fails with "'cout' is not a member of 'std'". Pick the line that restores it properly.
+        code: |-
+          ___
+
+          // Mission Log: daily status report for the Codebase
+          int main() {
+              std::cout << "=== MISSION LOG ===\n";
+              return 0;
+          }
+        options:
+          - t: using namespace std;
+            why: That doesn't declare cout. You still need the header.
+          - t: "#include <iostream>;"
+            why: Directives take no semicolon; compilers warn about "extra tokens".
+          - t: "#include <string>"
+            why: "Wrong toolbox: <string> isn't guaranteed to bring in std::cout."
+          - t: "#include <iostream>"
+            why: Correct! The input/output header, no semicolon.
+        answer: 3
+        hints:
+          - std::cout comes from the input/output stream header.
+          - Preprocessor directives never end with ;.
+        short: "#include <iostream> declares std::cout. No semicolon."
+        explain: "#include <iostream> declares std::cout. Include exactly what you use, spelled exactly right, with no semicolon."
+        sideBySide:
+          unsafe: |-
+            // (no #include)
+            int main() {
+                std::cout << "=== MISSION LOG ===\n";  // error
+            }
+          hardened: |-
+            #include <iostream>
+
+            int main() {
+                std::cout << "=== MISSION LOG ===\n";
+            }
+          expect: error
+    - input: std::cuot
+      label: Typo gremlin!
+      challenge:
+        id: w1.p.a3
+        type: bug
+        tags: [ w1.cout, w1.compile ]
+        prompt: "Intentionally broken: \"error: 'cuot' is not a member of 'std'; did you mean 'cout'?\". Tap the sabotaged line, then pick the fix."
+        code: |-
+          #include <iostream>
+
+          // Mission Log: daily status report for the Codebase
+          int main() {
+              std::cout << "=== MISSION LOG ===\n";
+              std::cuot << "Day:\t" << 1 << '\n';
+              return 0;
+          }
+        expect: error
+        unsafe: true
+        bugLine: 5
+        options:
+          - t: Add using namespace std; at the top
+            why: cuot doesn't exist in std either. Still fails.
+          - t: Change std::cuot to std::cout
+            why: Correct! The compiler even suggested it.
+          - t: Change std::cuot to std:cuot
+            why: "One colon makes it worse: std: becomes a label."
+          - t: "#include <cuot>"
+            why: There's no such header. The name is just misspelled.
+        answer: 1
+        bug: typo-gremlin
+        hints:
+          - The message names what it couldn't find.
+          - It even suggests the right spelling.
+        short: "Typo: cuot should be cout. The compiler suggested it!"
+        explain: "Compilers often suggest a fix for misspelled names. Read the whole message: the answer is frequently right there."
+        sideBySide:
+          unsafe: std::cuot << "Day:\t" << 1 << '\n';
+          hardened: std::cout << "Day:\t" << 1 << '\n';
+          expect: error

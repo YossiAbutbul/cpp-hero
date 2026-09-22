@@ -1,0 +1,249 @@
+# World 2 · Lesson 2: Letters, switches & text
+
+id: w2.l2
+title: Letters, switches & text
+skill: structure
+shield: false
+concept:
+  short: char holds one letter, bool holds true/false, std::string holds any text.
+  analogy: "Different stuff needs different boxes: a `char` is one letter tile, a `bool` is a light switch (on or off), and a `std::string` is a whole necklace of letter tiles."
+  body:
+    - "`char` holds exactly one character, written in **single** quotes: `char rank{'B'};`"
+    - "`bool` holds `true` or `false`. By default `std::cout` prints a bool as `1` or `0`; send `std::boolalpha` first to print the words."
+    - '`std::string` (add `#include <string>`) holds text of any length, in **double** quotes: `std::string name{"Curlo"};`. Join strings with `+`, and get the number of characters with `.size()`.'
+    - "Secret: a `char` is really a small number (its character code; `'A'` is 65 in ASCII). Math on a char, like `'A' + 1`, produces an `int` (66), so cout prints a number, not a letter."
+  pitfall: "Mixing up quotes: `'A'` is a char, `\"A\"` is a string. `char c{\"A\"};` won't compile. And yes, `std::cout << true;` prints `1`. Everyone is surprised the first time!"
+demo:
+  code: |-
+    #include <iostream>
+    #include <string>
+
+    int main() {
+        std::string name{"Curlo"};
+        char rank{'B'};
+        bool shielded{true};
+        std::cout << name << " rank " << rank << '\n';
+        std::cout << shielded << '\n';
+        std::cout << std::boolalpha << shielded << '\n';
+        return 0;
+    }
+  steps:
+    - line: 3
+      note: "main() starts. #include <string> gave us std::string."
+    - line: 4
+      vars:
+        name: '"Curlo"'
+      note: A string box can hold a whole word.
+    - line: 5
+      vars:
+        name: '"Curlo"'
+        rank: "'B'"
+      note: A char box holds exactly one character.
+    - line: 6
+      vars:
+        name: '"Curlo"'
+        rank: "'B'"
+        shielded: "true"
+      note: "A bool is a switch: true or false."
+    - line: 7
+      vars:
+        name: '"Curlo"'
+        rank: "'B'"
+        shielded: "true"
+      out: |
+        Curlo rank B
+      note: A string prints its text; a char prints as a character.
+    - line: 8
+      vars:
+        name: '"Curlo"'
+        rank: "'B'"
+        shielded: "true"
+      out: |
+        1
+      note: Surprise! By default a bool prints as 1 (true) or 0 (false).
+    - line: 9
+      vars:
+        name: '"Curlo"'
+        rank: "'B'"
+        shielded: "true"
+      out: |
+        true
+      note: std::boolalpha switches cout to printing the words true/false.
+    - line: 10
+      note: Done!
+challenges:
+  - id: w2.l2.c1
+    type: predict
+    tags: [ w2.char, w2.int ]
+    short: A char prints as a letter; char + int is an int.
+    prompt: What does this print?
+    code: |-
+      char c{'A'};
+      std::cout << c << ' ' << c + 1 << '\n';
+    options:
+      - t: |
+          A 66
+        why: "Correct: c prints as a letter, but c + 1 is int arithmetic ('A' is 65), so it prints 66."
+      - t: |
+          A B
+        why: Adding 1 to a char gives an int, and cout prints ints as numbers, not letters.
+      - t: |
+          65 66
+        why: c on its own is still a char, so it prints as the letter A.
+      - t: |
+          A 1
+        why: c + 1 adds 1 to A's character code (65), it doesn't print 1 on its own.
+    answer: 0
+    hints:
+      - A char prints as a character. What type is char + int?
+      - "'A' has the code 65."
+    explain: "`c` is a char, so it prints as `A`. In `c + 1` the char is promoted to int: 65 + 1 = 66, an int, printed as a number."
+  - id: w2.l2.c2
+    type: mcq
+    tags: [ w2.char ]
+    short: "Single quotes make a char: 'Z'."
+    prompt: Which line correctly stores the single letter Z?
+    options:
+      - t: char letter{'Z'};
+        why: "Correct: single quotes make a char literal."
+      - t: char letter{"Z"};
+        why: "Double quotes make a string literal, which can't go into a char box: compile error."
+      - t: char letter{Z};
+        why: "Without quotes, Z looks like the name of a variable, and no variable Z exists: compile error."
+      - t: char 'Z'{letter};
+        why: The name comes after the type, and a literal can't be used as a name.
+    answer: 0
+    hints:
+      - How many quote marks does a char use?
+      - Single quotes for one character, double quotes for text.
+    explain: "A char literal uses single quotes: `'Z'`. Double quotes, `\"Z\"`, make a string, even if it's one letter long."
+  - id: w2.l2.c3
+    type: predict
+    tags: [ w2.bool ]
+    short: Bools print 1/0 until std::boolalpha switches to words.
+    prompt: What does this print? (Two lines.)
+    code: |-
+      bool a{true};
+      bool b{false};
+      std::cout << a << b << '\n';
+      std::cout << std::boolalpha << a << '\n';
+    options:
+      - t: |
+          10
+          true
+        why: "Correct: without boolalpha, true prints 1 and false prints 0 (no space between them). Then boolalpha prints the word."
+      - t: |
+          truefalse
+          true
+        why: Without std::boolalpha, bools print as 1 and 0, not words.
+      - t: |
+          1 0
+          true
+        why: "No space is printed between a and b: nothing asks for one."
+      - t: |
+          10
+          1
+        why: std::boolalpha switches cout to words, so the second line is true.
+    answer: 0
+    hints:
+      - By default a bool prints as a digit.
+      - std::boolalpha only affects output after it.
+    explain: "Default bool output is `1`/`0`. The first line glues 1 and 0 together: `10`. After `std::boolalpha`, true prints as `true`."
+  - id: w2.l2.c4
+    type: fill
+    tags: [ w2.string, w1.include ]
+    short: Text goes in std::string, from <string>.
+    prompt: Fill in the type so hero can hold a whole name.
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          ___ hero{"Ada"};
+          std::cout << "Hi, " << hero << '\n';
+          return 0;
+      }
+    accept:
+      - std::string
+    placeholder: type
+    hints:
+      - The header on line 2 gives you this type.
+      - "It lives in the std namespace: std::..."
+    explain: "`std::string` holds text of any length. It comes from `<string>` and needs the `std::` prefix."
+  - id: w2.l2.c5
+    type: predict
+    tags: [ w2.string ]
+    short: "size() counts every character: 5 + 1 + 8 = 14."
+    prompt: What does this print?
+    code: |-
+      std::string a{"Brace"};
+      std::string b{"Yourself"};
+      std::string both{a + " " + b};
+      std::cout << both.size() << '\n';
+    options:
+      - t: |
+          14
+        why: "Correct: 5 letters + 1 space + 8 letters = 14 characters."
+      - t: |
+          13
+        why: "Don't forget the space in the middle: it's a character too."
+      - t: |
+          2
+        why: size() counts characters, not words.
+      - t: |
+          Brace Yourself
+        why: We print both.size(), the length, not the text itself.
+    answer: 0
+    hints:
+      - size() counts every character, spaces included.
+      - '"Brace" has 5, "Yourself" has 8.'
+    explain: '`+` glues strings together: "Brace Yourself". `.size()` counts its characters: 5 + 1 + 8 = 14.'
+  - id: w2.l2.c6
+    type: bug
+    tags: [ w2.char, w1.compile ]
+    short: "\"C\" is a string; a char needs 'C'."
+    prompt: This program doesn't compile (intentionally broken). Tap the buggy line, then pick the fix that keeps initial a char.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          char initial{"C"};
+          std::cout << initial << '\n';
+          return 0;
+      }
+    expect: error
+    bugLine: 3
+    options:
+      - t: char initial{'C'};
+        why: "Correct: single quotes make a char literal."
+      - t: char initial = "C";
+        why: "Still a string literal in a char box; switching to = doesn't help: compile error."
+      - t: char initial{C};
+        why: "Without quotes, C is treated as an undeclared variable name: compile error."
+    answer: 0
+    hints:
+      - Look at the quote marks.
+      - One character = single quotes.
+    explain: "`\"C\"` is a string literal (text), so it can't initialize a char. `'C'` is the char literal you want."
+    sideBySide:
+      unsafe: 'char initial{"C"};   // compile error: string in a char box'
+      hardened: "char initial{'C'};   // single quotes: a real char"
+      expect: error
+recap:
+  - "`char` = one character in single quotes: `'B'`."
+  - "`bool` = true/false; prints 1/0 unless you use std::boolalpha."
+  - "`std::string` = text in double quotes; `+` joins, `.size()` counts."
+  - "`'A' + 1` is the int 66, not 'B'."
+vault:
+  - id: w2.types
+    title: char, bool, std::string
+    code: |-
+      #include <string>
+
+      char rank{'B'};                // one character
+      bool alive{true};              // true / false
+      std::string name{"Curlo"};     // any text
+      std::cout << std::boolalpha << alive;  // prints true
+    note: Single quotes for char, double quotes for strings. Bools print 1/0 unless you use std::boolalpha.
+    defense: false
+reviewTags: [ w1.include, w1.cout, w2.int ]

@@ -1,0 +1,23 @@
+# World 1: Hello, World. Lessons are lesson-NN.yaml (played in file order).
+
+id: w1
+num: 1
+title: Hello, World
+icon: rocket
+blurb: "Your first program: what C++ code looks like and how it becomes something that runs."
+story:
+  intro:
+    - Oh! A visitor! Hi hi! I'm Curlo, and I live between these braces { }.
+    - This is my home, the Codebase. It used to be so tidy...
+    - But bugs keep sneaking in through every missing semicolon!
+    - Learn C++ with me, and together we'll kick out the bug lords.
+    - "First up: making a program say hello. I'm brace-d and ready!"
+  bossIntro:
+    - Uh-oh. Hear that giggling? It's the Syntax Gremlin, the first bug lord!
+    - "He steals semicolons, scrambles #includes and misspells std::cout."
+    - But you can read error messages now. Let's end this statement properly;
+  victory:
+    - YOU DID IT! The Syntax Gremlin is gone, and every semicolon is home!
+    - 'Wait, he dropped a note: "The Garbage Blob sends its regards."'
+    - It's covered in random numbers. Something uninitialized stirs in World 2...
+    - Rest your fingers, hero. We march when you tap Continue!

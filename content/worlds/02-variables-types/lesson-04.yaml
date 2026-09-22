@@ -1,0 +1,257 @@
+# World 2 · Lesson 4: Shape-shifting values: conversions
+
+id: w2.l4
+title: "Shape-shifting values: conversions"
+skill: logic
+shield: false
+concept:
+  short: int / int drops the fraction; convert to double first with static_cast.
+  analogy: "Pouring a double into an int is like pouring 3.9 litres into a 3-litre jug: the extra 0.9 spills on the floor and is gone for good."
+  body:
+    - "C++ converts between number types automatically (**implicit conversion**). `int` to `double` is harmless: `double d = 5;` stores 5.0."
+    - "`double` to `int` **truncates toward zero**: 3.9 becomes 3 and -3.9 becomes -3. No rounding, ever."
+    - "**Integer division**: when both sides of `/` are ints, the answer is an int and the fraction is thrown away: `7 / 2` is `3`. The `%` operator gives the remainder: `7 % 2` is `1`."
+    - "Mixing types promotes the int: `7.0 / 2` is 3.5 because 2 becomes a double first. For variables, convert on purpose with `static_cast<double>(gold) / heroes`."
+    - '`static_cast<T>(value)` is the explicit "I meant this" conversion, easy to spot and search for.'
+  pitfall: "`static_cast<double>(a / b)` is too late! `a / b` already did integer division and lost the fraction. Cast one of the operands, not the result."
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        int gold{7};
+        int heroes{2};
+        int each{gold / heroes};
+        int left{gold % heroes};
+        double exact{static_cast<double>(gold) / heroes};
+        std::cout << each << " r" << left << '\n';
+        std::cout << exact << '\n';
+        return 0;
+    }
+  steps:
+    - line: 3
+      vars:
+        gold: "7"
+      note: 7 gold to share.
+    - line: 4
+      vars:
+        gold: "7"
+        heroes: "2"
+      note: Between 2 heroes.
+    - line: 5
+      vars:
+        gold: "7"
+        heroes: "2"
+        each: "3"
+      note: "int / int is integer division: 7 / 2 = 3."
+    - line: 6
+      vars:
+        gold: "7"
+        heroes: "2"
+        each: "3"
+        left: "1"
+      note: "% gives the remainder: 7 = 2 * 3 + 1."
+    - line: 7
+      vars:
+        gold: "7"
+        heroes: "2"
+        each: "3"
+        left: "1"
+        exact: "3.5"
+      note: "gold becomes 7.0 first, so it's a real division: 3.5."
+    - line: 8
+      vars:
+        gold: "7"
+        heroes: "2"
+        each: "3"
+        left: "1"
+        exact: "3.5"
+      out: |
+        3 r1
+      note: 3 each, remainder 1.
+    - line: 9
+      vars:
+        gold: "7"
+        heroes: "2"
+        each: "3"
+        left: "1"
+        exact: "3.5"
+      out: |
+        3.5
+      note: The exact share.
+    - line: 10
+      note: Done!
+challenges:
+  - id: w2.l4.c1
+    type: predict
+    tags: [ w2.convert, w2.int ]
+    short: a / b is integer division (3) before r stores it.
+    prompt: What does this print?
+    code: |-
+      int a{7};
+      int b{2};
+      double r = a / b;
+      std::cout << r << '\n';
+    options:
+      - t: |
+          3
+        why: "Correct: int / int gives 3, then it's stored as 3.0 and printed as 3."
+      - t: |
+          3.5
+        why: The division happens first, with two ints, so the .5 is lost before r ever sees it.
+      - t: |
+          3.0
+        why: r does hold 3.0, but default cout formatting prints it as 3.
+      - t: |
+          4
+        why: Integer division truncates; it never rounds up.
+    answer: 0
+    hints:
+      - What types are on each side of / ?
+      - The right side is computed before it's stored in r.
+    explain: The type of the variable on the left doesn't change how the right side is computed. `a / b` is integer division (3), which is then stored as 3.0 and printed as `3`.
+  - id: w2.l4.c2
+    type: predict
+    tags: [ w2.convert ]
+    short: "Converting to int truncates toward zero: -3.9 becomes -3."
+    prompt: What does this print?
+    code: |-
+      double temp{-3.9};
+      int t{static_cast<int>(temp)};
+      std::cout << t << '\n';
+    options:
+      - t: |
+          -3
+        why: "Correct: conversion to int truncates toward zero, so -3.9 becomes -3."
+      - t: |
+          -4
+        why: "That would be rounding down (floor). Truncation goes toward zero: -3."
+      - t: |
+          -3.9
+        why: t is an int; it can't hold the .9.
+      - t: |
+          3
+        why: Truncation drops the fraction but keeps the sign.
+    answer: 0
+    hints:
+      - Truncation just chops off everything after the decimal point.
+      - Chopping -3.9 leaves -3.
+    explain: "`static_cast<int>` on a double truncates toward zero: 3.9 → 3 and -3.9 → -3."
+  - id: w2.l4.c3
+    type: mcq
+    tags: [ w2.convert, w2.double ]
+    short: Division is fractional only if an operand is already a double.
+    prompt: Which expression evaluates to 2.5?
+    options:
+      - t: 5.0 / 2
+        why: "Correct: 5.0 is a double, so 2 is promoted and the division is real: 2.5."
+      - t: 5 / 2
+        why: "int / int is integer division: 2."
+      - t: static_cast<double>(5 / 2)
+        why: "5 / 2 is computed first (2), then cast: 2.0. The cast came too late."
+      - t: 5 % 2
+        why: "% is the remainder: 1."
+    answer: 0
+    hints:
+      - At least one side of / must be a double before dividing.
+      - Watch where the cast happens.
+    explain: Division is only real (fractional) if at least one operand is floating-point when the division happens.
+  - id: w2.l4.c4
+    type: bug
+    tags: [ w2.convert ]
+    unsafe: true
+    short: Cast an operand before dividing, not the result.
+    prompt: This compiles, but prints 4 instead of 4.5 (a logic bug, not UB). Tap the buggy line, then pick the fix.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int total{9};
+          int count{2};
+          double average{static_cast<double>(total / count)};
+          std::cout << average << '\n';
+          return 0;
+      }
+    bugLine: 5
+    options:
+      - t: double average{static_cast<double>(total) / count};
+        why: "Correct: total becomes 9.0 before dividing, so the division is 9.0 / 2 = 4.5."
+      - t: double average = total / count;
+        why: "Still int / int: 4. Moving to = changes nothing about the division."
+      - t: double average{(total / count) * 1.0};
+        why: The integer division (4) happens first; multiplying by 1.0 afterwards just gives 4.0.
+    answer: 0
+    hints:
+      - "When does the fraction get lost: before or after the cast?"
+      - Cast an operand, not the result.
+    explain: "`static_cast<double>(total / count)` casts the result of integer division, which is already 4. Cast `total` first so the division itself is done in double."
+    sideBySide:
+      unsafe: double average{static_cast<double>(total / count)};  // 4
+      hardened: double average{static_cast<double>(total) / count};  // 4.5
+      prelude: int total{9}; int count{2};
+  - id: w2.l4.c5
+    type: edge
+    tags: [ w2.convert, w2.int ]
+    unsafe: true
+    short: Only values that don't divide evenly expose integer division.
+    prompt: This accuracy calculation has a logic bug. Which test values expose it? Select all that apply.
+    code: |-
+      int hits{/* test value */};
+      int shots{/* test value */};
+      double accuracy = hits / shots;
+      std::cout << accuracy << '\n';
+    options:
+      - t: hits = 10, shots = 10
+        why: 10 / 10 = 1, which is the right answer, so this test passes and hides the bug.
+      - t: hits = 3, shots = 4
+        why: "Exposes it: prints 0 instead of 0.75."
+      - t: hits = 8, shots = 2
+        why: 8 / 2 = 4 exactly, so the bug stays hidden.
+      - t: hits = 7, shots = 2
+        why: "Exposes it: prints 3 instead of 3.5."
+      - t: hits = 0, shots = 5
+        why: 0 / 5 = 0, which is correct, so the bug stays hidden.
+    answers: [ 1, 3 ]
+    hints:
+      - The bug only shows when the real answer has a fractional part.
+      - Which pairs don't divide evenly?
+    explain: Integer division only goes wrong when the true result isn't whole. Tests where the numbers divide evenly pass and hide the bug, which is why good tests include "awkward" values.
+    sideBySide:
+      unsafe: double accuracy = hits / shots;  // int division
+      hardened: double accuracy{static_cast<double>(hits) / shots};
+      prelude: int hits{3}; int shots{4};
+  - id: w2.l4.c6
+    type: fill
+    tags: [ w2.convert ]
+    short: static_cast<double>(hp) / 2 gives 4.5.
+    prompt: Make this print 4.5 by converting hp before the division.
+    code: |-
+      int hp{9};
+      double half{___(hp) / 2};
+      std::cout << half << '\n';
+    accept:
+      - static_cast<double>
+      - double
+    placeholder: conversion
+    hints:
+      - Use the explicit C++ cast.
+      - static_cast<...>
+    explain: "`static_cast<double>(hp) / 2` is 9.0 / 2 = 4.5. (`double(hp)` also works, but static_cast is clearer and easier to search for.)"
+recap:
+  - "int / int drops fractions: 7 / 2 is 3."
+  - "double → int truncates toward zero: -3.9 → -3."
+  - "Cast an operand before dividing: `static_cast<double>(a) / b`."
+  - Tests with values that divide evenly can hide conversion bugs.
+vault:
+  - id: w2.convert
+    title: Conversions & division
+    code: |-
+      7 / 2                          // 3   (int division)
+      7 % 2                          // 1   (remainder)
+      7.0 / 2                        // 3.5
+      static_cast<double>(a) / b     // real division
+      static_cast<int>(-3.9)         // -3  (truncates toward zero)
+    expect: skip
+    note: Convert before you divide, not after.
+    defense: false
+reviewTags: [ w1.compile, w2.double, w2.auto, w2.char ]

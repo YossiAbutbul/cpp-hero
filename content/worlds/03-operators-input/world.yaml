@@ -1,0 +1,14 @@
+# World 3: Operators & Input. Lessons are lesson-NN.yaml (played in file order).
+
+id: w3
+num: 3
+title: Operators & Input
+icon: calc
+blurb: Make your program do math, compare things, make logical calls, and listen to the player, without letting bad input in.
+story:
+  intro:
+    - Brace yourself! Bugs are sneaking in through the input gate. Let's guard it!
+  bossIntro:
+    - Uh-oh! The Input Golem, made of bad input. Only validated input can crack it!
+  victory:
+    - The Golem crumbled into neat integers! The gate is safe. I'm bursting my braces!
