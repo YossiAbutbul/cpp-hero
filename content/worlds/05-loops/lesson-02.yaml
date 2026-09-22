@@ -1,0 +1,268 @@
+# World 5 · Lesson 2: For loops
+
+id: w5.l2
+title: For loops
+skill: logic
+shield: false
+concept:
+  short: "for (start; condition; update) puts the whole counting plan in one line."
+  analogy: "A for loop is a training schedule: where to start, when to stop, and how to step, written on one card."
+  body:
+    - "`for (int i = 0; i < 5; ++i) { ... }` has three parts, separated by semicolons: the **start** runs once, the **condition** is checked before every lap, the **update** runs after every lap."
+    - "It's a while loop with the counter bookkeeping moved into the header, so it's much harder to forget the update."
+    - "**Counting laps**: `for (int i = 0; i < n; ++i)` runs exactly n times (0, 1, ..., n-1). `for (int i = 1; i <= n; ++i)` also runs n times (1, ..., n). Pick one style and stick with it. From 3 to 9 inclusive is 9 - 3 + 1 = 7 laps."
+    - "A counter declared in the header (`int i`) only exists inside the loop. After the closing `}` it's gone."
+    - "The update can be any step: `i += 2`, `--i`, `power *= 2`. For a plain counter, `++i` and `i++` do the same job here."
+  pitfall: "Common beginner mistake: a semicolon right after the header, `for (...);`. That semicolon IS the (empty) body; the block below runs once, after the loop."
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        int total{0};
+        for (int round = 1; round <= 3; ++round) {
+            total += round * 5;
+            std::cout << "Round " << round << ": " << total << '\n';
+        }
+        std::cout << "Total: " << total << '\n';
+        return 0;
+    }
+  steps:
+    - line: 3
+      vars:
+        total: "0"
+      note: Accumulator ready at 0.
+    - line: 4
+      vars:
+        total: "0"
+        round: "1"
+      note: "Start runs once: round = 1. Then 1 <= 3."
+    - line: 5
+      vars:
+        total: "5"
+        round: "1"
+    - line: 6
+      out: |
+        Round 1: 5
+    - line: 4
+      vars:
+        total: "5"
+        round: "2"
+      note: "Update: ++round makes 2. 2 <= 3, go."
+    - line: 5
+      vars:
+        total: "15"
+        round: "2"
+    - line: 6
+      out: |
+        Round 2: 15
+    - line: 4
+      vars:
+        total: "15"
+        round: "3"
+      note: "round is 3. 3 <= 3 is still true."
+    - line: 5
+      vars:
+        total: "30"
+        round: "3"
+    - line: 6
+      out: |
+        Round 3: 30
+    - line: 4
+      vars:
+        total: "30"
+        round: "4"
+      note: "round is 4. 4 <= 3 is false: done."
+    - line: 8
+      vars:
+        total: "30"
+      out: |
+        Total: 30
+      note: round is gone now; total lives on.
+    - line: 9
+challenges:
+  - id: w5.l2.c1
+    type: predict
+    tags: [ w5.for ]
+    prompt: What does this print? (Watch the spaces.)
+    code: |-
+      #include <iostream>
+
+      int main() {
+          for (int i = 0; i < 5; i += 2) {
+              std::cout << i << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: "0 2 4 \n"
+        why: "Correct: i is 0, 2, 4; then 6 < 5 is false. Each number is followed by a space."
+      - t: "0 2 4 6 \n"
+        why: 6 < 5 is false, so 6 is never printed.
+      - t: "2 4 \n"
+        why: The start value 0 is checked and printed before the first update.
+      - t: "0 1 2 3 4 \n"
+        why: The update is i += 2, so i jumps by 2.
+    answer: 0
+    hints:
+      - The update adds 2 each lap.
+      - The first lap uses the start value.
+    short: "i takes 0, 2, 4; 6 fails i < 5."
+    explain: "Start i = 0 (0 < 5, print). i += 2 gives 2, then 4, both printed. Then 6 < 5 is false. Output: \"0 2 4 \" (trailing space) and a newline."
+  - id: w5.l2.c2
+    type: fill
+    tags: [ w5.for, w5.offbyone ]
+    prompt: Fill in the condition so the loop runs exactly 5 times.
+    code: |-
+      for (int i = 0; ___; ++i) {
+          std::cout << "Push-up!\n";
+      }
+    accept:
+      - i < 5
+      - i <= 4
+      - 5 > i
+    placeholder: condition
+    hints:
+      - "Starting at 0, the laps are 0, 1, 2, 3, 4."
+      - Use < with the number of laps.
+    short: "Start at 0, stop at < 5: exactly 5 laps."
+    explain: "i < 5 runs for i = 0, 1, 2, 3, 4: five laps. i <= 5 would run six times (0 through 5), a classic off-by-one."
+  - id: w5.l2.c3
+    type: order
+    tags: [ w5.for ]
+    prompt: "Order the lines to print 1, 2, 3 (one per line), then Go!"
+    lines:
+      - "for (int i = 1; i <= 3; ++i) {"
+      - "    std::cout << i << '\\n';"
+      - "}"
+      - std::cout << "Go!\n";
+    distractors:
+      - "for (int i = 1; i <= 3; ++i);"
+    hints:
+      - The header opens a block with {.
+      - Go! prints once, after the loop.
+    short: Header with {, body, closing }, then Go! once after.
+    explain: "The header opens the block, the body prints i, the } ends the loop, and Go! runs once afterward. The distractor has a stray ; that makes an empty loop body."
+  - id: w5.l2.c4
+    type: mcq
+    tags: [ w5.for, w1.warnings ]
+    unsafe: true
+    prompt: "UNSAFE: spot the stray semicolon. How many times does Hi print?"
+    code: |-
+      for (int i = 0; i < 3; ++i);
+      {
+          std::cout << "Hi\n";
+      }
+    options:
+      - t: Once
+        why: "Correct: the ; is the loop's empty body. The block below is separate and runs once."
+      - t: Three times
+        why: That's what was intended, but the ; ended the loop before the block.
+      - t: Zero times
+        why: The block isn't part of the loop, so nothing stops it from running once.
+      - t: Forever
+        why: The empty loop still counts 0, 1, 2 and ends normally.
+    answer: 0
+    hints:
+      - What does the ; at the end of the header do?
+      - The { } below is just a normal block.
+    short: "for (...); has an empty body; the block below runs once."
+    explain: "The semicolon right after the header is an empty statement, and that's the loop body. The loop spins 3 times doing nothing, then the block runs once. g++ -Wall even warns (-Wmisleading-indentation). Never put ; after a loop header."
+  - id: w5.l2.c5
+    type: predict
+    tags: [ w5.for, w5.accum ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int power{1};
+          for (int i = 0; i < 4; ++i) {
+              power *= 2;
+          }
+          std::cout << power << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          16
+        why: "Correct: 4 laps of doubling: 2, 4, 8, 16."
+      - t: |
+          8
+        why: i < 4 runs for i = 0, 1, 2, 3. That's 4 laps, not 3.
+      - t: |
+          32
+        why: That's 5 doublings. i = 4 fails the condition.
+      - t: |
+          2
+        why: The body runs every lap, not just once.
+    answer: 0
+    hints:
+      - How many laps does i < 4 give, starting at 0?
+      - Double 1 that many times.
+    short: "4 laps of doubling: 1 → 2 → 4 → 8 → 16."
+    explain: "i = 0, 1, 2, 3 gives 4 laps, and each doubles power: 2, 4, 8, 16. The accumulator here multiplies instead of adding, so it starts at 1, not 0."
+  - id: w5.l2.c6
+    type: edge
+    tags: [ w5.offbyone, w5.for ]
+    bug: off-by-one
+    prompt: This should print exactly `count` stars. Which test values expose the bug? Select all.
+    code: |-
+      for (int i = 1; i < count; ++i) {
+          std::cout << '*';
+      }
+      std::cout << '\n';
+    prelude: int count{3};
+    options:
+      - t: "0"
+        why: "Prints 0 stars, which is right. Zero hides this bug."
+      - t: "1"
+        why: "Exposes it: 1 < 1 is false, so 0 stars instead of 1."
+      - t: "3"
+        why: "Exposes it: laps are i = 1 and 2, so 2 stars instead of 3."
+      - t: "10"
+        why: "Exposes it: 9 stars instead of 10."
+    answers: [ 1, 2, 3 ]
+    hints:
+      - Count the laps for each value by hand.
+      - "Starting at 1 with < means one lap short."
+    short: "Starting at 1 with < runs count - 1 times. Test 0, 1 and more."
+    explain: "Starting at 1 and stopping at < count gives count - 1 laps. Only 0 looks right, by luck. Fix: start at 0 with <, or start at 1 with <=. Good tests always try 0, 1 and a bigger value."
+    sideBySide:
+      unsafe: |-
+        for (int i = 1; i < count; ++i) {   // count - 1 laps
+            std::cout << '*';
+        }
+      hardened: |-
+        for (int i = 0; i < count; ++i) {   // exactly count laps
+            std::cout << '*';
+        }
+      prelude: int count{3};
+recap:
+  - "for (start; condition; update): the plan in one line."
+  - "0 to < n runs exactly n times."
+  - Never put ; right after a loop header.
+  - A header counter only lives inside the loop.
+vault:
+  - id: w5.for
+    title: The for loop
+    code: |-
+      for (int i = 0; i < 5; ++i) {   // start; check; update
+          std::cout << i << ' ';        // 0 1 2 3 4
+      }
+      for (int i = 10; i > 0; i -= 3) {
+          std::cout << i << ' ';        // 10 7 4 1
+      }
+    note: "Start runs once, condition before every lap, update after every lap."
+    defense: false
+  - id: w5.lapcount
+    title: Counting laps
+    code: |-
+      for (int i = 0; i < n; ++i) {}    // n laps: 0..n-1
+      for (int i = 1; i <= n; ++i) {}   // n laps: 1..n
+      // from a to b inclusive: b - a + 1 laps
+    prelude: int n{4};
+    note: Pick one style per loop and check it with n = 0, 1 and 2.
+    defense: false
+reviewTags: [ w3.incdec, w3.arith, w5.while, w5.accum ]

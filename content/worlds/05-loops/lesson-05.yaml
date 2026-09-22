@@ -1,0 +1,420 @@
+# World 5 · Lesson 5: Shield: Loops that always end (Shield lesson)
+
+id: w5.l5
+title: "Shield: Loops that always end"
+skill: defense
+shield: true
+concept:
+  short: "Guard every loop: correct bounds, a counter that reaches the exit, matching signedness, and checked input."
+  analogy: "A safe loop is a racetrack with a finish line you can't miss: right length, always moving forward, no potholes."
+  body:
+    - "**Off-by-one**: `for (int i = 0; i < n; ++i)` runs n times; `i <= n` runs n + 1. Starting at 1 with `<` runs n - 1. Test every loop by hand with n = 0, 1 and 2. Rule of thumb: start at 0 and use `<` (a \"half-open\" range)."
+    - "**Infinite loops** happen when the condition can never become false: the counter isn't updated, is updated the wrong way, a `continue` skips the update, or it jumps over the exit (`i != 10` with `i += 3` goes 9, 12, ...). Guards: keep the update in the `for` header, use `<` or `>` instead of `!=`, and cap retries (`tries < 5`). Signed overflow from a runaway counter is UB too."
+    - "**Signed vs unsigned**: `.size()` returns `std::size_t`, an **unsigned** type (no negatives). In `int i < s.size()` the int is converted to unsigned, so -1 becomes a huge number and `-1 < s.size()` is **false**. `-Wall` warns with `-Wsign-compare`: listen to it. Use `std::size_t i` to count through a size, or `std::ssize(s)` (C++20) when you need a signed size."
+    - "**Unsigned countdowns wrap**: for unsigned, `0 - 1` is the largest value (18446744073709551615 for a 64-bit std::size_t). So `i >= 0` is always true (`-Wextra` warns), and `s.size() - 1` on an empty string is huge. Count down with `for (std::size_t i = s.size(); i > 0; --i)` and use index `i - 1`. (`s[i]` is the character at position i, counting from 0: more in World 7.)"
+    - "**Input in loops**: a failed `std::cin >>` jams the stream, so a retry loop spins forever. Check every read, then `clear()`, `ignore(...)`, and stop if `std::cin.eof()`."
+    - "UB doesn't guarantee a crash: an out-of-range index or runaway counter can look fine in testing and fail later. Guard, don't hope."
+  pitfall: "Common beginner mistake: silencing -Wsign-compare with a cast instead of fixing the loop's types. The warning is pointing at a real trap."
+demo:
+  code: |-
+    #include <iostream>
+    #include <string>
+
+    int main() {
+        std::string word{"loop"};
+        for (std::size_t i = word.size(); i > 0; --i) {
+            std::cout << word[i - 1];
+        }
+        std::cout << '\n';
+        return 0;
+    }
+  steps:
+    - line: 4
+      vars:
+        word: '"loop"'
+      note: "word.size() is 4: an unsigned std::size_t."
+    - line: 5
+      vars:
+        word: '"loop"'
+        i: "4"
+      note: "Start at size(), not size() - 1. 4 > 0."
+    - line: 6
+      out: "p"
+      note: "Index i - 1 = 3: the last letter."
+    - line: 5
+      vars:
+        word: '"loop"'
+        i: "3"
+    - line: 6
+      out: "o"
+    - line: 5
+      vars:
+        word: '"loop"'
+        i: "2"
+    - line: 6
+      out: "o"
+    - line: 5
+      vars:
+        word: '"loop"'
+        i: "1"
+    - line: 6
+      out: "l"
+      note: "Index 0: the first letter."
+    - line: 5
+      vars:
+        word: '"loop"'
+        i: "0"
+      crash: "With i >= 0, --i would wrap to 18446744073709551615!"
+      note: For unsigned, i >= 0 is always true.
+    - line: 5
+      shield: Clean exit at zero!
+      note: "i > 0 is false: the loop stops safely."
+    - line: 8
+      out: "\n"
+    - line: 9
+      note: "\"loop\" backwards is \"pool\". No wrap, no crash."
+challenges:
+  - id: w5.l5.c1
+    type: bug
+    tags: [ w5.offbyone, w5.for ]
+    bug: off-by-one
+    prompt: "This should print Round 1, Round 2, Round 3. It prints four lines. Tap the buggy line, then pick the fix."
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int rounds{3};
+          for (int r = 0; r <= rounds; ++r) {
+              std::cout << "Round " << r << '\n';
+          }
+          return 0;
+      }
+    bugLine: 4
+    options:
+      - t: for (int r = 1; r <= rounds; ++r) {
+        why: "Correct: r takes 1, 2, 3. Three laps with the right labels."
+      - t: for (int r = 0; r < rounds; ++r) {
+        why: "Three laps, but labeled 0, 1, 2. Right count, wrong numbers."
+      - t: for (int r = 1; r < rounds; ++r) {
+        why: Only 1 and 2. Now it's one lap short.
+      - t: for (int r = 0; r <= rounds + 1; ++r) {
+        why: Five laps, 0 to 4. Even further off.
+    answer: 0
+    hints:
+      - Which labels print? Count them.
+      - The labels should start at 1 and include 3.
+    short: "0 to <= 3 is four laps. Start at 1 to print 1..3."
+    explain: "r = 0, 1, 2, 3 is four laps: 3 - 0 + 1. To print 1 to 3, start at 1 and keep <=. (Or keep 0 and < rounds, and print r + 1.) Always check the first and last lap."
+    sideBySide:
+      unsafe: |-
+        for (int r = 0; r <= rounds; ++r) {   // 0, 1, 2, 3: four laps
+            std::cout << "Round " << r << '\n';
+        }
+      hardened: |-
+        for (int r = 1; r <= rounds; ++r) {   // 1, 2, 3
+            std::cout << "Round " << r << '\n';
+        }
+      prelude: int rounds{3};
+  - id: w5.l5.c2
+    type: harden
+    tags: [ w5.signed-unsigned, w5.for, w2.string ]
+    bug: signed-unsigned
+    prompt: "g++ -Wall warns about this loop. Pick the counter that compares cleanly with name.size()."
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string name{"Curlo"};
+          for (___; i < name.size(); ++i) {
+              std::cout << name[i] << '.';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: std::size_t i = 0
+        why: "Correct: same unsigned type as size(), so the comparison is clean and can't go negative."
+      - t: int i = 0
+        why: "Works here, but warns: -Wsign-compare. Mixing signed and unsigned is a trap waiting to spring."
+      - t: int i = -1
+        why: -1 converts to a huge unsigned number, so -1 < size() is false and nothing prints.
+      - t: std::size_t i = 1
+        why: Clean types, but skips name[0], so the C is lost. Off by one.
+    answer: 0
+    hints:
+      - What type does .size() return?
+      - Match the counter's type to the size's type.
+    short: Count through a size with std::size_t to match .size().
+    explain: "`.size()` returns std::size_t (unsigned). An int counter gets converted for the comparison, and -Wall warns (-Wsign-compare) because a negative int would become huge. std::size_t i = 0 matches the type exactly."
+    sideBySide:
+      unsafe: |-
+        for (int i = 0; i < name.size(); ++i) {   // warning: -Wsign-compare
+            std::cout << name[i] << '.';
+        }
+      hardened: |-
+        for (std::size_t i = 0; i < name.size(); ++i) {
+            std::cout << name[i] << '.';
+        }
+      prelude: std::string name{"Curlo"};
+  - id: w5.l5.c3
+    type: predict
+    tags: [ w5.signed-unsigned, w3.compare ]
+    bug: signed-unsigned
+    unsafe: true
+    expect: warn
+    prompt: "UNSAFE comparison (g++ warns). What does this print?"
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string name{"Curlo"};
+          int limit{-1};
+          std::cout << (limit < name.size()) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          0
+        why: "Correct: -1 is converted to unsigned, becoming a huge number, and huge < 5 is false."
+      - t: |
+          1
+        why: That's the math answer. C++ converts -1 to std::size_t first, which is enormous.
+      - t: |
+          -1
+        why: A comparison gives a bool, which prints as 1 or 0.
+      - t: "Compile error"
+        why: It compiles; g++ only warns (-Wsign-compare). That's why warnings matter.
+    answer: 0
+    hints:
+      - What type does name.size() return?
+      - What does -1 become as an unsigned number?
+    short: -1 converts to a huge unsigned number, so -1 < 5 is false.
+    explain: "Comparing int with std::size_t converts the int to unsigned. -1 becomes 18446744073709551615 (64-bit), and that's not less than 5, so it prints 0. -Wall catches it with -Wsign-compare."
+  - id: w5.l5.c4
+    type: breakit
+    tags: [ w5.signed-unsigned, w5.infinite, w3.validate ]
+    bug: signed-unsigned
+    unsafe: true
+    prompt: "UNSAFE countdown: it compiles without a single warning. Which input breaks it?"
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int start{};
+          if (!(std::cin >> start)) {
+              return 1;
+          }
+          for (unsigned int t = start; t > 0; --t) {
+              std::cout << t << ' ';
+          }
+          std::cout << "Liftoff!\n";
+          return 0;
+      }
+    options:
+      - t: "3"
+        why: "Prints 3 2 1 Liftoff! Works."
+      - t: "0"
+        why: 0 > 0 is false, so it goes straight to Liftoff! Fine.
+      - t: "-1"
+        why: "Correct: -1 becomes 4294967295 as unsigned: over four billion numbers before liftoff."
+      - t: "100"
+        why: A long countdown, but it ends. Big is fine; wrapped is the problem.
+    answer: 2
+    hints:
+      - What happens when a negative int is stored in an unsigned?
+      - "-Wall -Wextra don't warn here. Only validation saves you."
+    short: -1 stored in an unsigned wraps to over four billion.
+    explain: "Converting -1 to unsigned int wraps to 4294967295 (32-bit), so the loop prints billions of numbers. No warning at -Wall -Wextra (that needs -Wsign-conversion). Validate the range, and keep the counter signed."
+    sideBySide:
+      unsafe: |-
+        for (unsigned int t = start; t > 0; --t) {   // -1 wraps huge
+            std::cout << t << ' ';
+        }
+      hardened: |-
+        if (start < 0 || start > 100) {
+            std::cout << "Countdown must be 0 to 100.\n";
+            return 1;
+        }
+        for (int t = start; t > 0; --t) {
+            std::cout << t << ' ';
+        }
+      prelude: int start{3};
+  - id: w5.l5.c5
+    type: review
+    tags: [ w5.infinite, w5.retry, w3.cin ]
+    bug: infinite-loop
+    unsafe: true
+    prompt: "UNSAFE: two of these loops can run forever. Tap every dangerous line."
+    code: |-
+      int guess{0};
+      while (guess != 7) {
+          std::cout << "Guess: ";
+          std::cin >> guess;
+      }
+      for (int i = 0; i != 10; i += 3) {
+          std::cout << i << '\n';
+      }
+    dangerous: [ 3, 5 ]
+    lineNotes:
+      "1": "Fine by itself, as long as every read inside is checked."
+      "3": "Unchecked read: abc jams cin, guess stays 0, and the loop spins forever."
+      "5": "0, 3, 6, 9, 12... i never equals 10. Runs until overflow (UB). Use i < 10."
+    hints:
+      - What happens to the first loop if the player types abc?
+      - List the values of i in the second loop.
+    short: "Check reads inside loops, and use < instead of != for steps."
+    explain: "A failed read never waits again, so guess stays 0 and the first loop never ends (end of input does the same). The second loop steps over 10 and keeps counting until signed overflow, which is UB. Check every read; compare with < so any overshoot still exits."
+    sideBySide:
+      unsafe: |-
+        while (guess != 7) {
+            std::cout << "Guess: ";
+            std::cin >> guess;
+        }
+        for (int i = 0; i != 10; i += 3) {
+            std::cout << i << '\n';
+        }
+      hardened: |-
+        while (guess != 7) {
+            std::cout << "Guess: ";
+            if (!(std::cin >> guess)) {
+                if (std::cin.eof()) {
+                    return 1;
+                }
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            }
+        }
+        for (int i = 0; i < 10; i += 3) {
+            std::cout << i << '\n';
+        }
+      prelude: int guess{0};
+  - id: w5.l5.c6
+    type: safe
+    tags: [ w5.offbyone, w5.infinite, w5.signed-unsigned ]
+    prompt: Safe or unsafe? Loop bugs incoming. Go fast!
+    seconds: 40
+    items:
+      - code: |-
+          for (std::size_t i = 0; i < s.size(); ++i) {
+              std::cout << s[i];
+          }
+        prelude: std::string s{"hi"};
+        safe: true
+        why: Matching unsigned types and a half-open range.
+      - code: |-
+          for (int i = 0; i < s.size(); ++i) {
+              std::cout << s[i];
+          }
+        prelude: std::string s{"hi"};
+        safe: false
+        why: "Signed vs unsigned comparison: -Wsign-compare warns. Use std::size_t."
+      - code: |-
+          for (unsigned int i = 5; i >= 0; --i) {
+              std::cout << i;
+          }
+        safe: false
+        why: An unsigned is always >= 0. It wraps past 0 and never stops.
+      - code: |-
+          int i{0};
+          while (i < 3) {
+              std::cout << i;
+              ++i;
+          }
+        safe: true
+        why: The counter moves toward the exit every lap.
+      - code: |-
+          int i{0};
+          while (i < 3) {
+              std::cout << i;
+          }
+        safe: false
+        why: i never changes, so i < 3 is true forever.
+      - code: |-
+          for (int i = 10; i > 0; i -= 3) {
+              std::cout << i;
+          }
+        safe: true
+        why: "10, 7, 4, 1, then -2 fails i > 0. > catches the overshoot."
+      - code: |-
+          for (int i = 0; i != 10; i += 3) {
+              std::cout << i;
+          }
+        safe: false
+        why: i jumps from 9 to 12 and never equals 10.
+      - code: |-
+          while (!(std::cin >> n)) {
+              std::cout << "Again: ";
+          }
+        prelude: int n{};
+        safe: false
+        why: Never clears the fail state, so every read fails instantly, forever.
+      - code: |-
+          for (std::size_t i = s.size(); i > 0; --i) {
+              std::cout << s[i - 1];
+          }
+        prelude: std::string s{"hi"};
+        safe: true
+        why: Unsigned countdown done right. i > 0 stops before wrapping.
+    hints:
+      - "Does the counter always reach the exit?"
+      - "Watch for >= 0 on unsigned and int vs .size()."
+    short: Safe loops move toward an exit they can't skip, with matching types.
+    explain: "Safe loops always reach their exit: the counter moves every lap, the comparison can't be skipped (< not !=), unsigned counters never test >= 0, and failed reads are cleared before retrying."
+recap:
+  - "Half-open 0 to < n: exactly n laps."
+  - Every lap must move toward an exit you can't skip.
+  - ".size() is unsigned: count with std::size_t."
+  - "Unsigned countdown: i > 0 and index i - 1."
+vault:
+  - id: w5.halfopen
+    title: Beat off-by-one
+    code: |-
+      for (int i = 0; i < n; ++i) {}    // n laps (half-open: 0..n-1)
+      for (int i = 1; i <= n; ++i) {}   // n laps (1..n)
+      for (int i = 0; i <= n; ++i) {}   // n + 1 laps: usually a bug!
+    prelude: int n{3};
+    note: Trace the first and last lap by hand, and test n = 0, 1 and 2.
+    defense: true
+  - id: w5.loopexit
+    title: Loops that always end
+    code: |-
+      int tries{0};
+      while (tries < 5) {    // capped: can't run forever
+          ++tries;           // update on every path
+      }
+      for (int i = 0; i < 10; i += 3) {}   // < survives overshoot; != doesn't
+    note: "Each lap must move toward the exit. Beware continue skipping a while loop's update."
+    defense: true
+  - id: w5.unsignedloop
+    title: Signed vs unsigned loops
+    code: |-
+      for (std::size_t i = 0; i < s.size(); ++i) {}   // count up: std::size_t
+      for (std::size_t i = s.size(); i > 0; --i) {
+          char c = s[i - 1];                           // count down: i > 0, use i - 1
+      }
+      for (std::size_t i = 0; i + 1 < s.size(); ++i) {} // not i < s.size() - 1
+    prelude: std::string s{"abc"};
+    note: "-1 < s.size() is false. Heed -Wsign-compare; never test unsigned >= 0."
+    defense: true
+  - id: w5.retryloop
+    title: The safe retry loop
+    code: |-
+      #include <limits>
+
+      int n{0};
+      do {
+          std::cout << "Pick 1-3: ";
+          if (!(std::cin >> n)) {
+              if (std::cin.eof()) {
+                  return 1;                // no more input: stop
+              }
+              std::cin.clear();
+              std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+              n = 0;                       // mark invalid
+          }
+      } while (n < 1 || n > 3);
+    note: Check the read, clear, ignore, and handle end of input, or the loop can spin forever.
+    defense: true
+reviewTags: [ w3.validate, w3.cin, w2.string, w5.for, w5.retry, w5.nested ]

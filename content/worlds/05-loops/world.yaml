@@ -1,0 +1,15 @@
+# World 5: Loops. Lessons are lesson-NN.yaml (played in file order).
+
+id: w5
+num: 5
+title: Loops
+icon: loop
+blurb: Make your program repeat itself on purpose, count and total things up, and always find the exit.
+story:
+  intro:
+    - The Branch Phantom is gone, but now the Codebase is spinning in circles!
+    - Bugs are hiding inside loops that never end. Let's learn to repeat safely!
+  bossIntro:
+    - Eek! The Loop Hydra! Every loop without an exit grows it a new head!
+  victory:
+    - The Hydra ran out of heads! Every loop in the Codebase ends right on time.

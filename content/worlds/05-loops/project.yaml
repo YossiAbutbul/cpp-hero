@@ -1,0 +1,277 @@
+# World 5 mini-project: Training Grounds
+
+id: w5.p
+title: Training Grounds
+intro: "Run training rounds: read how many, record each round's damage, then report the total and average."
+steps:
+  - id: w5.p.s1
+    type: write
+    tags: [ w5.accum, w2.init ]
+    prompt: "First, the accumulator. Write one line that declares an int named `total` and starts it at 0."
+    accept:
+      - int total{0};
+      - int total{};
+      - int total = 0;
+    acceptRe:
+      - ^int total ?(\{ ?0? ?\}|= ?0|= ?\{ ?0? ?\}) ?;$
+    placeholder: int total ...
+    hints:
+      - An accumulator needs a known starting value.
+      - int total{0}; works, and so does int total = 0;
+    short: int total{0}; gives the accumulator a known start.
+    explain: "The loop will add each round's damage to total, so it must start at a known 0. An uninitialized total would hold garbage, and reading it is UB."
+  - id: w5.p.s2
+    type: fill
+    tags: [ w5.for, w5.offbyone ]
+    prompt: "Loop once per round, labeling them Round 1, Round 2, ... Fill in the condition."
+    code: |-
+      for (int r = 1; ___; ++r) {
+          std::cout << "Round " << r << '\n';
+      }
+    prelude: int rounds{3};
+    accept:
+      - r <= rounds
+      - rounds >= r
+    placeholder: condition
+    hints:
+      - The labels start at 1. Where should they end?
+      - "The last round is rounds itself, so include it."
+    short: "Start at 1 and stop at <= rounds: exactly rounds laps."
+    explain: "With r starting at 1, `r <= rounds` runs for 1, 2, ..., rounds: exactly rounds laps with human-friendly labels. `r < rounds` would skip the last round."
+  - id: w5.p.s3
+    type: order
+    tags: [ w5.dowhile, w5.retry ]
+    prompt: "Each round, keep asking until the damage is 1 to 100. Order the lines."
+    prelude: int damage{0};
+    lines:
+      - do {
+      - "    std::cout << \"Damage (1-100)? \";"
+      - "    std::cin >> damage;"
+      - "} while (damage < 1 || damage > 100);"
+    distractors:
+      - "} while (damage >= 1 && damage <= 100);"
+    hints:
+      - Ask, read, then check.
+      - The condition describes a BAD answer.
+    short: Ask, read, repeat while the damage is out of range.
+    explain: "The do-while asks at least once and repeats while damage is outside 1 to 100. The distractor is inverted: it would repeat on GOOD answers. (The Stress Test will make this read tougher.)"
+  - id: w5.p.s4
+    type: fill
+    tags: [ w5.accum ]
+    prompt: After a valid read, add this round's damage to the total. Fill in the operator.
+    code: total ___ damage;
+    prelude: int total{0}; int damage{40};
+    accept:
+      - +=
+    placeholder: operator
+    hints:
+      - The total grows each round.
+      - Add in place with a compound operator.
+    short: total += damage; grows the accumulator each round.
+    explain: "`total += damage;` adds this round's damage to the running total. After the loop, total holds the sum of every round."
+  - id: w5.p.s5
+    type: predict
+    tags: [ w5.accum, w3.arith, w2.convert ]
+    prompt: "Test run: 4 rounds that add up to 90 damage. What do the report lines say?"
+    code: |-
+      std::cout << "Total: " << total << '\n';
+      std::cout << "Average: " << static_cast<double>(total) / rounds << '\n';
+    prelude: int total{90}; int rounds{4};
+    options:
+      - t: |
+          Total: 90
+          Average: 22.5
+        why: "Correct: total is cast to double first, so 90 / 4 is real division: 22.5."
+      - t: |
+          Total: 90
+          Average: 22
+        why: The cast makes it double division, so the .5 survives.
+      - t: |
+          Total: 90
+          Average: 22.50
+        why: std::cout prints doubles without trailing zeros by default.
+      - t: |
+          Total: 90 Average: 22.5
+        why: Each line ends with '\n', so they print on separate lines.
+    answer: 0
+    hints:
+      - Is this int division or double division?
+      - "90 / 4 with a fraction is 22.5."
+    short: "Cast before dividing: 90 / 4 = 22.5."
+    explain: "static_cast<double>(total) makes the division real division (World 3), so 90 / 4 is 22.5, printed without extra zeros."
+program: |-
+  #include <iostream>
+  #include <limits>
+
+  int main() {
+      int rounds{0};
+      do {
+          std::cout << "How many rounds (1-10)? ";
+          if (!(std::cin >> rounds)) {
+              if (std::cin.eof()) {
+                  return 1;
+              }
+              std::cin.clear();
+              std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+              rounds = 0;
+          }
+      } while (rounds < 1 || rounds > 10);
+
+      int total{0};
+      for (int r = 1; r <= rounds; ++r) {
+          int damage{0};
+          do {
+              std::cout << "Round " << r << " damage (1-100)? ";
+              if (!(std::cin >> damage)) {
+                  if (std::cin.eof()) {
+                      return 1;
+                  }
+                  std::cin.clear();
+                  std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                  damage = 0;
+              }
+          } while (damage < 1 || damage > 100);
+          total += damage;
+          std::cout << "Round " << r << ": " << damage << " damage\n";
+      }
+
+      std::cout << "Total: " << total << '\n';
+      if (rounds > 0) {
+          std::cout << "Average: " << static_cast<double>(total) / rounds << '\n';
+      }
+      return 0;
+  }
+programStdin: |
+  3
+  40
+  abc
+  25
+  30
+stress:
+  intro: Brace yourself! I'll throw nasty training data at the Grounds. Patch every crack!
+  attacks:
+    - input: "0"
+      label: Zero rounds!
+      challenge:
+        id: w5.p.a1
+        type: harden
+        tags: [ w5.accum, w3.divzero ]
+        prompt: "0 rounds: the loop never runs, then the average divides 0 by 0! Pick the guard."
+        code: |-
+          std::cout << "Total: " << total << '\n';
+          if (___) {
+              std::cout << "Average: " << static_cast<double>(total) / rounds << '\n';
+          }
+        prelude: int total{0}; int rounds{0};
+        options:
+          - t: rounds > 0
+            why: "Correct: only divide when at least one round happened."
+          - t: total > 0
+            why: "Wrong variable: a real average of 0 is hidden, and the divisor is rounds."
+          - t: rounds >= 0
+            why: Still lets 0 through, which is exactly the attack.
+          - t: rounds != 0
+            why: "Stops the division by zero, but -3 rounds still prints a nonsense average."
+        answer: 0
+        hints:
+          - Which variable is the divisor?
+          - "Averages only make sense after at least one round."
+        short: Guard the average with rounds > 0.
+        explain: "With 0 rounds the loop body never runs and total stays 0. 0.0 / 0 gives NaN (\"not a number\", printed as nan or -nan) for doubles; with ints, dividing by zero is UB. Only compute the average when rounds > 0."
+        sideBySide:
+          unsafe: |-
+            std::cout << "Average: " << static_cast<double>(total) / rounds << '\n';   // 0 rounds: nan
+          hardened: |-
+            if (rounds > 0) {
+                std::cout << "Average: " << static_cast<double>(total) / rounds << '\n';
+            }
+          prelude: int total{0}; int rounds{0};
+    - input: "-3"
+      label: Negative rounds!
+      challenge:
+        id: w5.p.a2
+        type: harden
+        tags: [ w5.retry, w5.dowhile, w3.validate ]
+        prompt: "-3 rounds: the loop quietly runs zero times and the report is nonsense. Make the rounds prompt retry until it's 1 to 10."
+        code: |-
+          int rounds{0};
+          do {
+              std::cout << "How many rounds (1-10)? ";
+              std::cin >> rounds;
+          } while (___);
+        options:
+          - t: rounds < 1 || rounds > 10
+            why: "Correct: repeats for 0, negatives and anything over 10."
+          - t: rounds < 0
+            why: "Misses 0, the first attack, and allows 5000 rounds."
+          - t: rounds == -3
+            why: Only blocks this exact attack. -4 walks right in.
+          - t: rounds >= 1 && rounds <= 10
+            why: "Inverted: asks again on every GOOD answer."
+        answer: 0
+        hints:
+          - The condition describes a bad answer.
+          - Block both ends of the range.
+        short: Retry while rounds is outside 1 to 10.
+        explain: "A for loop with a negative count simply runs zero times: no crash, just a wrong report (and a later divide by -3). Validate the whole range at input, so every later line can trust rounds. The last attack will make this read survive text too."
+        sideBySide:
+          unsafe: |-
+            std::cin >> rounds;   // -3 accepted
+          hardened: |-
+            do {
+                std::cout << "How many rounds (1-10)? ";
+                std::cin >> rounds;
+            } while (rounds < 1 || rounds > 10);
+          prelude: int rounds{0};
+    - input: abc
+      label: Text in the middle of training!
+      challenge:
+        id: w5.p.a3
+        type: bug
+        tags: [ w5.retry, w5.infinite, w3.cin ]
+        bug: infinite-loop
+        unsafe: true
+        prompt: "In round 2 Curlo types `abc`. damage becomes 0, cin jams, and the prompt prints forever! Tap the line to protect, then pick the fix."
+        code: |-
+          int damage{0};
+          do {
+              std::cout << "Round " << r << " damage (1-100)? ";
+              std::cin >> damage;
+          } while (damage < 1 || damage > 100);
+          total += damage;
+        prelude: int r{2}; int total{40};
+        bugLine: 3
+        options:
+          - t: "if (!(std::cin >> damage)) { if (std::cin.eof()) { return 1; } std::cin.clear(); std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\\n'); damage = 0; }"
+            why: "Correct: detects the bad read, stops at end of input, unjams cin and drops the junk line."
+          - t: "std::cin >> damage; std::cin.clear();"
+            why: "Unjams cin, but abc is still waiting, so the next read fails again. Still infinite."
+          - t: "std::cin >> damage; std::cin.ignore();"
+            why: A jammed stream ignores nothing. clear() must come first.
+          - t: "if (!(std::cin >> damage)) { damage = 50; }"
+            why: "Invents damage, and cin stays jammed for every later round."
+        answer: 0
+        hints:
+          - After a failed read, every later read fails instantly.
+          - "Check the read, then clear() and ignore() the junk."
+        short: "Check the read in the loop: clear(), ignore(), and stop at end of input."
+        explain: "A failed read sets damage to 0 (invalid, so loop again) and jams cin, so the next read fails without waiting: an infinite loop. Checking the read, then clear() and ignore(), lets the player retry. The eof() check stops the loop if input runs out."
+        sideBySide:
+          unsafe: |-
+            do {
+                std::cout << "Round " << r << " damage (1-100)? ";
+                std::cin >> damage;   // abc: infinite loop
+            } while (damage < 1 || damage > 100);
+          hardened: |-
+            do {
+                std::cout << "Round " << r << " damage (1-100)? ";
+                if (!(std::cin >> damage)) {
+                    if (std::cin.eof()) {
+                        return 1;
+                    }
+                    std::cin.clear();
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                    damage = 0;
+                }
+            } while (damage < 1 || damage > 100);
+          prelude: int r{2}; int damage{0};

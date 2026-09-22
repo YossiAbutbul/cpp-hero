@@ -1,0 +1,330 @@
+# World 5 · Lesson 4: Break, continue and nested loops
+
+id: w5.l4
+title: Break, continue and nested loops
+skill: logic
+shield: false
+concept:
+  short: "break leaves the loop now; continue skips to the next lap. A loop inside a loop builds grids."
+  analogy: "Nested loops are a clock: the minute hand (inner loop) goes all the way round for every tick of the hour hand."
+  body:
+    - "`break;` exits the loop immediately; execution continues after its closing `}`. Handy for \"stop as soon as...\" logic, like a `while (true)` loop that ends when hp hits 0."
+    - "`continue;` skips the rest of this lap. In a `for` loop the update (`++i`) still runs; in a `while` loop it jumps straight back to the condition, so an update at the bottom is **skipped**."
+    - "A **nested** loop is a loop in another loop's body. For every lap of the outer loop, the inner loop runs completely, restarting from its start value. Rows outside, columns inside: that's how you print grids and patterns."
+    - "The inner loop's bound can use the outer counter: `for (int col = 1; col <= row; ++col)` makes each row one longer, a triangle."
+    - "`break` and `continue` affect only the **innermost** loop they're in. A `break` in the inner loop ends that row, not the whole grid."
+  pitfall: "Common beginner mistake: `continue` in a while loop that skips the `++i` at the bottom. The counter stops moving and the loop never ends."
+demo:
+  code: |-
+    #include <iostream>
+
+    int main() {
+        for (int row = 1; row <= 3; ++row) {
+            for (int col = 1; col <= row; ++col) {
+                std::cout << '*';
+            }
+            std::cout << '\n';
+        }
+        return 0;
+    }
+  steps:
+    - line: 3
+      vars:
+        row: "1"
+      note: "Outer loop: row 1."
+    - line: 4
+      vars:
+        row: "1"
+        col: "1"
+      note: "Inner loop starts fresh: col = 1."
+    - line: 5
+      out: "*"
+    - line: 4
+      vars:
+        row: "1"
+        col: "2"
+      note: "2 <= 1 is false: this row is done."
+    - line: 7
+      out: "\n"
+    - line: 3
+      vars:
+        row: "2"
+      note: "Next row: 2. The inner loop restarts."
+    - line: 4
+      vars:
+        row: "2"
+        col: "1"
+    - line: 5
+      out: "*"
+    - line: 4
+      vars:
+        row: "2"
+        col: "2"
+    - line: 5
+      out: "*"
+    - line: 4
+      vars:
+        row: "2"
+        col: "3"
+      note: "3 <= 2 is false: row 2 done."
+    - line: 7
+      out: "\n"
+    - line: 3
+      vars:
+        row: "3"
+    - line: 4
+      vars:
+        row: "3"
+        col: "1"
+    - line: 5
+      out: "*"
+    - line: 4
+      vars:
+        row: "3"
+        col: "2"
+    - line: 5
+      out: "*"
+    - line: 4
+      vars:
+        row: "3"
+        col: "3"
+    - line: 5
+      out: "*"
+    - line: 4
+      vars:
+        row: "3"
+        col: "4"
+    - line: 7
+      out: "\n"
+    - line: 3
+      vars:
+        row: "4"
+      note: "row 4 fails row <= 3: the triangle is done."
+    - line: 9
+challenges:
+  - id: w5.l4.c1
+    type: predict
+    tags: [ w5.continue, w3.modulo ]
+    prompt: What does this print? (Watch the spaces.)
+    code: |-
+      #include <iostream>
+
+      int main() {
+          for (int i = 1; i <= 6; ++i) {
+              if (i % 3 == 0) {
+                  continue;
+              }
+              std::cout << i << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: "1 2 4 5 \n"
+        why: "Correct: 3 and 6 are multiples of 3, so continue skips printing them."
+      - t: "1 2 \n"
+        why: That's what break would do. continue only skips one lap.
+      - t: "3 6 \n"
+        why: "Reversed: continue SKIPS the multiples of 3."
+      - t: "1 2 3 4 5 6 \n"
+        why: The continue runs before the print for 3 and 6.
+    answer: 0
+    hints:
+      - Which values of i make i % 3 == 0 true?
+      - continue skips the rest of that lap only.
+    short: continue skips 3 and 6; the loop keeps going.
+    explain: "For i = 3 and 6, i % 3 is 0, so continue jumps to ++i and skips the print. Every other value prints with a space. Output: \"1 2 4 5 \" and a newline."
+  - id: w5.l4.c2
+    type: predict
+    tags: [ w5.break, w5.accum ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int total{0};
+          for (int i = 1; i <= 10; ++i) {
+              total += i;
+              if (total > 10) {
+                  break;
+              }
+          }
+          std::cout << total << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          15
+        why: "Correct: totals go 1, 3, 6, 10, 15. 15 > 10, so break ends the loop."
+      - t: |
+          10
+        why: 10 > 10 is false, so the loop keeps going one more lap.
+      - t: |
+          55
+        why: That's 1 through 10 with no break. The break stops it early.
+      - t: |
+          21
+        why: The break fires right after 15, before i = 6 is added.
+    answer: 0
+    hints:
+      - Keep a running total lap by lap.
+      - Is 10 > 10 true?
+    short: "Totals 1, 3, 6, 10, 15; break fires at 15."
+    explain: "The running total is 1, 3, 6, 10, then 15. The check comes after adding, and 15 is the first total above 10, so break exits and 15 is printed."
+  - id: w5.l4.c3
+    type: predict
+    tags: [ w5.nested ]
+    prompt: A little grid. What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          for (int r = 0; r < 2; ++r) {
+              for (int c = 0; c < 3; ++c) {
+                  std::cout << r << c << ' ';
+              }
+              std::cout << '\n';
+          }
+          return 0;
+      }
+    options:
+      - t: "00 01 02 \n10 11 12 \n"
+        why: "Correct: 2 rows; in each, c runs 0, 1, 2 before r moves on."
+      - t: "00 10 \n01 11 \n02 12 \n"
+        why: Rows and columns swapped. The inner loop (c) runs fully for each r.
+      - t: "00 01 02 10 11 12 \n"
+        why: The newline prints after every row, not once at the end.
+      - t: "00 11 \n"
+        why: The inner loop restarts from 0 for every r and runs all 3 laps.
+    answer: 0
+    hints:
+      - The inner loop runs completely for each outer lap.
+      - The newline belongs to the outer loop.
+    short: "For each r, c runs 0 to 2; then a newline."
+    explain: "Outer r = 0: inner prints 00 01 02 then a newline. Outer r = 1: 10 11 12 then a newline. 2 × 3 = 6 pairs in total."
+  - id: w5.l4.c4
+    type: mcq
+    tags: [ w5.break, w5.nested ]
+    prompt: How many pairs does this print?
+    code: |-
+      for (int r = 0; r < 3; ++r) {
+          for (int c = 0; c < 3; ++c) {
+              if (c == 1) {
+                  break;
+              }
+              std::cout << r << c << ' ';
+          }
+      }
+    options:
+      - t: "3"
+        why: "Correct: break ends only the inner loop, so each of the 3 rows prints just c = 0."
+      - t: "1"
+        why: That would mean break ended BOTH loops. It only leaves the innermost one.
+      - t: "9"
+        why: The break stops each row at c = 1.
+      - t: "6"
+        why: c = 1 hits the break before printing, so only c = 0 prints per row.
+    answer: 0
+    hints:
+      - Which loop does break leave?
+      - The outer loop still runs all 3 laps.
+    short: break leaves only the inner loop; each row prints once.
+    explain: "Each row prints r0, then c = 1 triggers break, which ends the inner loop only. The outer loop continues, so rows 0, 1, 2 each print once: 00 10 20."
+  - id: w5.l4.c5
+    type: fill
+    tags: [ w5.break, w5.while ]
+    prompt: Fill in the statement that ends the loop once hp drops to 0 or below.
+    code: |-
+      int hp{10};
+      while (true) {
+          hp -= 4;
+          if (hp <= 0) {
+              ___;
+          }
+          std::cout << "Still standing: " << hp << '\n';
+      }
+      std::cout << "Down!\n";
+    accept:
+      - break
+      - break;
+    placeholder: keyword
+    hints:
+      - while (true) never ends on its own.
+      - You need a keyword that leaves the loop right now.
+    short: break is the only exit from a while (true) loop.
+    explain: "while (true) never stops by itself, so break is the exit. It prints 6, then 2, then hp becomes -2 and break jumps to \"Down!\". A while (true) loop must always have a reachable break."
+  - id: w5.l4.c6
+    type: review
+    tags: [ w5.continue, w5.infinite ]
+    bug: infinite-loop
+    unsafe: true
+    prompt: "UNSAFE: this should add up the odd numbers below 10. Tap every dangerous line."
+    code: |-
+      int sum{0};
+      int i{0};
+      while (i < 10) {
+          if (i % 2 == 0) {
+              continue;
+          }
+          sum += i;
+          ++i;
+      }
+    dangerous: [ 4 ]
+    lineNotes:
+      "2": "The condition is fine; the problem is i stops moving."
+      "4": "continue jumps back to the check and skips ++i: i stays 0 forever."
+      "7": "The update is here, but continue never reaches it."
+    hints:
+      - Follow i = 0 through one lap.
+      - What does continue skip in a while loop?
+    short: continue in a while loop skipped the update. Use a for loop.
+    explain: "At i = 0, i % 2 == 0 is true, so continue jumps straight back to i < 10, skipping ++i. i is 0 forever: an infinite loop. In a for loop, continue still runs the update, so the counter always moves."
+    sideBySide:
+      unsafe: |-
+        while (i < 10) {
+            if (i % 2 == 0) {
+                continue;   // skips ++i
+            }
+            sum += i;
+            ++i;
+        }
+      hardened: |-
+        for (int k = 0; k < 10; ++k) {
+            if (k % 2 == 0) {
+                continue;   // ++k still runs
+            }
+            sum += k;
+        }
+      prelude: int sum{0}; int i{0};
+recap:
+  - break leaves the innermost loop immediately.
+  - continue skips to the next lap.
+  - In while loops, continue can skip your update.
+  - "Nested: the inner loop runs fully per outer lap."
+vault:
+  - id: w5.breakcontinue
+    title: break and continue
+    code: |-
+      for (int i = 1; i <= 10; ++i) {
+          if (i % 2 == 0) {
+              continue;   // skip evens; ++i still runs
+          }
+          if (i > 7) {
+              break;      // leave the loop now
+          }
+          std::cout << i << ' ';   // 1 3 5 7
+      }
+    note: Both affect only the innermost loop. Prefer for loops when you use continue.
+    defense: false
+  - id: w5.nested
+    title: Nested loops (grid)
+    code: |-
+      for (int row = 1; row <= 3; ++row) {
+          for (int col = 1; col <= row; ++col) {
+              std::cout << '*';
+          }
+          std::cout << '\n';   // one newline per row
+      }
+    note: Rows outside, columns inside. The inner loop restarts every row.
+    defense: false
+reviewTags: [ w3.modulo, w3.logic, w5.for, w5.accum ]

@@ -1,0 +1,313 @@
+# World 5 · Lesson 3: Do-while and the retry loop
+
+id: w5.l3
+title: Do-while and the retry loop
+skill: logic
+shield: false
+concept:
+  short: "do { body } while (condition); runs the body first, then checks. Perfect for asking until the answer is valid."
+  analogy: "A do-while is a shopkeeper: you always get asked once, and asked again only if your answer made no sense."
+  body:
+    - "`do { ... } while (condition);` runs the body, **then** checks the condition. So the body always runs **at least once**. Note the semicolon after `while (...)`."
+    - "That makes it the natural shape for input: ask, read, and repeat while the answer is invalid. The condition describes a **bad** answer: `while (n < 1 || n > 3);`."
+    - "A retry loop must survive text too. If `std::cin >> n` fails, the stream jams: every later read fails instantly, and the loop spins forever. Recover with the World 3 pair: `std::cin.clear();` then `std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\\n');`."
+    - "One more exit: if input **ends** (end of file, or Ctrl+D / Ctrl+Z), no amount of clearing brings more input. Check `std::cin.eof()` and give up cleanly instead of looping forever."
+    - "A `while` loop can read too: `while (std::cin >> n && n != 0) { ... }` keeps reading until a 0, bad text, or the end of input. That's a **sentinel** loop."
+  pitfall: "Common beginner mistake: a retry loop that never clears the fail state. The first `abc` makes every later read fail instantly, and the prompt prints forever."
+demo:
+  code: |-
+    #include <iostream>
+    #include <limits>
+
+    int main() {
+        int pick{0};
+        int tries{0};
+        do {
+            ++tries;
+            std::cout << "Door (1-3)? ";
+            if (!(std::cin >> pick)) {
+                if (std::cin.eof()) {
+                    return 1;
+                }
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                pick = 0;
+            }
+        } while (pick < 1 || pick > 3);
+        std::cout << "Door " << pick << " opens after " << tries << " tries!\n";
+        return 0;
+    }
+  stdin: |
+    abc
+    9
+    2
+  steps:
+    - line: 4
+      vars:
+        pick: "0"
+    - line: 5
+      vars:
+        pick: "0"
+        tries: "0"
+    - line: 6
+      note: "do: run the body first, check later."
+    - line: 7
+      vars:
+        pick: "0"
+        tries: "1"
+    - line: 8
+      out: "Door (1-3)? "
+      note: "Simulated input: `abc`"
+    - line: 9
+      shield: Bad read caught!
+      note: The read fails, so the if runs.
+    - line: 13
+      note: Reset the fail state.
+    - line: 14
+      note: Throw away the junk line.
+    - line: 15
+      vars:
+        pick: "0"
+        tries: "1"
+      note: Mark the answer as invalid.
+    - line: 17
+      note: "0 < 1 is true: ask again."
+    - line: 7
+      vars:
+        pick: "0"
+        tries: "2"
+    - line: 8
+      out: "Door (1-3)? "
+      note: "Simulated input: `9`"
+    - line: 9
+      vars:
+        pick: "9"
+        tries: "2"
+      note: 9 is a number, so the read works.
+    - line: 17
+      note: "9 > 3: still invalid. Again!"
+    - line: 7
+      vars:
+        pick: "9"
+        tries: "3"
+    - line: 8
+      out: "Door (1-3)? "
+      note: "Simulated input: `2`"
+    - line: 9
+      vars:
+        pick: "2"
+        tries: "3"
+    - line: 17
+      note: "2 is in range: the loop ends."
+    - line: 18
+      out: |
+        Door 2 opens after 3 tries!
+    - line: 19
+challenges:
+  - id: w5.l3.c1
+    type: mcq
+    tags: [ w5.dowhile ]
+    prompt: How many times does the body run?
+    code: |-
+      int n{5};
+      do {
+          ++n;
+      } while (n < 3);
+    options:
+      - t: Once
+        why: "Correct: the body runs first (n becomes 6), then 6 < 3 is false."
+      - t: Zero times
+        why: That's what a while loop would do. do-while always runs at least once.
+      - t: Three times
+        why: The condition is false after the first lap, so it stops.
+      - t: Forever
+        why: n grows away from 3, and the check is already false after one lap.
+    answer: 0
+    hints:
+      - When does a do-while check its condition?
+      - After the first lap, what is n?
+    short: do-while runs the body once before the first check.
+    explain: "do-while checks at the bottom. The body runs (n = 6), then 6 < 3 is false, so it stops after exactly one lap. A while loop with the same condition would run zero times."
+  - id: w5.l3.c2
+    type: predict
+    tags: [ w5.while, w3.cin ]
+    prompt: "A sentinel loop. The input is `4 7 0 9`. What does this print?"
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int n{};
+          int sum{0};
+          while (std::cin >> n && n != 0) {
+              sum += n;
+          }
+          std::cout << sum << '\n';
+          return 0;
+      }
+    stdin: |
+      4 7 0 9
+    options:
+      - t: |
+          11
+        why: "Correct: 4 + 7, then the 0 ends the loop. The 9 is never read."
+      - t: |
+          20
+        why: The loop stops at the 0 sentinel, so 9 is never added.
+      - t: |
+          4
+        why: The loop keeps reading until the 0, not just once.
+      - t: |
+          0
+        why: The 0 stops the loop, but 4 and 7 were already added.
+    answer: 0
+    hints:
+      - The loop stops at the first 0.
+      - Everything before the 0 is added.
+    short: The loop adds until the 0 sentinel; 4 + 7 = 11.
+    explain: "Each lap reads a number; the loop continues only if the read worked AND the number isn't 0. 4 and 7 are added, 0 stops it, and 9 stays unread. Bad text or end of input would also stop it safely."
+  - id: w5.l3.c3
+    type: harden
+    tags: [ w5.retry, w5.dowhile, w3.logic ]
+    prompt: The loop should keep asking while the age is invalid (valid is 0 to 120). Pick the condition.
+    code: |-
+      #include <iostream>
+      #include <limits>
+
+      int main() {
+          int age{-1};
+          do {
+              std::cout << "Age (0-120): ";
+              if (!(std::cin >> age)) {
+                  if (std::cin.eof()) {
+                      return 1;
+                  }
+                  std::cin.clear();
+                  std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                  age = -1;
+              }
+          } while (___);
+          std::cout << "Age " << age << " accepted\n";
+          return 0;
+      }
+    options:
+      - t: age < 0 || age > 120
+        why: "Correct: describes a BAD age, so the loop repeats exactly while the answer is invalid."
+      - t: age >= 0 && age <= 120
+        why: "Inverted: repeats while the age is GOOD and accepts the first bad one."
+      - t: age < 0 && age > 120
+        why: No number is both below 0 and above 120, so the loop never repeats.
+      - t: age != 0
+        why: Loops until someone types exactly 0, and accepts 0 even though 500 was rejected.
+    answer: 0
+    hints:
+      - The loop repeats while the condition is true.
+      - Describe an invalid age, not a valid one.
+    short: A retry loop repeats while the answer is invalid.
+    explain: "The do-while repeats while its condition is true, so the condition must describe a bad answer: below 0 or above 120. A failed read sets age to -1, which is also bad, so text gets another try too."
+    sideBySide:
+      unsafe: |-
+        std::cout << "Age (0-120): ";
+        std::cin >> age;   // one chance, never checked
+      hardened: |-
+        do {
+            std::cout << "Age (0-120): ";
+            if (!(std::cin >> age)) {
+                if (std::cin.eof()) {
+                    return 1;
+                }
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                age = -1;
+            }
+        } while (age < 0 || age > 120);
+      prelude: int age{-1};
+  - id: w5.l3.c4
+    type: order
+    tags: [ w5.dowhile, w5.counter ]
+    prompt: Order the lines into a do-while that swings the sword 3 times.
+    prelude: int swings{0};
+    lines:
+      - do {
+      - "    std::cout << \"Swing!\\n\";"
+      - "    ++swings;"
+      - "} while (swings < 3);"
+    distractors:
+      - "} while (swings < 3)"
+    hints:
+      - The body comes before the condition.
+      - A do-while ends with a semicolon.
+    short: "do { body } while (condition); with a final semicolon."
+    explain: "do opens the block, the body swings and counts, and `} while (swings < 3);` closes it. The distractor is missing the ;, which is a compile error for do-while."
+  - id: w5.l3.c5
+    type: breakit
+    tags: [ w5.retry, w5.infinite, w3.validate ]
+    bug: infinite-loop
+    unsafe: true
+    prompt: "UNSAFE retry loop. Which input makes it spin forever?"
+    code: |-
+      int n{};
+      do {
+          std::cout << "Number (1-9): ";
+          std::cin >> n;
+      } while (n < 1 || n > 9);
+    options:
+      - t: "5"
+        why: Valid, so the loop ends right away.
+      - t: "12"
+        why: Out of range, so it asks again, and the next answer gets read. That's fine.
+      - t: "0"
+        why: Asks again and reads the next answer. Annoying, not broken.
+      - t: abc
+        why: "Correct: n becomes 0, cin jams, and every later read fails instantly: endless prompts."
+    answer: 3
+    hints:
+      - Which input puts cin into the fail state?
+      - Once cin has failed, what happens to the next read?
+    short: Text jams cin; an unchecked retry loop then spins forever.
+    explain: "\"abc\" fails: n becomes 0 (invalid, so loop again) and cin enters the fail state. Every following read fails immediately without waiting, so the prompt prints forever. Check the read, clear(), ignore(), and stop at end of input."
+    sideBySide:
+      unsafe: |-
+        do {
+            std::cout << "Number (1-9): ";
+            std::cin >> n;   // "abc" jams cin: infinite loop
+        } while (n < 1 || n > 9);
+      hardened: |-
+        do {
+            std::cout << "Number (1-9): ";
+            if (!(std::cin >> n)) {
+                if (std::cin.eof()) {
+                    return 1;
+                }
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                n = 0;
+            }
+        } while (n < 1 || n > 9);
+      prelude: int n{};
+recap:
+  - do-while always runs at least once.
+  - "End a do-while with while (...); and a semicolon."
+  - "Retry condition = the answer is bad."
+  - "Failed read? clear(), ignore(), and stop at end of input."
+vault:
+  - id: w5.dowhile
+    title: The do-while loop
+    code: |-
+      int swings{0};
+      do {
+          std::cout << "Swing!\n";   // runs at least once
+          ++swings;
+      } while (swings < 3);          // note the ;
+    note: Checks at the bottom. Use it when the body must happen before the first check.
+    defense: false
+  - id: w5.sentinel
+    title: Sentinel loop
+    code: |-
+      int n{};
+      int sum{0};
+      while (std::cin >> n && n != 0) {
+          sum += n;
+      }
+    note: Stops on the sentinel 0, on bad text, and at the end of input.
+    defense: false
+reviewTags: [ w3.cin, w3.validate, w3.logic, w5.while ]

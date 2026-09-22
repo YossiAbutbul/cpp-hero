@@ -1,0 +1,571 @@
+# World 5 boss: The Loop Hydra
+
+id: w5.boss
+name: The Loop Hydra
+art: hydra
+hp: 7
+intro: HISSS! Forget one exit and I grow another head. Your loops are MY loops!
+taunt:
+  - i <= size? Delicious. One more head for me.
+  - You forgot ++i. I'll wait right here... forever.
+  - Unsigned zero minus one? That's a LOT of heads.
+  - Type abc. Watch your retry loop spin forever!
+rounds:
+  - id: w5.boss.r1
+    type: predict
+    tags: [ w5.while, w5.counter ]
+    prompt: The Hydra counts its heads. What does this print? (Watch the spaces.)
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int heads{5};
+          while (heads > 0) {
+              std::cout << heads << ' ';
+              heads -= 2;
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: "5 3 1 \n"
+        why: "Correct: 5, 3, 1 print; then heads is -1 and -1 > 0 is false."
+      - t: "5 3 1 -1 \n"
+        why: -1 > 0 is false, so -1 is never printed.
+      - t: "5 4 3 2 1 \n"
+        why: The counter drops by 2 each lap, not 1.
+      - t: "3 1 \n"
+        why: The first lap prints 5 before subtracting.
+    answer: 0
+    hints:
+      - Print first, then subtract 2.
+      - "> 0 catches the jump from 1 to -1."
+    short: "5, 3, 1 print; -1 fails heads > 0."
+    explain: "Each lap prints heads, then subtracts 2: 5, 3, 1. After 1, heads is -1, and -1 > 0 is false. Using > instead of != means the jump past 0 still ends the loop."
+  - id: w5.boss.r2
+    type: predict
+    tags: [ w5.for, w5.accum ]
+    prompt: The Hydra totals its bites. What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int sum{0};
+          for (int i = 2; i <= 8; i += 2) {
+              sum += i;
+          }
+          std::cout << sum << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          20
+        why: "Correct: 2 + 4 + 6 + 8 = 20. 8 <= 8 is true, so 8 is included."
+      - t: |
+          12
+        why: That stops before 8. <= includes the last value.
+      - t: |
+          30
+        why: 10 <= 8 is false, so 10 is never added.
+      - t: |
+          14
+        why: The start value 2 is added too.
+    answer: 0
+    hints:
+      - "List every i: start 2, step 2, stop after 8."
+      - Add them all.
+    short: "i = 2, 4, 6, 8; the sum is 20."
+    explain: "i takes 2, 4, 6 and 8 (8 <= 8 is true), then 10 fails. 2 + 4 + 6 + 8 = 20."
+  - id: w5.boss.r3
+    type: mcq
+    tags: [ w5.offbyone, w5.for ]
+    bug: off-by-one
+    prompt: How many times does this loop run?
+    code: for (int i = 3; i <= 9; ++i) {}
+    options:
+      - t: "7"
+        why: "Correct: 3 to 9 inclusive is 9 - 3 + 1 = 7 laps."
+      - t: "6"
+        why: "That's 9 - 3, the fencepost mistake: both ends count."
+      - t: "9"
+        why: The loop starts at 3, not 1.
+      - t: "10"
+        why: That would be 0 to 9. The start is 3.
+    answer: 0
+    hints:
+      - Count 3, 4, 5, ... 9 on your fingers.
+      - "Inclusive ranges: last - first + 1."
+    short: "3 to 9 inclusive: 9 - 3 + 1 = 7 laps."
+    explain: "Inclusive at both ends means last - first + 1: 3, 4, 5, 6, 7, 8, 9 is 7 laps. Forgetting the + 1 is the fencepost error, the Off-by-One Imp's favorite trick."
+  - id: w5.boss.r4
+    type: predict
+    tags: [ w5.nested, w5.continue ]
+    prompt: The heads tangle. What does this print? (Watch the spaces.)
+    code: |-
+      #include <iostream>
+
+      int main() {
+          for (int i = 1; i <= 3; ++i) {
+              for (int j = 1; j <= 3; ++j) {
+                  if (j == i) {
+                      continue;
+                  }
+                  std::cout << i << j << ' ';
+              }
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: "12 13 21 23 31 32 \n"
+        why: "Correct: every pair except where i equals j."
+      - t: "11 22 33 \n"
+        why: "Reversed: continue SKIPS the pairs where j == i."
+      - t: "12 13 \n"
+        why: continue only skips one inner lap; it doesn't end any loop.
+      - t: "12 13 23 \n"
+        why: The inner loop restarts at 1 for every i, so 21, 31 and 32 print too.
+    answer: 0
+    hints:
+      - The inner loop runs fully for each i.
+      - continue skips only the matching pair.
+    short: "All 9 pairs minus 11, 22, 33: six pairs."
+    explain: "For each i, j runs 1 to 3, and continue skips the lap where j == i. That removes 11, 22 and 33 and leaves six pairs in order."
+  - id: w5.boss.r5
+    type: speed
+    tags: [ w5.for, w5.offbyone, w5.dowhile, w5.continue, w5.signed-unsigned ]
+    prompt: SPEED ROUND! The Hydra lunges with every head. Answer fast!
+    seconds: 45
+    items:
+      - q: How many laps?
+        code: for (int i = 0; i < 4; ++i) {}
+        options:
+          - "3"
+          - "4"
+          - "5"
+        answer: 1
+      - q: How many laps?
+        code: for (int i = 0; i <= 4; ++i) {}
+        options:
+          - "4"
+          - "5"
+          - "6"
+        answer: 1
+      - q: Fewest times a do-while body can run?
+        options:
+          - "0"
+          - "1"
+          - "2"
+        answer: 1
+      - q: What does continue do?
+        options:
+          - Exits the loop
+          - Skips to the next lap
+          - Restarts the loop at i = 0
+        answer: 1
+      - q: What is n after the loop?
+        code: |-
+          int n{1};
+          while (n < 50) {
+              n *= 2;
+          }
+        options:
+          - "32"
+          - "64"
+          - "50"
+        answer: 1
+      - q: Does this loop ever end?
+        code: for (int i = 10; i != 0; i -= 3) {}
+        options:
+          - Yes, at 0
+          - No, it skips past 0
+          - It never starts
+        answer: 1
+      - q: "What is -1 < s.size() for a non-empty s?"
+        options:
+          - "true"
+          - "false"
+          - Compile error
+        answer: 1
+    hints:
+      - "< n from 0 gives n laps; <= adds one."
+      - "Unsigned comparisons turn -1 into a huge number."
+    short: "< n gives n laps, do-while runs once, -1 < size() is false."
+    explain: "0 to < 4 is 4 laps and <= 4 is 5; a do-while runs at least once; continue skips to the next lap; n doubles to 64; 10, 7, 4, 1, -2 skips 0 forever; and -1 converts to a huge unsigned, so -1 < s.size() is false."
+  - id: w5.boss.r6
+    type: bug
+    tags: [ w5.signed-unsigned, w5.infinite ]
+    bug: signed-unsigned
+    unsafe: true
+    prompt: "UNSAFE: the Hydra spells its name backwards and never stops. Tap the buggy line, then pick the fix."
+    code: |-
+      std::string word{"hydra"};
+      for (std::size_t i = word.size() - 1; i >= 0; --i) {
+          std::cout << word[i];
+      }
+    bugLine: 1
+    options:
+      - t: for (std::size_t i = word.size(); i-- > 0; ) {
+        why: "Correct: checks i > 0, THEN decrements, so the body sees 4 down to 0 and the loop stops."
+      - t: for (std::size_t i = word.size() - 1; i > 0; --i) {
+        why: "Ends, but skips index 0: prints \"ardy\". Off by one."
+      - t: for (std::size_t i = word.size(); i >= 0; --i) {
+        why: Still >= 0 on an unsigned, still endless, and word[5] is past the letters.
+      - t: for (unsigned int i = word.size() - 1; i >= 0; --i) {
+        why: Still unsigned, so i >= 0 is still always true.
+    answer: 0
+    hints:
+      - Can an unsigned number ever be below 0?
+      - Test i before decrementing it.
+    short: "Unsigned i >= 0 is always true. Test i-- > 0 instead."
+    explain: "An unsigned i is never negative: after 0, --i wraps to 18446744073709551615, word[i] reads far out of range (UB) and the loop never ends. -Wextra warns that the comparison is always true. `i-- > 0` tests first, then decrements, so the body sees 4, 3, 2, 1, 0."
+    sideBySide:
+      unsafe: |-
+        for (std::size_t i = word.size() - 1; i >= 0; --i) {   // always true
+            std::cout << word[i];
+        }
+      hardened: |-
+        for (std::size_t i = word.size(); i > 0; --i) {
+            std::cout << word[i - 1];   // prints "ardyh"
+        }
+      prelude: std::string word{"hydra"};
+  - id: w5.boss.r7
+    type: edge
+    tags: [ w5.retry, w5.infinite, w3.cin ]
+    bug: infinite-loop
+    unsafe: true
+    prompt: "UNSAFE retry loop. Which inputs make it spin forever? Select all."
+    code: |-
+      int n{0};
+      do {
+          std::cout << "Pick 1-5: ";
+          std::cin >> n;
+      } while (n < 1 || n > 5);
+    options:
+      - t: abc
+        why: "Exposes it: n becomes 0, cin jams, and every retry fails instantly."
+      - t: "0"
+        why: Out of range, so it asks again and reads the next answer. Fine.
+      - t: "7"
+        why: Asks again, and the next read works normally.
+      - t: End of input (Ctrl+D)
+        why: "Exposes it: no more input ever arrives, so n stays invalid and the loop never ends."
+      - t: "3"
+        why: Valid. The loop ends on the first try.
+    answers: [ 0, 3 ]
+    hints:
+      - Which inputs make every later read fail?
+      - Think about text, and about input that simply ends.
+    short: Text and end of input both jam an unchecked retry loop.
+    explain: "Out-of-range numbers are handled: the loop just asks again. But text jams cin, and at end of input there's nothing more to read. In both cases every read fails instantly and the loop never ends. Check the read, clear() and ignore(), and give up on eof()."
+    sideBySide:
+      unsafe: |-
+        do {
+            std::cout << "Pick 1-5: ";
+            std::cin >> n;
+        } while (n < 1 || n > 5);
+      hardened: |-
+        do {
+            std::cout << "Pick 1-5: ";
+            if (!(std::cin >> n)) {
+                if (std::cin.eof()) {
+                    return 1;
+                }
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                n = 0;
+            }
+        } while (n < 1 || n > 5);
+      prelude: int n{0};
+  - id: w5.boss.r8
+    type: harden
+    tags: [ w5.accum, w5.while, w3.divzero ]
+    prompt: The Hydra averages bite damage until a negative number. Pick the guard for the average.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int count{0};
+          int total{0};
+          int bite{};
+          while (std::cin >> bite && bite >= 0) {
+              total += bite;
+              ++count;
+          }
+          if (___) {
+              std::cout << "Average: " << total / count << '\n';
+          }
+          return 0;
+      }
+    options:
+      - t: count > 0
+        why: "Correct: only divide after at least one bite was counted."
+      - t: total != 0
+        why: "Avoids / 0 here, but hides a real average of 0 (three bites of 0)."
+      - t: bite >= 0
+        why: bite is the negative number that ended the loop. It says nothing about count.
+      - t: count >= 0
+        why: Always true, so an empty list still divides by zero.
+    answer: 0
+    hints:
+      - What if the very first number is negative?
+      - Guard the divisor, not the total.
+    short: "Zero bites means count is 0: guard with count > 0."
+    explain: "If the first input is negative (or text, or nothing), the loop runs zero times and count stays 0. total / count is then integer division by zero: UB. Check the divisor: count > 0."
+    sideBySide:
+      unsafe: |-
+        std::cout << "Average: " << total / count << '\n';   // count 0: UB
+      hardened: |-
+        if (count > 0) {
+            std::cout << "Average: " << total / count << '\n';
+        }
+      prelude: int count{0}; int total{0};
+  - id: w5.boss.r9
+    type: review
+    tags: [ w5.infinite, w5.signed-unsigned, w5.counter ]
+    bug: infinite-loop
+    unsafe: true
+    prompt: "UNSAFE: the Hydra hid endless loops in here. Tap every dangerous line."
+    code: |-
+      int total{0};
+      for (int i = 1; i <= 5; ++i) {
+          total += i;
+      }
+      unsigned int left{3};
+      while (left >= 0) {
+          --left;
+      }
+      int k{0};
+      while (k < 5) {
+          std::cout << k;
+      }
+    dangerous: [ 5, 9 ]
+    lineNotes:
+      "1": "Fine: 1 to 5 inclusive, five laps."
+      "5": "left is unsigned, so left >= 0 is always true. -Wextra warns."
+      "9": "k never changes inside this loop, so k < 5 stays true forever."
+    hints:
+      - Can an unsigned number fail >= 0?
+      - Does every loop change its counter?
+    short: "Unsigned >= 0 never fails, and a loop without an update never ends."
+    explain: "The first loop is fine. The second can't end: an unsigned is always >= 0, and after 0 it wraps to 4294967295. The third never updates k. Fix: use left > 0 and add ++k."
+    sideBySide:
+      unsafe: |-
+        while (left >= 0) {   // always true
+            --left;
+        }
+        while (k < 5) {
+            std::cout << k;   // k never changes
+        }
+      hardened: |-
+        while (left > 0) {
+            --left;
+        }
+        while (k < 5) {
+            std::cout << k;
+            ++k;
+        }
+      prelude: unsigned int left{3}; int k{0};
+defense:
+  - attack: "s <= swings + 1"
+    label: An off-by-one bound!
+    challenge:
+      id: w5.boss.d1
+      type: harden
+      tags: [ w5.offbyone, w5.for ]
+      bug: off-by-one
+      prompt: The Hydra wants an extra swing. Pick the bound that swings exactly `swings` times, labeled from 1.
+      code: |-
+        #include <iostream>
+
+        int main() {
+            int swings{};
+            if (!(std::cin >> swings) || swings < 0 || swings > 10) {
+                std::cout << "Swings must be 0 to 10.\n";
+                return 1;
+            }
+            for (int s = 1; ___; ++s) {
+                std::cout << "Swing " << s << "!\n";
+            }
+            return 0;
+        }
+      options:
+        - t: s <= swings
+          why: "Correct: 1 through swings, exactly swings laps. 0 swings means no laps."
+        - t: s < swings
+          why: One short. With 3 swings it only prints 1 and 2.
+        - t: s <= swings + 1
+          why: "One extra swing: the Hydra's trick."
+        - t: s != swings
+          why: With 0 swings, s starts at 1 and never equals 0. Runs until overflow.
+      answer: 0
+      hints:
+        - Starting at 1, which comparison includes the last swing?
+        - Test it with swings = 0 and swings = 1.
+      short: "Start at 1, stop at <= swings: exactly swings laps."
+      explain: "From 1 to swings inclusive is swings laps, and with 0 the check fails at once. != is dangerous: if the counter starts past the target, it never matches."
+      sideBySide:
+        unsafe: |-
+          for (int s = 1; s <= swings + 1; ++s) {   // one extra
+              std::cout << "Swing " << s << "!\n";
+          }
+        hardened: |-
+          for (int s = 1; s <= swings; ++s) {
+              std::cout << "Swing " << s << "!\n";
+          }
+        prelude: int swings{3};
+  - attack: "++r instead of ++c"
+    label: A counter that never updates!
+    challenge:
+      id: w5.boss.d2
+      type: bug
+      tags: [ w5.nested, w5.infinite, w5.counter ]
+      bug: infinite-loop
+      unsafe: true
+      prompt: "UNSAFE: the Hydra swapped a counter in this 3 × 3 grid. It never finishes. Tap the buggy line, then pick the fix."
+      code: |-
+        for (int r = 0; r < 3; ++r) {
+            for (int c = 0; c < 3; ++r) {
+                std::cout << '#';
+            }
+            std::cout << '\n';
+        }
+      bugLine: 1
+      options:
+        - t: for (int c = 0; c < 3; ++c) {
+          why: "Correct: the inner loop must move its own counter, c."
+        - t: for (int c = 0; c <= 3; ++r) {
+          why: Still bumps r, so c stays 0 and the inner loop never ends.
+        - t: for (int c = 0; r < 3; ++c) {
+          why: Now the condition checks the wrong counter. r stays 0, so it never ends.
+        - t: for (int c = 1; c < 3; ++c) {
+          why: Ends, but prints only 2 per row. Off by one.
+      answer: 0
+      hints:
+        - Which variable does the inner condition check?
+        - Which variable does the inner update change?
+      short: "The inner loop bumped r instead of c. Update the counter you test."
+      explain: "The inner loop checks c but updates r. c stays 0 forever, so c < 3 never becomes false, while r races upward until signed overflow (UB). Every loop must update the same counter its condition tests."
+      sideBySide:
+        unsafe: |-
+          for (int c = 0; c < 3; ++r) {   // c never changes
+              std::cout << '#';
+          }
+        hardened: |-
+          for (int c = 0; c < 3; ++c) {
+              std::cout << '#';
+          }
+        prelude: int r{0};
+  - attack: '""'
+    label: An empty name wraps the countdown!
+    challenge:
+      id: w5.boss.d3
+      type: breakit
+      tags: [ w5.signed-unsigned, w2.string ]
+      bug: signed-unsigned
+      unsafe: true
+      prompt: "UNSAFE: the Hydra names its heads. Which input line breaks this loop?"
+      code: |-
+        #include <iostream>
+        #include <string>
+
+        int main() {
+            std::string heads;
+            std::getline(std::cin, heads);
+            std::size_t last = heads.size() - 1;
+            for (std::size_t i = 0; i <= last; ++i) {
+                std::cout << heads[i] << '!';
+            }
+            std::cout << '\n';
+            return 0;
+        }
+      options:
+        - t: abc
+          why: last is 2, so it prints a!b!c!. Fine.
+        - t: a
+          why: last is 0, so one lap prints a!. Fine.
+        - t: (an empty line)
+          why: "Correct: size() is 0, and 0 - 1 wraps to a huge number: reads far past the text (UB)."
+        - t: two words
+          why: getline keeps the space. Nine characters, nine laps. Fine.
+      answer: 2
+      hints:
+        - What is heads.size() - 1 when heads is empty?
+        - Unsigned numbers can't go below 0; they wrap.
+      short: "size() - 1 on an empty string wraps to a huge number."
+      explain: "For an empty string, size() is 0 and 0 - 1 wraps to 18446744073709551615, so the loop reads way past the end: UB, which may crash or print garbage. Loop with i < heads.size() and nothing wraps."
+      sideBySide:
+        unsafe: |-
+          std::size_t last = heads.size() - 1;   // empty: huge
+          for (std::size_t i = 0; i <= last; ++i) {
+              std::cout << heads[i] << '!';
+          }
+        hardened: |-
+          for (std::size_t i = 0; i < heads.size(); ++i) {
+              std::cout << heads[i] << '!';
+          }
+        prelude: std::string heads;
+  - attack: abc
+    label: Text jams the retry loop!
+    challenge:
+      id: w5.boss.d4
+      type: harden
+      tags: [ w5.retry, w3.cin, w3.validate ]
+      bug: infinite-loop
+      prompt: "The Hydra types `abc`. The read is checked, but one line is missing. Pick it."
+      code: |-
+        #include <iostream>
+        #include <limits>
+
+        int main() {
+            int n{0};
+            do {
+                std::cout << "Heads to cut (1-9): ";
+                if (!(std::cin >> n)) {
+                    if (std::cin.eof()) {
+                        return 1;
+                    }
+                    ___;
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                    n = 0;
+                }
+            } while (n < 1 || n > 9);
+            std::cout << "Cut " << n << " heads!\n";
+            return 0;
+        }
+      options:
+        - t: std::cin.clear()
+          why: "Correct: resets the fail state, so ignore() can drop the junk and the next read works."
+        - t: std::cin.ignore()
+          why: A jammed stream ignores nothing. It must be cleared first.
+        - t: n = 1
+          why: Changes the number, not the stream. cin is still jammed, and n is overwritten anyway.
+        - t: break
+          why: Leaves the loop with n = 0, an invalid number. The Hydra wins.
+      answer: 0
+      hints:
+        - While cin is in the fail state, every operation on it fails.
+        - Reset the stream before discarding the junk.
+      short: "clear() first, then ignore(): unjam cin before the retry."
+      explain: "After a failed read, cin refuses to do anything until clear() resets it. Then ignore() throws away the bad line and the loop can ask again. Without clear(), the loop spins forever."
+      sideBySide:
+        unsafe: |-
+          if (!(std::cin >> n)) {
+              std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');   // does nothing: still jammed
+              n = 0;
+          }
+        hardened: |-
+          if (!(std::cin >> n)) {
+              if (std::cin.eof()) {
+                  return 1;
+              }
+              std::cin.clear();
+              std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+              n = 0;
+          }
+        prelude: int n{0};
+victory: The last head sighs... every loop exits. The Hydra finally rests.
+reward:
+  xp: 200
+  cosmetic: hydra-crest
+  bug: off-by-one
