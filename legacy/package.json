@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "commonjs",
+  "description": "Legacy vanilla-JS build of Cpp Hero (behavioral reference). Build with: node legacy/build.js"
+}

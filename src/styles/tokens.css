@@ -1,0 +1,58 @@
+/*
+ * Pop Path design tokens (designs/5-springboard.html, as used by the legacy
+ * app in legacy/src/styles.css). Components use these variables only.
+ */
+:root {
+  color-scheme: light;
+
+  /* surfaces + text */
+  --bg: #fff4e6;
+  --bg2: #ffe6c7;
+  --card: #ffffff;
+  --cream: #fffaf3;
+  --ink: #2a2140;
+  --ink2: #564e6c;
+  --muted: #716a84; /* slightly darker than the mockup's #7E7690 for AA contrast */
+  --line: #f0dfc9;
+
+  /* palette (base / dark / light) */
+  --tang: #f2641b;
+  --tang-d: #bf4808;
+  --tang-l: #ffd2b3;
+  --sun: #ffc62e;
+  --sun-d: #d69500;
+  --sun-l: #ffedb0;
+  --coral: #ff5a70;
+  --coral-d: #d0324c;
+  --coral-l: #ffd6dc;
+  --teal: #0fa898;
+  --teal-d: #077a6f;
+  --teal-l: #c4f1ea;
+  --sky: #3d8bff;
+  --sky-d: #2463c4;
+  --sky-l: #d6e6ff;
+  --grape: #7a4fd0;
+  --lock: #e6ded3;
+  --lock-d: #c6bbac;
+  --console: #2a2140;
+  --console-t: #ffe9a8;
+
+  /* motion */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --elastic: cubic-bezier(0.25, 1.7, 0.45, 1);
+
+  /* depth */
+  --sh:
+    0 1px 2px rgba(90, 45, 10, 0.06), 0 4px 10px rgba(90, 45, 10, 0.06),
+    0 16px 32px -8px rgba(90, 45, 10, 0.14);
+
+  /* type */
+  --f-ui: 'Nunito', ui-rounded, 'Segoe UI', system-ui, sans-serif;
+  --f-disp: 'Baloo 2', 'Nunito', ui-rounded, 'Segoe UI', system-ui, sans-serif;
+  --f-code: 'DM Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  /* radii */
+  --r-s: 10px;
+  --r-m: 16px;
+  --r-l: 24px;
+}

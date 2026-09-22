@@ -1,0 +1,8 @@
+legacy/
+designs/
+dist/
+dev-dist/
+coverage/
+content/
+package-lock.json
+docs/

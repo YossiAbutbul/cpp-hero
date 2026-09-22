@@ -1,0 +1,4 @@
+# Keep LF everywhere so YAML block scalars (C++ code, exact program output)
+# and the byte-for-byte predict checks are identical on every OS.
+* text=auto eol=lf
+*.png binary

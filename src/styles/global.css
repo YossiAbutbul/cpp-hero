@@ -1,0 +1,135 @@
+/* Global base styles (the component styles come in Phase B). */
+@import './tokens.css';
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+/* settings.textSize: s | m | l (set data-ts on <html>) */
+html[data-ts='s'] {
+  font-size: 14.5px;
+}
+html[data-ts='l'] {
+  font-size: 18px;
+}
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-ui);
+  font-size: 1rem;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+button:not(:disabled) {
+  cursor: pointer;
+}
+[hidden] {
+  display: none !important;
+}
+
+/* No visible scrollbars anywhere; scrolling (touch, wheel, keys) still works. */
+html,
+body,
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--sky);
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+
+/* screen-reader only */
+.sr {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+}
+
+code,
+pre {
+  font-family: var(--f-code);
+}
+
+/* Respect the OS setting; the in-app toggle sets data-rm on <html>. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+html[data-rm='1'] *,
+html[data-rm='1'] *::before,
+html[data-rm='1'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* App-shell bits shared by every screen */
+.save-notice {
+  margin: 0;
+  padding: 6px 16px;
+  background: var(--sun-l);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.update-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  max-width: calc(100vw - 32px);
+  background: var(--ink);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: var(--r-m);
+  box-shadow: var(--sh);
+  font-weight: 700;
+}
+.update-prompt button {
+  border: 0;
+  border-radius: var(--r-s);
+  padding: 6px 12px;
+  background: var(--sun);
+  color: var(--ink);
+  font-weight: 800;
+}
