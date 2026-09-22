@@ -46,8 +46,34 @@
         CH.router.go(t.dataset.go, {}, { dir: dir, root: true });
       });
     });
-    U.$('#btnStats').onclick = function () { CH.audio.play('tap'); CH.router.go('stats'); };
-    U.$('#btnSettings').onclick = function () { CH.audio.play('tap'); CH.router.go('settings'); };
+    // Header toggles: open Stats / Settings (expanding from the button); the
+    // icon morphs into an X, and tapping it again (or Esc) closes the panel.
+    var PANELS = { stats: U.$('#btnStats'), settings: U.$('#btnSettings') };
+    function isPanel(n) { return n === 'stats' || n === 'settings'; }
+    function closePanel() { CH.router.back('map', { dir: 'close' }); }
+    Object.keys(PANELS).forEach(function (name) {
+      var btn = PANELS[name];
+      btn.onclick = function () {
+        CH.audio.play('tap');
+        var c = CH.router.current;
+        if (c && c.name === name) { closePanel(); return; }
+        if (c && isPanel(c.name)) CH.router.go(name, {}, { dir: 'fade', replace: true, origin: { el: btn, id: 'hdr-' + name } });
+        else CH.router.go(name, {}, { dir: 'expand', origin: { el: btn, id: 'hdr-' + name } });
+      };
+    });
+    CH.events.on('screen', function (d) {
+      Object.keys(PANELS).forEach(function (name) {
+        var open = d.name === name, btn = PANELS[name], label = name === 'stats' ? 'Stats' : 'Settings';
+        btn.classList.toggle('is-open', open);
+        btn.setAttribute('aria-label', open ? 'Close ' + label.toLowerCase() : label);
+        btn.title = open ? 'Close' : label;
+      });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || U.$('#overlay-root').children.length) return;
+      var c = CH.router.current;
+      if (c && isPanel(c.name)) { e.preventDefault(); closePanel(); }
+    });
     CH.curlo.mount(U.$('#brandMark .brand-c'));
   }
 

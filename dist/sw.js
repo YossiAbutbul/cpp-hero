@@ -17,7 +17,7 @@
  */
 'use strict';
 
-const VERSION = "1.0.0-7b1df4b1";
+const VERSION = "1.0.0-89a7d5b3";
 const SHELL_PREFIX = 'cpphero-shell-';
 const SHELL_CACHE = `${SHELL_PREFIX}${VERSION}`;
 const FONTS_CACHE = 'cpphero-fonts-v1';

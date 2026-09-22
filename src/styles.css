@@ -36,6 +36,9 @@ button{font:inherit;color:inherit}
 [hidden]{display:none!important}
 button:not(:disabled){cursor:pointer}
 input,textarea{font:inherit}
+/* No visible scrollbars anywhere; scrolling (touch, wheel, keys) still works. */
+html,body,*{scrollbar-width:none;-ms-overflow-style:none}
+*::-webkit-scrollbar{display:none;width:0;height:0}
 :focus-visible{outline:3px solid var(--sky);outline-offset:3px;border-radius:12px}
 .sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;margin:-1px;padding:0;border:0}
 .skip-link{position:absolute;left:12px;top:-60px;z-index:100;background:var(--ink);color:#fff;padding:8px 12px;border-radius:10px;font-weight:800}
@@ -100,7 +103,7 @@ button.chip:active{transform:translateY(2px);box-shadow:none}
 /* ---------- stage + screens ---------- */
 .stage{position:relative;flex:1;min-height:0;overflow:hidden;outline:none}
 .screen{position:absolute;inset:0;will-change:transform;background:var(--cream)}
-.scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:6px 16px 32px;scrollbar-width:thin;overscroll-behavior:contain}
+.scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:6px 16px 32px;overscroll-behavior:contain}
 .card{background:var(--card);border-radius:24px;box-shadow:var(--sh);padding:16px;margin-bottom:14px;border:2px solid #fff}
 h1,h2,h3,h4{font-family:var(--f-disp);line-height:1.1;margin:0}
 h2{font-size:1.6rem;font-weight:800}
@@ -325,12 +328,17 @@ p{margin:6px 0}
 
 /* ---------- CODE ---------- */
 .codewrap{margin:8px 0}
-.code{background:#FFFBF4;border:2px solid var(--line);border-radius:18px;overflow-x:auto;padding:10px 0;font-family:var(--f-code);font-size:.86rem;line-height:1.75;position:relative;max-height:60vh;overflow-y:auto}
+.code{background:#FFFBF4;border:2px solid var(--line);border-radius:18px;overflow-x:hidden;padding:10px 0;font-family:var(--f-code);font-size:.86rem;line-height:1.75;position:relative;max-height:60vh;overflow-y:auto}
 .code.is-unsafe{border-color:var(--coral-l);background:#FFF7F7}
-.ln{display:flex;white-space:pre;padding-right:14px;border-left:4px solid transparent;transition:background .25s;min-width:100%;width:max-content;position:relative}
+.ln{display:flex;align-items:flex-start;padding-right:12px;border-left:4px solid transparent;transition:background .25s;width:100%;position:relative}
+/* Code never scrolls sideways: each logical line wraps with a hanging indent
+   (continuation rows start 2ch past the line's own indentation); the line
+   number stays on the first row and highlights cover the whole wrapped line. */
+.ln .cd{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere;padding-left:calc((var(--ind,0) + 2) * 1ch);text-indent:-2ch}
+.ln .cd .lead{display:none}
 button.ln{background:none;border:0;border-left:4px solid transparent;font:inherit;text-align:left;color:inherit;padding:0 14px 0 0;line-height:1.75}
 .code.tappable button.ln:hover:not(:disabled){background:var(--sun-l)}
-.code.tappable button.ln{min-height:34px;align-items:center}
+.code.tappable button.ln{min-height:34px;align-items:center;padding-top:2px;padding-bottom:2px}
 .ln .no{width:30px;flex:none;text-align:right;padding-right:12px;color:#A89D8F;user-select:none}
 .ln.hl{background:var(--sun-l);border-left-color:var(--sun-d)}
 .ln.hl .no{color:var(--ink)}
@@ -340,7 +348,7 @@ button.ln{background:none;border:0;border-left:4px solid transparent;font:inheri
 .ln.flag-ok{background:var(--teal-l);border-left-color:var(--teal-d)}
 .ln.flag-bad{background:var(--coral-l);border-left-color:var(--coral-d)}
 .ln.flag-miss{background:var(--sun-l);border-left-color:var(--sun-d)}
-.lmark{position:sticky;right:6px;background:inherit;border-radius:8px;padding:0 4px;display:inline-flex;align-items:center;gap:4px;margin-left:12px;font-family:var(--f-ui);font-size:.75rem;font-weight:900;white-space:nowrap}
+.lmark{flex:none;align-self:center;border-radius:8px;padding:0 4px;display:inline-flex;align-items:center;gap:4px;margin-left:12px;font-family:var(--f-ui);font-size:.75rem;font-weight:900;white-space:nowrap}
 .lmark .ic{width:18px;height:18px}
 .flag-ok .lmark{color:var(--teal-d)}.flag-bad .lmark{color:var(--coral-d)}.flag-miss .lmark{color:#8A5A00}
 .flagm{color:var(--coral-d)}
@@ -352,15 +360,15 @@ button.ln{background:none;border:0;border-left:4px solid transparent;font:inheri
 .blank{display:inline-block;min-width:3ch;border-bottom:3px dashed var(--tang);color:var(--tang-d);font-weight:500;padding:0 4px;background:var(--tang-l);border-radius:6px 6px 0 0}
 .blank.slot.ok{background:var(--teal-l);border-bottom:3px solid var(--teal-d);color:var(--teal-d)}
 .blank.slot.fixed{background:var(--teal-l);border-bottom:3px solid var(--teal-d);color:var(--teal-d)}
-.blank-in{display:inline-flex;align-items:center;gap:4px;position:relative}
-.fill-in{font-family:var(--f-code);font-size:.95rem;border:0;border-bottom:3px solid var(--tang);background:var(--tang-l);border-radius:8px 8px 0 0;padding:2px 6px;color:var(--ink);min-width:4ch;outline:none;line-height:1.4}
+.blank-in{display:inline-flex;align-items:flex-start;gap:4px;position:relative;max-width:100%;vertical-align:top;text-indent:0}
+.fill-in{font-family:var(--f-code);font-size:.95rem;border:0;border-bottom:3px solid var(--tang);background:var(--tang-l);border-radius:8px 8px 0 0;padding:2px 6px;color:var(--ink);min-width:4ch;max-width:100%;outline:none;line-height:1.4;resize:none;overflow:hidden;text-indent:0;white-space:pre-wrap;overflow-wrap:anywhere;field-sizing:content;height:auto;vertical-align:top;display:block}
 .fill-in:focus{background:#fff;box-shadow:0 0 0 3px var(--sky)}
 .blank-in.ok .fill-in{border-color:var(--teal-d);background:var(--teal-l)}
 .blank-in.bad .fill-in{border-color:var(--coral-d);background:var(--coral-l);text-decoration:line-through}
 .in-mark{width:22px;height:22px}
-.write-box{display:flex;align-items:center;gap:8px;background:var(--console);border-radius:16px;padding:10px 14px;margin-top:10px;position:relative}
+.write-box{display:flex;align-items:flex-start;gap:8px;background:var(--console);border-radius:16px;padding:10px 14px;margin-top:10px;position:relative}
 .write-prompt{font-family:var(--f-code);color:var(--sun);font-weight:500}
-.write-in{flex:1;min-width:0;background:transparent;border:0;color:var(--console-t);font-family:var(--f-code);font-size:1rem;outline:none;padding:6px 0}
+.write-in{flex:1;min-width:0;background:transparent;border:0;color:var(--console-t);font-family:var(--f-code);font-size:1rem;outline:none;padding:6px 0;resize:none;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45;field-sizing:content;min-height:calc(1.45em + 12px)}
 .write-in::placeholder{color:#8F86A8}
 .write-box:focus-within{box-shadow:0 0 0 3px var(--sky)}
 .write-box.ok{box-shadow:0 0 0 3px var(--teal)}
@@ -451,6 +459,8 @@ button.ln{background:none;border:0;border-left:4px solid transparent;font:inheri
 .opt.right .tag{color:var(--teal-d)}.opt.wrong .tag{color:var(--coral-d)}
 .opt:disabled{cursor:default}
 .opt.dim{opacity:.55}
+.opt.tried{opacity:.5;text-decoration:line-through;text-decoration-thickness:2px;box-shadow:0 2px 0 var(--cd)}
+.opt.tried .tag{display:block;color:var(--muted)}
 .opt.on{--c:var(--sky-l);--cd:var(--sky)}
 .opt .tick{display:none;position:absolute;right:8px;bottom:8px;width:22px;height:22px;border-radius:7px;background:var(--sky-d);color:#fff;place-items:center}
 .opt .tick .ic{width:16px;height:16px}
@@ -479,6 +489,10 @@ button.ln{background:none;border:0;border-left:4px solid transparent;font:inheri
 .rscore{font-weight:900;margin-top:2px}
 .rexp{margin:8px 0;font-size:1rem}
 .rshort{font-weight:800;font-size:1.05rem;margin:6px 0 4px}
+.result.soft{background:#FFF1F3}
+.soft-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.soft-btns .pbtn{min-height:52px;font-size:.9rem;padding:12px 8px;letter-spacing:.02em}
+.soft-btns .pbtn .ic{width:18px;height:18px}
 .rpick{display:flex;gap:8px;align-items:flex-start;background:rgba(255,255,255,.75);border-radius:14px;padding:8px 10px;margin:6px 0;font-size:.95rem}
 .rpick .ic{width:20px;height:20px;margin-top:1px}
 .more-wrap{margin:8px 0 2px}
@@ -524,7 +538,7 @@ button.ln{background:none;border:0;border-left:4px solid transparent;font:inheri
 .zone.prog{background:#FFFBF4;border:2px dashed var(--lock-d)}
 .zone.prog.empty::before{content:"Tap lines below to build your program";color:var(--muted);font-weight:700;text-align:center;padding:10px;font-size:.9rem}
 .zone.bank{background:var(--bg);border:2px solid var(--line)}
-.tile{display:flex;align-items:center;gap:8px;background:#fff;border:2px solid var(--line);border-radius:14px;padding:8px 10px;box-shadow:0 3px 0 var(--line);font-family:var(--f-code);font-size:.86rem;white-space:pre;overflow-x:auto;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;transition:box-shadow .15s,background .15s}
+.tile{display:flex;align-items:center;gap:8px;background:#fff;border:2px solid var(--line);border-radius:14px;padding:8px 10px;box-shadow:0 3px 0 var(--line);font-family:var(--f-code);font-size:.86rem;white-space:pre-wrap;overflow-wrap:anywhere;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;transition:box-shadow .15s,background .15s}
 .tile:hover{background:#FFFDF8}
 .tile .grip{color:var(--lock-d);display:grid}
 .tile .grip .ic{width:18px;height:18px}
@@ -855,3 +869,45 @@ button.ln{background:none;border:0;border-left:4px solid transparent;font:inheri
   .xpnum{min-width:64px}
   .nlabel{max-width:110px;font-size:.8rem}
 }
+
+/* ---------- header toggles: icon morphs into an X while its panel is open ---------- */
+.ibtn.morph{position:relative;overflow:hidden}
+.ibtn.morph svg{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;transition:transform .35s var(--spring),opacity .2s}
+.ibtn.morph .ic-x{opacity:0;transform:rotate(-90deg) scale(.4)}
+.ibtn.morph.is-open{background:var(--tang-l);border-color:var(--tang);box-shadow:0 3px 0 var(--tang)}
+.ibtn.morph.is-open .ic-main{opacity:0;transform:rotate(90deg) scale(.4)}
+.ibtn.morph.is-open .ic-x{opacity:1;transform:none}
+
+/* ---------- View Transitions (bottom-tab switches) ---------- */
+::view-transition-old(root),::view-transition-new(root){animation:none}
+::view-transition-group(ch-screen){animation-duration:.4s;animation-timing-function:cubic-bezier(.22,.9,.3,1.05)}
+::view-transition-image-pair(ch-screen){overflow:hidden}
+::view-transition-old(ch-screen){animation:vt-out .24s cubic-bezier(.5,0,.75,0) both}
+::view-transition-new(ch-screen){animation:vt-in .4s cubic-bezier(.22,.9,.3,1.05) both}
+html[data-vt=back]::view-transition-old(ch-screen){animation-name:vt-out-back}
+html[data-vt=back]::view-transition-new(ch-screen){animation-name:vt-in-back}
+@keyframes vt-out{to{transform:translateX(-18%) scale(.94);opacity:0}}
+@keyframes vt-in{from{transform:translateX(26%) scale(.97);opacity:0}70%{transform:translateX(-1.2%) scale(1);opacity:1}}
+@keyframes vt-out-back{to{transform:translateX(18%) scale(.94);opacity:0}}
+@keyframes vt-in-back{from{transform:translateX(-26%) scale(.97);opacity:0}70%{transform:translateX(1.2%) scale(1);opacity:1}}
+
+/* ---------- hearts ---------- */
+.hclock-row{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:900;font-size:1.05rem;margin:4px 0 8px}
+.hclock-row .ic{width:22px;height:22px}
+.hclock{font-variant-numeric:tabular-nums;color:var(--coral-d);background:var(--coral-l);border-radius:10px;padding:1px 8px}
+.heart-rules{list-style:none;padding:0;margin:4px 0 14px;display:grid;gap:8px}
+.heart-rules li{display:flex;gap:10px;align-items:center;background:var(--bg);border-radius:14px;padding:8px 12px;font-weight:700;font-size:.95rem}
+.heart-rules .ic{width:22px;height:22px;color:var(--ink2)}
+
+/* ---------- sheets / dialogs: drag handle ---------- */
+.sheet .grab{width:56px;height:6px;cursor:grab;position:relative}
+.sheet .grab::before{content:"";position:absolute;inset:-12px -20px}
+.sheet h3,.dlg h3,.dlg-curlo{cursor:grab}
+
+/* ---------- boss dramatic entrance ---------- */
+.boss-dim{position:absolute;inset:0;z-index:20;background:rgba(26,20,48,.88);display:grid;place-items:center;cursor:pointer}
+.bd-card{text-align:center;background:var(--coral-d);color:#fff;border-radius:26px;padding:18px 26px;box-shadow:0 8px 0 #9E1F35,0 0 60px rgba(255,90,112,.5)}
+.bd-card small{display:block;font-weight:900;letter-spacing:.14em;text-transform:uppercase;font-size:.8rem;color:var(--sun)}
+.bd-card b{font-family:var(--f-disp);font-weight:800;font-size:2rem;line-height:1.05}
+.lvl-in{max-width:min(360px,100%)}
+.lvl-in .t2,.bubble,.rpick,.rshort,.hint,.accepted{overflow-wrap:anywhere}

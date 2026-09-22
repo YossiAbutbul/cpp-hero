@@ -75,6 +75,23 @@
     ], { duration: 380, easing: 'ease-out', delay: delay || 0, fill: 'backwards', rm: 'fade' });
   };
 
+  /**
+   * Quick staggered lift-in for a list of already-laid-out elements: 20–40ms
+   * apart, everything done within ~350ms. Elements are never left invisible
+   * (fx.anim's timeout fallback drops the effect). Reduced motion: instant.
+   */
+  fx.stagger = function (els, opts) {
+    opts = opts || {};
+    var n = els.length;
+    if (!n || fx.reduced()) return;
+    var dur = opts.duration || 220, budget = opts.total || 350;
+    var step = n > 1 ? Math.max(20, Math.min(40, (budget - dur) / (n - 1))) : 0;
+    els.forEach(function (el, i) {
+      fx.anim(el, [{ opacity: 0, transform: 'translateY(10px) scale(.98)' }, { opacity: 1, transform: 'none' }],
+        { duration: dur, delay: Math.min(i * step, budget - dur), easing: fx.EASE_OUT, fill: 'backwards' });
+    });
+  };
+
   /** Slide up + fade in (explanations, cards). */
   fx.slideUp = function (el, delay) {
     return fx.anim(el, [

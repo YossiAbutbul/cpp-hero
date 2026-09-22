@@ -66,6 +66,28 @@
       taunt(U.pick(b.taunt && b.taunt.length ? b.taunt : ['Ha! Missed me!']));
     }
 
+    /* ---- 0. dramatic entrance: dim + name card slam + shake (tap to skip) ---- */
+    function dim() {
+      if (CH.fx.reduced()) return Promise.resolve();
+      return new Promise(function (resolve) {
+        var ov = U.h('<div class="boss-dim" aria-hidden="true"><div class="bd-card"><small>Boss battle</small><b>' + U.esc(b.name) + '</b></div></div>');
+        s.el.appendChild(ov);
+        var done = false;
+        function end() {
+          if (done) return; done = true;
+          CH.fx.anim(ov, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards', rm: 'keep' }).then(function () { ov.remove(); });
+          setTimeout(function () { ov.remove(); }, 400);
+          resolve();
+        }
+        ov.addEventListener('click', end);
+        CH.audio.play('boss');
+        CH.fx.anim(ov, [{ opacity: 0 }, { opacity: 1 }], { duration: 180, rm: 'keep' });
+        CH.fx.anim(ov.querySelector('.bd-card'), [{ transform: 'scale(2.4) rotate(-8deg)', opacity: 0 }, { transform: 'scale(.94) rotate(1deg)', opacity: 1, offset: 0.6 }, { transform: 'none', opacity: 1 }], { duration: 380, delay: 120, fill: 'backwards', easing: 'ease-out' })
+          .then(function () { CH.fx.shake(s.el, 10); });
+        setTimeout(end, 1150);
+      });
+    }
+
     /* ---- 1. entrance ---- */
     function entrance() {
       var el = U.h('<div class="boss-intro"><div class="boss-stage-in"><div class="boss-big"></div><div class="boss-banner"><small>Boss battle · World ' + world.num + '</small><b>' + U.esc(b.name) + '</b></div></div></div>');
@@ -75,7 +97,6 @@
       if (b.intro) el.appendChild(U.h('<div class="bubble boss-bubble"><b>' + U.esc(b.name) + ':</b> ' + U.md([].concat(b.intro)[0]) + '</div>'));
       el.appendChild(U.h('<p class="muted small center">' + icon('heart') + ' Wrong answers cost a heart. Land ' + U.plural(maxHp, 'hit') + ', then survive the Defense Phase!</p>'));
       var pr = s.card(el, icon('swords') + ' Fight!', 'coral');
-      CH.audio.play('boss');
       var big = el.querySelector('.boss-big'), banner = el.querySelector('.boss-banner');
       CH.fx.anim(big, [{ transform: 'translateY(-120%) scale(.7)', opacity: 0 }, { transform: 'translateY(6%) scale(1.1,.86)', opacity: 1, offset: 0.55 }, { transform: 'translateY(-4%) scale(.96,1.05)', offset: 0.75 }, { transform: 'none', opacity: 1 }], { duration: 900, easing: 'ease-out', rm: 'fade' })
         .then(function () { CH.fx.shake(s.el, 8); });
@@ -109,7 +130,7 @@
     function defensePhase() {
       if (!defense.length) return Promise.resolve();
       var el = U.h('<div class="def-intro"><div class="phase-banner"><small>Phase 2</small><b>Defense!</b></div></div>');
-      el.appendChild(CH.ui.curloSays('The boss is enraged and hurls <b>hostile inputs</b> at us! Harden the code so my shield can block them!', 'bracing').el);
+      el.appendChild(CH.ui.curloSays('Hostile inputs incoming! Harden the code so my shield holds!', 'bracing').el);
       var pr = s.card(el, icon('shield') + ' Shields up!', 'teal');
       drawArt(false);
       taunt('Enough! Eat THIS input!');
@@ -183,7 +204,7 @@
       });
     }
 
-    entrance().then(rounds).then(defensePhase).then(victory).catch(function (e) { if (e && e.message !== 'quit') console.error(e); });
+    dim().then(entrance).then(rounds).then(defensePhase).then(victory).catch(function (e) { if (e && e.message !== 'quit') console.error(e); });
     return s;
   }
 

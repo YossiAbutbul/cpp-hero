@@ -14,6 +14,7 @@
 
   /** Get (and resume) the shared AudioContext. Returns null if unsupported. */
   function ctx() {
+    if (!CH.config.SOUND_ENABLED) return null;   // feature flag: audio fully off
     try {
       if (!ac) {
         var A = window.AudioContext || window.webkitAudioContext;
@@ -142,22 +143,24 @@
   CH.audio = {
     /** Play a named SFX (no-op when sound is off). */
     play: function (name) {
-      if (!settings().sound) return;
+      if (!CH.config.SOUND_ENABLED || !settings().sound) return;
       var f = SFX[name];
       if (f) try { f(); } catch (e) { /* ignore */ }
     },
     names: Object.keys(SFX),
     /** Call after settings change or first gesture. */
     sync: function () {
+      if (!CH.config.SOUND_ENABLED) { stopMusic(); return; }
       if (settings().music && gestured) startMusic(); else stopMusic();
     },
-    unlock: function () { ctx(); }
+    unlock: function () { ctx(); },
+    get enabled() { return !!CH.config.SOUND_ENABLED; }
   };
 
   // First user gesture: create/resume the context and start music if enabled.
   var gestured = false;
   function onGesture() {
-    if (gestured) return;
+    if (gestured || !CH.config.SOUND_ENABLED) return;
     gestured = true;
     ctx();
     CH.audio.sync();

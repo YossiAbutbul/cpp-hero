@@ -11,11 +11,11 @@
   function S() { return CH.store.state; }
   var icon = function (n, c) { return CH.ui.icon(n, c); };
 
-  var STORY = [
+  var STORY = [   // Curlo lines: 15 words max each
     'Hi hi hi! I’m <b>Curlo</b>, a brace-bean: half curly brace <b>{ }</b>, all heart!',
-    'I live in the <b>Codebase</b>. It used to be tidy… but <b>bugs</b> keep sneaking in through sloppy code: gremlins, blobs, golems, and worse.',
-    'Here’s the deal: you learn <b>C++</b> with me, and we write code so solid that no bug can break it. Every boss we beat makes the Codebase safer.',
-    'I’ll explain, cheer, and maybe tell a few terrible jokes. Ready to become a <b>Cpp Hero</b>?'
+    'I live in the <b>Codebase</b>, and sneaky <b>bugs</b> keep breaking in!',
+    'Learn <b>C++</b> with me, and we’ll write code no bug can break.',
+    'I’ll explain, cheer, and tell terrible jokes. Ready, <b>Cpp Hero</b>?'
   ];
 
   function screen() {

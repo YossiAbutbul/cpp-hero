@@ -32,20 +32,23 @@
   };
 
   /** Start a map node (with hearts check + world story intro). */
-  SU.startNode = function (node) {
+  SU.startNode = function (node, originEl) {
     var s = S();
     if ((node.kind === 'lesson' || node.kind === 'boss') && s.hearts.n <= 0) {
       return CH.ui.dialog({
         title: 'Out of hearts', mood: 'worried',
-        html: '<p>' + CH.curlo.line('noHearts') + '</p><p class="muted">Next free heart in <b>' + U.fmtClock(G().nextHeartIn()) + '</b>.</p>',
-        buttons: [{ label: icon('practice') + 'Practice to refill', value: 'p', cls: 'teal' }, { label: 'Later', value: 0, cls: 'ghost' }]
+        html: '<p>' + CH.curlo.line('noHearts') + '</p>' + CH.ui.heartClockHTML() + '<p class="muted small">A 3-question review earns a heart right away.</p>',
+        onMount: CH.ui.bindHeartClock,
+        buttons: [{ label: icon('practice') + 'Earn a heart', value: 'p', cls: 'teal' }, { label: 'Wait for it', value: 0, cls: 'ghost' }]
       }).then(function (v) { if (v === 'p') CH.router.go('practice', { autoReview: true }); });
     }
     var w = node.world;
+    // Expand from the tapped map node (collapses back into it on exit).
+    var tx = originEl && document.body.contains(originEl) ? { dir: 'expand', origin: { el: originEl, id: node.id } } : { dir: 'up' };
     function go() {
-      if (node.kind === 'lesson') CH.router.go('lesson', { id: node.id }, { dir: 'up' });
-      else if (node.kind === 'project') CH.router.go('project', { world: w.id }, { dir: 'up' });
-      else if (node.kind === 'boss') CH.router.go('boss', { world: w.id }, { dir: 'up' });
+      if (node.kind === 'lesson') CH.router.go('lesson', { id: node.id }, tx);
+      else if (node.kind === 'project') CH.router.go('project', { world: w.id }, tx);
+      else if (node.kind === 'boss') CH.router.go('boss', { world: w.id }, tx);
     }
     if (node.kind === 'lesson' && node.i === 0 && !node.done && w.story && w.story.intro) {
       return CH.ui.dialog({ title: 'World ' + w.num + ': ' + w.title, mood: 'celebrate', el: CH.ui.story(w.story.intro), buttons: [{ label: 'Let’s go!', value: 1 }], dismissValue: 0 })
@@ -216,7 +219,7 @@
         else ic = NODE_ICON.cur;
         var stateTxt = st === 'done' ? 'complete' : st === 'cur' ? 'you are here' : st === 'open' ? 'open' : 'locked';
         var best = n.kind === 'lesson' && s.lessons[n.id] ? ', best ' + Math.round((s.lessons[n.id].best || 0) * 100) + '%' : '';
-        html += '<button class="' + cls + '" style="left:' + p.x + 'px;top:' + p.y + 'px" data-i="' + i + '" aria-label="' + U.esc(nodeKindLabel(n) + ': ' + nodeLabel(n) + ', ' + stateTxt + best) + '">' + ic + '</button>';
+        html += '<button class="' + cls + '" style="left:' + p.x + 'px;top:' + p.y + 'px" data-i="' + i + '" data-origin-id="' + U.esc(n.id) + '" aria-label="' + U.esc(nodeKindLabel(n) + ': ' + nodeLabel(n) + ', ' + stateTxt + best) + '">' + ic + '</button>';
         var right = p.o <= 0.05, off = n.kind === 'boss' ? 62 : isCur ? 54 : 48;
         html += '<div class="nlabel ' + st + '" style="top:' + p.y + 'px;' + (right ? 'left:' + (p.x + off) + 'px' : 'right:' + (W - p.x + off) + 'px') + '" aria-hidden="true"><small>' + U.esc(nodeKindLabel(n)) + (n.done ? ' · ' + (n.kind === 'lesson' ? Math.round((s.lessons[n.id].best || 0) * 100) + '%' : 'done') : '') + '</small>' + U.esc(nodeLabel(n)) + '</div>';
         if (isCur) html += '<div class="start-tip" style="left:' + p.x + 'px;top:' + (p.y - (n.kind === 'boss' ? 62 : 52)) + 'px" aria-hidden="true">' + (n.kind === 'boss' ? 'FIGHT!' : 'START') + '</div>';
@@ -264,7 +267,7 @@
     var el = U.h('<div>' + body + '<div class="row"><button class="pbtn ' + (n.kind === 'boss' ? 'coral' : n.done ? 'ghost' : '') + '" data-autofocus>' +
       (n.kind === 'boss' ? icon('swords') + (n.done ? 'Rematch' : 'Fight!') : n.done ? icon('retype') + 'Practice again' : icon('play') + 'Start') + '</button></div></div>');
     var sh = CH.ui.sheet({ title: nodeLabel(n), el: el });
-    el.querySelector('.pbtn').onclick = function () { sh.close(); setTimeout(function () { SU.startNode(n); }, 120); };
+    el.querySelector('.pbtn').onclick = function () { sh.close(); setTimeout(function () { SU.startNode(n, btn); }, 120); };
   }
 
   /* ======================================================================
@@ -551,6 +554,19 @@
      ====================================================================== */
   screens.stats = {
     tab: 'more',
+    onShow: function (el) {
+      // Cards are already laid out; a quick staggered lift-in, then numbers count up and bars fill.
+      var cards = U.$$('.tile-stat, .card', el);
+      CH.fx.stagger(cards, { duration: 200 });
+      var after = CH.fx.reduced() ? 0 : 180;
+      setTimeout(function () {
+        U.$$('.tile-stat .ts-v', el).forEach(function (v) {
+          var m = /^(\D*)(\d+)(\D*)$/.exec(v.textContent);
+          if (m && +m[2] > 0) CH.fx.countUp(v, 0, +m[2], 500, function (n) { return m[1] + n + m[3]; });
+        });
+        U.$$('.sfill[data-p]', el).forEach(function (f) { f.style.transform = 'scaleX(' + f.dataset.p + ')'; });
+      }, after);
+    },
     render: function () {
       var s = S(), c = s.counters;
       var acc = c.correct + c.wrong ? Math.round(100 * c.correct / (c.correct + c.wrong)) : 0;
@@ -582,17 +598,17 @@
         { l: 'Reviews', v: c.reviews, i: 'practice', cls: 'sky' }
       ].forEach(function (t, i) {
         var tile = U.h('<div class="tile-stat ' + t.cls + '"><div class="ts-l">' + icon(t.i) + U.esc(t.l) + '</div><div class="ts-v">' + U.esc(t.v) + '</div></div>');
-        tiles.appendChild(tile); CH.fx.popIn(tile, i * 50);
+        tiles.appendChild(tile);
       });
       var sa = el.querySelector('.skill-acc');
       G().SKILLS.forEach(function (k) {
         var p = perSkill[k], n = p ? p.r + p.w : 0, a = n ? Math.round(100 * p.r / n) : 0;
-        sa.appendChild(U.h('<div class="stat"><span>' + SKILL_NAMES[k] + '</span><div class="sbar" role="meter" aria-label="' + SKILL_NAMES[k] + ' accuracy" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + a + '"><div class="sfill" style="--c:' + SKILL_COLORS[k] + ';transform:scaleX(' + a / 100 + ')"></div></div><span class="snum">' + (n ? a + '%' : '–') + '</span></div>'));
+        sa.appendChild(U.h('<div class="stat"><span>' + SKILL_NAMES[k] + '</span><div class="sbar" role="meter" aria-label="' + SKILL_NAMES[k] + ' accuracy" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + a + '"><div class="sfill" style="--c:' + SKILL_COLORS[k] + '" data-p="' + a / 100 + '"></div></div><span class="snum">' + (n ? a + '%' : '–') + '</span></div>'));
       });
       var wp = el.querySelector('.wprog');
       G().worlds().forEach(function (w) {
         var nodes = G().nodes(w), d = nodes.filter(function (n) { return n.done; }).length;
-        wp.appendChild(U.h('<div class="stat"><span>W' + w.num + '</span><div class="sbar" role="meter" aria-label="World ' + w.num + ' progress" aria-valuemin="0" aria-valuemax="' + nodes.length + '" aria-valuenow="' + d + '"><div class="sfill" style="--c:var(--tang);transform:scaleX(' + (nodes.length ? d / nodes.length : 0) + ')"></div></div><span class="snum">' + d + '/' + nodes.length + '</span></div>'));
+        wp.appendChild(U.h('<div class="stat"><span>W' + w.num + '</span><div class="sbar" role="meter" aria-label="World ' + w.num + ' progress" aria-valuemin="0" aria-valuemax="' + nodes.length + '" aria-valuenow="' + d + '"><div class="sfill" style="--c:var(--tang)" data-p="' + (nodes.length ? d / nodes.length : 0) + '"></div></div><span class="snum">' + d + '/' + nodes.length + '</span></div>'));
       });
       var ag = el.querySelector('.ach-grid');
       G().achDefs().forEach(function (a) {
@@ -618,7 +634,7 @@
         '<div class="eyebrow">Settings</div><h2 class="scr-title">Make it yours</h2>' +
         (CH.store.persistent ? '' : '<div class="notice" role="note">' + icon('info') + '<span>Progress can’t be saved on this device (storage is blocked). Use Export to keep a copy.</span></div>') +
         '<div class="card">' +
-          toggle('sound', 'Sound effects', 'sound') + toggle('music', 'Music', 'music', 'Gentle generated ambient loop') +
+          (CH.config.SOUND_ENABLED ? toggle('sound', 'Sound effects', 'sound') + toggle('music', 'Music', 'music', 'Gentle generated ambient loop') : '') +
           toggle('reduceMotion', 'Reduce motion', 'motion', 'Fades instead of bounces; no confetti') +
           '<div class="set-row"><span class="set-ic">' + icon('text') + '</span><div class="set-t"><b id="lb-ts">Text size</b></div><div class="seg small" role="radiogroup" aria-labelledby="lb-ts">' +
             ['s', 'm', 'l'].map(function (z) { return '<button role="radio" aria-checked="' + (st.textSize === z) + '" data-ts="' + z + '">' + z.toUpperCase() + '</button>'; }).join('') + '</div></div>' +

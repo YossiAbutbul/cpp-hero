@@ -233,11 +233,11 @@
       state.answered = true;
       if (state.hintBtn) state.hintBtn.hidden = true;
       U.$$('.check-btn', sh.actions).forEach(function (b) { b.hidden = true; });
-      var info = (ctx.onAnswer && ctx.onAnswer(res, sh)) || {};
+      var info = o.info || (ctx.onAnswer && ctx.onAnswer(res, sh)) || {};
       var good = res.correct;
       var r = sh.result;
       r.className = 'result show ' + (good ? 'good' : 'bad');
-      var hdr = good ? (res.assisted ? 'Correct (with help)' : 'Correct!') : (res.score != null && res.score > 0 ? 'Almost!' : 'Not quite');
+      var hdr = good ? (res.retried ? 'Got it on try two!' : res.assisted ? 'Correct (with help)' : 'Correct!') : (res.score != null && res.score > 0 ? 'Almost!' : 'Not quite');
       var short = ch.short || firstSentence(ch.explain);
       r.innerHTML = '<div class="rh">' + icon(good ? 'ok' : 'no') + '<span>' + hdr + '</span>' + (info.xpText ? '<span class="rxp">' + U.esc(info.xpText) + '</span>' : '') + '</div>' +
         (res.score != null && res.total ? '<div class="rscore">' + res.right + ' of ' + res.total + ' right</div>' : '') +
@@ -287,6 +287,79 @@
     });
   }
 
+  /* ======================================================================
+     Retry flow (lessons / projects / practice / reviews; never timed rounds
+     or boss rounds). First wrong answer → "Not quite" + feedback on the
+     picked option WITHOUT revealing the answer, with [Try again] and
+     [Show answer]. The heart is lost only on that first wrong answer; a
+     correct retry is "assisted" (small consolation XP, combo stays broken).
+     o: { reveal(), soft(), reset(), pickedWhy, softMsg, visible }
+     ====================================================================== */
+  function retryAllowed(ch, ctx, state) {
+    return !!ctx.allowRetry && !state.retried && ch.type !== 'safe' && ch.type !== 'speed';
+  }
+
+  function conclude(ch, ctx, sh, state, res, detailHTML, o) {
+    o = o || {};
+    if (!res.correct && o.reset && retryAllowed(ch, ctx, state)) return softResult(ch, ctx, sh, state, res, detailHTML, o);
+    if (o.reveal) o.reveal();
+    if (state.retried) {
+      var fin = { correct: res.correct, assisted: true, retried: true, hints: state.hints };
+      var info = (ctx.onAnswer && ctx.onAnswer({ correct: res.correct, assisted: true, retried: true, retry: true, hints: state.hints }, sh)) || {};
+      return showResult(ch, ctx, sh, state, fin, detailHTML, Object.assign({}, o, { info: info }));
+    }
+    return showResult(ch, ctx, sh, state, res, detailHTML, o);
+  }
+
+  function softResult(ch, ctx, sh, state, res, detailHTML, o) {
+    return new Promise(function (resolve) {
+      state.answered = true;
+      state.retried = true;
+      if (state.hintBtn) state.hintBtn.hidden = true;
+      U.$$('.check-btn', sh.actions).forEach(function (b) { b.hidden = true; });
+      var info = (ctx.onAnswer && ctx.onAnswer(res, sh)) || {};
+      if (o.soft) o.soft();
+      var nudge = !o.pickedWhy && !o.softMsg && state.hints === 0 && ch.hints && ch.hints[0] ? ch.hints[0] : '';
+      var r = sh.result;
+      r.className = 'result show bad soft';
+      r.innerHTML = '<div class="rh">' + icon('no') + '<span>Not quite</span>' + (info.xpText ? '<span class="rxp">' + U.esc(info.xpText) + '</span>' : '') + '</div>' +
+        (o.pickedWhy ? '<div class="rpick">' + icon('no') + '<span>' + U.md(o.pickedWhy) + '</span></div>' : '') +
+        (o.softMsg ? '<div class="rpick">' + icon('info') + '<span>' + U.md(o.softMsg) + '</span></div>' : '') +
+        (nudge ? '<div class="rpick">' + icon('bulb') + '<span>' + U.md(nudge) + '</span></div>' : '') +
+        '<div class="soft-btns"><button class="pbtn sun try-btn">' + icon('retype') + 'Try again</button><button class="pbtn ghost show-btn">Show answer</button></div>';
+      var rl = sh.el.querySelector('.react-line');
+      rl.hidden = false;
+      rl.textContent = 'Not quite. Give it another go!';
+      CH.curlo.react(sh.head.curlo, 'worried', 1400);
+      CH.fx.slideUp(r);
+      var tryBtn = r.querySelector('.try-btn'), showBtn = r.querySelector('.show-btn');
+      setTimeout(function () {
+        try { r.scrollIntoView({ block: 'nearest', behavior: CH.fx.reduced() ? 'auto' : 'smooth' }); } catch (e) { /* ignore */ }
+        try { tryBtn.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+      }, 260);
+      tryBtn.onclick = function () {
+        CH.audio.play('pop');
+        tryBtn.disabled = showBtn.disabled = true;
+        CH.fx.anim(r, [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(16px) scale(.96)' }], { duration: 180, fill: 'forwards', rm: 'keep' }).then(function () {
+          CH.fx.cancel(r);
+          r.className = 'result'; r.innerHTML = '';
+          state.answered = false;
+          if (state.hintBtn && !state.hintBtn.disabled) state.hintBtn.hidden = false;
+          U.$$('.check-btn', sh.actions).forEach(function (b) { b.hidden = false; });
+          rl.textContent = 'Try again! No heart lost this time.';
+          CH.curlo.react(sh.head.curlo, 'thinking');
+          o.reset();
+          CH.fx.bounce(sh.body);
+        });
+      };
+      showBtn.onclick = function () {
+        CH.audio.play('tap');
+        if (o.reveal) o.reveal();
+        showResult(ch, ctx, sh, state, { correct: false, assisted: state.assisted, hints: state.hints, shown: true }, detailHTML, Object.assign({}, o, { info: info })).then(resolve);
+      };
+    });
+  }
+
   /** Feedback FX at answer time. */
   function feedback(sh, good, anchor) {
     if (good) {
@@ -333,17 +406,41 @@
     var g = optionGrid(ch.options, { ws: isPredict, mono: mono, single: isHarden });
     sh.body.appendChild(g.el);
     return new Promise(function (resolve) {
+      var tried = [];
       var off = optionKeys(g.buttons, pick, function () { return !state.answered; });
       g.buttons.forEach(function (b, i) { b.onclick = function () { pick(i); }; });
       function pick(i) {
-        if (state.answered) return;
+        if (state.answered || tried.indexOf(i) >= 0) return;
         off();
         var good = i === ch.answer;
-        markOptions(g.buttons, [ch.answer], [i]);
-        if (blank) { blank.textContent = optText(ch.options[ch.answer]); blank.classList.add(good ? 'ok' : 'fixed'); }
         feedback(sh, good, g.buttons[i]);
-        showResult(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints },
-          whyList(ch.options, [ch.answer], [i], { ws: isPredict, mono: mono }), { pickedWhy: optWhy(ch.options[i]) }).then(resolve);
+        conclude(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints },
+          whyList(ch.options, [ch.answer], [i], { ws: isPredict, mono: mono }), {
+            pickedWhy: optWhy(ch.options[i]),
+            reveal: function () {
+              markOptions(g.buttons, [ch.answer], [i]);
+              if (blank) { blank.textContent = optText(ch.options[ch.answer]); blank.classList.add(good ? 'ok' : 'fixed'); }
+            },
+            soft: function () {
+              g.buttons.forEach(function (b) { b.disabled = true; });
+              g.buttons[i].classList.add('wrong');
+              g.buttons[i].querySelector('.tag').textContent = 'Not quite';
+            },
+            reset: function () {
+              tried.push(i);
+              g.buttons.forEach(function (b, k) {
+                var t = tried.indexOf(k) >= 0;
+                b.classList.remove('wrong', 'right', 'dim');
+                b.classList.toggle('tried', t);
+                b.querySelector('.tag').textContent = t ? 'Tried' : '';
+                b.disabled = t;
+                if (t) b.setAttribute('aria-label', (b.getAttribute('aria-label') || '').replace(/ \(already tried\)$/, '') + ' (already tried)');
+              });
+              off = optionKeys(g.buttons, pick, function () { return !state.answered; });
+              var f = g.buttons.filter(function (b) { return !b.disabled; })[0];
+              if (f) try { f.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+            }
+          }).then(resolve);
       }
     });
   }
@@ -352,69 +449,146 @@
   /* ---- fill: one inline blank in the code ---- */
   R.fill = function (ch, ctx, sh, state) {
     var inputId = U.uid('fill');
-    var codeWrap = CH.code.block(ch.code, { unsafe: !!ch.unsafe, blankHTML: '<span class="blank-in"><input id="' + inputId + '" class="fill-in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Fill in the blank"></span>' });
+    var codeWrap = CH.code.block(ch.code, { unsafe: !!ch.unsafe, blankHTML: '<span class="blank-in"><textarea id="' + inputId + '" class="fill-in" rows="1" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Fill in the blank"></textarea></span>' });
     sh.body.appendChild(codeWrap);
-    var input = codeWrap.querySelector('input');
+    var input = codeWrap.querySelector('textarea.fill-in');
     if (!input) {
       // Safety net: blank not found in the code → offer a separate input.
-      var fb = U.h('<div class="write-box"><label for="' + inputId + '" class="sr">Fill in the blank</label><span class="write-prompt" aria-hidden="true">___</span><span class="blank-in"><input id="' + inputId + '" class="write-in fill-in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></span></div>');
+      var fb = U.h('<div class="write-box"><label for="' + inputId + '" class="sr">Fill in the blank</label><span class="write-prompt" aria-hidden="true">___</span><span class="blank-in"><textarea id="' + inputId + '" class="write-in fill-in" rows="1" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea></span></div>');
       sh.body.appendChild(fb);
-      input = fb.querySelector('input');
+      input = fb.querySelector('textarea');
     }
     input.placeholder = ch.placeholder || '???';
-    function size() { input.style.width = Math.max(4, Math.min(40, (input.value || input.placeholder).length + 1)) + 'ch'; }
-    size();
-    sh.body.appendChild(U.h('<p class="subprompt small muted">Type into the highlighted blank, then press Check (or Enter).</p>'));
+    var size = autoWidth(input);
+    var grow = autoGrow(input);
+    sh.body.appendChild(U.h('<p class="subprompt small muted">Type in the blank, then Check (or Enter).</p>'));
     var btn = checkBtn();
     sh.actions.appendChild(btn);
     setTimeout(function () { try { input.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 400);
     return new Promise(function (resolve) {
-      input.addEventListener('input', function () { size(); btn.disabled = !input.value.trim(); });
-      input.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !btn.disabled && !state.answered) { e.preventDefault(); submit(); } });
+      input.addEventListener('input', function () {
+        if (/\n/.test(input.value)) input.value = input.value.replace(/\n/g, ' ');
+        size(); grow(); btn.disabled = !input.value.trim();
+      });
+      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); if (!btn.disabled && !state.answered) submit(); } });
       btn.onclick = submit;
+      function mark(ok) {
+        input.readOnly = true;
+        input.parentNode.classList.remove('ok', 'bad');
+        input.parentNode.classList.add(ok ? 'ok' : 'bad');
+        var m = input.parentNode.querySelector('.in-mark'); if (m) m.remove();
+        input.parentNode.insertAdjacentHTML('beforeend', icon(ok ? 'ok' : 'no', 'in-mark'));
+      }
       function submit() {
         if (state.answered) return;
         var good = matches(input.value, ch);
-        input.readOnly = true;
-        input.parentNode.classList.add(good ? 'ok' : 'bad');
-        input.parentNode.insertAdjacentHTML('beforeend', icon(good ? 'ok' : 'no', 'in-mark'));
         feedback(sh, good, input);
         var det = '<div class="accepted"><b>' + (good ? 'Your answer:' : 'You typed:') + '</b> <code class="i">' + U.esc(input.value) + '</code>' +
           (good ? '' : '<br><b>Correct:</b> <code class="i">' + U.esc(ch.accept[0]) + '</code>') +
           (ch.accept.length > 1 ? '<br><span class="muted small">Also accepted: ' + ch.accept.slice(1).map(function (a) { return '<code class="i">' + U.esc(a) + '</code>'; }).join(' ') + '</span>' : '') + '</div>';
-        showResult(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, { visible: good ? '' : '<div class="rpick">' + icon('ok') + '<span>Correct: <code class="i">' + U.esc(ch.accept[0]) + '</code></span></div>' }).then(resolve);
+        conclude(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, {
+          visible: good ? '' : '<div class="rpick">' + icon('ok') + '<span>Correct: <code class="i">' + U.esc(ch.accept[0]) + '</code></span></div>',
+          softMsg: 'Close! Check spelling, symbols and semicolons.',
+          reveal: function () { mark(good); },
+          soft: function () { mark(false); },
+          reset: function () {
+            input.readOnly = false;
+            input.parentNode.classList.remove('bad');
+            var m = input.parentNode.querySelector('.in-mark'); if (m) m.remove();
+            btn.disabled = !input.value.trim();
+            try { input.focus({ preventScroll: true }); input.select(); } catch (e) { /* ignore */ }
+          }
+        }).then(resolve);
       }
     });
   };
+
+  /**
+   * Make an <input> fit the longer of its value and placeholder. Uses CSS
+   * `field-sizing: content` where supported; otherwise sets an explicit width
+   * that includes padding + border (the font is monospace, so ch is exact).
+   */
+  var FIELD_SIZING = !!(window.CSS && CSS.supports && CSS.supports('field-sizing', 'content'));
+  function autoWidth(input) {
+    function size() {
+      if (FIELD_SIZING) return;
+      var n = Math.max((input.value || '').length, (input.placeholder || '').length, 3) + 1;
+      var cs = getComputedStyle(input);
+      var extra = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0);
+      input.style.width = 'calc(' + n + 'ch + ' + Math.ceil(extra) + 'px)';
+    }
+    function minW() {
+      var cs = getComputedStyle(input);
+      var extra = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0);
+      input.style.minWidth = 'min(100%, calc(' + (Math.max((input.placeholder || '').length, 3) + 1) + 'ch + ' + Math.ceil(extra) + 'px))';
+    }
+    minW();
+    size();
+    setTimeout(size, 0);
+    return size;
+  }
+
+  /** Auto-grow a single-line textarea in height (wraps instead of scrolling sideways). */
+  function autoGrow(ta) {
+    function grow() {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    }
+    ta.addEventListener('input', grow);
+    setTimeout(grow, 0);
+    return grow;
+  }
 
   /* ---- write: type a whole line ---- */
   R.write = function (ch, ctx, sh, state) {
     var cw = codeFor(ch); if (cw) sh.body.appendChild(cw);
     var id = U.uid('write');
     var box = U.h('<div class="write-box"><label for="' + id + '" class="sr">Your line of C++</label>' +
-      '<span class="write-prompt" aria-hidden="true">&gt;</span><input id="' + id + '" class="write-in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>');
-    var input = box.querySelector('input');
+      '<span class="write-prompt" aria-hidden="true">&gt;</span><textarea id="' + id + '" class="write-in" rows="1" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea></div>');
+    var input = box.querySelector('textarea');
     input.placeholder = ch.placeholder || 'Type your C++ here';
     sh.body.appendChild(box);
+    autoGrow(input);
     sh.body.appendChild(U.h('<p class="subprompt small muted">Spacing doesn’t matter. Press Enter or Check.</p>'));
     var btn = checkBtn();
     sh.actions.appendChild(btn);
     setTimeout(function () { try { input.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 400);
     return new Promise(function (resolve) {
-      input.addEventListener('input', function () { btn.disabled = !input.value.trim(); });
-      input.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !btn.disabled && !state.answered) { e.preventDefault(); submit(); } });
+      input.addEventListener('input', function () {
+        if (/\n/.test(input.value)) input.value = input.value.replace(/\n/g, ' ');   // one logical line
+        btn.disabled = !input.value.trim();
+      });
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); if (!btn.disabled && !state.answered) submit(); }
+      });
       btn.onclick = submit;
+      function mark(ok) {
+        input.readOnly = true;
+        box.classList.remove('ok', 'bad');
+        box.classList.add(ok ? 'ok' : 'bad');
+        var m = box.querySelector('.in-mark'); if (m) m.remove();
+        box.insertAdjacentHTML('beforeend', icon(ok ? 'ok' : 'no', 'in-mark'));
+      }
       function submit() {
         if (state.answered) return;
         var good = matches(input.value, ch);
-        input.readOnly = true;
-        box.classList.add(good ? 'ok' : 'bad');
-        box.insertAdjacentHTML('beforeend', icon(good ? 'ok' : 'no', 'in-mark'));
         feedback(sh, good, box);
         var sample = (ch.accept && ch.accept[0]) || '';
         var det = '<div class="accepted"><b>You wrote:</b> <code class="i">' + U.esc(input.value) + '</code>' +
           (sample ? '<br><b>' + (good ? 'Model answer:' : 'One correct answer:') + '</b> <code class="i">' + U.esc(sample) + '</code>' : '') + '</div>';
-        showResult(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, { visible: good || !sample ? '' : '<div class="rpick">' + icon('ok') + '<span>One answer: <code class="i">' + U.esc(sample) + '</code></span></div>' }).then(resolve);
+        conclude(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, {
+          visible: good || !sample ? '' : '<div class="rpick">' + icon('ok') + '<span>One answer: <code class="i">' + U.esc(sample) + '</code></span></div>',
+          softMsg: 'Almost! Check names, symbols and the semicolon.',
+          reveal: function () { mark(good); },
+          soft: function () { mark(false); },
+          reset: function () {
+            input.readOnly = false;
+            box.classList.remove('bad');
+            var m = box.querySelector('.in-mark'); if (m) m.remove();
+            btn.disabled = !input.value.trim();
+            try { input.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+          }
+        }).then(resolve);
       }
     });
   };
@@ -582,17 +756,27 @@
         if (state.answered) return;
         var got = tiles(prog).map(function (t) { return t._item.t; });
         var good = got.length === ch.lines.length && got.every(function (t, i) { return t.trim() === ch.lines[i].trim(); });
-        tiles(prog).forEach(function (t, i) {
-          var ok = ch.lines[i] != null && t._item.t.trim() === ch.lines[i].trim();
-          t.classList.add(ok ? 'ok' : 'bad');
-          t.querySelector('.tmark').innerHTML = icon(ok ? 'ok' : 'no');
-          t.setAttribute('aria-label', t._item.t.trim() + (ok ? ' (correct position)' : ' (wrong position)'));
-        });
+        var inPlace = tiles(prog).filter(function (t, i) { return ch.lines[i] != null && t._item.t.trim() === ch.lines[i].trim(); }).length;
         U.$$('.tile', wrap).forEach(function (t) { t.tabIndex = -1; });
         feedback(sh, good, prog);
         var det = '<div class="accepted"><b>Correct order:</b><ol class="ans-lines">' + ch.lines.map(function (l) { return '<li><code class="i">' + U.esc(l.trim()) + '</code></li>'; }).join('') + '</ol>' +
           (hasBank ? '<span class="muted small">Not needed: ' + ch.distractors.map(function (d) { return '<code class="i">' + U.esc(d.trim()) + '</code>'; }).join(' ') + '</span>' : '') + '</div>';
-        showResult(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det).then(resolve);
+        conclude(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, {
+          softMsg: inPlace + ' of ' + ch.lines.length + ' lines are in the right spot' + (hasBank && got.length !== ch.lines.length ? ', and the line count is off.' : '.'),
+          reveal: function () {
+            tiles(prog).forEach(function (t, i) {
+              var ok = ch.lines[i] != null && t._item.t.trim() === ch.lines[i].trim();
+              t.classList.add(ok ? 'ok' : 'bad');
+              t.querySelector('.tmark').innerHTML = icon(ok ? 'ok' : 'no');
+              t.setAttribute('aria-label', t._item.t.trim() + (ok ? ' (correct position)' : ' (wrong position)'));
+            });
+          },
+          reset: function () {
+            U.$$('.tile', wrap).forEach(function (t) { t.tabIndex = 0; });
+            update();
+            var f = wrap.querySelector('.tile'); if (f) try { f.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+          }
+        }).then(resolve);
       };
     });
   };
@@ -606,43 +790,84 @@
     var lineWrong = false;
     return new Promise(function (resolve) {
       var lines = U.$$('.ln', cw);
+      var target = lines[ch.bugLine];
+      function flagTarget() {
+        if (target && !target.classList.contains('flag-ok')) { target.classList.add('flag-ok'); target.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('bug') + '<b>Bug here</b></span>'); }
+      }
+      function clearMarks(ln) { ln.classList.remove('flag-bad', 'flag-ok'); var m = ln.querySelector('.lmark'); if (m) m.remove(); }
       lines.forEach(function (ln) {
         ln.onclick = function () {
           if (state.answered || state.lineChosen) return;
           state.lineChosen = true;
           var i = +ln.dataset.l, ok = i === ch.bugLine;
           lines.forEach(function (x) { x.disabled = true; });
-          var target = lines[ch.bugLine];
           if (ok) {
             ln.classList.add('flag-ok');
             ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('ok') + '<b>Found it!</b></span>');
             CH.audio.play('select'); CH.fx.bounce(ln);
-          } else {
-            lineWrong = true;
-            ln.classList.add('flag-bad');
-            ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('no') + '<b>Not this one</b></span>');
-            if (target) { target.classList.add('flag-ok'); target.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('bug') + '<b>Bug here</b></span>'); }
-            CH.audio.play('wrong'); CH.fx.shake(ln, 6);
+            fixStep();
+            return;
           }
-          step.innerHTML = icon('wand') + ' <b>Step 2:</b> choose the fix for line ' + (ch.bugLine + 1) + '.';
-          var g = optionGrid(ch.options, { mono: true, single: true });
-          sh.body.appendChild(g.el);
-          CH.fx.slideUp(g.el);
-          var off = optionKeys(g.buttons, pick, function () { return !state.answered; });
-          g.buttons.forEach(function (b, k) { b.onclick = function () { pick(k); }; });
-          setTimeout(function () { try { g.buttons[0].focus({ preventScroll: true }); g.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { /* ignore */ } }, 200);
-          function pick(k) {
-            if (state.answered) return;
-            off();
-            var fixOK = k === ch.answer, good = fixOK && !lineWrong;
-            markOptions(g.buttons, [ch.answer], [k]);
-            feedback(sh, good, g.buttons[k]);
-            var det = (lineWrong ? '<div class="accepted">' + icon('bug') + ' The bug was on <b>line ' + (ch.bugLine + 1) + '</b>.' + (fixOK ? ' You picked the right fix, though!' : '') + '</div>' : '') +
-              whyList(ch.options, [ch.answer], [k], { rightLabel: 'The fix.', mono: true });
-            showResult(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, { pickedWhy: optWhy(ch.options[k]), visible: lineWrong ? '<div class="rpick">' + icon('bug') + '<span>The bug was on <b>line ' + (ch.bugLine + 1) + '</b>.</span></div>' : '' }).then(resolve);
+          ln.classList.add('flag-bad');
+          ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('no') + '<b>Not this one</b></span>');
+          if (retryAllowed(ch, ctx, state)) {
+            // Wrong line: a retryable miss (don't reveal where the bug is yet).
+            feedback(sh, false, ln);
+            conclude(ch, ctx, sh, state, { correct: false, assisted: state.assisted, hints: state.hints },
+              '<div class="accepted">' + icon('bug') + ' The bug was on <b>line ' + (ch.bugLine + 1) + '</b>.</div>' + whyList(ch.options, [ch.answer], [], { rightLabel: 'The fix.', mono: true }), {
+                softMsg: 'That line is fine. Look for what could break.',
+                reveal: flagTarget,
+                reset: function () {
+                  clearMarks(ln);
+                  lines.forEach(function (x) { x.disabled = false; });
+                  state.lineChosen = false;
+                  try { lines[0].focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+                }
+              }).then(resolve);
+            return;
           }
+          lineWrong = true;
+          flagTarget();
+          CH.audio.play('wrong'); CH.fx.shake(ln, 6);
+          fixStep();
         };
       });
+      function fixStep() {
+        step.innerHTML = icon('wand') + ' <b>Step 2:</b> choose the fix for line ' + (ch.bugLine + 1) + '.';
+        var g = optionGrid(ch.options, { mono: true, single: true });
+        sh.body.appendChild(g.el);
+        CH.fx.slideUp(g.el);
+        var tried = [];
+        var off = optionKeys(g.buttons, pick, function () { return !state.answered; });
+        g.buttons.forEach(function (b, k) { b.onclick = function () { pick(k); }; });
+        setTimeout(function () { try { g.buttons[0].focus({ preventScroll: true }); g.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { /* ignore */ } }, 200);
+        function pick(k) {
+          if (state.answered || tried.indexOf(k) >= 0) return;
+          off();
+          var fixOK = k === ch.answer, good = fixOK && !lineWrong;
+          feedback(sh, good, g.buttons[k]);
+          var det = (lineWrong ? '<div class="accepted">' + icon('bug') + ' The bug was on <b>line ' + (ch.bugLine + 1) + '</b>.' + (fixOK ? ' You picked the right fix, though!' : '') + '</div>' : '') +
+            whyList(ch.options, [ch.answer], [k], { rightLabel: 'The fix.', mono: true });
+          conclude(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, {
+            pickedWhy: optWhy(ch.options[k]),
+            visible: lineWrong ? '<div class="rpick">' + icon('bug') + '<span>The bug was on <b>line ' + (ch.bugLine + 1) + '</b>.</span></div>' : '',
+            reveal: function () { markOptions(g.buttons, [ch.answer], [k]); },
+            soft: function () { g.buttons.forEach(function (b) { b.disabled = true; }); g.buttons[k].classList.add('wrong'); g.buttons[k].querySelector('.tag').textContent = 'Not quite'; },
+            reset: lineWrong ? null : function () {
+              tried.push(k);
+              g.buttons.forEach(function (b, j) {
+                var t = tried.indexOf(j) >= 0;
+                b.classList.remove('wrong'); b.classList.toggle('tried', t);
+                b.querySelector('.tag').textContent = t ? 'Tried' : '';
+                b.disabled = t;
+              });
+              off = optionKeys(g.buttons, pick, function () { return !state.answered; });
+              var f = g.buttons.filter(function (b) { return !b.disabled; })[0];
+              if (f) try { f.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+            }
+          }).then(resolve);
+        }
+      }
     });
   };
 
@@ -676,14 +901,18 @@
         if (state.answered) return;
         var D = ch.dangerous || [];
         var good = flagged.length === D.length && D.every(function (i) { return flagged.indexOf(i) >= 0; });
-        lines.forEach(function (ln) {
-          var i = +ln.dataset.l, isD = D.indexOf(i) >= 0, isF = flagged.indexOf(i) >= 0;
-          ln.disabled = true;
-          var m = ln.querySelector('.lmark'); if (m) m.remove();
-          if (isD && isF) { ln.classList.add('flag-ok'); ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('ok') + '<b>Caught</b></span>'); }
-          else if (isD) { ln.classList.add('flag-miss'); ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('alert') + '<b>Missed</b></span>'); }
-          else if (isF) { ln.classList.add('flag-bad'); ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('no') + '<b>Safe</b></span>'); }
-        });
+        var caught = D.filter(function (i) { return flagged.indexOf(i) >= 0; }).length;
+        var falseFlags = flagged.filter(function (i) { return D.indexOf(i) < 0; }).length;
+        lines.forEach(function (ln) { ln.disabled = true; });
+        function reveal() {
+          lines.forEach(function (ln) {
+            var i = +ln.dataset.l, isD = D.indexOf(i) >= 0, isF = flagged.indexOf(i) >= 0;
+            var m = ln.querySelector('.lmark'); if (m) m.remove();
+            if (isD && isF) { ln.classList.add('flag-ok'); ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('ok') + '<b>Caught</b></span>'); }
+            else if (isD) { ln.classList.add('flag-miss'); ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('alert') + '<b>Missed</b></span>'); }
+            else if (isF) { ln.classList.add('flag-bad'); ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('no') + '<b>Safe</b></span>'); }
+          });
+        }
         feedback(sh, good, cw);
         var notes = ch.lineNotes || {};
         var keys = Object.keys(notes).map(Number).sort(function (a, b) { return a - b; });
@@ -691,7 +920,11 @@
           var isD = D.indexOf(i) >= 0;
           return '<li class="' + (isD ? 'nope' : 'yes') + '">' + icon(isD ? 'alert' : 'ok') + '<div><code>Line ' + (i + 1) + '</code><span class="wl"><b>' + (isD ? 'Dangerous.' : 'Fine.') + '</b> ' + U.md(notes[i]) + '</span></div></li>';
         }).join('') + '</ul>';
-        showResult(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det).then(resolve);
+        conclude(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, {
+          softMsg: 'You caught ' + caught + ' of ' + D.length + ' dangerous lines' + (falseFlags ? ' and flagged ' + U.plural(falseFlags, 'safe line') + '.' : '.'),
+          reveal: reveal,
+          reset: function () { lines.forEach(function (ln) { ln.disabled = false; }); try { lines[0].focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+        }).then(resolve);
       };
     });
   };
@@ -723,11 +956,20 @@
         off();
         var A = ch.answers || [];
         var good = picked.length === A.length && A.every(function (i) { return picked.indexOf(i) >= 0; });
-        g.buttons.forEach(function (b) { b.classList.remove('on'); });
-        markOptions(g.buttons, A, picked);
+        var snapshot = picked.slice();
         feedback(sh, good, g.el);
-        showResult(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints },
-          whyList(ch.options, A, picked, { rightLabel: 'Exposes the bug.', mono: true })).then(resolve);
+        g.buttons.forEach(function (b) { b.disabled = true; });
+        conclude(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints },
+          whyList(ch.options, A, snapshot, { rightLabel: 'Exposes the bug.', mono: true }), {
+            softMsg: 'Not quite: a pick is off, or one is missing.',
+            reveal: function () { g.buttons.forEach(function (b) { b.classList.remove('on'); }); markOptions(g.buttons, A, snapshot); },
+            reset: function () {
+              g.buttons.forEach(function (b) { b.disabled = false; });
+              off = optionKeys(g.buttons, toggle, function () { return !state.answered; });
+              btn.disabled = !picked.length;
+              try { g.buttons[0].focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+            }
+          }).then(resolve);
       };
     });
   };

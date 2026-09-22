@@ -75,6 +75,9 @@
       var t = toks[i][0], v = toks[i][1], part = v.slice(0, left);
       left -= part.length;
       if (t === 'blank') body += blankHTML != null ? blankHTML : '<span class="blank" aria-label="blank">___</span>';
+      // Leading indentation is drawn with padding (hanging indent), so the
+      // spaces themselves are kept in the DOM (copy/paste) but not rendered.
+      else if (t === 'ws' && i === 0) body += '<span class="lead">' + U.esc(part) + '</span>';
       else if (t === 'ws' || t === 'id') body += U.esc(part);
       else body += '<span class="t-' + t + '">' + U.esc(part) + '</span>';
     }
@@ -103,10 +106,12 @@
     var el = U.h('<div class="code' + (opts.unsafe ? ' is-unsafe' : '') + (opts.tappable ? ' tappable' : '') + '" role="' + (opts.tappable ? 'group' : 'region') + '" aria-label="' + U.esc(opts.label || (opts.unsafe ? 'Unsafe C++ code' : 'C++ code')) + '"></div>');
     lines.forEach(function (ln, i) {
       var added = other && ln.trim() && other.indexOf(ln.trim()) < 0;
-      var inner = '<span class="no" aria-hidden="true">' + (i + 1) + '</span><span class="cd">' + (lineHTML(ln, null, opts.blankHTML) || ' ') + '</span>' + (added ? '<span class="dmark" aria-label="changed line">+</span>' : '');
+      // Wrapped lines get a hanging indent: continuation rows start 2ch past the line's own indentation.
+      var ind = (/^[ \t]*/.exec(ln)[0] || '').replace(/\t/g, '    ').length;
+      var inner = '<span class="no" aria-hidden="true">' + (i + 1) + '</span><span class="cd" style="--ind:' + ind + '">' + (lineHTML(ln, null, opts.blankHTML) || ' ') + '</span>' + (added ? '<span class="dmark" aria-label="changed line">+</span>' : '');
       var row = opts.tappable
         ? '<button type="button" class="ln" data-l="' + i + '" aria-pressed="false" aria-label="Line ' + (i + 1) + ': ' + U.esc(ln.trim() || 'blank line') + '">' + inner + '</button>'
-        : '<div class="ln' + (added ? ' added' : '') + '" data-l="' + i + '">' + inner + '</div>';
+        : '<div class="ln' + (added ? ' added' : '') + (/___/.test(ln) ? ' has-blank' : '') + '" data-l="' + i + '">' + inner + '</div>';
       el.insertAdjacentHTML('beforeend', row);
     });
     wrap.appendChild(el);

@@ -136,20 +136,37 @@
   };
 
   /* ---- HUD sheets ---- */
+  /** "Next heart in mm:ss" line; pair with ui.bindHeartClock(root) to keep it live. */
+  ui.heartClockHTML = function () {
+    var secs = CH.game.nextHeartIn();
+    if (S().hearts.n >= S().hearts.max) return '<p class="hclock-row">' + ui.icon('heart') + ' Hearts are full!</p>';
+    return '<p class="hclock-row">' + ui.icon('clock') + ' Next heart in <b class="hclock">' + U.fmtClock(secs) + '</b></p>';
+  };
+  ui.bindHeartClock = function (root) {
+    var t = setInterval(function () {
+      if (!document.body.contains(root)) return clearInterval(t);
+      CH.game.regenHearts();
+      var c = root.querySelector('.hclock');
+      if (c) c.textContent = U.fmtClock(CH.game.nextHeartIn());
+      var hs = root.querySelector('.big-hearts');
+      if (hs) hs.innerHTML = ui.heartsHTML(S().hearts.n, S().hearts.max);
+    }, 1000);
+  };
+
   ui.heartsSheet = function () {
-    var s = S(), secs = CH.game.nextHeartIn();
+    var s = S();
     var el = U.h('<div><div class="big-hearts">' + ui.heartsHTML(s.hearts.n, s.hearts.max) + '</div>' +
-      '<p class="center">' + (s.hearts.n >= s.hearts.max ? 'Full hearts! A wrong answer in a lesson or boss fight costs one.' :
-        'Next heart in <b class="hclock">' + U.fmtClock(secs) + '</b>. Hearts refill 1 every 30 minutes.') + '</p>' +
-      '<p class="center muted">Finish a quick <b>practice review</b> to earn a heart right away.</p>' +
+      '<div class="center">' + ui.heartClockHTML() + '</div>' +
+      '<ul class="heart-rules">' +
+        '<li>' + ui.icon('no') + '<span>A wrong <b>first try</b> costs one heart. Retries are free.</span></li>' +
+        '<li>' + ui.icon('clock') + '<span>Hearts refill <b>1 every 30 minutes</b>.</span></li>' +
+        '<li>' + ui.icon('practice') + '<span>A quick <b>practice review</b> earns one now.</span></li>' +
+        '<li>' + ui.icon('ok') + '<span>At zero, practice still works. Never stuck!</span></li>' +
+      '</ul>' +
       '<div class="row"><button class="pbtn teal" data-a="review">' + ui.icon('practice') + 'Practice review</button></div></div>');
     var sh = ui.sheet({ title: 'Hearts', el: el });
     el.querySelector('[data-a=review]').onclick = function () { sh.close(); CH.router.go('practice', { autoReview: true }); };
-    var t = setInterval(function () {
-      var c = el.querySelector('.hclock');
-      if (!document.body.contains(el)) return clearInterval(t);
-      if (c) c.textContent = U.fmtClock(CH.game.nextHeartIn());
-    }, 1000);
+    ui.bindHeartClock(el);
   };
 
   ui.streakSheet = function () {
@@ -184,74 +201,164 @@
   var screens = (CH.screens = CH.screens || {});
   var cur = null, stack = [];
 
+  /*
+   * Motion system for screens (all transform / opacity / clip-path, <= ~420ms,
+   * interruptible, reduced motion = instant crossfade):
+   *   'expand'   circular clip-path reveal from opts.origin (map node, header
+   *              button) into the full screen; remembered so that leaving
+   *              ('down'/'close') collapses back into the same element.
+   *   1 / -1     direction-aware horizontal slide + slight scale/fade with a
+   *              spring settle (bottom tabs). Uses the View Transitions API when
+   *              available, WAAPI otherwise.
+   *   'up'       card rises from the bottom (sessions without an origin).
+   *   'down'     card drops away (leaving a session without an origin).
+   *   'fade'     quick crossfade.
+   */
+  var vtActive = null, origin = null;
+
   CH.router = {
-    /** Navigate. opts: { dir: 1|-1|'up'|'zoom'|'fade', replace: bool, root: bool } */
+    /** Navigate. opts: { dir, origin: {el, id}, replace, root } */
     go: function (name, params, opts) {
       opts = opts || {};
       var def = screens[name];
       if (!def) { console.error('[router] unknown screen', name); return; }
       var stage = U.$('#stage');
       var prev = cur;
+      // Interruptible: finish any in-flight transition instantly.
+      if (vtActive) { try { vtActive.skipTransition(); } catch (e) { /* ignore */ } vtActive = null; }
+      U.$$('.screen', stage).forEach(function (s) { if (!prev || s !== prev.el) s.remove(); });
+      if (prev) { CH.fx.cancel(prev.el); prev.el.style.clipPath = ''; prev.el.style.zIndex = ''; }
       if (prev && prev.def.onHide) try { prev.def.onHide(prev.el); } catch (e) { console.error(e); }
       var el;
       try { el = def.render(params || {}); }
       catch (e) { console.error('[router] render failed for', name, e); el = U.h('<section class="screen"><div class="scroll"><div class="card"><h3>Oops</h3><p>Something went wrong loading this screen.</p><button class="pbtn" onclick="CH.router.go(\'map\',{}, {root:true})">Back to map</button></div></div></section>'); }
       el.classList.add('screen', 'on');
       el.setAttribute('data-screen', name);
-      stage.appendChild(el);
 
       if (opts.root) stack = [];
-      else if (prev && !opts.replace) stack.push({ name: prev.name, params: prev.params });
+      else if (prev && !opts.replace) stack.push({ name: prev.name, params: prev.params, origin: origin });
       cur = { name: name, params: params || {}, el: el, def: def };
 
-      // Chrome: immersive screens hide the top bar, HUD and tab bar.
-      var app = U.$('#app');
-      app.classList.toggle('immersive', def.chrome === 'immersive');
-      U.$$('.tab').forEach(function (t) {
-        if (t.dataset.go === (def.tab || name)) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
-      });
-      if (def.chrome !== 'immersive') ui.renderHUD();
+      var dir = opts.dir || 1;
+      var rm = CH.fx.reduced();
+      var o = opts.origin && opts.origin.el ? pointIn(opts.origin.el, stage) : null;
+      if (dir === 'expand' && !o) dir = 'up';
+      if (dir === 'expand' || (opts.origin && opts.origin.id)) origin = { id: opts.origin.id };
+      var collapseTo = null;
+      if ((dir === 'down' || dir === 'close') && origin) collapseTo = origin;
+      if (dir === 'down' || dir === 'close') origin = opts.keepOrigin ? origin : null;
 
-      transition(prev && prev.el, el, opts.dir || 1);
-      if (def.onShow) try { def.onShow(el, params || {}); } catch (e) { console.error(e); }
-      // Move focus to the new screen for keyboard / screen-reader users.
-      var focusT = el.querySelector('[data-autofocus]') || el.querySelector('h1,h2') || el;
-      if (focusT) { if (!focusT.hasAttribute('tabindex') && !focusT.matches('button, a[href], input, select, textarea')) focusT.setAttribute('tabindex', '-1'); try { focusT.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
-      E.emit('screen', { name: name });
+      var mounted = false;
+      function mount() {
+        if (mounted) return;
+        mounted = true;
+        stage.appendChild(el);
+        var app = U.$('#app');
+        app.classList.toggle('immersive', def.chrome === 'immersive');
+        U.$$('.tab').forEach(function (t) {
+          if (t.dataset.go === (def.tab || name)) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+        });
+        if (def.chrome !== 'immersive') ui.renderHUD();
+        if (def.onShow) try { def.onShow(el, params || {}); } catch (e) { console.error(e); }
+        // Move focus to the new screen for keyboard / screen-reader users.
+        var focusT = el.querySelector('[data-autofocus]') || el.querySelector('h1,h2') || el;
+        if (focusT) { if (!focusT.hasAttribute('tabindex') && !focusT.matches('button, a[href], input, select, textarea')) focusT.setAttribute('tabindex', '-1'); try { focusT.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+        E.emit('screen', { name: name });
+      }
+
+      var useVT = !rm && prev && (dir === 1 || dir === -1) && typeof document.startViewTransition === 'function' && document.visibilityState === 'visible';
+      if (useVT) {
+        document.documentElement.setAttribute('data-vt', dir === -1 ? 'back' : 'fwd');
+        prev.el.style.viewTransitionName = 'ch-screen';
+        try {
+          vtActive = document.startViewTransition(function () {
+            if (prev.el.parentNode) prev.el.remove();
+            el.style.viewTransitionName = 'ch-screen';
+            mount();
+          });
+          var clear = function () { el.style.viewTransitionName = ''; document.documentElement.removeAttribute('data-vt'); vtActive = null; };
+          vtActive.finished.then(clear, clear);
+          // Skipped transitions reject these promises: expected, so swallow them.
+          if (vtActive.ready) vtActive.ready.catch(function () {});
+          if (vtActive.updateCallbackDone) vtActive.updateCallbackDone.catch(function () {});
+          setTimeout(function () { mount(); if (prev.el.parentNode) prev.el.remove(); }, 600);   // safety net
+        } catch (e) { useVT = false; }
+      }
+      if (!useVT) {
+        mount();
+        var target = null;
+        if (collapseTo) {
+          var tEl = document.querySelector('[data-origin-id="' + cssEsc(collapseTo.id) + '"]');
+          if (tEl && tEl.getClientRects().length) target = pointIn(tEl, stage);
+        }
+        transition(prev && prev.el, el, dir, o, target);
+      }
     },
-    back: function (fallback) {
+    back: function (fallback, opts) {
       var p = stack.pop();
-      if (p) CH.router.go(p.name, p.params, { dir: -1, replace: true });
-      else CH.router.go(fallback || 'map', {}, { dir: -1, root: true });
+      var dir = (opts && opts.dir) || -1;
+      if (p) { CH.router.go(p.name, p.params, { dir: dir, replace: true }); if (p.origin !== undefined) origin = p.origin; }
+      else CH.router.go(fallback || 'map', {}, { dir: dir, root: true });
     },
     get current() { return cur; },
-    refresh: function () { if (cur) CH.router.go(cur.name, cur.params, { replace: true, dir: 'fade' }); }
+    get depth() { return stack.length; },
+    refresh: function () { if (cur) CH.router.go(cur.name, cur.params, { replace: true, dir: 'fade', keepOrigin: true }); }
   };
 
-  /** Themed spring card-slide (from the design), with safe removal fallback. */
-  function transition(from, to, dir) {
+  function cssEsc(s) { return String(s).replace(/["\\]/g, '\\$&'); }
+
+  /** Center of an element in stage coordinates. */
+  function pointIn(el, stage) {
+    var r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
+    return { x: r.left + r.width / 2 - s.left, y: r.top + r.height / 2 - s.top, w: s.width, h: s.height, r: Math.max(r.width, r.height) / 2 };
+  }
+  function farCorner(p) {
+    return Math.ceil(Math.max(Math.hypot(p.x, p.y), Math.hypot(p.w - p.x, p.y), Math.hypot(p.x, p.h - p.y), Math.hypot(p.w - p.x, p.h - p.y))) + 8;
+  }
+
+  /** WAAPI transitions (also the fallback when View Transitions aren't available). */
+  function transition(from, to, dir, o, target) {
     var rm = CH.fx.reduced();
     function removeFrom() { if (from && from.parentNode) from.remove(); }
-    if (!from) { CH.fx.anim(to, [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 360, easing: CH.fx.EASE_OUT, rm: 'fade' }); return; }
+    if (!from) { CH.fx.anim(to, [{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: CH.fx.EASE_OUT, rm: 'fade' }); return; }
     from.style.pointerEvents = 'none';
     if (rm || dir === 'fade') {
-      CH.fx.anim(from, [{ opacity: 1 }, { opacity: 0 }], { duration: 160, rm: 'keep', fill: 'forwards' }).then(removeFrom);
-      CH.fx.anim(to, [{ opacity: 0 }, { opacity: 1 }], { duration: 160, rm: 'keep' });
-      setTimeout(removeFrom, 400);
+      CH.fx.anim(from, [{ opacity: 1 }, { opacity: 0 }], { duration: 140, rm: 'keep', fill: 'forwards' }).then(removeFrom);
+      CH.fx.anim(to, [{ opacity: 0 }, { opacity: 1 }], { duration: 140, rm: 'keep' });
+      setTimeout(removeFrom, 360);
       return;
     }
-    var outK, inK, outD = 280, inD = 620;
-    if (dir === 'up') {           // sessions rise like a card from the bottom
-      outK = [{ transform: 'none', opacity: 1 }, { transform: 'scale(.92)', opacity: 0 }];
-      inK = [{ transform: 'translateY(100%) scale(.96)', opacity: 0.6 }, { transform: 'translateY(-2%)', opacity: 1, offset: 0.62 }, { transform: 'translateY(.8%)', offset: 0.82 }, { transform: 'none', opacity: 1 }];
-    } else if (dir === 'down') {  // leaving a session: card drops away
-      outK = [{ transform: 'none', opacity: 1 }, { transform: 'translateY(60%) rotate(3deg) scale(.94)', opacity: 0 }];
-      inK = [{ transform: 'scale(.94)', opacity: 0 }, { transform: 'scale(1.01)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }];
-      inD = 460;
+    if (dir === 'expand' && o) {
+      // Grow a circle from the tapped element until it covers the stage.
+      var R = farCorner(o), at = ' at ' + o.x + 'px ' + o.y + 'px';
+      CH.fx.anim(to, [{ clipPath: 'circle(' + Math.max(8, o.r) + 'px' + at + ')' }, { clipPath: 'circle(' + R + 'px' + at + ')' }], { duration: 420, easing: 'cubic-bezier(.3,.7,.2,1)', rm: 'keep' })
+        .then(function () { to.style.clipPath = ''; removeFrom(); });
+      CH.fx.anim(from, [{ transform: 'none', opacity: 1 }, { transform: 'scale(.96)', opacity: 0.6 }], { duration: 420, easing: 'ease-out', fill: 'forwards' });
+      setTimeout(removeFrom, 700);
+      return;
+    }
+    if ((dir === 'down' || dir === 'close') && target) {
+      // Shrink the leaving screen back into its origin element.
+      from.style.zIndex = 3;
+      var R2 = farCorner(target), at2 = ' at ' + target.x + 'px ' + target.y + 'px';
+      CH.fx.anim(from, [{ clipPath: 'circle(' + R2 + 'px' + at2 + ')' }, { clipPath: 'circle(' + Math.max(6, target.r * 0.6) + 'px' + at2 + ')', opacity: 0.4 }], { duration: 380, easing: 'cubic-bezier(.6,0,.4,1)', fill: 'forwards', rm: 'keep' })
+        .then(removeFrom);
+      CH.fx.anim(to, [{ transform: 'scale(.97)', opacity: 0.7 }, { transform: 'none', opacity: 1 }], { duration: 380, easing: CH.fx.EASE_OUT });
+      setTimeout(removeFrom, 700);
+      return;
+    }
+    var outK, inK, outD = 240, inD = 400;
+    if (dir === 'up') {
+      outK = [{ transform: 'none', opacity: 1 }, { transform: 'scale(.94)', opacity: 0 }];
+      inK = [{ transform: 'translateY(60%) scale(.96)', opacity: 0 }, { transform: 'translateY(-1.5%)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }];
+    } else if (dir === 'down' || dir === 'close') {
+      outK = [{ transform: 'none', opacity: 1 }, { transform: 'translateY(40%) scale(.94)', opacity: 0 }];
+      inK = [{ transform: 'scale(.96)', opacity: 0 }, { transform: 'scale(1.005)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }];
+      inD = 360;
     } else {
       var d = dir === -1 ? -1 : 1;
-      outK = [{ transform: 'none', opacity: 1 }, { transform: 'translateX(' + (-d * 28) + '%) scale(.9) rotate(' + (-d * 2) + 'deg)', opacity: 0 }];
-      inK = [{ transform: 'translateX(' + (d * 105) + '%) rotate(' + (d * 4) + 'deg) scale(.96)', opacity: 0.6 }, { transform: 'translateX(-2%) rotate(0) scale(1)', opacity: 1, offset: 0.62 }, { transform: 'translateX(.8%)', offset: 0.82 }, { transform: 'none', opacity: 1 }];
+      outK = [{ transform: 'none', opacity: 1 }, { transform: 'translateX(' + (-d * 18) + '%) scale(.94)', opacity: 0 }];
+      inK = [{ transform: 'translateX(' + (d * 26) + '%) scale(.97)', opacity: 0 }, { transform: 'translateX(' + (-d * 1.2) + '%) scale(1)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }];
     }
     CH.fx.anim(from, outK, { duration: outD, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }).then(removeFrom);
     CH.fx.anim(to, inK, { duration: inD, easing: 'cubic-bezier(.22,.9,.3,1.05)' });
@@ -291,7 +398,7 @@
       root.appendChild(el);
       if (opts.mood) { var c = CH.curlo.mount(el.querySelector('.dlg-curlo')); setTimeout(function () { CH.curlo.react(c, opts.mood); }, 60); }
       var box = el.querySelector('.dlg');
-      CH.fx.anim(box, [{ transform: 'translateY(30px) scale(.9)', opacity: 0 }, { transform: 'translateY(-4px) scale(1.02)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }], { duration: 380, easing: CH.fx.EASE_OUT, rm: 'fade' });
+      CH.fx.anim(box, [{ transform: 'translateY(90px) scale(.94)', opacity: 0 }, { transform: 'translateY(-6px) scale(1.01)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }], { duration: 360, easing: CH.fx.EASE_OUT, rm: 'fade' });
       function done(v) {
         document.removeEventListener('keydown', onKey, true);
         CH.fx.anim(el, [{ opacity: 1 }, { opacity: 0 }], { duration: 160, rm: 'keep', fill: 'forwards' }).then(function () { el.remove(); });
@@ -305,6 +412,8 @@
       }
       document.addEventListener('keydown', onKey, true);
       el.querySelector('.scrim').onclick = function () { done(opts.dismissValue); };
+      swipeDown(box, box.querySelector('h3'), function () { done(opts.dismissValue); });
+      swipeDown(box, box.querySelector('.dlg-curlo'), function () { done(opts.dismissValue); });
       U.$$('.dlg-btns .pbtn', el).forEach(function (b) {
         b.onclick = function () { CH.audio.play('tap'); done((opts.buttons || [{ value: true }])[+b.dataset.i].value); };
       });
@@ -313,6 +422,42 @@
       setTimeout(function () { var f = el.querySelector('.dlg-btns .pbtn'); if (f) f.focus(); }, 50);
     });
   };
+
+  /**
+   * Swipe-down-to-dismiss for sheets/dialogs: drag the handle down; past
+   * ~90px (or a quick flick) it dismisses, otherwise it springs back.
+   */
+  function swipeDown(panel, handle, onDismiss) {
+    if (!handle) return;
+    handle.style.touchAction = 'none';
+    handle.addEventListener('pointerdown', function (e) {
+      if (e.button != null && e.button !== 0) return;
+      if (e.target.closest('button, input, textarea, a, select') && handle !== panel.querySelector('.grab')) return;
+      var y0 = e.clientY, t0 = Date.now(), dy = 0, moved = false;
+      function mv(ev) {
+        dy = Math.max(0, ev.clientY - y0);
+        if (!moved && dy > 6) { moved = true; panel.style.transition = 'none'; }
+        if (moved) panel.style.transform = 'translateY(' + dy + 'px)';
+      }
+      function up() {
+        document.removeEventListener('pointermove', mv);
+        document.removeEventListener('pointerup', up);
+        document.removeEventListener('pointercancel', up);
+        if (!moved) return;
+        var v = dy / Math.max(1, Date.now() - t0);
+        panel.style.transition = '';
+        if (dy > 90 || v > 0.7) { panel.style.transform = ''; onDismiss(); }
+        else {
+          panel.style.transition = 'transform .35s cubic-bezier(.34,1.56,.64,1)';
+          panel.style.transform = '';
+          setTimeout(function () { panel.style.transition = ''; }, 400);
+        }
+      }
+      document.addEventListener('pointermove', mv);
+      document.addEventListener('pointerup', up);
+      document.addEventListener('pointercancel', up);
+    });
+  }
 
   /** Confirm helper: resolves true/false. */
   ui.confirm = function (title, html, yes, no, danger) {
@@ -344,6 +489,8 @@
     document.addEventListener('keydown', onKey, true);
     scrim.onclick = close;
     wrap.querySelector('.xbtn').onclick = close;
+    swipeDown(sheet, sheet.querySelector('.grab'), close);
+    swipeDown(sheet, sheet.querySelector('h3'), close);
     CH.audio.play('tap');
     setTimeout(function () { var f = sheet.querySelector('.sheet-body ' + FOCUSABLE) || wrap.querySelector('.xbtn'); if (f) f.focus({ preventScroll: true }); }, 80);
     return { el: wrap, body: body, close: close };

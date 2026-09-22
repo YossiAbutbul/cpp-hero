@@ -57,6 +57,9 @@ button{font:inherit;color:inherit}
 [hidden]{display:none!important}
 button:not(:disabled){cursor:pointer}
 input,textarea{font:inherit}
+/* No visible scrollbars anywhere; scrolling (touch, wheel, keys) still works. */
+html,body,*{scrollbar-width:none;-ms-overflow-style:none}
+*::-webkit-scrollbar{display:none;width:0;height:0}
 :focus-visible{outline:3px solid var(--sky);outline-offset:3px;border-radius:12px}
 .sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;margin:-1px;padding:0;border:0}
 .skip-link{position:absolute;left:12px;top:-60px;z-index:100;background:var(--ink);color:#fff;padding:8px 12px;border-radius:10px;font-weight:800}
@@ -121,7 +124,7 @@ button.chip:active{transform:translateY(2px);box-shadow:none}
 /* ---------- stage + screens ---------- */
 .stage{position:relative;flex:1;min-height:0;overflow:hidden;outline:none}
 .screen{position:absolute;inset:0;will-change:transform;background:var(--cream)}
-.scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:6px 16px 32px;scrollbar-width:thin;overscroll-behavior:contain}
+.scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:6px 16px 32px;overscroll-behavior:contain}
 .card{background:var(--card);border-radius:24px;box-shadow:var(--sh);padding:16px;margin-bottom:14px;border:2px solid #fff}
 h1,h2,h3,h4{font-family:var(--f-disp);line-height:1.1;margin:0}
 h2{font-size:1.6rem;font-weight:800}
@@ -346,12 +349,17 @@ p{margin:6px 0}
 
 /* ---------- CODE ---------- */
 .codewrap{margin:8px 0}
-.code{background:#FFFBF4;border:2px solid var(--line);border-radius:18px;overflow-x:auto;padding:10px 0;font-family:var(--f-code);font-size:.86rem;line-height:1.75;position:relative;max-height:60vh;overflow-y:auto}
+.code{background:#FFFBF4;border:2px solid var(--line);border-radius:18px;overflow-x:hidden;padding:10px 0;font-family:var(--f-code);font-size:.86rem;line-height:1.75;position:relative;max-height:60vh;overflow-y:auto}
 .code.is-unsafe{border-color:var(--coral-l);background:#FFF7F7}
-.ln{display:flex;white-space:pre;padding-right:14px;border-left:4px solid transparent;transition:background .25s;min-width:100%;width:max-content;position:relative}
+.ln{display:flex;align-items:flex-start;padding-right:12px;border-left:4px solid transparent;transition:background .25s;width:100%;position:relative}
+/* Code never scrolls sideways: each logical line wraps with a hanging indent
+   (continuation rows start 2ch past the line's own indentation); the line
+   number stays on the first row and highlights cover the whole wrapped line. */
+.ln .cd{flex:1;min-width:0;white-space:pre-wrap;overflow-wrap:anywhere;padding-left:calc((var(--ind,0) + 2) * 1ch);text-indent:-2ch}
+.ln .cd .lead{display:none}
 button.ln{background:none;border:0;border-left:4px solid transparent;font:inherit;text-align:left;color:inherit;padding:0 14px 0 0;line-height:1.75}
 .code.tappable button.ln:hover:not(:disabled){background:var(--sun-l)}
-.code.tappable button.ln{min-height:34px;align-items:center}
+.code.tappable button.ln{min-height:34px;align-items:center;padding-top:2px;padding-bottom:2px}
 .ln .no{width:30px;flex:none;text-align:right;padding-right:12px;color:#A89D8F;user-select:none}
 .ln.hl{background:var(--sun-l);border-left-color:var(--sun-d)}
 .ln.hl .no{color:var(--ink)}
@@ -361,7 +369,7 @@ button.ln{background:none;border:0;border-left:4px solid transparent;font:inheri
 .ln.flag-ok{background:var(--teal-l);border-left-color:var(--teal-d)}
 .ln.flag-bad{background:var(--coral-l);border-left-color:var(--coral-d)}
 .ln.flag-miss{background:var(--sun-l);border-left-color:var(--sun-d)}
-.lmark{position:sticky;right:6px;background:inherit;border-radius:8px;padding:0 4px;display:inline-flex;align-items:center;gap:4px;margin-left:12px;font-family:var(--f-ui);font-size:.75rem;font-weight:900;white-space:nowrap}
+.lmark{flex:none;align-self:center;border-radius:8px;padding:0 4px;display:inline-flex;align-items:center;gap:4px;margin-left:12px;font-family:var(--f-ui);font-size:.75rem;font-weight:900;white-space:nowrap}
 .lmark .ic{width:18px;height:18px}
 .flag-ok .lmark{color:var(--teal-d)}.flag-bad .lmark{color:var(--coral-d)}.flag-miss .lmark{color:#8A5A00}
 .flagm{color:var(--coral-d)}
@@ -373,15 +381,15 @@ button.ln{background:none;border:0;border-left:4px solid transparent;font:inheri
 .blank{display:inline-block;min-width:3ch;border-bottom:3px dashed var(--tang);color:var(--tang-d);font-weight:500;padding:0 4px;background:var(--tang-l);border-radius:6px 6px 0 0}
 .blank.slot.ok{background:var(--teal-l);border-bottom:3px solid var(--teal-d);color:var(--teal-d)}
 .blank.slot.fixed{background:var(--teal-l);border-bottom:3px solid var(--teal-d);color:var(--teal-d)}
-.blank-in{display:inline-flex;align-items:center;gap:4px;position:relative}
-.fill-in{font-family:var(--f-code);font-size:.95rem;border:0;border-bottom:3px solid var(--tang);background:var(--tang-l);border-radius:8px 8px 0 0;padding:2px 6px;color:var(--ink);min-width:4ch;outline:none;line-height:1.4}
+.blank-in{display:inline-flex;align-items:flex-start;gap:4px;position:relative;max-width:100%;vertical-align:top;text-indent:0}
+.fill-in{font-family:var(--f-code);font-size:.95rem;border:0;border-bottom:3px solid var(--tang);background:var(--tang-l);border-radius:8px 8px 0 0;padding:2px 6px;color:var(--ink);min-width:4ch;max-width:100%;outline:none;line-height:1.4;resize:none;overflow:hidden;text-indent:0;white-space:pre-wrap;overflow-wrap:anywhere;field-sizing:content;height:auto;vertical-align:top;display:block}
 .fill-in:focus{background:#fff;box-shadow:0 0 0 3px var(--sky)}
 .blank-in.ok .fill-in{border-color:var(--teal-d);background:var(--teal-l)}
 .blank-in.bad .fill-in{border-color:var(--coral-d);background:var(--coral-l);text-decoration:line-through}
 .in-mark{width:22px;height:22px}
-.write-box{display:flex;align-items:center;gap:8px;background:var(--console);border-radius:16px;padding:10px 14px;margin-top:10px;position:relative}
+.write-box{display:flex;align-items:flex-start;gap:8px;background:var(--console);border-radius:16px;padding:10px 14px;margin-top:10px;position:relative}
 .write-prompt{font-family:var(--f-code);color:var(--sun);font-weight:500}
-.write-in{flex:1;min-width:0;background:transparent;border:0;color:var(--console-t);font-family:var(--f-code);font-size:1rem;outline:none;padding:6px 0}
+.write-in{flex:1;min-width:0;background:transparent;border:0;color:var(--console-t);font-family:var(--f-code);font-size:1rem;outline:none;padding:6px 0;resize:none;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45;field-sizing:content;min-height:calc(1.45em + 12px)}
 .write-in::placeholder{color:#8F86A8}
 .write-box:focus-within{box-shadow:0 0 0 3px var(--sky)}
 .write-box.ok{box-shadow:0 0 0 3px var(--teal)}
@@ -472,6 +480,8 @@ button.ln{background:none;border:0;border-left:4px solid transparent;font:inheri
 .opt.right .tag{color:var(--teal-d)}.opt.wrong .tag{color:var(--coral-d)}
 .opt:disabled{cursor:default}
 .opt.dim{opacity:.55}
+.opt.tried{opacity:.5;text-decoration:line-through;text-decoration-thickness:2px;box-shadow:0 2px 0 var(--cd)}
+.opt.tried .tag{display:block;color:var(--muted)}
 .opt.on{--c:var(--sky-l);--cd:var(--sky)}
 .opt .tick{display:none;position:absolute;right:8px;bottom:8px;width:22px;height:22px;border-radius:7px;background:var(--sky-d);color:#fff;place-items:center}
 .opt .tick .ic{width:16px;height:16px}
@@ -500,6 +510,10 @@ button.ln{background:none;border:0;border-left:4px solid transparent;font:inheri
 .rscore{font-weight:900;margin-top:2px}
 .rexp{margin:8px 0;font-size:1rem}
 .rshort{font-weight:800;font-size:1.05rem;margin:6px 0 4px}
+.result.soft{background:#FFF1F3}
+.soft-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.soft-btns .pbtn{min-height:52px;font-size:.9rem;padding:12px 8px;letter-spacing:.02em}
+.soft-btns .pbtn .ic{width:18px;height:18px}
 .rpick{display:flex;gap:8px;align-items:flex-start;background:rgba(255,255,255,.75);border-radius:14px;padding:8px 10px;margin:6px 0;font-size:.95rem}
 .rpick .ic{width:20px;height:20px;margin-top:1px}
 .more-wrap{margin:8px 0 2px}
@@ -545,7 +559,7 @@ button.ln{background:none;border:0;border-left:4px solid transparent;font:inheri
 .zone.prog{background:#FFFBF4;border:2px dashed var(--lock-d)}
 .zone.prog.empty::before{content:"Tap lines below to build your program";color:var(--muted);font-weight:700;text-align:center;padding:10px;font-size:.9rem}
 .zone.bank{background:var(--bg);border:2px solid var(--line)}
-.tile{display:flex;align-items:center;gap:8px;background:#fff;border:2px solid var(--line);border-radius:14px;padding:8px 10px;box-shadow:0 3px 0 var(--line);font-family:var(--f-code);font-size:.86rem;white-space:pre;overflow-x:auto;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;transition:box-shadow .15s,background .15s}
+.tile{display:flex;align-items:center;gap:8px;background:#fff;border:2px solid var(--line);border-radius:14px;padding:8px 10px;box-shadow:0 3px 0 var(--line);font-family:var(--f-code);font-size:.86rem;white-space:pre-wrap;overflow-wrap:anywhere;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;transition:box-shadow .15s,background .15s}
 .tile:hover{background:#FFFDF8}
 .tile .grip{color:var(--lock-d);display:grid}
 .tile .grip .ic{width:18px;height:18px}
@@ -876,6 +890,48 @@ button.ln{background:none;border:0;border-left:4px solid transparent;font:inheri
   .xpnum{min-width:64px}
   .nlabel{max-width:110px;font-size:.8rem}
 }
+
+/* ---------- header toggles: icon morphs into an X while its panel is open ---------- */
+.ibtn.morph{position:relative;overflow:hidden}
+.ibtn.morph svg{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;transition:transform .35s var(--spring),opacity .2s}
+.ibtn.morph .ic-x{opacity:0;transform:rotate(-90deg) scale(.4)}
+.ibtn.morph.is-open{background:var(--tang-l);border-color:var(--tang);box-shadow:0 3px 0 var(--tang)}
+.ibtn.morph.is-open .ic-main{opacity:0;transform:rotate(90deg) scale(.4)}
+.ibtn.morph.is-open .ic-x{opacity:1;transform:none}
+
+/* ---------- View Transitions (bottom-tab switches) ---------- */
+::view-transition-old(root),::view-transition-new(root){animation:none}
+::view-transition-group(ch-screen){animation-duration:.4s;animation-timing-function:cubic-bezier(.22,.9,.3,1.05)}
+::view-transition-image-pair(ch-screen){overflow:hidden}
+::view-transition-old(ch-screen){animation:vt-out .24s cubic-bezier(.5,0,.75,0) both}
+::view-transition-new(ch-screen){animation:vt-in .4s cubic-bezier(.22,.9,.3,1.05) both}
+html[data-vt=back]::view-transition-old(ch-screen){animation-name:vt-out-back}
+html[data-vt=back]::view-transition-new(ch-screen){animation-name:vt-in-back}
+@keyframes vt-out{to{transform:translateX(-18%) scale(.94);opacity:0}}
+@keyframes vt-in{from{transform:translateX(26%) scale(.97);opacity:0}70%{transform:translateX(-1.2%) scale(1);opacity:1}}
+@keyframes vt-out-back{to{transform:translateX(18%) scale(.94);opacity:0}}
+@keyframes vt-in-back{from{transform:translateX(-26%) scale(.97);opacity:0}70%{transform:translateX(1.2%) scale(1);opacity:1}}
+
+/* ---------- hearts ---------- */
+.hclock-row{display:flex;align-items:center;justify-content:center;gap:6px;font-weight:900;font-size:1.05rem;margin:4px 0 8px}
+.hclock-row .ic{width:22px;height:22px}
+.hclock{font-variant-numeric:tabular-nums;color:var(--coral-d);background:var(--coral-l);border-radius:10px;padding:1px 8px}
+.heart-rules{list-style:none;padding:0;margin:4px 0 14px;display:grid;gap:8px}
+.heart-rules li{display:flex;gap:10px;align-items:center;background:var(--bg);border-radius:14px;padding:8px 12px;font-weight:700;font-size:.95rem}
+.heart-rules .ic{width:22px;height:22px;color:var(--ink2)}
+
+/* ---------- sheets / dialogs: drag handle ---------- */
+.sheet .grab{width:56px;height:6px;cursor:grab;position:relative}
+.sheet .grab::before{content:"";position:absolute;inset:-12px -20px}
+.sheet h3,.dlg h3,.dlg-curlo{cursor:grab}
+
+/* ---------- boss dramatic entrance ---------- */
+.boss-dim{position:absolute;inset:0;z-index:20;background:rgba(26,20,48,.88);display:grid;place-items:center;cursor:pointer}
+.bd-card{text-align:center;background:var(--coral-d);color:#fff;border-radius:26px;padding:18px 26px;box-shadow:0 8px 0 #9E1F35,0 0 60px rgba(255,90,112,.5)}
+.bd-card small{display:block;font-weight:900;letter-spacing:.14em;text-transform:uppercase;font-size:.8rem;color:var(--sun)}
+.bd-card b{font-family:var(--f-disp);font-weight:800;font-size:2rem;line-height:1.05}
+.lvl-in{max-width:min(360px,100%)}
+.lvl-in .t2,.bubble,.rpick,.rshort,.hint,.accepted{overflow-wrap:anywhere}
 </style>
 </head>
 <body>
@@ -886,8 +942,9 @@ button.ln{background:none;border:0;border-left:4px solid transparent;font:inheri
   <a class="skip-link" href="#stage">Skip to content</a>
   <header class="topbar">
     <div class="brand" id="brandMark"><span class="brand-c" aria-hidden="true"></span><span>Cpp Hero</span></div>
-    <button class="ibtn" id="btnStats" aria-label="Stats" title="Stats"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="#2A2140" stroke-width="2.6" stroke-linecap="round"/></svg></button>
-    <button class="ibtn" id="btnSettings" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" fill="#FFC62E" stroke="#2A2140" stroke-width="2.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M5.5 18.5l2.1-2.1M16.4 7.6l2.1-2.1" stroke="#2A2140" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+    <!-- Header toggles: the icon morphs into an X while its screen is open. -->
+    <button class="ibtn morph" id="btnStats" data-origin-id="hdr-stats" aria-label="Stats" title="Stats"><svg class="ic-main" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="12" width="4" height="8" rx="1.2" fill="#0FA898"/><rect x="10" y="6" width="4" height="14" rx="1.2" fill="#F2641B"/><rect x="16.5" y="9" width="4" height="11" rx="1.2" fill="#FFC62E"/><path d="M2.5 21h19" stroke="#2A2140" stroke-width="2" stroke-linecap="round"/></svg><svg class="ic-x" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="#2A2140" stroke-width="2.8" stroke-linecap="round"/></svg></button>
+    <button class="ibtn morph" id="btnSettings" data-origin-id="hdr-settings" aria-label="Settings" title="Settings"><svg class="ic-main" viewBox="0 0 24 24" aria-hidden="true"><g transform="translate(12 12) scale(.88) translate(-12 -12)"><path d="M9.27 4.27L9.69 1.66L14.31 1.66L14.73 4.27L15.53 4.60L17.68 3.05L20.95 6.32L19.40 8.47L19.73 9.27L22.34 9.69L22.34 14.31L19.73 14.73L19.40 15.53L20.95 17.68L17.68 20.95L15.53 19.40L14.73 19.73L14.31 22.34L9.69 22.34L9.27 19.73L8.47 19.40L6.32 20.95L3.05 17.68L4.60 15.53L4.27 14.73L1.66 14.31L1.66 9.69L4.27 9.27L4.60 8.47L3.05 6.32L6.32 3.05L8.47 4.60Z" fill="#FFE6C7" stroke="#2A2140" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3.6" fill="#fff" stroke="#2A2140" stroke-width="2"/></g></svg><svg class="ic-x" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" fill="none" stroke="#2A2140" stroke-width="2.8" stroke-linecap="round"/></svg></button>
   </header>
   <div class="hud" id="hud" aria-label="Player status"></div>
 
@@ -931,8 +988,15 @@ button.ln{background:none;border:0;border-left:4px solid transparent;font:inheri
     if (!Array.isArray(CH.content[k])) CH.content[k] = [];
   });
 
+  /**
+   * Feature flags. SOUND_ENABLED=false turns ALL audio off: no AudioContext is
+   * ever created, SFX/music are no-ops and the Sound/Music settings are hidden.
+   * (settings.sound / settings.music stay in the save for format stability.)
+   */
+  CH.config = CH.config || { SOUND_ENABLED: false };
+
   /** Build version stamped by build.js (same value as the SW cache name). */
-  CH.VERSION = '1.0.0-7b1df4b1';
+  CH.VERSION = '1.0.0-89a7d5b3';
 
   /** Developer mode: URL hash contains "dev" (e.g. index.html#dev). */
   CH.dev = /(^|[#&])dev\b/.test(location.hash || '');
@@ -6154,6 +6218,7 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
 
   /** Get (and resume) the shared AudioContext. Returns null if unsupported. */
   function ctx() {
+    if (!CH.config.SOUND_ENABLED) return null;   // feature flag: audio fully off
     try {
       if (!ac) {
         var A = window.AudioContext || window.webkitAudioContext;
@@ -6282,22 +6347,24 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
   CH.audio = {
     /** Play a named SFX (no-op when sound is off). */
     play: function (name) {
-      if (!settings().sound) return;
+      if (!CH.config.SOUND_ENABLED || !settings().sound) return;
       var f = SFX[name];
       if (f) try { f(); } catch (e) { /* ignore */ }
     },
     names: Object.keys(SFX),
     /** Call after settings change or first gesture. */
     sync: function () {
+      if (!CH.config.SOUND_ENABLED) { stopMusic(); return; }
       if (settings().music && gestured) startMusic(); else stopMusic();
     },
-    unlock: function () { ctx(); }
+    unlock: function () { ctx(); },
+    get enabled() { return !!CH.config.SOUND_ENABLED; }
   };
 
   // First user gesture: create/resume the context and start music if enabled.
   var gestured = false;
   function onGesture() {
-    if (gestured) return;
+    if (gestured || !CH.config.SOUND_ENABLED) return;
     gestured = true;
     ctx();
     CH.audio.sync();
@@ -6387,6 +6454,23 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
       { transform: 'scale(1.08)', opacity: 1, offset: 0.65 },
       { transform: 'none', opacity: 1 }
     ], { duration: 380, easing: 'ease-out', delay: delay || 0, fill: 'backwards', rm: 'fade' });
+  };
+
+  /**
+   * Quick staggered lift-in for a list of already-laid-out elements: 20–40ms
+   * apart, everything done within ~350ms. Elements are never left invisible
+   * (fx.anim's timeout fallback drops the effect). Reduced motion: instant.
+   */
+  fx.stagger = function (els, opts) {
+    opts = opts || {};
+    var n = els.length;
+    if (!n || fx.reduced()) return;
+    var dur = opts.duration || 220, budget = opts.total || 350;
+    var step = n > 1 ? Math.max(20, Math.min(40, (budget - dur) / (n - 1))) : 0;
+    els.forEach(function (el, i) {
+      fx.anim(el, [{ opacity: 0, transform: 'translateY(10px) scale(.98)' }, { opacity: 1, transform: 'none' }],
+        { duration: dur, delay: Math.min(i * step, budget - dur), easing: fx.EASE_OUT, fill: 'backwards' });
+    });
   };
 
   /** Slide up + fade in (explanations, cards). */
@@ -8592,20 +8676,37 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
   };
 
   /* ---- HUD sheets ---- */
+  /** "Next heart in mm:ss" line; pair with ui.bindHeartClock(root) to keep it live. */
+  ui.heartClockHTML = function () {
+    var secs = CH.game.nextHeartIn();
+    if (S().hearts.n >= S().hearts.max) return '<p class="hclock-row">' + ui.icon('heart') + ' Hearts are full!</p>';
+    return '<p class="hclock-row">' + ui.icon('clock') + ' Next heart in <b class="hclock">' + U.fmtClock(secs) + '</b></p>';
+  };
+  ui.bindHeartClock = function (root) {
+    var t = setInterval(function () {
+      if (!document.body.contains(root)) return clearInterval(t);
+      CH.game.regenHearts();
+      var c = root.querySelector('.hclock');
+      if (c) c.textContent = U.fmtClock(CH.game.nextHeartIn());
+      var hs = root.querySelector('.big-hearts');
+      if (hs) hs.innerHTML = ui.heartsHTML(S().hearts.n, S().hearts.max);
+    }, 1000);
+  };
+
   ui.heartsSheet = function () {
-    var s = S(), secs = CH.game.nextHeartIn();
+    var s = S();
     var el = U.h('<div><div class="big-hearts">' + ui.heartsHTML(s.hearts.n, s.hearts.max) + '</div>' +
-      '<p class="center">' + (s.hearts.n >= s.hearts.max ? 'Full hearts! A wrong answer in a lesson or boss fight costs one.' :
-        'Next heart in <b class="hclock">' + U.fmtClock(secs) + '</b>. Hearts refill 1 every 30 minutes.') + '</p>' +
-      '<p class="center muted">Finish a quick <b>practice review</b> to earn a heart right away.</p>' +
+      '<div class="center">' + ui.heartClockHTML() + '</div>' +
+      '<ul class="heart-rules">' +
+        '<li>' + ui.icon('no') + '<span>A wrong <b>first try</b> costs one heart. Retries are free.</span></li>' +
+        '<li>' + ui.icon('clock') + '<span>Hearts refill <b>1 every 30 minutes</b>.</span></li>' +
+        '<li>' + ui.icon('practice') + '<span>A quick <b>practice review</b> earns one now.</span></li>' +
+        '<li>' + ui.icon('ok') + '<span>At zero, practice still works. Never stuck!</span></li>' +
+      '</ul>' +
       '<div class="row"><button class="pbtn teal" data-a="review">' + ui.icon('practice') + 'Practice review</button></div></div>');
     var sh = ui.sheet({ title: 'Hearts', el: el });
     el.querySelector('[data-a=review]').onclick = function () { sh.close(); CH.router.go('practice', { autoReview: true }); };
-    var t = setInterval(function () {
-      var c = el.querySelector('.hclock');
-      if (!document.body.contains(el)) return clearInterval(t);
-      if (c) c.textContent = U.fmtClock(CH.game.nextHeartIn());
-    }, 1000);
+    ui.bindHeartClock(el);
   };
 
   ui.streakSheet = function () {
@@ -8640,74 +8741,164 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
   var screens = (CH.screens = CH.screens || {});
   var cur = null, stack = [];
 
+  /*
+   * Motion system for screens (all transform / opacity / clip-path, <= ~420ms,
+   * interruptible, reduced motion = instant crossfade):
+   *   'expand'   circular clip-path reveal from opts.origin (map node, header
+   *              button) into the full screen; remembered so that leaving
+   *              ('down'/'close') collapses back into the same element.
+   *   1 / -1     direction-aware horizontal slide + slight scale/fade with a
+   *              spring settle (bottom tabs). Uses the View Transitions API when
+   *              available, WAAPI otherwise.
+   *   'up'       card rises from the bottom (sessions without an origin).
+   *   'down'     card drops away (leaving a session without an origin).
+   *   'fade'     quick crossfade.
+   */
+  var vtActive = null, origin = null;
+
   CH.router = {
-    /** Navigate. opts: { dir: 1|-1|'up'|'zoom'|'fade', replace: bool, root: bool } */
+    /** Navigate. opts: { dir, origin: {el, id}, replace, root } */
     go: function (name, params, opts) {
       opts = opts || {};
       var def = screens[name];
       if (!def) { console.error('[router] unknown screen', name); return; }
       var stage = U.$('#stage');
       var prev = cur;
+      // Interruptible: finish any in-flight transition instantly.
+      if (vtActive) { try { vtActive.skipTransition(); } catch (e) { /* ignore */ } vtActive = null; }
+      U.$$('.screen', stage).forEach(function (s) { if (!prev || s !== prev.el) s.remove(); });
+      if (prev) { CH.fx.cancel(prev.el); prev.el.style.clipPath = ''; prev.el.style.zIndex = ''; }
       if (prev && prev.def.onHide) try { prev.def.onHide(prev.el); } catch (e) { console.error(e); }
       var el;
       try { el = def.render(params || {}); }
       catch (e) { console.error('[router] render failed for', name, e); el = U.h('<section class="screen"><div class="scroll"><div class="card"><h3>Oops</h3><p>Something went wrong loading this screen.</p><button class="pbtn" onclick="CH.router.go(\'map\',{}, {root:true})">Back to map</button></div></div></section>'); }
       el.classList.add('screen', 'on');
       el.setAttribute('data-screen', name);
-      stage.appendChild(el);
 
       if (opts.root) stack = [];
-      else if (prev && !opts.replace) stack.push({ name: prev.name, params: prev.params });
+      else if (prev && !opts.replace) stack.push({ name: prev.name, params: prev.params, origin: origin });
       cur = { name: name, params: params || {}, el: el, def: def };
 
-      // Chrome: immersive screens hide the top bar, HUD and tab bar.
-      var app = U.$('#app');
-      app.classList.toggle('immersive', def.chrome === 'immersive');
-      U.$$('.tab').forEach(function (t) {
-        if (t.dataset.go === (def.tab || name)) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
-      });
-      if (def.chrome !== 'immersive') ui.renderHUD();
+      var dir = opts.dir || 1;
+      var rm = CH.fx.reduced();
+      var o = opts.origin && opts.origin.el ? pointIn(opts.origin.el, stage) : null;
+      if (dir === 'expand' && !o) dir = 'up';
+      if (dir === 'expand' || (opts.origin && opts.origin.id)) origin = { id: opts.origin.id };
+      var collapseTo = null;
+      if ((dir === 'down' || dir === 'close') && origin) collapseTo = origin;
+      if (dir === 'down' || dir === 'close') origin = opts.keepOrigin ? origin : null;
 
-      transition(prev && prev.el, el, opts.dir || 1);
-      if (def.onShow) try { def.onShow(el, params || {}); } catch (e) { console.error(e); }
-      // Move focus to the new screen for keyboard / screen-reader users.
-      var focusT = el.querySelector('[data-autofocus]') || el.querySelector('h1,h2') || el;
-      if (focusT) { if (!focusT.hasAttribute('tabindex') && !focusT.matches('button, a[href], input, select, textarea')) focusT.setAttribute('tabindex', '-1'); try { focusT.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
-      E.emit('screen', { name: name });
+      var mounted = false;
+      function mount() {
+        if (mounted) return;
+        mounted = true;
+        stage.appendChild(el);
+        var app = U.$('#app');
+        app.classList.toggle('immersive', def.chrome === 'immersive');
+        U.$$('.tab').forEach(function (t) {
+          if (t.dataset.go === (def.tab || name)) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+        });
+        if (def.chrome !== 'immersive') ui.renderHUD();
+        if (def.onShow) try { def.onShow(el, params || {}); } catch (e) { console.error(e); }
+        // Move focus to the new screen for keyboard / screen-reader users.
+        var focusT = el.querySelector('[data-autofocus]') || el.querySelector('h1,h2') || el;
+        if (focusT) { if (!focusT.hasAttribute('tabindex') && !focusT.matches('button, a[href], input, select, textarea')) focusT.setAttribute('tabindex', '-1'); try { focusT.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+        E.emit('screen', { name: name });
+      }
+
+      var useVT = !rm && prev && (dir === 1 || dir === -1) && typeof document.startViewTransition === 'function' && document.visibilityState === 'visible';
+      if (useVT) {
+        document.documentElement.setAttribute('data-vt', dir === -1 ? 'back' : 'fwd');
+        prev.el.style.viewTransitionName = 'ch-screen';
+        try {
+          vtActive = document.startViewTransition(function () {
+            if (prev.el.parentNode) prev.el.remove();
+            el.style.viewTransitionName = 'ch-screen';
+            mount();
+          });
+          var clear = function () { el.style.viewTransitionName = ''; document.documentElement.removeAttribute('data-vt'); vtActive = null; };
+          vtActive.finished.then(clear, clear);
+          // Skipped transitions reject these promises: expected, so swallow them.
+          if (vtActive.ready) vtActive.ready.catch(function () {});
+          if (vtActive.updateCallbackDone) vtActive.updateCallbackDone.catch(function () {});
+          setTimeout(function () { mount(); if (prev.el.parentNode) prev.el.remove(); }, 600);   // safety net
+        } catch (e) { useVT = false; }
+      }
+      if (!useVT) {
+        mount();
+        var target = null;
+        if (collapseTo) {
+          var tEl = document.querySelector('[data-origin-id="' + cssEsc(collapseTo.id) + '"]');
+          if (tEl && tEl.getClientRects().length) target = pointIn(tEl, stage);
+        }
+        transition(prev && prev.el, el, dir, o, target);
+      }
     },
-    back: function (fallback) {
+    back: function (fallback, opts) {
       var p = stack.pop();
-      if (p) CH.router.go(p.name, p.params, { dir: -1, replace: true });
-      else CH.router.go(fallback || 'map', {}, { dir: -1, root: true });
+      var dir = (opts && opts.dir) || -1;
+      if (p) { CH.router.go(p.name, p.params, { dir: dir, replace: true }); if (p.origin !== undefined) origin = p.origin; }
+      else CH.router.go(fallback || 'map', {}, { dir: dir, root: true });
     },
     get current() { return cur; },
-    refresh: function () { if (cur) CH.router.go(cur.name, cur.params, { replace: true, dir: 'fade' }); }
+    get depth() { return stack.length; },
+    refresh: function () { if (cur) CH.router.go(cur.name, cur.params, { replace: true, dir: 'fade', keepOrigin: true }); }
   };
 
-  /** Themed spring card-slide (from the design), with safe removal fallback. */
-  function transition(from, to, dir) {
+  function cssEsc(s) { return String(s).replace(/["\\]/g, '\\$&'); }
+
+  /** Center of an element in stage coordinates. */
+  function pointIn(el, stage) {
+    var r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
+    return { x: r.left + r.width / 2 - s.left, y: r.top + r.height / 2 - s.top, w: s.width, h: s.height, r: Math.max(r.width, r.height) / 2 };
+  }
+  function farCorner(p) {
+    return Math.ceil(Math.max(Math.hypot(p.x, p.y), Math.hypot(p.w - p.x, p.y), Math.hypot(p.x, p.h - p.y), Math.hypot(p.w - p.x, p.h - p.y))) + 8;
+  }
+
+  /** WAAPI transitions (also the fallback when View Transitions aren't available). */
+  function transition(from, to, dir, o, target) {
     var rm = CH.fx.reduced();
     function removeFrom() { if (from && from.parentNode) from.remove(); }
-    if (!from) { CH.fx.anim(to, [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 360, easing: CH.fx.EASE_OUT, rm: 'fade' }); return; }
+    if (!from) { CH.fx.anim(to, [{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: CH.fx.EASE_OUT, rm: 'fade' }); return; }
     from.style.pointerEvents = 'none';
     if (rm || dir === 'fade') {
-      CH.fx.anim(from, [{ opacity: 1 }, { opacity: 0 }], { duration: 160, rm: 'keep', fill: 'forwards' }).then(removeFrom);
-      CH.fx.anim(to, [{ opacity: 0 }, { opacity: 1 }], { duration: 160, rm: 'keep' });
-      setTimeout(removeFrom, 400);
+      CH.fx.anim(from, [{ opacity: 1 }, { opacity: 0 }], { duration: 140, rm: 'keep', fill: 'forwards' }).then(removeFrom);
+      CH.fx.anim(to, [{ opacity: 0 }, { opacity: 1 }], { duration: 140, rm: 'keep' });
+      setTimeout(removeFrom, 360);
       return;
     }
-    var outK, inK, outD = 280, inD = 620;
-    if (dir === 'up') {           // sessions rise like a card from the bottom
-      outK = [{ transform: 'none', opacity: 1 }, { transform: 'scale(.92)', opacity: 0 }];
-      inK = [{ transform: 'translateY(100%) scale(.96)', opacity: 0.6 }, { transform: 'translateY(-2%)', opacity: 1, offset: 0.62 }, { transform: 'translateY(.8%)', offset: 0.82 }, { transform: 'none', opacity: 1 }];
-    } else if (dir === 'down') {  // leaving a session: card drops away
-      outK = [{ transform: 'none', opacity: 1 }, { transform: 'translateY(60%) rotate(3deg) scale(.94)', opacity: 0 }];
-      inK = [{ transform: 'scale(.94)', opacity: 0 }, { transform: 'scale(1.01)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }];
-      inD = 460;
+    if (dir === 'expand' && o) {
+      // Grow a circle from the tapped element until it covers the stage.
+      var R = farCorner(o), at = ' at ' + o.x + 'px ' + o.y + 'px';
+      CH.fx.anim(to, [{ clipPath: 'circle(' + Math.max(8, o.r) + 'px' + at + ')' }, { clipPath: 'circle(' + R + 'px' + at + ')' }], { duration: 420, easing: 'cubic-bezier(.3,.7,.2,1)', rm: 'keep' })
+        .then(function () { to.style.clipPath = ''; removeFrom(); });
+      CH.fx.anim(from, [{ transform: 'none', opacity: 1 }, { transform: 'scale(.96)', opacity: 0.6 }], { duration: 420, easing: 'ease-out', fill: 'forwards' });
+      setTimeout(removeFrom, 700);
+      return;
+    }
+    if ((dir === 'down' || dir === 'close') && target) {
+      // Shrink the leaving screen back into its origin element.
+      from.style.zIndex = 3;
+      var R2 = farCorner(target), at2 = ' at ' + target.x + 'px ' + target.y + 'px';
+      CH.fx.anim(from, [{ clipPath: 'circle(' + R2 + 'px' + at2 + ')' }, { clipPath: 'circle(' + Math.max(6, target.r * 0.6) + 'px' + at2 + ')', opacity: 0.4 }], { duration: 380, easing: 'cubic-bezier(.6,0,.4,1)', fill: 'forwards', rm: 'keep' })
+        .then(removeFrom);
+      CH.fx.anim(to, [{ transform: 'scale(.97)', opacity: 0.7 }, { transform: 'none', opacity: 1 }], { duration: 380, easing: CH.fx.EASE_OUT });
+      setTimeout(removeFrom, 700);
+      return;
+    }
+    var outK, inK, outD = 240, inD = 400;
+    if (dir === 'up') {
+      outK = [{ transform: 'none', opacity: 1 }, { transform: 'scale(.94)', opacity: 0 }];
+      inK = [{ transform: 'translateY(60%) scale(.96)', opacity: 0 }, { transform: 'translateY(-1.5%)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }];
+    } else if (dir === 'down' || dir === 'close') {
+      outK = [{ transform: 'none', opacity: 1 }, { transform: 'translateY(40%) scale(.94)', opacity: 0 }];
+      inK = [{ transform: 'scale(.96)', opacity: 0 }, { transform: 'scale(1.005)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }];
+      inD = 360;
     } else {
       var d = dir === -1 ? -1 : 1;
-      outK = [{ transform: 'none', opacity: 1 }, { transform: 'translateX(' + (-d * 28) + '%) scale(.9) rotate(' + (-d * 2) + 'deg)', opacity: 0 }];
-      inK = [{ transform: 'translateX(' + (d * 105) + '%) rotate(' + (d * 4) + 'deg) scale(.96)', opacity: 0.6 }, { transform: 'translateX(-2%) rotate(0) scale(1)', opacity: 1, offset: 0.62 }, { transform: 'translateX(.8%)', offset: 0.82 }, { transform: 'none', opacity: 1 }];
+      outK = [{ transform: 'none', opacity: 1 }, { transform: 'translateX(' + (-d * 18) + '%) scale(.94)', opacity: 0 }];
+      inK = [{ transform: 'translateX(' + (d * 26) + '%) scale(.97)', opacity: 0 }, { transform: 'translateX(' + (-d * 1.2) + '%) scale(1)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }];
     }
     CH.fx.anim(from, outK, { duration: outD, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards' }).then(removeFrom);
     CH.fx.anim(to, inK, { duration: inD, easing: 'cubic-bezier(.22,.9,.3,1.05)' });
@@ -8747,7 +8938,7 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
       root.appendChild(el);
       if (opts.mood) { var c = CH.curlo.mount(el.querySelector('.dlg-curlo')); setTimeout(function () { CH.curlo.react(c, opts.mood); }, 60); }
       var box = el.querySelector('.dlg');
-      CH.fx.anim(box, [{ transform: 'translateY(30px) scale(.9)', opacity: 0 }, { transform: 'translateY(-4px) scale(1.02)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }], { duration: 380, easing: CH.fx.EASE_OUT, rm: 'fade' });
+      CH.fx.anim(box, [{ transform: 'translateY(90px) scale(.94)', opacity: 0 }, { transform: 'translateY(-6px) scale(1.01)', opacity: 1, offset: 0.7 }, { transform: 'none', opacity: 1 }], { duration: 360, easing: CH.fx.EASE_OUT, rm: 'fade' });
       function done(v) {
         document.removeEventListener('keydown', onKey, true);
         CH.fx.anim(el, [{ opacity: 1 }, { opacity: 0 }], { duration: 160, rm: 'keep', fill: 'forwards' }).then(function () { el.remove(); });
@@ -8761,6 +8952,8 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
       }
       document.addEventListener('keydown', onKey, true);
       el.querySelector('.scrim').onclick = function () { done(opts.dismissValue); };
+      swipeDown(box, box.querySelector('h3'), function () { done(opts.dismissValue); });
+      swipeDown(box, box.querySelector('.dlg-curlo'), function () { done(opts.dismissValue); });
       U.$$('.dlg-btns .pbtn', el).forEach(function (b) {
         b.onclick = function () { CH.audio.play('tap'); done((opts.buttons || [{ value: true }])[+b.dataset.i].value); };
       });
@@ -8769,6 +8962,42 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
       setTimeout(function () { var f = el.querySelector('.dlg-btns .pbtn'); if (f) f.focus(); }, 50);
     });
   };
+
+  /**
+   * Swipe-down-to-dismiss for sheets/dialogs: drag the handle down; past
+   * ~90px (or a quick flick) it dismisses, otherwise it springs back.
+   */
+  function swipeDown(panel, handle, onDismiss) {
+    if (!handle) return;
+    handle.style.touchAction = 'none';
+    handle.addEventListener('pointerdown', function (e) {
+      if (e.button != null && e.button !== 0) return;
+      if (e.target.closest('button, input, textarea, a, select') && handle !== panel.querySelector('.grab')) return;
+      var y0 = e.clientY, t0 = Date.now(), dy = 0, moved = false;
+      function mv(ev) {
+        dy = Math.max(0, ev.clientY - y0);
+        if (!moved && dy > 6) { moved = true; panel.style.transition = 'none'; }
+        if (moved) panel.style.transform = 'translateY(' + dy + 'px)';
+      }
+      function up() {
+        document.removeEventListener('pointermove', mv);
+        document.removeEventListener('pointerup', up);
+        document.removeEventListener('pointercancel', up);
+        if (!moved) return;
+        var v = dy / Math.max(1, Date.now() - t0);
+        panel.style.transition = '';
+        if (dy > 90 || v > 0.7) { panel.style.transform = ''; onDismiss(); }
+        else {
+          panel.style.transition = 'transform .35s cubic-bezier(.34,1.56,.64,1)';
+          panel.style.transform = '';
+          setTimeout(function () { panel.style.transition = ''; }, 400);
+        }
+      }
+      document.addEventListener('pointermove', mv);
+      document.addEventListener('pointerup', up);
+      document.addEventListener('pointercancel', up);
+    });
+  }
 
   /** Confirm helper: resolves true/false. */
   ui.confirm = function (title, html, yes, no, danger) {
@@ -8800,6 +9029,8 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
     document.addEventListener('keydown', onKey, true);
     scrim.onclick = close;
     wrap.querySelector('.xbtn').onclick = close;
+    swipeDown(sheet, sheet.querySelector('.grab'), close);
+    swipeDown(sheet, sheet.querySelector('h3'), close);
     CH.audio.play('tap');
     setTimeout(function () { var f = sheet.querySelector('.sheet-body ' + FOCUSABLE) || wrap.querySelector('.xbtn'); if (f) f.focus({ preventScroll: true }); }, 80);
     return { el: wrap, body: body, close: close };
@@ -9057,6 +9288,9 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
       var t = toks[i][0], v = toks[i][1], part = v.slice(0, left);
       left -= part.length;
       if (t === 'blank') body += blankHTML != null ? blankHTML : '<span class="blank" aria-label="blank">___</span>';
+      // Leading indentation is drawn with padding (hanging indent), so the
+      // spaces themselves are kept in the DOM (copy/paste) but not rendered.
+      else if (t === 'ws' && i === 0) body += '<span class="lead">' + U.esc(part) + '</span>';
       else if (t === 'ws' || t === 'id') body += U.esc(part);
       else body += '<span class="t-' + t + '">' + U.esc(part) + '</span>';
     }
@@ -9085,10 +9319,12 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
     var el = U.h('<div class="code' + (opts.unsafe ? ' is-unsafe' : '') + (opts.tappable ? ' tappable' : '') + '" role="' + (opts.tappable ? 'group' : 'region') + '" aria-label="' + U.esc(opts.label || (opts.unsafe ? 'Unsafe C++ code' : 'C++ code')) + '"></div>');
     lines.forEach(function (ln, i) {
       var added = other && ln.trim() && other.indexOf(ln.trim()) < 0;
-      var inner = '<span class="no" aria-hidden="true">' + (i + 1) + '</span><span class="cd">' + (lineHTML(ln, null, opts.blankHTML) || ' ') + '</span>' + (added ? '<span class="dmark" aria-label="changed line">+</span>' : '');
+      // Wrapped lines get a hanging indent: continuation rows start 2ch past the line's own indentation.
+      var ind = (/^[ \t]*/.exec(ln)[0] || '').replace(/\t/g, '    ').length;
+      var inner = '<span class="no" aria-hidden="true">' + (i + 1) + '</span><span class="cd" style="--ind:' + ind + '">' + (lineHTML(ln, null, opts.blankHTML) || ' ') + '</span>' + (added ? '<span class="dmark" aria-label="changed line">+</span>' : '');
       var row = opts.tappable
         ? '<button type="button" class="ln" data-l="' + i + '" aria-pressed="false" aria-label="Line ' + (i + 1) + ': ' + U.esc(ln.trim() || 'blank line') + '">' + inner + '</button>'
-        : '<div class="ln' + (added ? ' added' : '') + '" data-l="' + i + '">' + inner + '</div>';
+        : '<div class="ln' + (added ? ' added' : '') + (/___/.test(ln) ? ' has-blank' : '') + '" data-l="' + i + '">' + inner + '</div>';
       el.insertAdjacentHTML('beforeend', row);
     });
     wrap.appendChild(el);
@@ -9645,11 +9881,11 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
       state.answered = true;
       if (state.hintBtn) state.hintBtn.hidden = true;
       U.$$('.check-btn', sh.actions).forEach(function (b) { b.hidden = true; });
-      var info = (ctx.onAnswer && ctx.onAnswer(res, sh)) || {};
+      var info = o.info || (ctx.onAnswer && ctx.onAnswer(res, sh)) || {};
       var good = res.correct;
       var r = sh.result;
       r.className = 'result show ' + (good ? 'good' : 'bad');
-      var hdr = good ? (res.assisted ? 'Correct (with help)' : 'Correct!') : (res.score != null && res.score > 0 ? 'Almost!' : 'Not quite');
+      var hdr = good ? (res.retried ? 'Got it on try two!' : res.assisted ? 'Correct (with help)' : 'Correct!') : (res.score != null && res.score > 0 ? 'Almost!' : 'Not quite');
       var short = ch.short || firstSentence(ch.explain);
       r.innerHTML = '<div class="rh">' + icon(good ? 'ok' : 'no') + '<span>' + hdr + '</span>' + (info.xpText ? '<span class="rxp">' + U.esc(info.xpText) + '</span>' : '') + '</div>' +
         (res.score != null && res.total ? '<div class="rscore">' + res.right + ' of ' + res.total + ' right</div>' : '') +
@@ -9699,6 +9935,79 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
     });
   }
 
+  /* ======================================================================
+     Retry flow (lessons / projects / practice / reviews; never timed rounds
+     or boss rounds). First wrong answer → "Not quite" + feedback on the
+     picked option WITHOUT revealing the answer, with [Try again] and
+     [Show answer]. The heart is lost only on that first wrong answer; a
+     correct retry is "assisted" (small consolation XP, combo stays broken).
+     o: { reveal(), soft(), reset(), pickedWhy, softMsg, visible }
+     ====================================================================== */
+  function retryAllowed(ch, ctx, state) {
+    return !!ctx.allowRetry && !state.retried && ch.type !== 'safe' && ch.type !== 'speed';
+  }
+
+  function conclude(ch, ctx, sh, state, res, detailHTML, o) {
+    o = o || {};
+    if (!res.correct && o.reset && retryAllowed(ch, ctx, state)) return softResult(ch, ctx, sh, state, res, detailHTML, o);
+    if (o.reveal) o.reveal();
+    if (state.retried) {
+      var fin = { correct: res.correct, assisted: true, retried: true, hints: state.hints };
+      var info = (ctx.onAnswer && ctx.onAnswer({ correct: res.correct, assisted: true, retried: true, retry: true, hints: state.hints }, sh)) || {};
+      return showResult(ch, ctx, sh, state, fin, detailHTML, Object.assign({}, o, { info: info }));
+    }
+    return showResult(ch, ctx, sh, state, res, detailHTML, o);
+  }
+
+  function softResult(ch, ctx, sh, state, res, detailHTML, o) {
+    return new Promise(function (resolve) {
+      state.answered = true;
+      state.retried = true;
+      if (state.hintBtn) state.hintBtn.hidden = true;
+      U.$$('.check-btn', sh.actions).forEach(function (b) { b.hidden = true; });
+      var info = (ctx.onAnswer && ctx.onAnswer(res, sh)) || {};
+      if (o.soft) o.soft();
+      var nudge = !o.pickedWhy && !o.softMsg && state.hints === 0 && ch.hints && ch.hints[0] ? ch.hints[0] : '';
+      var r = sh.result;
+      r.className = 'result show bad soft';
+      r.innerHTML = '<div class="rh">' + icon('no') + '<span>Not quite</span>' + (info.xpText ? '<span class="rxp">' + U.esc(info.xpText) + '</span>' : '') + '</div>' +
+        (o.pickedWhy ? '<div class="rpick">' + icon('no') + '<span>' + U.md(o.pickedWhy) + '</span></div>' : '') +
+        (o.softMsg ? '<div class="rpick">' + icon('info') + '<span>' + U.md(o.softMsg) + '</span></div>' : '') +
+        (nudge ? '<div class="rpick">' + icon('bulb') + '<span>' + U.md(nudge) + '</span></div>' : '') +
+        '<div class="soft-btns"><button class="pbtn sun try-btn">' + icon('retype') + 'Try again</button><button class="pbtn ghost show-btn">Show answer</button></div>';
+      var rl = sh.el.querySelector('.react-line');
+      rl.hidden = false;
+      rl.textContent = 'Not quite. Give it another go!';
+      CH.curlo.react(sh.head.curlo, 'worried', 1400);
+      CH.fx.slideUp(r);
+      var tryBtn = r.querySelector('.try-btn'), showBtn = r.querySelector('.show-btn');
+      setTimeout(function () {
+        try { r.scrollIntoView({ block: 'nearest', behavior: CH.fx.reduced() ? 'auto' : 'smooth' }); } catch (e) { /* ignore */ }
+        try { tryBtn.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+      }, 260);
+      tryBtn.onclick = function () {
+        CH.audio.play('pop');
+        tryBtn.disabled = showBtn.disabled = true;
+        CH.fx.anim(r, [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(16px) scale(.96)' }], { duration: 180, fill: 'forwards', rm: 'keep' }).then(function () {
+          CH.fx.cancel(r);
+          r.className = 'result'; r.innerHTML = '';
+          state.answered = false;
+          if (state.hintBtn && !state.hintBtn.disabled) state.hintBtn.hidden = false;
+          U.$$('.check-btn', sh.actions).forEach(function (b) { b.hidden = false; });
+          rl.textContent = 'Try again! No heart lost this time.';
+          CH.curlo.react(sh.head.curlo, 'thinking');
+          o.reset();
+          CH.fx.bounce(sh.body);
+        });
+      };
+      showBtn.onclick = function () {
+        CH.audio.play('tap');
+        if (o.reveal) o.reveal();
+        showResult(ch, ctx, sh, state, { correct: false, assisted: state.assisted, hints: state.hints, shown: true }, detailHTML, Object.assign({}, o, { info: info })).then(resolve);
+      };
+    });
+  }
+
   /** Feedback FX at answer time. */
   function feedback(sh, good, anchor) {
     if (good) {
@@ -9745,17 +10054,41 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
     var g = optionGrid(ch.options, { ws: isPredict, mono: mono, single: isHarden });
     sh.body.appendChild(g.el);
     return new Promise(function (resolve) {
+      var tried = [];
       var off = optionKeys(g.buttons, pick, function () { return !state.answered; });
       g.buttons.forEach(function (b, i) { b.onclick = function () { pick(i); }; });
       function pick(i) {
-        if (state.answered) return;
+        if (state.answered || tried.indexOf(i) >= 0) return;
         off();
         var good = i === ch.answer;
-        markOptions(g.buttons, [ch.answer], [i]);
-        if (blank) { blank.textContent = optText(ch.options[ch.answer]); blank.classList.add(good ? 'ok' : 'fixed'); }
         feedback(sh, good, g.buttons[i]);
-        showResult(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints },
-          whyList(ch.options, [ch.answer], [i], { ws: isPredict, mono: mono }), { pickedWhy: optWhy(ch.options[i]) }).then(resolve);
+        conclude(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints },
+          whyList(ch.options, [ch.answer], [i], { ws: isPredict, mono: mono }), {
+            pickedWhy: optWhy(ch.options[i]),
+            reveal: function () {
+              markOptions(g.buttons, [ch.answer], [i]);
+              if (blank) { blank.textContent = optText(ch.options[ch.answer]); blank.classList.add(good ? 'ok' : 'fixed'); }
+            },
+            soft: function () {
+              g.buttons.forEach(function (b) { b.disabled = true; });
+              g.buttons[i].classList.add('wrong');
+              g.buttons[i].querySelector('.tag').textContent = 'Not quite';
+            },
+            reset: function () {
+              tried.push(i);
+              g.buttons.forEach(function (b, k) {
+                var t = tried.indexOf(k) >= 0;
+                b.classList.remove('wrong', 'right', 'dim');
+                b.classList.toggle('tried', t);
+                b.querySelector('.tag').textContent = t ? 'Tried' : '';
+                b.disabled = t;
+                if (t) b.setAttribute('aria-label', (b.getAttribute('aria-label') || '').replace(/ \(already tried\)$/, '') + ' (already tried)');
+              });
+              off = optionKeys(g.buttons, pick, function () { return !state.answered; });
+              var f = g.buttons.filter(function (b) { return !b.disabled; })[0];
+              if (f) try { f.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+            }
+          }).then(resolve);
       }
     });
   }
@@ -9764,69 +10097,146 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
   /* ---- fill: one inline blank in the code ---- */
   R.fill = function (ch, ctx, sh, state) {
     var inputId = U.uid('fill');
-    var codeWrap = CH.code.block(ch.code, { unsafe: !!ch.unsafe, blankHTML: '<span class="blank-in"><input id="' + inputId + '" class="fill-in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Fill in the blank"></span>' });
+    var codeWrap = CH.code.block(ch.code, { unsafe: !!ch.unsafe, blankHTML: '<span class="blank-in"><textarea id="' + inputId + '" class="fill-in" rows="1" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Fill in the blank"></textarea></span>' });
     sh.body.appendChild(codeWrap);
-    var input = codeWrap.querySelector('input');
+    var input = codeWrap.querySelector('textarea.fill-in');
     if (!input) {
       // Safety net: blank not found in the code → offer a separate input.
-      var fb = U.h('<div class="write-box"><label for="' + inputId + '" class="sr">Fill in the blank</label><span class="write-prompt" aria-hidden="true">___</span><span class="blank-in"><input id="' + inputId + '" class="write-in fill-in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></span></div>');
+      var fb = U.h('<div class="write-box"><label for="' + inputId + '" class="sr">Fill in the blank</label><span class="write-prompt" aria-hidden="true">___</span><span class="blank-in"><textarea id="' + inputId + '" class="write-in fill-in" rows="1" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea></span></div>');
       sh.body.appendChild(fb);
-      input = fb.querySelector('input');
+      input = fb.querySelector('textarea');
     }
     input.placeholder = ch.placeholder || '???';
-    function size() { input.style.width = Math.max(4, Math.min(40, (input.value || input.placeholder).length + 1)) + 'ch'; }
-    size();
-    sh.body.appendChild(U.h('<p class="subprompt small muted">Type into the highlighted blank, then press Check (or Enter).</p>'));
+    var size = autoWidth(input);
+    var grow = autoGrow(input);
+    sh.body.appendChild(U.h('<p class="subprompt small muted">Type in the blank, then Check (or Enter).</p>'));
     var btn = checkBtn();
     sh.actions.appendChild(btn);
     setTimeout(function () { try { input.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 400);
     return new Promise(function (resolve) {
-      input.addEventListener('input', function () { size(); btn.disabled = !input.value.trim(); });
-      input.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !btn.disabled && !state.answered) { e.preventDefault(); submit(); } });
+      input.addEventListener('input', function () {
+        if (/\n/.test(input.value)) input.value = input.value.replace(/\n/g, ' ');
+        size(); grow(); btn.disabled = !input.value.trim();
+      });
+      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); if (!btn.disabled && !state.answered) submit(); } });
       btn.onclick = submit;
+      function mark(ok) {
+        input.readOnly = true;
+        input.parentNode.classList.remove('ok', 'bad');
+        input.parentNode.classList.add(ok ? 'ok' : 'bad');
+        var m = input.parentNode.querySelector('.in-mark'); if (m) m.remove();
+        input.parentNode.insertAdjacentHTML('beforeend', icon(ok ? 'ok' : 'no', 'in-mark'));
+      }
       function submit() {
         if (state.answered) return;
         var good = matches(input.value, ch);
-        input.readOnly = true;
-        input.parentNode.classList.add(good ? 'ok' : 'bad');
-        input.parentNode.insertAdjacentHTML('beforeend', icon(good ? 'ok' : 'no', 'in-mark'));
         feedback(sh, good, input);
         var det = '<div class="accepted"><b>' + (good ? 'Your answer:' : 'You typed:') + '</b> <code class="i">' + U.esc(input.value) + '</code>' +
           (good ? '' : '<br><b>Correct:</b> <code class="i">' + U.esc(ch.accept[0]) + '</code>') +
           (ch.accept.length > 1 ? '<br><span class="muted small">Also accepted: ' + ch.accept.slice(1).map(function (a) { return '<code class="i">' + U.esc(a) + '</code>'; }).join(' ') + '</span>' : '') + '</div>';
-        showResult(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, { visible: good ? '' : '<div class="rpick">' + icon('ok') + '<span>Correct: <code class="i">' + U.esc(ch.accept[0]) + '</code></span></div>' }).then(resolve);
+        conclude(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, {
+          visible: good ? '' : '<div class="rpick">' + icon('ok') + '<span>Correct: <code class="i">' + U.esc(ch.accept[0]) + '</code></span></div>',
+          softMsg: 'Close! Check spelling, symbols and semicolons.',
+          reveal: function () { mark(good); },
+          soft: function () { mark(false); },
+          reset: function () {
+            input.readOnly = false;
+            input.parentNode.classList.remove('bad');
+            var m = input.parentNode.querySelector('.in-mark'); if (m) m.remove();
+            btn.disabled = !input.value.trim();
+            try { input.focus({ preventScroll: true }); input.select(); } catch (e) { /* ignore */ }
+          }
+        }).then(resolve);
       }
     });
   };
+
+  /**
+   * Make an <input> fit the longer of its value and placeholder. Uses CSS
+   * `field-sizing: content` where supported; otherwise sets an explicit width
+   * that includes padding + border (the font is monospace, so ch is exact).
+   */
+  var FIELD_SIZING = !!(window.CSS && CSS.supports && CSS.supports('field-sizing', 'content'));
+  function autoWidth(input) {
+    function size() {
+      if (FIELD_SIZING) return;
+      var n = Math.max((input.value || '').length, (input.placeholder || '').length, 3) + 1;
+      var cs = getComputedStyle(input);
+      var extra = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0);
+      input.style.width = 'calc(' + n + 'ch + ' + Math.ceil(extra) + 'px)';
+    }
+    function minW() {
+      var cs = getComputedStyle(input);
+      var extra = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) + (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0);
+      input.style.minWidth = 'min(100%, calc(' + (Math.max((input.placeholder || '').length, 3) + 1) + 'ch + ' + Math.ceil(extra) + 'px))';
+    }
+    minW();
+    size();
+    setTimeout(size, 0);
+    return size;
+  }
+
+  /** Auto-grow a single-line textarea in height (wraps instead of scrolling sideways). */
+  function autoGrow(ta) {
+    function grow() {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    }
+    ta.addEventListener('input', grow);
+    setTimeout(grow, 0);
+    return grow;
+  }
 
   /* ---- write: type a whole line ---- */
   R.write = function (ch, ctx, sh, state) {
     var cw = codeFor(ch); if (cw) sh.body.appendChild(cw);
     var id = U.uid('write');
     var box = U.h('<div class="write-box"><label for="' + id + '" class="sr">Your line of C++</label>' +
-      '<span class="write-prompt" aria-hidden="true">&gt;</span><input id="' + id + '" class="write-in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>');
-    var input = box.querySelector('input');
+      '<span class="write-prompt" aria-hidden="true">&gt;</span><textarea id="' + id + '" class="write-in" rows="1" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></textarea></div>');
+    var input = box.querySelector('textarea');
     input.placeholder = ch.placeholder || 'Type your C++ here';
     sh.body.appendChild(box);
+    autoGrow(input);
     sh.body.appendChild(U.h('<p class="subprompt small muted">Spacing doesn’t matter. Press Enter or Check.</p>'));
     var btn = checkBtn();
     sh.actions.appendChild(btn);
     setTimeout(function () { try { input.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 400);
     return new Promise(function (resolve) {
-      input.addEventListener('input', function () { btn.disabled = !input.value.trim(); });
-      input.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !btn.disabled && !state.answered) { e.preventDefault(); submit(); } });
+      input.addEventListener('input', function () {
+        if (/\n/.test(input.value)) input.value = input.value.replace(/\n/g, ' ');   // one logical line
+        btn.disabled = !input.value.trim();
+      });
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); if (!btn.disabled && !state.answered) submit(); }
+      });
       btn.onclick = submit;
+      function mark(ok) {
+        input.readOnly = true;
+        box.classList.remove('ok', 'bad');
+        box.classList.add(ok ? 'ok' : 'bad');
+        var m = box.querySelector('.in-mark'); if (m) m.remove();
+        box.insertAdjacentHTML('beforeend', icon(ok ? 'ok' : 'no', 'in-mark'));
+      }
       function submit() {
         if (state.answered) return;
         var good = matches(input.value, ch);
-        input.readOnly = true;
-        box.classList.add(good ? 'ok' : 'bad');
-        box.insertAdjacentHTML('beforeend', icon(good ? 'ok' : 'no', 'in-mark'));
         feedback(sh, good, box);
         var sample = (ch.accept && ch.accept[0]) || '';
         var det = '<div class="accepted"><b>You wrote:</b> <code class="i">' + U.esc(input.value) + '</code>' +
           (sample ? '<br><b>' + (good ? 'Model answer:' : 'One correct answer:') + '</b> <code class="i">' + U.esc(sample) + '</code>' : '') + '</div>';
-        showResult(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, { visible: good || !sample ? '' : '<div class="rpick">' + icon('ok') + '<span>One answer: <code class="i">' + U.esc(sample) + '</code></span></div>' }).then(resolve);
+        conclude(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, {
+          visible: good || !sample ? '' : '<div class="rpick">' + icon('ok') + '<span>One answer: <code class="i">' + U.esc(sample) + '</code></span></div>',
+          softMsg: 'Almost! Check names, symbols and the semicolon.',
+          reveal: function () { mark(good); },
+          soft: function () { mark(false); },
+          reset: function () {
+            input.readOnly = false;
+            box.classList.remove('bad');
+            var m = box.querySelector('.in-mark'); if (m) m.remove();
+            btn.disabled = !input.value.trim();
+            try { input.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+          }
+        }).then(resolve);
       }
     });
   };
@@ -9994,17 +10404,27 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
         if (state.answered) return;
         var got = tiles(prog).map(function (t) { return t._item.t; });
         var good = got.length === ch.lines.length && got.every(function (t, i) { return t.trim() === ch.lines[i].trim(); });
-        tiles(prog).forEach(function (t, i) {
-          var ok = ch.lines[i] != null && t._item.t.trim() === ch.lines[i].trim();
-          t.classList.add(ok ? 'ok' : 'bad');
-          t.querySelector('.tmark').innerHTML = icon(ok ? 'ok' : 'no');
-          t.setAttribute('aria-label', t._item.t.trim() + (ok ? ' (correct position)' : ' (wrong position)'));
-        });
+        var inPlace = tiles(prog).filter(function (t, i) { return ch.lines[i] != null && t._item.t.trim() === ch.lines[i].trim(); }).length;
         U.$$('.tile', wrap).forEach(function (t) { t.tabIndex = -1; });
         feedback(sh, good, prog);
         var det = '<div class="accepted"><b>Correct order:</b><ol class="ans-lines">' + ch.lines.map(function (l) { return '<li><code class="i">' + U.esc(l.trim()) + '</code></li>'; }).join('') + '</ol>' +
           (hasBank ? '<span class="muted small">Not needed: ' + ch.distractors.map(function (d) { return '<code class="i">' + U.esc(d.trim()) + '</code>'; }).join(' ') + '</span>' : '') + '</div>';
-        showResult(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det).then(resolve);
+        conclude(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, {
+          softMsg: inPlace + ' of ' + ch.lines.length + ' lines are in the right spot' + (hasBank && got.length !== ch.lines.length ? ', and the line count is off.' : '.'),
+          reveal: function () {
+            tiles(prog).forEach(function (t, i) {
+              var ok = ch.lines[i] != null && t._item.t.trim() === ch.lines[i].trim();
+              t.classList.add(ok ? 'ok' : 'bad');
+              t.querySelector('.tmark').innerHTML = icon(ok ? 'ok' : 'no');
+              t.setAttribute('aria-label', t._item.t.trim() + (ok ? ' (correct position)' : ' (wrong position)'));
+            });
+          },
+          reset: function () {
+            U.$$('.tile', wrap).forEach(function (t) { t.tabIndex = 0; });
+            update();
+            var f = wrap.querySelector('.tile'); if (f) try { f.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+          }
+        }).then(resolve);
       };
     });
   };
@@ -10018,43 +10438,84 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
     var lineWrong = false;
     return new Promise(function (resolve) {
       var lines = U.$$('.ln', cw);
+      var target = lines[ch.bugLine];
+      function flagTarget() {
+        if (target && !target.classList.contains('flag-ok')) { target.classList.add('flag-ok'); target.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('bug') + '<b>Bug here</b></span>'); }
+      }
+      function clearMarks(ln) { ln.classList.remove('flag-bad', 'flag-ok'); var m = ln.querySelector('.lmark'); if (m) m.remove(); }
       lines.forEach(function (ln) {
         ln.onclick = function () {
           if (state.answered || state.lineChosen) return;
           state.lineChosen = true;
           var i = +ln.dataset.l, ok = i === ch.bugLine;
           lines.forEach(function (x) { x.disabled = true; });
-          var target = lines[ch.bugLine];
           if (ok) {
             ln.classList.add('flag-ok');
             ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('ok') + '<b>Found it!</b></span>');
             CH.audio.play('select'); CH.fx.bounce(ln);
-          } else {
-            lineWrong = true;
-            ln.classList.add('flag-bad');
-            ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('no') + '<b>Not this one</b></span>');
-            if (target) { target.classList.add('flag-ok'); target.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('bug') + '<b>Bug here</b></span>'); }
-            CH.audio.play('wrong'); CH.fx.shake(ln, 6);
+            fixStep();
+            return;
           }
-          step.innerHTML = icon('wand') + ' <b>Step 2:</b> choose the fix for line ' + (ch.bugLine + 1) + '.';
-          var g = optionGrid(ch.options, { mono: true, single: true });
-          sh.body.appendChild(g.el);
-          CH.fx.slideUp(g.el);
-          var off = optionKeys(g.buttons, pick, function () { return !state.answered; });
-          g.buttons.forEach(function (b, k) { b.onclick = function () { pick(k); }; });
-          setTimeout(function () { try { g.buttons[0].focus({ preventScroll: true }); g.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { /* ignore */ } }, 200);
-          function pick(k) {
-            if (state.answered) return;
-            off();
-            var fixOK = k === ch.answer, good = fixOK && !lineWrong;
-            markOptions(g.buttons, [ch.answer], [k]);
-            feedback(sh, good, g.buttons[k]);
-            var det = (lineWrong ? '<div class="accepted">' + icon('bug') + ' The bug was on <b>line ' + (ch.bugLine + 1) + '</b>.' + (fixOK ? ' You picked the right fix, though!' : '') + '</div>' : '') +
-              whyList(ch.options, [ch.answer], [k], { rightLabel: 'The fix.', mono: true });
-            showResult(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, { pickedWhy: optWhy(ch.options[k]), visible: lineWrong ? '<div class="rpick">' + icon('bug') + '<span>The bug was on <b>line ' + (ch.bugLine + 1) + '</b>.</span></div>' : '' }).then(resolve);
+          ln.classList.add('flag-bad');
+          ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('no') + '<b>Not this one</b></span>');
+          if (retryAllowed(ch, ctx, state)) {
+            // Wrong line: a retryable miss (don't reveal where the bug is yet).
+            feedback(sh, false, ln);
+            conclude(ch, ctx, sh, state, { correct: false, assisted: state.assisted, hints: state.hints },
+              '<div class="accepted">' + icon('bug') + ' The bug was on <b>line ' + (ch.bugLine + 1) + '</b>.</div>' + whyList(ch.options, [ch.answer], [], { rightLabel: 'The fix.', mono: true }), {
+                softMsg: 'That line is fine. Look for what could break.',
+                reveal: flagTarget,
+                reset: function () {
+                  clearMarks(ln);
+                  lines.forEach(function (x) { x.disabled = false; });
+                  state.lineChosen = false;
+                  try { lines[0].focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+                }
+              }).then(resolve);
+            return;
           }
+          lineWrong = true;
+          flagTarget();
+          CH.audio.play('wrong'); CH.fx.shake(ln, 6);
+          fixStep();
         };
       });
+      function fixStep() {
+        step.innerHTML = icon('wand') + ' <b>Step 2:</b> choose the fix for line ' + (ch.bugLine + 1) + '.';
+        var g = optionGrid(ch.options, { mono: true, single: true });
+        sh.body.appendChild(g.el);
+        CH.fx.slideUp(g.el);
+        var tried = [];
+        var off = optionKeys(g.buttons, pick, function () { return !state.answered; });
+        g.buttons.forEach(function (b, k) { b.onclick = function () { pick(k); }; });
+        setTimeout(function () { try { g.buttons[0].focus({ preventScroll: true }); g.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) { /* ignore */ } }, 200);
+        function pick(k) {
+          if (state.answered || tried.indexOf(k) >= 0) return;
+          off();
+          var fixOK = k === ch.answer, good = fixOK && !lineWrong;
+          feedback(sh, good, g.buttons[k]);
+          var det = (lineWrong ? '<div class="accepted">' + icon('bug') + ' The bug was on <b>line ' + (ch.bugLine + 1) + '</b>.' + (fixOK ? ' You picked the right fix, though!' : '') + '</div>' : '') +
+            whyList(ch.options, [ch.answer], [k], { rightLabel: 'The fix.', mono: true });
+          conclude(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, {
+            pickedWhy: optWhy(ch.options[k]),
+            visible: lineWrong ? '<div class="rpick">' + icon('bug') + '<span>The bug was on <b>line ' + (ch.bugLine + 1) + '</b>.</span></div>' : '',
+            reveal: function () { markOptions(g.buttons, [ch.answer], [k]); },
+            soft: function () { g.buttons.forEach(function (b) { b.disabled = true; }); g.buttons[k].classList.add('wrong'); g.buttons[k].querySelector('.tag').textContent = 'Not quite'; },
+            reset: lineWrong ? null : function () {
+              tried.push(k);
+              g.buttons.forEach(function (b, j) {
+                var t = tried.indexOf(j) >= 0;
+                b.classList.remove('wrong'); b.classList.toggle('tried', t);
+                b.querySelector('.tag').textContent = t ? 'Tried' : '';
+                b.disabled = t;
+              });
+              off = optionKeys(g.buttons, pick, function () { return !state.answered; });
+              var f = g.buttons.filter(function (b) { return !b.disabled; })[0];
+              if (f) try { f.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+            }
+          }).then(resolve);
+        }
+      }
     });
   };
 
@@ -10088,14 +10549,18 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
         if (state.answered) return;
         var D = ch.dangerous || [];
         var good = flagged.length === D.length && D.every(function (i) { return flagged.indexOf(i) >= 0; });
-        lines.forEach(function (ln) {
-          var i = +ln.dataset.l, isD = D.indexOf(i) >= 0, isF = flagged.indexOf(i) >= 0;
-          ln.disabled = true;
-          var m = ln.querySelector('.lmark'); if (m) m.remove();
-          if (isD && isF) { ln.classList.add('flag-ok'); ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('ok') + '<b>Caught</b></span>'); }
-          else if (isD) { ln.classList.add('flag-miss'); ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('alert') + '<b>Missed</b></span>'); }
-          else if (isF) { ln.classList.add('flag-bad'); ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('no') + '<b>Safe</b></span>'); }
-        });
+        var caught = D.filter(function (i) { return flagged.indexOf(i) >= 0; }).length;
+        var falseFlags = flagged.filter(function (i) { return D.indexOf(i) < 0; }).length;
+        lines.forEach(function (ln) { ln.disabled = true; });
+        function reveal() {
+          lines.forEach(function (ln) {
+            var i = +ln.dataset.l, isD = D.indexOf(i) >= 0, isF = flagged.indexOf(i) >= 0;
+            var m = ln.querySelector('.lmark'); if (m) m.remove();
+            if (isD && isF) { ln.classList.add('flag-ok'); ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('ok') + '<b>Caught</b></span>'); }
+            else if (isD) { ln.classList.add('flag-miss'); ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('alert') + '<b>Missed</b></span>'); }
+            else if (isF) { ln.classList.add('flag-bad'); ln.insertAdjacentHTML('beforeend', '<span class="lmark">' + icon('no') + '<b>Safe</b></span>'); }
+          });
+        }
         feedback(sh, good, cw);
         var notes = ch.lineNotes || {};
         var keys = Object.keys(notes).map(Number).sort(function (a, b) { return a - b; });
@@ -10103,7 +10568,11 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
           var isD = D.indexOf(i) >= 0;
           return '<li class="' + (isD ? 'nope' : 'yes') + '">' + icon(isD ? 'alert' : 'ok') + '<div><code>Line ' + (i + 1) + '</code><span class="wl"><b>' + (isD ? 'Dangerous.' : 'Fine.') + '</b> ' + U.md(notes[i]) + '</span></div></li>';
         }).join('') + '</ul>';
-        showResult(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det).then(resolve);
+        conclude(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints }, det, {
+          softMsg: 'You caught ' + caught + ' of ' + D.length + ' dangerous lines' + (falseFlags ? ' and flagged ' + U.plural(falseFlags, 'safe line') + '.' : '.'),
+          reveal: reveal,
+          reset: function () { lines.forEach(function (ln) { ln.disabled = false; }); try { lines[0].focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+        }).then(resolve);
       };
     });
   };
@@ -10135,11 +10604,20 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
         off();
         var A = ch.answers || [];
         var good = picked.length === A.length && A.every(function (i) { return picked.indexOf(i) >= 0; });
-        g.buttons.forEach(function (b) { b.classList.remove('on'); });
-        markOptions(g.buttons, A, picked);
+        var snapshot = picked.slice();
         feedback(sh, good, g.el);
-        showResult(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints },
-          whyList(ch.options, A, picked, { rightLabel: 'Exposes the bug.', mono: true })).then(resolve);
+        g.buttons.forEach(function (b) { b.disabled = true; });
+        conclude(ch, ctx, sh, state, { correct: good, assisted: state.assisted, hints: state.hints },
+          whyList(ch.options, A, snapshot, { rightLabel: 'Exposes the bug.', mono: true }), {
+            softMsg: 'Not quite: a pick is off, or one is missing.',
+            reveal: function () { g.buttons.forEach(function (b) { b.classList.remove('on'); }); markOptions(g.buttons, A, snapshot); },
+            reset: function () {
+              g.buttons.forEach(function (b) { b.disabled = false; });
+              off = optionKeys(g.buttons, toggle, function () { return !state.answered; });
+              btn.disabled = !picked.length;
+              try { g.buttons[0].focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+            }
+          }).then(resolve);
       };
     });
   };
@@ -10319,6 +10797,8 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
 
   var BASE_XP = { lesson: 10, boss: 12, project: 8, practice: 15, review: 8, refill: 5, placement: 0 };
   var HEART_MODES = ['lesson', 'boss'];
+  var RETRY_MODES = ['lesson', 'project', 'practice', 'review', 'refill'];   // never boss / placement
+  var RETRY_XP = 2;
 
   /* ======================================================================
      Session shell
@@ -10402,11 +10882,11 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
     if (old) {
       old.classList.add('leaving');
       var rm = CH.fx.reduced();
-      CH.fx.anim(old, rm ? [{ opacity: 1 }, { opacity: 0 }] : [{ transform: 'none', opacity: 1 }, { transform: 'translateX(-30%) scale(.92) rotate(-2deg)', opacity: 0 }],
-        { duration: rm ? 120 : 240, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards', rm: 'keep' }).then(function () { old.remove(); });
+      CH.fx.anim(old, rm ? [{ opacity: 1 }, { opacity: 0 }] : [{ transform: 'none', opacity: 1 }, { transform: 'translate(-12%, -2%) scale(.9)', opacity: 0 }],
+        { duration: rm ? 120 : 220, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards', rm: 'keep' }).then(function () { old.remove(); });
       setTimeout(function () { old.remove(); }, 500);
-      CH.fx.anim(pg, rm ? [{ opacity: 0 }, { opacity: 1 }] : [{ transform: 'translateX(100%) rotate(3deg)', opacity: 0.5 }, { transform: 'translateX(-2%)', opacity: 1, offset: 0.65 }, { transform: 'none', opacity: 1 }],
-        { duration: rm ? 140 : 520, easing: 'cubic-bezier(.22,.9,.3,1.05)', rm: 'keep' });
+      CH.fx.anim(pg, rm ? [{ opacity: 0 }, { opacity: 1 }] : [{ transform: 'translateX(34%) translateY(3%) scale(.94) rotate(2deg)', opacity: 0 }, { transform: 'translateX(-1.5%) scale(1.005)', opacity: 1, offset: 0.68 }, { transform: 'none', opacity: 1 }],
+        { duration: rm ? 140 : 380, easing: 'cubic-bezier(.22,.9,.3,1.05)', rm: 'keep' });
     }
     return pg;
   };
@@ -10425,6 +10905,7 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
       mode: mode,
       eyebrow: extra.eyebrow,
       noHints: mode === 'placement' || extra.noHints,
+      allowRetry: RETRY_MODES.indexOf(mode) >= 0 && !extra.noRetry,
       continueLabel: extra.continueLabel,
       onHint: function (tier, cost, btn) {
         var d = G().addXP(-cost, 'hint');
@@ -10432,8 +10913,19 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
         if (d) CH.fx.floatText(btn, d + ' XP', 'neg');
       },
       onAnswer: function (res, sh) {
-        self.total++;
         var out = {};
+        if (res.retry) {
+          // Second try after a miss: no hearts, no combo, tiny consolation XP.
+          if (res.correct) {
+            var dr = G().addXP(RETRY_XP, 'retry');
+            self.xp += dr;
+            if (dr) out.xpText = '+' + dr + ' XP';
+          }
+          self.updateCombo(true);
+          if (extra.onAnswer) extra.onAnswer(res);
+          return out;
+        }
+        self.total++;
         G().recordAnswer(ch, res.correct, mode === 'refill' ? 'review' : mode, res.assisted, res.hints);
         if (res.correct) {
           self.right++;
@@ -10471,7 +10963,8 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
     var self = this;
     return CH.ui.dialog({
       title: 'Out of hearts!', mood: 'worried',
-      html: '<p>' + CH.curlo.line('noHearts') + '</p><p class="muted small">Answer a quick 3-question review to earn a heart and keep going. No hearts are lost during the review.</p>',
+      html: '<p>' + CH.curlo.line('noHearts') + '</p>' + CH.ui.heartClockHTML() + '<p class="muted small">Or answer 3 quick review questions to earn one now. No hearts lost there.</p>',
+      onMount: CH.ui.bindHeartClock,
       buttons: [{ label: icon('practice') + 'Earn a heart', value: 'refill', cls: 'teal' }, { label: 'Quit to map', value: 'quit', cls: 'ghost' }],
       dismissValue: 'refill'
     }).then(function (v) {
@@ -10768,7 +11261,7 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
         var el = U.h('<div class="stress-intro"><div class="eyebrow">' + icon('swords') + ' Stress Test</div><h2>Break-in attempt!</h2></div>');
         var cs = CH.ui.curloSays(CH.ui.story(p.stress.intro || 'Curlo throws bad input at your program!'), 'bracing');
         el.appendChild(cs.el);
-        el.appendChild(U.h('<p class="muted">Real users type anything. For each attack, watch what breaks, then harden the code so the shield holds.</p>'));
+        el.appendChild(U.h('<p class="muted">Users type anything. See what breaks, then harden it.</p>'));
         return s.card(el, 'Bring it on!', 'coral');
       }
       function attack() {
@@ -10804,14 +11297,18 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
         return CH.challenges.render(a.challenge, host, {
           mode: 'project', eyebrow: 'Fix it · ' + (CH.challenges.TYPES[a.challenge.type] || ''),
           onHint: function (t, cost, b) { var d = CH.game.addXP(-cost, 'hint'); s.xp += d; if (d) CH.fx.floatText(b, d + ' XP', 'neg'); },
+          allowRetry: true,
           onAnswer: function (res) {
-            s.total++;
-            CH.game.recordAnswer(a.challenge, res.correct, 'project', res.assisted, res.hints);
-            s.updateCombo(!res.correct);
             var out = {};
+            if (!res.retry) {
+              s.total++;
+              CH.game.recordAnswer(a.challenge, res.correct, 'project', res.assisted, res.hints);
+            }
+            s.updateCombo(!res.correct || res.retry);
             if (res.correct) {
-              s.right++;
-              if (!res.assisted) { var d = CH.game.addXP(Math.round(12 * CH.game.multiplier()), 'stress'); s.xp += d; out.xpText = '+' + d + ' XP'; }
+              if (!res.retry) s.right++;
+              if (res.retry) { var d0 = CH.game.addXP(2, 'retry'); s.xp += d0; out.xpText = '+' + d0 + ' XP'; }
+              else if (!res.assisted) { var d = CH.game.addXP(Math.round(12 * CH.game.multiplier()), 'stress'); s.xp += d; out.xpText = '+' + d + ' XP'; }
               try { arena.el.scrollIntoView({ block: 'center', behavior: CH.fx.reduced() ? 'auto' : 'smooth' }); } catch (e) { /* ignore */ }
               arena.setAttack(a.input);
               setTimeout(function () { arena.block(); }, 350);
@@ -10920,6 +11417,28 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
       taunt(U.pick(b.taunt && b.taunt.length ? b.taunt : ['Ha! Missed me!']));
     }
 
+    /* ---- 0. dramatic entrance: dim + name card slam + shake (tap to skip) ---- */
+    function dim() {
+      if (CH.fx.reduced()) return Promise.resolve();
+      return new Promise(function (resolve) {
+        var ov = U.h('<div class="boss-dim" aria-hidden="true"><div class="bd-card"><small>Boss battle</small><b>' + U.esc(b.name) + '</b></div></div>');
+        s.el.appendChild(ov);
+        var done = false;
+        function end() {
+          if (done) return; done = true;
+          CH.fx.anim(ov, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards', rm: 'keep' }).then(function () { ov.remove(); });
+          setTimeout(function () { ov.remove(); }, 400);
+          resolve();
+        }
+        ov.addEventListener('click', end);
+        CH.audio.play('boss');
+        CH.fx.anim(ov, [{ opacity: 0 }, { opacity: 1 }], { duration: 180, rm: 'keep' });
+        CH.fx.anim(ov.querySelector('.bd-card'), [{ transform: 'scale(2.4) rotate(-8deg)', opacity: 0 }, { transform: 'scale(.94) rotate(1deg)', opacity: 1, offset: 0.6 }, { transform: 'none', opacity: 1 }], { duration: 380, delay: 120, fill: 'backwards', easing: 'ease-out' })
+          .then(function () { CH.fx.shake(s.el, 10); });
+        setTimeout(end, 1150);
+      });
+    }
+
     /* ---- 1. entrance ---- */
     function entrance() {
       var el = U.h('<div class="boss-intro"><div class="boss-stage-in"><div class="boss-big"></div><div class="boss-banner"><small>Boss battle · World ' + world.num + '</small><b>' + U.esc(b.name) + '</b></div></div></div>');
@@ -10929,7 +11448,6 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
       if (b.intro) el.appendChild(U.h('<div class="bubble boss-bubble"><b>' + U.esc(b.name) + ':</b> ' + U.md([].concat(b.intro)[0]) + '</div>'));
       el.appendChild(U.h('<p class="muted small center">' + icon('heart') + ' Wrong answers cost a heart. Land ' + U.plural(maxHp, 'hit') + ', then survive the Defense Phase!</p>'));
       var pr = s.card(el, icon('swords') + ' Fight!', 'coral');
-      CH.audio.play('boss');
       var big = el.querySelector('.boss-big'), banner = el.querySelector('.boss-banner');
       CH.fx.anim(big, [{ transform: 'translateY(-120%) scale(.7)', opacity: 0 }, { transform: 'translateY(6%) scale(1.1,.86)', opacity: 1, offset: 0.55 }, { transform: 'translateY(-4%) scale(.96,1.05)', offset: 0.75 }, { transform: 'none', opacity: 1 }], { duration: 900, easing: 'ease-out', rm: 'fade' })
         .then(function () { CH.fx.shake(s.el, 8); });
@@ -10963,7 +11481,7 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
     function defensePhase() {
       if (!defense.length) return Promise.resolve();
       var el = U.h('<div class="def-intro"><div class="phase-banner"><small>Phase 2</small><b>Defense!</b></div></div>');
-      el.appendChild(CH.ui.curloSays('The boss is enraged and hurls <b>hostile inputs</b> at us! Harden the code so my shield can block them!', 'bracing').el);
+      el.appendChild(CH.ui.curloSays('Hostile inputs incoming! Harden the code so my shield holds!', 'bracing').el);
       var pr = s.card(el, icon('shield') + ' Shields up!', 'teal');
       drawArt(false);
       taunt('Enough! Eat THIS input!');
@@ -11037,7 +11555,7 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
       });
     }
 
-    entrance().then(rounds).then(defensePhase).then(victory).catch(function (e) { if (e && e.message !== 'quit') console.error(e); });
+    dim().then(entrance).then(rounds).then(defensePhase).then(victory).catch(function (e) { if (e && e.message !== 'quit') console.error(e); });
     return s;
   }
 
@@ -11080,20 +11598,23 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
   };
 
   /** Start a map node (with hearts check + world story intro). */
-  SU.startNode = function (node) {
+  SU.startNode = function (node, originEl) {
     var s = S();
     if ((node.kind === 'lesson' || node.kind === 'boss') && s.hearts.n <= 0) {
       return CH.ui.dialog({
         title: 'Out of hearts', mood: 'worried',
-        html: '<p>' + CH.curlo.line('noHearts') + '</p><p class="muted">Next free heart in <b>' + U.fmtClock(G().nextHeartIn()) + '</b>.</p>',
-        buttons: [{ label: icon('practice') + 'Practice to refill', value: 'p', cls: 'teal' }, { label: 'Later', value: 0, cls: 'ghost' }]
+        html: '<p>' + CH.curlo.line('noHearts') + '</p>' + CH.ui.heartClockHTML() + '<p class="muted small">A 3-question review earns a heart right away.</p>',
+        onMount: CH.ui.bindHeartClock,
+        buttons: [{ label: icon('practice') + 'Earn a heart', value: 'p', cls: 'teal' }, { label: 'Wait for it', value: 0, cls: 'ghost' }]
       }).then(function (v) { if (v === 'p') CH.router.go('practice', { autoReview: true }); });
     }
     var w = node.world;
+    // Expand from the tapped map node (collapses back into it on exit).
+    var tx = originEl && document.body.contains(originEl) ? { dir: 'expand', origin: { el: originEl, id: node.id } } : { dir: 'up' };
     function go() {
-      if (node.kind === 'lesson') CH.router.go('lesson', { id: node.id }, { dir: 'up' });
-      else if (node.kind === 'project') CH.router.go('project', { world: w.id }, { dir: 'up' });
-      else if (node.kind === 'boss') CH.router.go('boss', { world: w.id }, { dir: 'up' });
+      if (node.kind === 'lesson') CH.router.go('lesson', { id: node.id }, tx);
+      else if (node.kind === 'project') CH.router.go('project', { world: w.id }, tx);
+      else if (node.kind === 'boss') CH.router.go('boss', { world: w.id }, tx);
     }
     if (node.kind === 'lesson' && node.i === 0 && !node.done && w.story && w.story.intro) {
       return CH.ui.dialog({ title: 'World ' + w.num + ': ' + w.title, mood: 'celebrate', el: CH.ui.story(w.story.intro), buttons: [{ label: 'Let’s go!', value: 1 }], dismissValue: 0 })
@@ -11264,7 +11785,7 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
         else ic = NODE_ICON.cur;
         var stateTxt = st === 'done' ? 'complete' : st === 'cur' ? 'you are here' : st === 'open' ? 'open' : 'locked';
         var best = n.kind === 'lesson' && s.lessons[n.id] ? ', best ' + Math.round((s.lessons[n.id].best || 0) * 100) + '%' : '';
-        html += '<button class="' + cls + '" style="left:' + p.x + 'px;top:' + p.y + 'px" data-i="' + i + '" aria-label="' + U.esc(nodeKindLabel(n) + ': ' + nodeLabel(n) + ', ' + stateTxt + best) + '">' + ic + '</button>';
+        html += '<button class="' + cls + '" style="left:' + p.x + 'px;top:' + p.y + 'px" data-i="' + i + '" data-origin-id="' + U.esc(n.id) + '" aria-label="' + U.esc(nodeKindLabel(n) + ': ' + nodeLabel(n) + ', ' + stateTxt + best) + '">' + ic + '</button>';
         var right = p.o <= 0.05, off = n.kind === 'boss' ? 62 : isCur ? 54 : 48;
         html += '<div class="nlabel ' + st + '" style="top:' + p.y + 'px;' + (right ? 'left:' + (p.x + off) + 'px' : 'right:' + (W - p.x + off) + 'px') + '" aria-hidden="true"><small>' + U.esc(nodeKindLabel(n)) + (n.done ? ' · ' + (n.kind === 'lesson' ? Math.round((s.lessons[n.id].best || 0) * 100) + '%' : 'done') : '') + '</small>' + U.esc(nodeLabel(n)) + '</div>';
         if (isCur) html += '<div class="start-tip" style="left:' + p.x + 'px;top:' + (p.y - (n.kind === 'boss' ? 62 : 52)) + 'px" aria-hidden="true">' + (n.kind === 'boss' ? 'FIGHT!' : 'START') + '</div>';
@@ -11312,7 +11833,7 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
     var el = U.h('<div>' + body + '<div class="row"><button class="pbtn ' + (n.kind === 'boss' ? 'coral' : n.done ? 'ghost' : '') + '" data-autofocus>' +
       (n.kind === 'boss' ? icon('swords') + (n.done ? 'Rematch' : 'Fight!') : n.done ? icon('retype') + 'Practice again' : icon('play') + 'Start') + '</button></div></div>');
     var sh = CH.ui.sheet({ title: nodeLabel(n), el: el });
-    el.querySelector('.pbtn').onclick = function () { sh.close(); setTimeout(function () { SU.startNode(n); }, 120); };
+    el.querySelector('.pbtn').onclick = function () { sh.close(); setTimeout(function () { SU.startNode(n, btn); }, 120); };
   }
 
   /* ======================================================================
@@ -11599,6 +12120,19 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
      ====================================================================== */
   screens.stats = {
     tab: 'more',
+    onShow: function (el) {
+      // Cards are already laid out; a quick staggered lift-in, then numbers count up and bars fill.
+      var cards = U.$$('.tile-stat, .card', el);
+      CH.fx.stagger(cards, { duration: 200 });
+      var after = CH.fx.reduced() ? 0 : 180;
+      setTimeout(function () {
+        U.$$('.tile-stat .ts-v', el).forEach(function (v) {
+          var m = /^(\D*)(\d+)(\D*)$/.exec(v.textContent);
+          if (m && +m[2] > 0) CH.fx.countUp(v, 0, +m[2], 500, function (n) { return m[1] + n + m[3]; });
+        });
+        U.$$('.sfill[data-p]', el).forEach(function (f) { f.style.transform = 'scaleX(' + f.dataset.p + ')'; });
+      }, after);
+    },
     render: function () {
       var s = S(), c = s.counters;
       var acc = c.correct + c.wrong ? Math.round(100 * c.correct / (c.correct + c.wrong)) : 0;
@@ -11630,17 +12164,17 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
         { l: 'Reviews', v: c.reviews, i: 'practice', cls: 'sky' }
       ].forEach(function (t, i) {
         var tile = U.h('<div class="tile-stat ' + t.cls + '"><div class="ts-l">' + icon(t.i) + U.esc(t.l) + '</div><div class="ts-v">' + U.esc(t.v) + '</div></div>');
-        tiles.appendChild(tile); CH.fx.popIn(tile, i * 50);
+        tiles.appendChild(tile);
       });
       var sa = el.querySelector('.skill-acc');
       G().SKILLS.forEach(function (k) {
         var p = perSkill[k], n = p ? p.r + p.w : 0, a = n ? Math.round(100 * p.r / n) : 0;
-        sa.appendChild(U.h('<div class="stat"><span>' + SKILL_NAMES[k] + '</span><div class="sbar" role="meter" aria-label="' + SKILL_NAMES[k] + ' accuracy" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + a + '"><div class="sfill" style="--c:' + SKILL_COLORS[k] + ';transform:scaleX(' + a / 100 + ')"></div></div><span class="snum">' + (n ? a + '%' : '–') + '</span></div>'));
+        sa.appendChild(U.h('<div class="stat"><span>' + SKILL_NAMES[k] + '</span><div class="sbar" role="meter" aria-label="' + SKILL_NAMES[k] + ' accuracy" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + a + '"><div class="sfill" style="--c:' + SKILL_COLORS[k] + '" data-p="' + a / 100 + '"></div></div><span class="snum">' + (n ? a + '%' : '–') + '</span></div>'));
       });
       var wp = el.querySelector('.wprog');
       G().worlds().forEach(function (w) {
         var nodes = G().nodes(w), d = nodes.filter(function (n) { return n.done; }).length;
-        wp.appendChild(U.h('<div class="stat"><span>W' + w.num + '</span><div class="sbar" role="meter" aria-label="World ' + w.num + ' progress" aria-valuemin="0" aria-valuemax="' + nodes.length + '" aria-valuenow="' + d + '"><div class="sfill" style="--c:var(--tang);transform:scaleX(' + (nodes.length ? d / nodes.length : 0) + ')"></div></div><span class="snum">' + d + '/' + nodes.length + '</span></div>'));
+        wp.appendChild(U.h('<div class="stat"><span>W' + w.num + '</span><div class="sbar" role="meter" aria-label="World ' + w.num + ' progress" aria-valuemin="0" aria-valuemax="' + nodes.length + '" aria-valuenow="' + d + '"><div class="sfill" style="--c:var(--tang)" data-p="' + (nodes.length ? d / nodes.length : 0) + '"></div></div><span class="snum">' + d + '/' + nodes.length + '</span></div>'));
       });
       var ag = el.querySelector('.ach-grid');
       G().achDefs().forEach(function (a) {
@@ -11666,7 +12200,7 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
         '<div class="eyebrow">Settings</div><h2 class="scr-title">Make it yours</h2>' +
         (CH.store.persistent ? '' : '<div class="notice" role="note">' + icon('info') + '<span>Progress can’t be saved on this device (storage is blocked). Use Export to keep a copy.</span></div>') +
         '<div class="card">' +
-          toggle('sound', 'Sound effects', 'sound') + toggle('music', 'Music', 'music', 'Gentle generated ambient loop') +
+          (CH.config.SOUND_ENABLED ? toggle('sound', 'Sound effects', 'sound') + toggle('music', 'Music', 'music', 'Gentle generated ambient loop') : '') +
           toggle('reduceMotion', 'Reduce motion', 'motion', 'Fades instead of bounces; no confetti') +
           '<div class="set-row"><span class="set-ic">' + icon('text') + '</span><div class="set-t"><b id="lb-ts">Text size</b></div><div class="seg small" role="radiogroup" aria-labelledby="lb-ts">' +
             ['s', 'm', 'l'].map(function (z) { return '<button role="radio" aria-checked="' + (st.textSize === z) + '" data-ts="' + z + '">' + z.toUpperCase() + '</button>'; }).join('') + '</div></div>' +
@@ -11801,11 +12335,11 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
   function S() { return CH.store.state; }
   var icon = function (n, c) { return CH.ui.icon(n, c); };
 
-  var STORY = [
+  var STORY = [   // Curlo lines: 15 words max each
     'Hi hi hi! I’m <b>Curlo</b>, a brace-bean: half curly brace <b>{ }</b>, all heart!',
-    'I live in the <b>Codebase</b>. It used to be tidy… but <b>bugs</b> keep sneaking in through sloppy code: gremlins, blobs, golems, and worse.',
-    'Here’s the deal: you learn <b>C++</b> with me, and we write code so solid that no bug can break it. Every boss we beat makes the Codebase safer.',
-    'I’ll explain, cheer, and maybe tell a few terrible jokes. Ready to become a <b>Cpp Hero</b>?'
+    'I live in the <b>Codebase</b>, and sneaky <b>bugs</b> keep breaking in!',
+    'Learn <b>C++</b> with me, and we’ll write code no bug can break.',
+    'I’ll explain, cheer, and tell terrible jokes. Ready, <b>Cpp Hero</b>?'
   ];
 
   function screen() {
@@ -12053,8 +12587,34 @@ std::cout << shards / golems << ' ' << shards % golems << '\n';`,
         CH.router.go(t.dataset.go, {}, { dir: dir, root: true });
       });
     });
-    U.$('#btnStats').onclick = function () { CH.audio.play('tap'); CH.router.go('stats'); };
-    U.$('#btnSettings').onclick = function () { CH.audio.play('tap'); CH.router.go('settings'); };
+    // Header toggles: open Stats / Settings (expanding from the button); the
+    // icon morphs into an X, and tapping it again (or Esc) closes the panel.
+    var PANELS = { stats: U.$('#btnStats'), settings: U.$('#btnSettings') };
+    function isPanel(n) { return n === 'stats' || n === 'settings'; }
+    function closePanel() { CH.router.back('map', { dir: 'close' }); }
+    Object.keys(PANELS).forEach(function (name) {
+      var btn = PANELS[name];
+      btn.onclick = function () {
+        CH.audio.play('tap');
+        var c = CH.router.current;
+        if (c && c.name === name) { closePanel(); return; }
+        if (c && isPanel(c.name)) CH.router.go(name, {}, { dir: 'fade', replace: true, origin: { el: btn, id: 'hdr-' + name } });
+        else CH.router.go(name, {}, { dir: 'expand', origin: { el: btn, id: 'hdr-' + name } });
+      };
+    });
+    CH.events.on('screen', function (d) {
+      Object.keys(PANELS).forEach(function (name) {
+        var open = d.name === name, btn = PANELS[name], label = name === 'stats' ? 'Stats' : 'Settings';
+        btn.classList.toggle('is-open', open);
+        btn.setAttribute('aria-label', open ? 'Close ' + label.toLowerCase() : label);
+        btn.title = open ? 'Close' : label;
+      });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || U.$('#overlay-root').children.length) return;
+      var c = CH.router.current;
+      if (c && isPanel(c.name)) { e.preventDefault(); closePanel(); }
+    });
     CH.curlo.mount(U.$('#brandMark .brand-c'));
   }
 

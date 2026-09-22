@@ -15,6 +15,8 @@
 
   var BASE_XP = { lesson: 10, boss: 12, project: 8, practice: 15, review: 8, refill: 5, placement: 0 };
   var HEART_MODES = ['lesson', 'boss'];
+  var RETRY_MODES = ['lesson', 'project', 'practice', 'review', 'refill'];   // never boss / placement
+  var RETRY_XP = 2;
 
   /* ======================================================================
      Session shell
@@ -98,11 +100,11 @@
     if (old) {
       old.classList.add('leaving');
       var rm = CH.fx.reduced();
-      CH.fx.anim(old, rm ? [{ opacity: 1 }, { opacity: 0 }] : [{ transform: 'none', opacity: 1 }, { transform: 'translateX(-30%) scale(.92) rotate(-2deg)', opacity: 0 }],
-        { duration: rm ? 120 : 240, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards', rm: 'keep' }).then(function () { old.remove(); });
+      CH.fx.anim(old, rm ? [{ opacity: 1 }, { opacity: 0 }] : [{ transform: 'none', opacity: 1 }, { transform: 'translate(-12%, -2%) scale(.9)', opacity: 0 }],
+        { duration: rm ? 120 : 220, easing: 'cubic-bezier(.5,0,.75,0)', fill: 'forwards', rm: 'keep' }).then(function () { old.remove(); });
       setTimeout(function () { old.remove(); }, 500);
-      CH.fx.anim(pg, rm ? [{ opacity: 0 }, { opacity: 1 }] : [{ transform: 'translateX(100%) rotate(3deg)', opacity: 0.5 }, { transform: 'translateX(-2%)', opacity: 1, offset: 0.65 }, { transform: 'none', opacity: 1 }],
-        { duration: rm ? 140 : 520, easing: 'cubic-bezier(.22,.9,.3,1.05)', rm: 'keep' });
+      CH.fx.anim(pg, rm ? [{ opacity: 0 }, { opacity: 1 }] : [{ transform: 'translateX(34%) translateY(3%) scale(.94) rotate(2deg)', opacity: 0 }, { transform: 'translateX(-1.5%) scale(1.005)', opacity: 1, offset: 0.68 }, { transform: 'none', opacity: 1 }],
+        { duration: rm ? 140 : 380, easing: 'cubic-bezier(.22,.9,.3,1.05)', rm: 'keep' });
     }
     return pg;
   };
@@ -121,6 +123,7 @@
       mode: mode,
       eyebrow: extra.eyebrow,
       noHints: mode === 'placement' || extra.noHints,
+      allowRetry: RETRY_MODES.indexOf(mode) >= 0 && !extra.noRetry,
       continueLabel: extra.continueLabel,
       onHint: function (tier, cost, btn) {
         var d = G().addXP(-cost, 'hint');
@@ -128,8 +131,19 @@
         if (d) CH.fx.floatText(btn, d + ' XP', 'neg');
       },
       onAnswer: function (res, sh) {
-        self.total++;
         var out = {};
+        if (res.retry) {
+          // Second try after a miss: no hearts, no combo, tiny consolation XP.
+          if (res.correct) {
+            var dr = G().addXP(RETRY_XP, 'retry');
+            self.xp += dr;
+            if (dr) out.xpText = '+' + dr + ' XP';
+          }
+          self.updateCombo(true);
+          if (extra.onAnswer) extra.onAnswer(res);
+          return out;
+        }
+        self.total++;
         G().recordAnswer(ch, res.correct, mode === 'refill' ? 'review' : mode, res.assisted, res.hints);
         if (res.correct) {
           self.right++;
@@ -167,7 +181,8 @@
     var self = this;
     return CH.ui.dialog({
       title: 'Out of hearts!', mood: 'worried',
-      html: '<p>' + CH.curlo.line('noHearts') + '</p><p class="muted small">Answer a quick 3-question review to earn a heart and keep going. No hearts are lost during the review.</p>',
+      html: '<p>' + CH.curlo.line('noHearts') + '</p>' + CH.ui.heartClockHTML() + '<p class="muted small">Or answer 3 quick review questions to earn one now. No hearts lost there.</p>',
+      onMount: CH.ui.bindHeartClock,
       buttons: [{ label: icon('practice') + 'Earn a heart', value: 'refill', cls: 'teal' }, { label: 'Quit to map', value: 'quit', cls: 'ghost' }],
       dismissValue: 'refill'
     }).then(function (v) {

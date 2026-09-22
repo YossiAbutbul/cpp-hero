@@ -86,7 +86,7 @@
         var el = U.h('<div class="stress-intro"><div class="eyebrow">' + icon('swords') + ' Stress Test</div><h2>Break-in attempt!</h2></div>');
         var cs = CH.ui.curloSays(CH.ui.story(p.stress.intro || 'Curlo throws bad input at your program!'), 'bracing');
         el.appendChild(cs.el);
-        el.appendChild(U.h('<p class="muted">Real users type anything. For each attack, watch what breaks, then harden the code so the shield holds.</p>'));
+        el.appendChild(U.h('<p class="muted">Users type anything. See what breaks, then harden it.</p>'));
         return s.card(el, 'Bring it on!', 'coral');
       }
       function attack() {
@@ -122,14 +122,18 @@
         return CH.challenges.render(a.challenge, host, {
           mode: 'project', eyebrow: 'Fix it · ' + (CH.challenges.TYPES[a.challenge.type] || ''),
           onHint: function (t, cost, b) { var d = CH.game.addXP(-cost, 'hint'); s.xp += d; if (d) CH.fx.floatText(b, d + ' XP', 'neg'); },
+          allowRetry: true,
           onAnswer: function (res) {
-            s.total++;
-            CH.game.recordAnswer(a.challenge, res.correct, 'project', res.assisted, res.hints);
-            s.updateCombo(!res.correct);
             var out = {};
+            if (!res.retry) {
+              s.total++;
+              CH.game.recordAnswer(a.challenge, res.correct, 'project', res.assisted, res.hints);
+            }
+            s.updateCombo(!res.correct || res.retry);
             if (res.correct) {
-              s.right++;
-              if (!res.assisted) { var d = CH.game.addXP(Math.round(12 * CH.game.multiplier()), 'stress'); s.xp += d; out.xpText = '+' + d + ' XP'; }
+              if (!res.retry) s.right++;
+              if (res.retry) { var d0 = CH.game.addXP(2, 'retry'); s.xp += d0; out.xpText = '+' + d0 + ' XP'; }
+              else if (!res.assisted) { var d = CH.game.addXP(Math.round(12 * CH.game.multiplier()), 'stress'); s.xp += d; out.xpText = '+' + d + ' XP'; }
               try { arena.el.scrollIntoView({ block: 'center', behavior: CH.fx.reduced() ? 'auto' : 'smooth' }); } catch (e) { /* ignore */ }
               arena.setAttack(a.input);
               setTimeout(function () { arena.block(); }, 350);

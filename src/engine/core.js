@@ -15,6 +15,13 @@
     if (!Array.isArray(CH.content[k])) CH.content[k] = [];
   });
 
+  /**
+   * Feature flags. SOUND_ENABLED=false turns ALL audio off: no AudioContext is
+   * ever created, SFX/music are no-ops and the Sound/Music settings are hidden.
+   * (settings.sound / settings.music stay in the save for format stability.)
+   */
+  CH.config = CH.config || { SOUND_ENABLED: false };
+
   /** Build version stamped by build.js (same value as the SW cache name). */
   CH.VERSION = '__BUILD_VERSION__';
 
