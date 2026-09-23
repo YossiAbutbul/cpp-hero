@@ -45,7 +45,7 @@ demo:
     - line: 9
       vars:
         bag: "{\"Fireball\", \"Fireball\"}"
-        scroll: "(moved-from)"
+        scroll: "~"
       note: "Move: the bag takes the letters; scroll is hollow."
     - line: 10
       vars:

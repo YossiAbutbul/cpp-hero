@@ -65,7 +65,7 @@ demo:
     - line: 13
       vars:
         bag: "\"gem\""
-        loot: "(moved-from)"
+        loot: "~"
       note: bag takes the gem. loot is a hollow husk.
     - line: 15
       crash: "Printing loot now: unspecified contents!"

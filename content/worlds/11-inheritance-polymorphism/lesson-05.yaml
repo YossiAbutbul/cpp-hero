@@ -47,27 +47,54 @@ demo:
     - line: 20
       mem:
         cells:
-          - { name: mage, value: "Mage" }
-          - { name: hero, ptr: mage }
+          - name: mage
+            addr: heap
+            layers:
+              - { class: Hero }
+              - { class: Mage }
+          - { name: hero, ptr: mage, addr: stack }
       note: A Hero pointer owns a Mage on the heap.
     - line: 21
       push:
         name: rally
-        vars:
-          h: "→ the whole Mage"
+      mem:
+        cells:
+          - { name: h, ref: mage, readonly: true }
       note: "By reference: nothing is copied, nothing is sliced."
     - line: 15
       crash: "By value (Hero h), only the Hero part would arrive!"
+      mem:
+        cells:
+          - name: h
+            layers:
+              - { class: Hero }
+              - { class: Mage, cut: true }
       note: "What if rally took Hero h? A sliced copy."
     - line: 15
       shield: "const Hero&: no slicing!"
+      mem:
+        cells:
+          - { name: h, ref: mage, readonly: true }
       note: "Ours takes const Hero&, so the whole Mage arrives."
     - line: 16
       out: |
         Mage!
+      mem:
+        cells:
+          - name: mage
+            layers:
+              - { class: Hero }
+              - { class: Mage, hit: true }
       note: "Virtual call on the whole object: Mage's cheer."
     - line: 17
       pop: true
+      mem:
+        cells:
+          - name: mage
+            layers:
+              - { class: Hero }
+              - { class: Mage }
+        drop: [ h ]
       note: The Mage is untouched.
     - line: 22
       crash: "Non-virtual ~Hero: the Mage part is never cleaned!"
@@ -78,6 +105,12 @@ demo:
     - line: 11
       out: |
         Mage part cleaned
+      mem:
+        cells:
+          - name: mage
+            layers:
+              - { class: Hero }
+              - { class: Mage, cut: true }
       note: "Derived part cleaned first..."
     - line: 5
       out: |
