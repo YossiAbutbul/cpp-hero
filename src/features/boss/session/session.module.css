@@ -343,3 +343,16 @@
     display: none;
   }
 }
+@media (max-width: 400px) {
+  .arena {
+    height: 124px;
+  }
+  .dm {
+    width: 82px;
+    bottom: 10px;
+  }
+  .arenaBoss {
+    width: 76px;
+    height: 76px;
+  }
+}
