@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { matchesAnswer, normalizeAnswer } from './matching';
+import { editDistance, isNearMiss, matchesAnswer, normalizeAnswer } from './matching';
 
 /** The legacy normalize() from legacy/src/engine/challenges.js, extracted verbatim. */
 function legacyNormalize(): (s: unknown) => string {
@@ -85,5 +85,25 @@ describe('matchesAnswer', () => {
 
   it('ignores invalid regexes instead of throwing', () => {
     expect(matchesAnswer('x', { acceptRe: ['(unclosed'] })).toBe(false);
+  });
+});
+
+describe('isNearMiss', () => {
+  it('counts a typo, a swap, case or a missing semicolon as close', () => {
+    expect(editDistance('int', 'itn')).toBe(1);
+    expect(isNearMiss('itn', { accept: ['int'] })).toBe(true);
+    expect(isNearMiss('std::cot', { accept: ['std::cout'] })).toBe(true);
+    expect(isNearMiss('return 0', { accept: ['return 0;'] })).toBe(true);
+    expect(isNearMiss('RETURN 0 ;', { accept: ['return 0;'] })).toBe(true);
+    expect(isNearMiss('<', { accept: ['<<'] })).toBe(true);
+  });
+
+  it('treats unrelated answers as not close', () => {
+    expect(isNearMiss('cin', { accept: ['cout'] })).toBe(false);
+    expect(isNearMiss('>>', { accept: ['<<'] })).toBe(false);
+    expect(isNearMiss('double', { accept: ['int'] })).toBe(false);
+    expect(isNearMiss('while (true)', { accept: ['for (int i = 0; i < 3; i++)'] })).toBe(false);
+    expect(isNearMiss('', { accept: ['int'] })).toBe(false);
+    expect(isNearMiss('x', { acceptRe: ['^x+$'] })).toBe(false);
   });
 });

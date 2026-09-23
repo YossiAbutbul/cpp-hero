@@ -1,7 +1,7 @@
 /** fill: one inline blank in the code (AutoGrowInput) · write: type a whole line. */
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { ChallengeOf } from '@/content/schema';
-import { matchesAnswer } from '@/engine/matching';
+import { isNearMiss, matchesAnswer } from '@/engine/matching';
 import { CodeBlock } from '@/features/code';
 import { AutoGrowInput } from '@/ui/AutoGrowInput';
 import { Icon } from '@/ui/Icon';
@@ -35,7 +35,9 @@ export function Fill({ ch, phase, attempt, submit }: RendererProps) {
     submit({
       correct: ok,
       anchor: input,
-      softMsg: 'Close! Check spelling, symbols and semicolons.',
+      softMsg: isNearMiss(v, c)
+        ? 'Close! Check spelling, symbols and semicolons.'
+        : 'Not quite. Give it another go!',
       visible: ok ? undefined : (
         <div className={styles.rpick}>
           <Icon name="ok" />
