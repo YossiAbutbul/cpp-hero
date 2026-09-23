@@ -22,7 +22,7 @@ challenges are YAML files in [`content/`](content/README.md), validated at build
 
 When the user says **"continue according to plan"**, do these steps in order. Use parallel subagents where noted.
 
-1. **Full playtest** of all 16 worlds end to end: a full boss fight, a boss knock-out (lose all 5 hearts, then Try again), and Import/Paste/Reset in Settings (never tested by hand). Fix what breaks.
+1. **Full playtest: mostly done (2026-09-23).** Done: automated playthrough of all 16 worlds and all 802 challenges (`src/playthrough.test.ts`, 3 content bugs fixed); by hand: World 1 boss knock-out + Try again and a full win to World 2; lessons and scroll-to-feedback; review in lessons removed (only a lesson's own questions now); import/hearts/lock bugs from a code review fixed. **Left:** Import/Paste/Reset in Settings by hand (code reviewed and hardened, not clicked through), and a quick look at one boss from a later world.
 2. **Polish / follow-ups.** Can run as parallel subagents, each with its own folders:
    - World 6 and World 8 `NOTES.md` still describe the old demo format; update them.
    - Ideas from NOTES: a multi-stage boss schema (`content/worlds/16-final-boss/NOTES.md`), `obj` cards for inheritance/slicing (World 11 NOTES), moved-from "husk" boxes (World 15 NOTES).
