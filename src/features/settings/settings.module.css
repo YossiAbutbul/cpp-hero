@@ -1,0 +1,109 @@
+/* Settings (legacy .set-row / .switch / .about / .sgrid) */
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 2px solid var(--bg);
+  flex-wrap: wrap;
+}
+.row:last-child {
+  border-bottom: 0;
+}
+.ic {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--ink2);
+}
+.t {
+  flex: 1;
+  min-width: 120px;
+}
+.t b {
+  display: block;
+}
+.t small {
+  display: block;
+  color: var(--muted);
+  font-weight: 700;
+}
+.row [role='tablist'] {
+  margin: 0;
+}
+.switch {
+  position: relative;
+  width: 58px;
+  height: 34px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--lock-d);
+  flex: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.switch i {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s var(--spring);
+}
+.switch[aria-checked='true'] {
+  background: var(--teal);
+}
+.switch[aria-checked='true'] i {
+  transform: translateX(24px);
+}
+.switch[aria-checked='true'] i::after {
+  content: '\2713';
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 14px;
+  color: var(--teal-d);
+}
+.btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.danger {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 2px solid var(--bg);
+}
+.paste textarea {
+  max-height: 30vh;
+  overflow-y: auto;
+  font-family: var(--f-code);
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+.about {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.about p {
+  margin: 2px 0 0;
+}
+.aboutC {
+  width: 60px;
+  flex: none;
+}
+.devGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
