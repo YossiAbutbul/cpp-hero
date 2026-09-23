@@ -7,11 +7,26 @@
  * inputs hurled at Curlo; block each by answering right), then victory,
  * rewards through game.beatBoss, and the results card. Hearts are per fight
  * (not saved): at 0 you're knocked out and can try again (intro skipped) or
- * go back to the map.
+ * go back to the map. A multi-stage boss (World 16) shows a stage banner
+ * before each stage, and a knock-out restarts only the current stage (or the
+ * Defense Phase) with fresh hearts; the stage logic lives in engine/boss.
  */
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 import { useGame } from '@/app/gameContext';
+import {
+  answerRound,
+  bossHp,
+  bossStages,
+  drawRound,
+  nextStage,
+  roundNumber,
+  stageCleared,
+  stageRound,
+  startStage,
+  type BossRun,
+  type Stage,
+} from '@/engine/boss';
 import { FIGHT_HEARTS, fightAnswer } from '@/engine/hearts';
 import { goBack } from '@/app/navigation';
 import type { Challenge, World } from '@/content/schema';
@@ -41,7 +56,8 @@ import styles from './boss.module.css';
 
 type Step =
   | { k: 'intro' }
-  | { k: 'round'; ch: Challenge; n: number; round: number }
+  | { k: 'stage'; idx: number; n: number; retry: boolean }
+  | { k: 'round'; ch: Challenge; n: number; round: string }
   | { k: 'defIntro' }
   | { k: 'defense'; i: number; n: number }
   | { k: 'victory' }
@@ -79,7 +95,9 @@ function Battle({ w, rematch, onRetry }: { w: World; rematch: boolean; onRetry: 
   const { game } = useGame();
   const dialog = useDialog();
   const b = w.boss;
-  const maxHp = Math.max(1, b.hp || b.rounds.length || 1);
+  const stages = useMemo(() => bossStages(b), [b]);
+  const staged = stages.length > 1;
+  const maxHp = bossHp(b);
   const defense = b.defense;
   const total = maxHp + defense.length + 1;
   const session = useSession({
@@ -93,26 +111,26 @@ function Battle({ w, rematch, onRetry }: { w: World; rematch: boolean; onRetry: 
   );
   // a rematch after a knock-out skips the intro and starts at round 1
   const skip = rematch && b.rounds.length > 0;
-  const [step, setStep] = useState<Step>(() =>
-    skip
-      ? { k: 'round', ch: b.rounds[0]!, n: 0, round: 1 }
-      : jump === 'defense' && defense.length
-      ? { k: 'defIntro' }
-      : jump === 'victory'
-        ? { k: 'victory' }
-        : { k: 'intro' },
-  );
+  const [init] = useState((): { run: BossRun; step: Step } => {
+    const run = startStage(stages, 0);
+    if (skip) {
+      const d = drawRound(run, stages);
+      return { run: d.run, step: { k: 'round', ch: d.ch, n: 0, round: eyebrowRound(d.run, stages) } };
+    }
+    if (jump) return { run: { ...run, hp: 0, stageHp: 0 }, step: jumpStep(jump, defense.length > 0) };
+    return { run, step: { k: 'intro' } };
+  });
+  const runRef = useRef(init.run);
+  const [step, setStep] = useState<Step>(init.step);
   const [dim, setDim] = useState(() => !reduced() && !jump && !rematch);
   const [hearts, setHearts] = useState(FIGHT_HEARTS);
   const heartsRef = useRef(FIGHT_HEARTS);
-  const [hp, setHp] = useState(jump ? 0 : maxHp);
-  const hpRef = useRef(jump ? 0 : maxHp);
+  const [hp, setHp] = useState(init.run.hp);
   const [done, setDone] = useState(0);
   const [say, setSay] = useState(() =>
     skip ? { text: pick(b.taunt.length ? b.taunt : ['Back for more?']), n: 1 } : { text: '', n: 0 },
   );
   const seq = useRef(0);
-  const queue = useRef({ list: b.rounds.slice(), i: skip ? 1 : 0, missed: [] as Challenge[] });
   const artEl = useRef<HTMLSpanElement>(null);
   const hpEl = useRef<HTMLDivElement>(null);
   const sayEl = useRef<HTMLDivElement>(null);
@@ -138,22 +156,57 @@ function Battle({ w, rematch, onRetry }: { w: World; rematch: boolean; onRetry: 
     );
   }, [say]);
 
+  /** The boss rears up (a hit it shrugs off, or a new stage). */
+  const roar = useCallback(() => {
+    void anim(
+      artEl.current,
+      [
+        { transform: 'none' },
+        { transform: 'translateY(8px) scale(1.12,.9)' },
+        { transform: 'translateY(-14px) scale(.95,1.08)' },
+        { transform: 'none' },
+      ],
+      { duration: 520, easing: SPRING },
+    );
+  }, []);
+
+  /** Show a stage banner (multi-stage bosses only). */
+  const toStage = useCallback(
+    (idx: number, retry: boolean) => {
+      const st = stages[idx]!;
+      setStep({ k: 'stage', idx, n: ++seq.current, retry });
+      taunt(retry ? 'Back for more? This stage is mine!' : pick(st.taunt.length ? st.taunt : ['Come at me!']));
+      if (idx > 0 || retry) window.setTimeout(roar, 250);
+    },
+    [stages, taunt, roar],
+  );
+
   /* ---- flow ---- */
   const nextRound = useCallback(() => {
-    if (hpRef.current <= 0) {
+    const run = runRef.current;
+    if (run.hp <= 0) {
       setStep(defense.length ? { k: 'defIntro' } : { k: 'victory' });
       return;
     }
-    const q = queue.current;
-    if (q.i >= q.list.length) {
-      q.list = shuffled(q.missed.length ? q.missed : b.rounds);
-      q.missed = [];
-      q.i = 0;
-      toast('The boss is still standing! Round two!', { icon: 'swords' });
-    }
-    const ch = q.list[q.i++]!;
-    setStep({ k: 'round', ch, n: ++seq.current, round: maxHp - hpRef.current + 1 });
-  }, [b.rounds, defense.length, maxHp]);
+    const ni = stageCleared(run) ? nextStage(run, stages) : null;
+    if (ni != null) return toStage(ni, false);
+    const d = drawRound(run, stages, shuffled);
+    runRef.current = d.run;
+    if (d.lap)
+      toast(staged ? 'This stage still stands! Round two!' : 'The boss is still standing! Round two!', {
+        icon: 'swords',
+      });
+    setStep({ k: 'round', ch: d.ch, n: ++seq.current, round: eyebrowRound(d.run, stages) });
+  }, [defense.length, stages, staged, toStage]);
+
+  /** Stage banner "Fight!": the stage starts at the hp it began with. */
+  const enterStage = useCallback(
+    (idx: number) => {
+      runRef.current = startStage(stages, idx);
+      nextRound();
+    },
+    [stages, nextRound],
+  );
 
   /** A settled answer: a miss costs one of this fight's hearts. */
   const countHeart = useCallback((r: ChallengeResult) => {
@@ -162,10 +215,15 @@ function Battle({ w, rematch, onRetry }: { w: World; rematch: boolean; onRetry: 
     if (f.lost) setHearts(f.hearts);
   }, []);
 
-  /** After Continue: out of hearts → knocked out (try again or map), else go on. */
+  /**
+   * After Continue: out of hearts → knocked out (try again or map), else go on.
+   * One stage: the whole fight starts over. Multi-stage: only this stage (or
+   * the Defense Phase) starts over, with fresh hearts.
+   */
   const afterAnswer = useCallback(
-    async (then: () => void) => {
+    async (then: () => void, phase: 'round' | 'defense') => {
       if (heartsRef.current > 0) return then();
+      const what = phase === 'defense' ? 'the Defense Phase' : 'this stage';
       const v = await dialog.open<'retry' | 'map'>({
         title: 'Knocked out!',
         mood: 'worried',
@@ -173,24 +231,39 @@ function Battle({ w, rematch, onRetry }: { w: World; rematch: boolean; onRetry: 
         body: (
           <>
             <p>{curloLine('knockedOut')}</p>
-            <p className="muted small">You get {FIGHT_HEARTS} fresh hearts.</p>
+            <p className="muted small">
+              You get {FIGHT_HEARTS} fresh hearts.{staged ? ` Only ${what} starts over.` : ''}
+            </p>
           </>
         ),
         buttons: [
-          { label: 'Try again', value: 'retry', variant: 'coral', icon: 'swords' },
+          { label: staged ? 'Retry stage' : 'Try again', value: 'retry', variant: 'coral', icon: 'swords' },
           { label: 'Back to map', value: 'map', variant: 'ghost' },
         ],
       });
-      if (v === 'map') session.leave();
-      else onRetry();
+      if (v === 'map') return session.leave();
+      if (!staged) return onRetry();
+      heartsRef.current = FIGHT_HEARTS;
+      setHearts(FIGHT_HEARTS);
+      if (phase === 'defense') {
+        setDone(maxHp);
+        setStep({ k: 'defIntro' });
+        return;
+      }
+      const run = startStage(stages, runRef.current.stage);
+      runRef.current = run;
+      setHp(run.hp);
+      setDone(maxHp - run.hp);
+      toStage(run.stage, true);
     },
-    [dialog, session, onRetry],
+    [dialog, session, onRetry, staged, stages, maxHp, toStage],
   );
 
   /* ---- hits and taunts ---- */
-  /** hpRef is already lowered (on answer); this plays the hit. */
+  /** runRef is already lowered (on answer); this plays the hit. */
   const hit = useCallback(() => {
-    const left = hpRef.current;
+    const run = runRef.current;
+    const left = run.hp;
     const seg = hpEl.current?.children[left] as HTMLElement | undefined;
     void anim(
       seg,
@@ -206,30 +279,29 @@ function Battle({ w, rematch, onRetry }: { w: World; rematch: boolean; onRetry: 
     void shake(art, 12);
     floatText(art, '−1 HP', 'dmg');
     burstAt(art, { n: 30, colors: ['#FFC62E', '#fff', '#FF5A70'], speed: 0.8 });
-    taunt(left > 0 ? pick(HIT_LINES) : 'No… NO! My HP!');
+    taunt(left <= 0 ? 'No… NO! My HP!' : stageCleared(run) ? 'Grr… that was only one stage!' : pick(HIT_LINES));
   }, [taunt]);
 
   const boast = useCallback(() => {
-    void anim(
-      artEl.current,
-      [
-        { transform: 'none' },
-        { transform: 'translateY(8px) scale(1.12,.9)' },
-        { transform: 'translateY(-14px) scale(.95,1.08)' },
-        { transform: 'none' },
-      ],
-      { duration: 520, easing: SPRING },
-    );
+    roar();
     bossTaunt();
-  }, [bossTaunt]);
+  }, [roar, bossTaunt]);
 
   /* ---- pages ---- */
-  const showHead = step.k === 'round';
+  const showHead = step.k === 'round' || step.k === 'stage';
   const wasHead = useRef(false);
   useLayoutEffect(() => {
     if (showHead && !wasHead.current) void slideUp(headEl.current);
     wasHead.current = showHead;
   }, [showHead]);
+
+  /** hp segments that start a new stage group (the bar empties right to left, stage 1 first) */
+  const cuts = useMemo(() => {
+    const out = new Set<number>();
+    let left = maxHp;
+    for (const s of stages.slice(0, -1)) out.add((left -= s.hp));
+    return out;
+  }, [stages, maxHp]);
 
   let page: ReactNode = null;
   let key = step.k as string;
@@ -241,12 +313,27 @@ function Battle({ w, rematch, onRetry }: { w: World; rematch: boolean; onRetry: 
           maxHp={maxHp}
           start={!dim}
           onFight={() => {
+            if (staged) return toStage(0, false);
             taunt(pick(b.taunt.length ? b.taunt : ['Come at me!']));
             nextRound();
           }}
         />
       );
       break;
+    case 'stage': {
+      const idx = step.idx;
+      key = `s${step.n}`;
+      page = (
+        <StageIntro
+          stage={stages[idx]!}
+          idx={idx}
+          count={stages.length}
+          retry={step.retry}
+          onGo={() => enterStage(idx)}
+        />
+      );
+      break;
+    }
     case 'round': {
       const ch = step.ch;
       key = `r${step.n}`;
@@ -255,20 +342,17 @@ function Battle({ w, rematch, onRetry }: { w: World; rematch: boolean; onRetry: 
           challenge={ch}
           mode="boss"
           hideCurlo
-          eyebrow={`Round ${step.round} · ${TYPE_LABELS[ch.type]}`}
+          eyebrow={`${step.round} · ${TYPE_LABELS[ch.type]}`}
           onResult={(r: ChallengeResult) => {
             session.record(r);
             countHeart(r);
+            runRef.current = answerRound(runRef.current, ch, r.correct);
             if (r.correct) {
-              hpRef.current = Math.max(0, hpRef.current - 1);
               setDone((d) => d + 1);
               window.setTimeout(hit, 200);
-            } else {
-              queue.current.missed.push(ch);
-              window.setTimeout(boast, 200);
-            }
+            } else window.setTimeout(boast, 200);
           }}
-          onContinue={() => void afterAnswer(nextRound)}
+          onContinue={() => void afterAnswer(nextRound, 'round')}
         />
       );
       break;
@@ -319,7 +403,7 @@ function Battle({ w, rematch, onRetry }: { w: World; rematch: boolean; onRetry: 
               void afterAnswer(() => {
                 const ni = r.correct ? i + 1 : i;
                 setStep(ni >= defense.length ? { k: 'victory' } : { k: 'defense', i: ni, n: ++seq.current });
-              });
+              }, 'defense');
             }}
           />
         </>
@@ -382,7 +466,10 @@ function Battle({ w, rematch, onRetry }: { w: World; rematch: boolean; onRetry: 
             aria-valuetext={`${hp} of ${maxHp} health left`}
           >
             {Array.from({ length: maxHp }, (_, i) => (
-              <i key={i} className={[styles.seg, i >= hp ? styles.gone : ''].join(' ')} />
+              <i
+                key={i}
+                className={[styles.seg, i >= hp ? styles.gone : '', cuts.has(i) ? styles.cut : ''].join(' ')}
+              />
             ))}
           </div>
           <div ref={sayEl} className={styles.say} aria-live="polite">
@@ -393,6 +480,20 @@ function Battle({ w, rematch, onRetry }: { w: World; rematch: boolean; onRetry: 
       <SlidePage pageKey={key}>{page}</SlidePage>
     </SessionFrame>
   );
+}
+
+/** Round label: "Round 3", or "Stage 2 · Round 1" in a multi-stage fight. */
+function eyebrowRound(run: BossRun, stages: Stage[]): string {
+  return stages.length > 1
+    ? `Stage ${run.stage + 1} · Round ${stageRound(run, stages)}`
+    : `Round ${roundNumber(run, stages)}`;
+}
+
+/** Dev-only phase jump (#/boss/w1?phase=defense|victory). */
+function jumpStep(jump: string, hasDefense: boolean): Step {
+  if (jump === 'defense' && hasDefense) return { k: 'defIntro' };
+  if (jump === 'victory') return { k: 'victory' };
+  return { k: 'intro' };
 }
 
 /** Runs a callback once when the defense page mounts. */
@@ -505,6 +606,54 @@ function Intro({
         doneLabel="Fight!"
         onDone={onFight}
       />
+    </div>
+  );
+}
+
+function StageIntro({
+  stage,
+  idx,
+  count,
+  retry,
+  onGo,
+}: {
+  stage: Stage;
+  idx: number;
+  count: number;
+  retry: boolean;
+  onGo: () => void;
+}) {
+  const banner = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    void anim(
+      banner.current,
+      [
+        { transform: 'translateY(-30px) scale(.6) rotate(-4deg)', opacity: 0 },
+        { transform: 'translateY(4px) scale(1.06) rotate(1deg)', opacity: 1, offset: 0.6 },
+        { transform: 'none', opacity: 1 },
+      ],
+      { duration: 560, easing: SPRING, rm: 'fade' },
+    );
+  }, []);
+  const last = idx === count - 1;
+  const hits = plural(stage.hp, 'hit');
+  return (
+    <div>
+      <div ref={banner} className={`${styles.phase} ${styles.stage}`}>
+        <small>{retry ? `Stage ${idx + 1} · Try again` : `Stage ${idx + 1} of ${count}`}</small>
+        <b>{stage.name}</b>
+      </div>
+      <CurloSays
+        mood={retry || last ? 'bracing' : 'thinking'}
+        text={
+          retry
+            ? `Fresh hearts! Land ${hits} to break this stage.`
+            : `Land ${hits} to break this stage${last ? '. The last one!' : '!'}`
+        }
+      />
+      <Button block variant="coral" icon="swords" className={ss.next} onClick={onGo} data-autofocus>
+        Fight!
+      </Button>
     </div>
   );
 }

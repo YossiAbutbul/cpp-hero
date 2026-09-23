@@ -1,7 +1,19 @@
-/** Unit tests for the small pure rule modules: progress, hearts, streak, SRS, quests, achievements, cosmetics. */
+/** Unit tests for the small pure rule modules: progress, hearts, boss stages, streak, SRS, quests, achievements, cosmetics. */
 import { describe, expect, it } from 'vitest';
-import type { Quest } from '../content/schema';
+import { loadContentFromDisk } from '../../scripts/lib/content-fs';
+import { BossSchema, type Boss, type Challenge, type Quest } from '../content/schema';
 import { testAchievement } from './achievements';
+import {
+  answerRound,
+  bossHp,
+  bossStages,
+  drawRound,
+  nextStage,
+  roundNumber,
+  stageCleared,
+  stageRound,
+  startStage,
+} from './boss';
 import { allCosmetics, cosmeticTest } from './cosmetics';
 import { costsHeart, FIGHT_HEARTS, fightAnswer } from './hearts';
 import { applyXp, comboMultiplier, levelInfo, xpForLevel, xpToNext } from './progress';
@@ -65,6 +77,112 @@ describe('boss fight hearts', () => {
     expect(fightAnswer(3, { correct: true, retry: false })).toEqual({ hearts: 3, lost: false, knockedOut: false });
     expect(fightAnswer(3, { correct: false, retry: true })).toEqual({ hearts: 3, lost: false, knockedOut: false });
     expect(fightAnswer(0, { correct: false, retry: false })).toEqual({ hearts: 0, lost: false, knockedOut: true });
+  });
+});
+
+describe('boss stages', () => {
+  const ch = (n: number) => ({ id: `wt.boss.r${n}`, type: 'mcq' }) as Challenge;
+  const rounds = [1, 2, 3, 4, 5, 6].map(ch);
+  const base = { id: 'wt.boss', name: 'Test', art: 'x', hp: 5, taunt: ['boo'], rounds, defense: [] } as unknown as Boss;
+  const staged: Boss = {
+    ...base,
+    stages: [
+      { name: 'One', taunt: [], rounds: ['wt.boss.r1', 'wt.boss.r2', 'wt.boss.r3'], hp: 2 },
+      { name: 'Two', taunt: ['grr'], rounds: ['wt.boss.r4', 'wt.boss.r5', 'wt.boss.r6'], hp: 3 },
+    ],
+  };
+
+  it('a boss without stages is one stage holding every round', () => {
+    const st = bossStages(base);
+    expect(st).toHaveLength(1);
+    expect(st[0]).toMatchObject({ name: '', hp: 5, taunt: ['boo'] });
+    expect(st[0]!.rounds).toBe(rounds);
+    expect(bossHp(base)).toBe(5);
+    const run = startStage(st, 0);
+    expect(run).toMatchObject({ stage: 0, hp: 5, stageHp: 5 });
+    expect(nextStage(run, st)).toBeNull();
+  });
+
+  it('stages resolve round ids and fall back to the boss taunts', () => {
+    const st = bossStages(staged);
+    expect(st.map((s) => s.rounds.map((r) => r.id))).toEqual([
+      ['wt.boss.r1', 'wt.boss.r2', 'wt.boss.r3'],
+      ['wt.boss.r4', 'wt.boss.r5', 'wt.boss.r6'],
+    ]);
+    expect(st.map((s) => s.taunt)).toEqual([['boo'], ['grr']]);
+    // the later stage starts at the hp left after the earlier ones
+    expect(startStage(st, 1)).toMatchObject({ stage: 1, hp: 3, stageHp: 3 });
+  });
+
+  it('plays a stage in order, brings misses back, then moves to the next stage', () => {
+    const st = bossStages(staged);
+    let run = startStage(st, 0);
+    const played: string[] = [];
+    const play = (correct: boolean) => {
+      const d = drawRound(run, st);
+      played.push(d.ch.id + (correct ? '' : '✗') + (d.lap ? '↻' : ''));
+      run = answerRound(d.run, d.ch, correct);
+    };
+    play(false);
+    play(true);
+    expect(stageRound(run, st)).toBe(2);
+    play(false);
+    play(true); // lap: only the two missed rounds come back
+    expect(played).toEqual(['wt.boss.r1✗', 'wt.boss.r2', 'wt.boss.r3✗', 'wt.boss.r1↻']);
+    expect(stageCleared(run)).toBe(true);
+    expect(run.hp).toBe(3);
+    expect(nextStage(run, st)).toBe(1);
+    run = startStage(st, 1);
+    expect(roundNumber(run, st)).toBe(3);
+    expect(stageRound(run, st)).toBe(1);
+    for (let i = 0; i < 3; i++) play(true);
+    expect(run.hp).toBe(0);
+    expect(stageCleared(run)).toBe(true);
+    expect(nextStage(run, st)).toBeNull();
+  });
+
+  it('a lap with no misses replays the whole stage (shuffled)', () => {
+    const st = bossStages(staged);
+    const rev = (xs: Challenge[]) => xs.slice().reverse();
+    let run = { ...startStage(st, 0), i: 3 };
+    const d = drawRound(run, st, rev);
+    expect(d.lap).toBe(true);
+    expect(d.ch.id).toBe('wt.boss.r3');
+    run = d.run;
+    expect(run.list.map((r) => r.id)).toEqual(['wt.boss.r3', 'wt.boss.r2', 'wt.boss.r1']);
+  });
+
+  it('restarting a stage gives back its hp and rounds, not the earlier stages', () => {
+    const st = bossStages(staged);
+    let run = startStage(st, 1);
+    for (let i = 0; i < 2; i++) {
+      const d = drawRound(run, st);
+      run = answerRound(d.run, d.ch, i === 0);
+    }
+    expect(run).toMatchObject({ hp: 2, stageHp: 2 });
+    expect(run.missed).toHaveLength(1);
+    const again = startStage(st, run.stage);
+    expect(again).toMatchObject({ stage: 1, hp: 3, stageHp: 3, i: 0, missed: [] });
+    expect(again.list.map((r) => r.id)).toEqual(['wt.boss.r4', 'wt.boss.r5', 'wt.boss.r6']);
+  });
+
+  it('the schema checks stage ids, order and hp (World 16 is valid)', () => {
+    const w16 = loadContentFromDisk().content!.worlds.find((w) => w.id === 'w16')!.boss;
+    expect(w16.stages?.map((s) => s.hp)).toEqual([3, 3, 4]);
+    expect(BossSchema.safeParse(w16).success).toBe(true);
+    const bad = (stages: Boss['stages']) => {
+      const r = BossSchema.safeParse({ ...w16, stages });
+      return r.success ? [] : r.error.issues.map((i) => i.message);
+    };
+    const ok = w16.stages!;
+    expect(bad([{ ...ok[0]!, hp: 4 }, ok[1]!, ok[2]!]).join()).toMatch(/adds up to 11/);
+    expect(bad([{ ...ok[0]!, rounds: ok[0]!.rounds.slice(1) }, ok[1]!, { ...ok[2]!, hp: 5 }]).join()).toMatch(
+      /every round id once/,
+    );
+    expect(bad([ok[1]!, ok[0]!, ok[2]!]).join()).toMatch(/in order/);
+    expect(bad([{ ...ok[0]!, hp: 5, rounds: ok[0]!.rounds }, { ...ok[1]!, hp: 1 }, ok[2]!]).join()).toMatch(
+      /needs at least hp \(5\)/,
+    );
   });
 });
 

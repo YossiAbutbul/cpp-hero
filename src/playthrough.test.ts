@@ -10,6 +10,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadContentFromDisk } from '../scripts/lib/content-fs';
 import type { Challenge, Content, World } from './content/schema';
+import { answerRound, bossStages, drawRound, nextStage, stageCleared, startStage } from './engine/boss';
 import { testAchievement } from './engine/achievements';
 import { STARTER_COLORS } from './engine/config';
 import { cosmeticTest } from './engine/cosmetics';
@@ -409,24 +410,18 @@ describe('full playthrough', { timeout: 120_000 }, () => {
       expect(game.bossUnlocked(w)).toBe(true);
       expectCurrent(game, w.boss.id);
       game.resetCombo();
-      const maxHp = Math.max(1, w.boss.hp || w.boss.rounds.length || 1);
-      let hp = maxHp;
-      let list = w.boss.rounds.slice();
-      let missed: Challenge[] = [];
-      let i = 0;
+      const stages = bossStages(w.boss);
+      let run = startStage(stages, 0);
       let guard = 0;
-      while (hp > 0) {
+      while (run.hp > 0) {
         expect(++guard).toBeLessThan(200);
-        if (i >= list.length) {
-          list = missed.length ? missed : w.boss.rounds.slice();
-          missed = [];
-          i = 0;
-        }
-        const ch = list[i++]!;
-        const r = play(game, s, ch, 'boss', miss(ch, w.num), watch);
-        if (r.correct) hp--;
-        else missed.push(ch);
+        const ni = stageCleared(run) ? nextStage(run, stages) : null;
+        if (ni != null) run = startStage(stages, ni);
+        const d = drawRound(run, stages);
+        const r = play(game, s, d.ch, 'boss', miss(d.ch, w.num), watch);
+        run = answerRound(d.run, d.ch, r.correct);
       }
+      expect(stageCleared(run) && nextStage(run, stages) == null).toBe(true);
       for (const d of w.boss.defense) {
         let ok = play(game, s, d.challenge, 'boss', miss(d.challenge, w.num), watch).correct;
         while (!ok) ok = play(game, s, d.challenge, 'boss', false, watch).correct;

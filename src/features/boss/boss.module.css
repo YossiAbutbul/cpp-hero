@@ -59,6 +59,9 @@
   background: linear-gradient(180deg, #ff8595, var(--coral));
   box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
 }
+.cut {
+  margin-left: 5px;
+}
 .gone {
   background: #4a3e66;
   box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.25);
@@ -179,6 +182,18 @@
   font-weight: 800;
   font-size: 2.2rem;
   line-height: 1;
+}
+/* multi-stage banner: the boss's purple, a sun-yellow stage count */
+.stage {
+  background: linear-gradient(180deg, #4a3a70, #2a2140);
+  box-shadow: 0 6px 0 #1a1430;
+}
+.stage small {
+  color: var(--sun);
+  opacity: 1;
+}
+.stage b {
+  font-size: 1.9rem;
 }
 .win {
   background: var(--teal);

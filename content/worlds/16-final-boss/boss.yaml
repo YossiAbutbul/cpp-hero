@@ -1,10 +1,10 @@
 # World 16 boss (Final Boss): The Undefined Dragon
 #
-# Multi-stage by design. The schema has no stage field yet (see NOTES.md), so the
-# rounds are grouped in order and each prompt names its stage:
-#   Stage 1 · Scales of Logic      r1-r4   (Worlds 1-7: loops, switch, unsigned, strings)
-#   Stage 2 · Wings of Memory      r5-r8   (Worlds 8-11: pointers, ownership, objects)
-#   Stage 3 · Fire of Abstraction  r9-r12  (Worlds 12-15: exceptions, STL, templates, UB)
+# A multi-stage fight (see `stages` below and NOTES.md). A knock-out restarts only
+# the current stage, with fresh hearts:
+#   Stage 1 · Scales of Logic      r1-r4   hp 3 (Worlds 1-7: loops, switch, unsigned, strings)
+#   Stage 2 · Wings of Memory      r5-r8   hp 3 (Worlds 8-11: pointers, ownership, objects)
+#   Stage 3 · Fire of Abstraction  r9-r12  hp 4 (Worlds 12-15: exceptions, STL, templates, UB)
 #   Defense · The Dragon's Fire    d1-d5   (hostile inputs, one per layer)
 # hp 10 (above the usual 6-8) because this is the final, longest fight.
 
@@ -19,12 +19,31 @@ taunt:
   - It worked on YOUR machine? I live on all the other ones.
   - Undefined means I can do ANYTHING. Even pretend I'm gone.
   - Your pointer still points at me. Go on, follow it.
+stages:
+  - name: Scales of Logic
+    taunt:
+      - My scales are made of every loop you got wrong.
+      - Off by one? I LOVE off by one.
+    rounds: [w16.boss.r1, w16.boss.r2, w16.boss.r3, w16.boss.r4]
+    hp: 3
+  - name: Wings of Memory
+    taunt:
+      - You cracked my scales. Now feel my wings of dangling pointers!
+      - Who owns this memory? Nobody. I do.
+    rounds: [w16.boss.r5, w16.boss.r6, w16.boss.r7, w16.boss.r8]
+    hp: 3
+  - name: Fire of Abstraction
+    taunt:
+      - Enough! Burn in templates, exceptions and undefined fire!
+      - My final form. Nothing here is defined.
+    rounds: [w16.boss.r9, w16.boss.r10, w16.boss.r11, w16.boss.r12]
+    hp: 4
 rounds:
   # ---- Stage 1 · Scales of Logic (Worlds 1-7) ----
   - id: w16.boss.r1
     type: predict
     tags: [ w16.flow, w5.continue, w5.break ]
-    prompt: "Stage 1 · Scales of Logic. The Dragon twists a loop. What does this print?"
+    prompt: "The Dragon twists a loop. What does this print?"
     code: |-
       #include <iostream>
 
@@ -61,7 +80,7 @@ rounds:
     tags: [ w16.flow, w4.switch, w4.fallthrough ]
     bug: missing-default
     expect: warn
-    prompt: "Stage 1 · Scales of Logic. rank is 1. How much gold is paid out?"
+    prompt: "`rank` is 1. How much gold is paid out?"
     code: |-
       int gold = 0;
       switch (rank) {
@@ -90,7 +109,7 @@ rounds:
     tags: [ w16.flow, w5.signed-unsigned, w5.infinite ]
     bug: signed-unsigned
     unsafe: true
-    prompt: "Stage 1 · Scales of Logic. UNSAFE: print hp backwards. Tap the buggy line, then pick the fix."
+    prompt: "UNSAFE: print hp backwards. Tap the buggy line, then pick the fix."
     code: |-
       std::vector<int> hp{3, 6, 9};
       for (std::size_t i = hp.size() - 1; i >= 0; --i) {
@@ -125,7 +144,7 @@ rounds:
   - id: w16.boss.r4
     type: predict
     tags: [ w16.functions, w6.constref, w2.string, w2.char ]
-    prompt: "Stage 1 · Scales of Logic. The Dragon mocks your name. What does this print?"
+    prompt: "The Dragon mocks your name. What does this print?"
     code: |-
       #include <iostream>
       #include <string>
@@ -170,7 +189,7 @@ rounds:
     tags: [ w16.ownership, w16.virtual, w8.nullcheck ]
     bug: double-delete
     unsafe: true
-    prompt: "Stage 2 · Wings of Memory. UNSAFE: tap every line that's a bug."
+    prompt: "UNSAFE: tap every line that's a bug."
     code: |-
       #include <iostream>
       #include <memory>
@@ -227,7 +246,7 @@ rounds:
   - id: w16.boss.r6
     type: mcq
     tags: [ w16.ownership, w16.classes ]
-    prompt: "Stage 2 · Wings of Memory. A class holds only a std::vector and a std::unique_ptr. Which special member functions must you write?"
+    prompt: "A class holds only a std::vector and a std::unique_ptr. Which special member functions must you write?"
     options:
       - t: None. The members already clean up and move correctly
         why: "Correct: the Rule of Zero. The compiler-generated ones do the right thing."
@@ -246,7 +265,7 @@ rounds:
   - id: w16.boss.r7
     type: predict
     tags: [ w16.virtual, w16.ownership ]
-    prompt: "Stage 2 · Wings of Memory. A Hydra hatches and dies in a scope. What does this print?"
+    prompt: "A Hydra hatches and dies in a scope. What does this print?"
     code: |-
       #include <iostream>
       #include <memory>
@@ -291,7 +310,7 @@ rounds:
     type: harden
     tags: [ w16.ownership ]
     bug: memory-leak
-    prompt: "Stage 2 · Wings of Memory. countEggs can return early. Pick the line that can't leak."
+    prompt: "countEggs can return early. Pick the line that can't leak."
     code: |-
       #include <memory>
 
@@ -346,7 +365,7 @@ rounds:
   - id: w16.boss.r9
     type: predict
     tags: [ w16.exceptions, w16.optional, w16.templates ]
-    prompt: "Stage 3 · Fire of Abstraction. The Dragon throws mid-assignment. What does this print?"
+    prompt: "The Dragon throws mid-assignment. What does this print?"
     code: |-
       #include <iostream>
       #include <optional>
@@ -393,7 +412,7 @@ rounds:
   - id: w16.boss.r10
     type: speed
     tags: [ w16.stl, w16.modern, w16.exceptions, w16.ownership ]
-    prompt: "Stage 3 · SPEED ROUND! The Dragon inhales. Answer before the fire!"
+    prompt: "SPEED ROUND! The Dragon inhales. Answer before the fire!"
     seconds: 50
     items:
       - q: Which smart pointer means exactly one owner?
@@ -451,7 +470,7 @@ rounds:
     tags: [ w16.templates, w16.stl ]
     bug: unchecked-find
     unsafe: true
-    prompt: "Stage 3 · Fire of Abstraction. UNSAFE: m is {\"imp\": 3, \"hydra\": 40}. Which keys expose UB? Select all."
+    prompt: "UNSAFE: m is {\"imp\": 3, \"hydra\": 40}. Which keys expose UB? Select all."
     code: |-
       #include <map>
       #include <string>
@@ -498,7 +517,7 @@ rounds:
     type: safe
     tags: [ w16.ub, w16.move, w16.bounds, w3.overflow ]
     bug: ub-hydra
-    prompt: "Stage 3 · Final breath! Safe or unsafe? Every world at once. Go!"
+    prompt: "Final breath! Safe or unsafe? Every world at once. Go!"
     seconds: 40
     items:
       - code: |-

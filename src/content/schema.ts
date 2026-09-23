@@ -533,6 +533,20 @@ export const ProjectSchema = z.strictObject({
   }),
 });
 
+/**
+ * Optional boss stages (multi-stage fights like World 16's). Each stage lists
+ * round ids from `rounds` (in order, together covering every round once) and
+ * how many hits break it; the stage hp values add up to the boss hp. Losing all
+ * hearts in a stage restarts only that stage. Absent = one stage (Worlds 1-15).
+ */
+export const BossStageSchema = z.strictObject({
+  name: text,
+  /** Stage-specific taunts (default: the boss taunts). */
+  taunt: z.array(words(TEXT_LIMITS.speech, 'stage taunt')).default([]),
+  rounds: z.array(z.string()).min(1),
+  hp: z.number().int().positive(),
+});
+
 export const BossSchema = z
   .strictObject({
     id: z.string().regex(/^w[a-z0-9]+\.boss$/, 'boss id must look like w1.boss'),
@@ -544,6 +558,7 @@ export const BossSchema = z
     intro: words(TEXT_LIMITS.speech, 'boss intro'),
     taunt: z.array(words(TEXT_LIMITS.speech, 'taunt')).default([]),
     rounds: z.array(ChallengeSchema).min(1),
+    stages: z.array(BossStageSchema).min(2).optional(),
     defense: z.array(z.strictObject({ attack: z.string(), label: text, challenge: ChallengeSchema })).default([]),
     victory: words(TEXT_LIMITS.speech, 'boss victory'),
     reward: z.strictObject({
@@ -562,6 +577,30 @@ export const BossSchema = z
     }
     if (!b.rounds.some((r) => (TIMED_TYPES as readonly string[]).includes(r.type))) {
       ctx.addIssue({ code: 'custom', path: ['rounds'], message: 'needs at least one timed round (speed or safe)' });
+    }
+    if (b.stages) {
+      const listed = b.stages.flatMap((st) => st.rounds);
+      const ids = b.rounds.map((r) => r.id);
+      if (listed.join(',') !== ids.join(',')) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['stages'],
+          message: `stage rounds must list every round id once, in order (${ids.join(', ')})`,
+        });
+      }
+      const sum = b.stages.reduce((a, st) => a + st.hp, 0);
+      if (sum !== b.hp) {
+        ctx.addIssue({ code: 'custom', path: ['stages'], message: `stage hp adds up to ${sum}, boss hp is ${b.hp}` });
+      }
+      b.stages.forEach((st, i) => {
+        if (st.rounds.length < st.hp) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['stages', i, 'rounds'],
+            message: `needs at least hp (${st.hp}) rounds, has ${st.rounds.length}`,
+          });
+        }
+      });
     }
   });
 
@@ -677,6 +716,7 @@ export type Lesson = z.infer<typeof LessonSchema>;
 export type Attack = z.infer<typeof AttackSchema>;
 export type Project = z.infer<typeof ProjectSchema>;
 export type Boss = z.infer<typeof BossSchema>;
+export type BossStage = z.infer<typeof BossStageSchema>;
 export type WorldMeta = z.infer<typeof WorldMetaSchema>;
 export type Bug = z.infer<typeof BugSchema>;
 export type Achievement = z.infer<typeof AchievementSchema>;
