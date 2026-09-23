@@ -1,0 +1,252 @@
+/* Onboarding (legacy .onboarding, .ob-*, .variant*, .goal-*, .place-*). */
+
+.screen {
+  background: linear-gradient(180deg, var(--cream), var(--sun-l));
+}
+.page {
+  max-width: 440px;
+  margin: 0 auto;
+  padding-top: 8px;
+}
+.brand {
+  text-align: center;
+  margin: 4px 0 6px;
+}
+.logo {
+  font-family: var(--f-disp);
+  font-weight: 800;
+  font-size: 2.2rem;
+  color: var(--tang-d);
+  text-shadow: 0 3px 0 #fff;
+}
+.hero {
+  display: grid;
+  place-items: center;
+}
+.halo {
+  position: relative;
+  width: 230px;
+  height: 230px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--sun-l) 0 58%, transparent 59%);
+  display: grid;
+  place-items: center;
+}
+.spark {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: var(--sun);
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: ch-twinkle 2.4s ease-in-out infinite;
+}
+.heroCurlo {
+  width: 180px;
+}
+.say {
+  margin: 14px 0 12px;
+  text-align: center;
+  min-height: 84px;
+  font-size: 1.05rem;
+  display: grid;
+  place-items: center;
+}
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.dots i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--lock-d);
+  transition:
+    transform 0.3s var(--spring),
+    background 0.2s;
+}
+.dots i.on {
+  background: var(--tang);
+  transform: scale(1.2);
+}
+.link {
+  background: none;
+  border: 0;
+  color: var(--ink2);
+  font-weight: 800;
+  text-decoration: underline;
+  padding: 10px;
+  display: block;
+  margin: 6px auto 0;
+}
+.eyebrow {
+  font-weight: 900;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tang-d);
+}
+.h2 {
+  margin: 2px 0 8px;
+}
+.preview {
+  width: 130px;
+  margin: 6px auto;
+}
+.previewSmall {
+  width: 110px;
+  margin: 6px auto;
+}
+.lbl {
+  display: block;
+  font-weight: 900;
+  font-size: 0.85rem;
+  margin: 12px 0 6px;
+  color: var(--ink2);
+}
+.variants {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.variant {
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 3px 0 var(--line);
+  transition: transform 0.15s var(--spring);
+}
+.variant:active,
+.goal:active {
+  transform: translateY(2px);
+}
+.variant[aria-checked='true'] {
+  border-color: var(--tang);
+  box-shadow: 0 3px 0 var(--tang);
+  background: var(--tang-l);
+}
+.swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.15);
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.swatch svg {
+  width: 16px;
+  height: 16px;
+}
+.variant small {
+  font-weight: 800;
+  font-size: 0.7rem;
+  line-height: 1.1;
+  text-align: center;
+}
+.goals {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 16px;
+}
+.goal {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  column-gap: 14px;
+  align-items: center;
+  text-align: left;
+  background: #fff;
+  border: 2px solid var(--line);
+  border-radius: 20px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 0 var(--line);
+  transition: transform 0.15s var(--spring);
+  font: inherit;
+  color: inherit;
+}
+.goal b {
+  grid-row: 1 / 3;
+  font-family: var(--f-disp);
+  font-size: 1.5rem;
+  color: var(--tang-d);
+  min-width: 80px;
+}
+.goal span {
+  font-weight: 900;
+}
+.goal small {
+  color: var(--muted);
+  font-weight: 700;
+  grid-column: 2;
+}
+.goal .check {
+  grid-row: 1 / 3;
+  grid-column: 3;
+  width: 26px;
+  height: 26px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity 0.2s,
+    transform 0.3s var(--spring);
+}
+.goal[aria-checked='true'] {
+  border-color: var(--tang);
+  background: var(--tang-l);
+  box-shadow: 0 4px 0 var(--tang);
+}
+.goal[aria-checked='true'] .check {
+  opacity: 1;
+  transform: none;
+}
+.col {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.next {
+  margin-top: 16px;
+}
+
+/* placement */
+.placeIntro {
+  text-align: center;
+}
+.worldIc {
+  width: 84px;
+  height: 84px;
+  margin: 10px auto;
+  background: var(--teal);
+  border-radius: 26px;
+  box-shadow: 0 5px 0 var(--teal-d);
+  display: grid;
+  place-items: center;
+}
+.worldIc > span {
+  width: 64px;
+  height: 64px;
+}
+.placeRes {
+  text-align: center;
+}
+.prIc {
+  display: grid;
+  place-items: center;
+  margin: 8px 0;
+}
+.prIc svg {
+  width: 70px;
+  height: 70px;
+}
+
+:global(html.rm) .spark {
+  animation: none;
+}
