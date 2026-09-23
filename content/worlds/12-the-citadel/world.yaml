@@ -1,0 +1,19 @@
+# World 12: The Citadel (Defensive Programming & Error Handling). Lessons are lesson-NN.yaml (played in file order).
+
+id: w12
+num: 12
+title: The Citadel
+icon: castle
+blurb: "Man the walls of the Codebase's fortress: trust no input, throw and catch errors, state your contracts, and hunt undefined behavior with real tools."
+story:
+  intro:
+    - The Slicing Phantom is gone, so every object keeps its whole self again!
+    - "Welcome to the Citadel, the Codebase's fortress. Bugs throw everything at its walls!"
+    - "Its walls are cracking. Let's rebuild them: validate, throw, catch, assert!"
+  bossIntro:
+    - "Uh-oh! The Chaos Hydra: one head throws, one lies, one hides UB!"
+    - Cut one head carelessly and two grow back. Handle every error properly!
+  victory:
+    - "Every head handled, every throw caught! The Citadel stands firm. {^_^}"
+    - "But beyond the walls, bugs copy-paste the same code for every type..."
+    - "World 13: Templates. Let's teach our code to be generic and still safe!"

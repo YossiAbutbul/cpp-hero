@@ -1,0 +1,289 @@
+# World 12 · Lesson 5: Contracts and invariants
+
+id: w12.l5
+title: Contracts and invariants
+skill: logic
+shield: false
+concept:
+  short: "Preconditions, postconditions and invariants are promises. Check untrusted ones with if; assert your own logic; static_assert at compile time."
+  analogy: "A contract has two signatures: the caller promises good arguments, the function promises a good result."
+  body:
+    - "A **precondition** is what must be true before a call (the caller's promise): `amount >= 0`. A **postcondition** is what the function guarantees afterward (its promise): `hp` stays between 0 and max. An **invariant** is what's always true about an object between public calls: `0 <= hp_ <= max_`."
+    - "Classes protect invariants (World 10): the constructor **establishes** it (or throws if it can't), every public member function **preserves** it, and `private` data means nobody outside can break it."
+    - "**Who checks what?** At a public boundary, where callers or input may be wrong, check with `if` and report (throw, or return an error): these checks stay on in every build. Inside your own code, where only a bug of yours could break a promise, use **`assert`**."
+    - "**`assert(cond)`** (from `<cassert>`) stops the program with the file and line when `cond` is false. Release builds usually define `NDEBUG`, which **deletes every assert**. So: never validate input with assert, and never put work inside one (`assert(load())` stops loading in release)."
+    - "**`static_assert(cond, \"message\")`** is checked by the **compiler**. If it's false, the build fails with your message. It costs nothing at run time. Use it for facts known at compile time: `static_assert(sizeof(int) >= 4, \"need 32-bit int\");` or checking a constant table size."
+  pitfall: "Common beginner mistake: guarding a public function's arguments with assert. Tests pass in the debug build, then the release build deletes the check and bad values walk straight in."
+demo:
+  code: |-
+    #include <cassert>
+    #include <iostream>
+    #include <stdexcept>
+
+    static_assert(sizeof(int) >= 4, "Health needs at least 32-bit int");
+
+    class Health {
+    public:
+        explicit Health(int max) : max_{max}, hp_{max} {
+            if (max <= 0) {
+                throw std::invalid_argument("max must be positive");
+            }
+        }
+
+        void damage(int amount) {
+            if (amount < 0) {
+                throw std::invalid_argument("negative damage");
+            }
+            hp_ = (amount >= hp_) ? 0 : hp_ - amount;
+            assert(hp_ >= 0 && hp_ <= max_);
+        }
+
+        int hp() const noexcept { return hp_; }
+
+    private:
+        int max_;
+        int hp_;
+    };
+
+    int main() {
+        Health hero{10};
+        hero.damage(4);
+        std::cout << hero.hp() << '\n';
+        hero.damage(99);
+        std::cout << hero.hp() << '\n';
+        return 0;
+    }
+  steps:
+    - line: 4
+      shield: Checked at compile time!
+      note: static_assert passed while compiling. Zero run-time cost.
+    - line: 29
+      push:
+        name: main
+    - line: 30
+      vars:
+        hero.max_: "10"
+        hero.hp_: "10"
+      note: "Constructor checks max > 0: invariant established."
+    - line: 31
+      push:
+        name: hero.damage
+        vars:
+          amount: "4"
+    - line: 15
+      note: "Precondition: amount >= 0. Checked with if: always on."
+    - line: 18
+      note: Clamp at 0, so hp never goes negative.
+    - line: 19
+      shield: Invariant holds!
+      note: "Postcondition assert: 6 is in 0..10."
+    - line: 31
+      pop: true
+      vars:
+        hero.hp_: "6"
+    - line: 32
+      out: |
+        6
+    - line: 33
+      push:
+        name: hero.damage
+        vars:
+          amount: "99"
+      note: A huge hit. Will hp go negative?
+    - line: 18
+      note: "99 >= 6, so hp becomes 0, not -93."
+    - line: 19
+      shield: Invariant holds!
+    - line: 33
+      pop: true
+      vars:
+        hero.hp_: "0"
+    - line: 34
+      out: |
+        0
+      note: The invariant held through every call.
+challenges:
+  - id: w12.l5.c1
+    type: mcq
+    tags: [ w12.assert ]
+    prompt: Which check belongs in an assert?
+    options:
+      - t: After your own clamp math, hp_ is between 0 and max_
+        why: "Correct: an internal promise only a bug in YOUR code could break. Perfect for assert."
+      - t: The player typed a valid age
+        why: User input can be wrong in any build. assert vanishes with NDEBUG; use if.
+      - t: The save file opened successfully
+        why: Files go missing in real life. That's an error to handle, not a bug to assert.
+      - t: std::cin >> x succeeded
+        why: Worse than useless under NDEBUG, the whole read is deleted along with the assert.
+    answer: 0
+    hints:
+      - Which of these can go wrong even if your code is perfect?
+      - Asserts disappear in release builds.
+    short: "assert your own logic; handle input and environment failures with if."
+    explain: "assert documents and checks assumptions about YOUR code: if it fires, you have a bug. Input, files and the network fail even when your code is perfect, so they need real checks that stay on in every build."
+  - id: w12.l5.c2
+    type: fill
+    tags: [ w12.static-assert ]
+    prompt: Make the BUILD fail if int is smaller than 4 bytes. Fill in the keyword.
+    code: ___(sizeof(int) >= 4, "need at least 32-bit int");
+    accept:
+      - static_assert
+    placeholder: keyword
+    hints:
+      - It's checked by the compiler, not at run time.
+      - It's assert's compile-time cousin.
+    short: static_assert checks a compile-time fact and fails the build if false.
+    explain: "static_assert(condition, message) is evaluated while compiling. If the condition is false, compilation stops with your message. sizeof(int) is known at compile time, so this is a perfect fit."
+  - id: w12.l5.c3
+    type: bug
+    tags: [ w12.assert, w12.contract ]
+    unsafe: true
+    prompt: "UNSAFE: withdraw is public, but its guard vanishes in release builds. Tap the line, then pick the fix."
+    code: |-
+      class Wallet {
+      public:
+          void withdraw(int amount) {
+              assert(amount > 0 && amount <= gold_);
+              gold_ -= amount;
+          }
+          int gold() const noexcept { return gold_; }
+
+      private:
+          int gold_{100};
+      };
+    bugLine: 3
+    options:
+      - t: "if (amount <= 0 || amount > gold_) { throw std::invalid_argument(\"bad withdrawal\"); }"
+        why: "Correct: a real check that stays on in every build, and callers can catch it."
+      - t: Keep the assert and hope nobody builds with -DNDEBUG
+        why: Release builds typically define NDEBUG. Hope is not a defense.
+      - t: static_assert(amount > 0);
+        why: amount is only known at run time, so static_assert can't use it. Compile error.
+      - t: Delete the check; callers should know better
+        why: Then withdraw(-500) adds 500 gold, and 1000 overdraws. The invariant breaks.
+    answer: 0
+    hints:
+      - What happens to assert when NDEBUG is defined?
+      - A public precondition needs a check that is always on.
+    short: Public preconditions need real checks. assert disappears with NDEBUG.
+    explain: "withdraw is a public boundary: any caller can pass anything. With NDEBUG (typical for release), assert is deleted, so withdraw(-500) adds gold and withdraw(1000) goes negative. Check with if and throw, so the invariant holds in every build."
+    sideBySide:
+      unsafe: |-
+        class Wallet {
+        public:
+            void withdraw(int amount) {
+                assert(amount > 0 && amount <= gold_);   // gone with NDEBUG
+                gold_ -= amount;
+            }
+
+        private:
+            int gold_{100};
+        };
+      hardened: |-
+        class Wallet {
+        public:
+            void withdraw(int amount) {
+                if (amount <= 0 || amount > gold_) {
+                    throw std::invalid_argument("bad withdrawal");
+                }
+                gold_ -= amount;
+            }
+
+        private:
+            int gold_{100};
+        };
+  - id: w12.l5.c4
+    type: predict
+    tags: [ w12.invariant ]
+    prompt: Meter keeps 0 <= value_ <= max_. What does this print?
+    code: |-
+      #include <iostream>
+
+      class Meter {
+      public:
+          explicit Meter(int max) : max_{max > 0 ? max : 1} {}
+          void add(int n) {
+              if (n < 0) {
+                  return;
+              }
+              value_ = (n > max_ - value_) ? max_ : value_ + n;
+          }
+          int value() const noexcept { return value_; }
+
+      private:
+          int max_;
+          int value_{0};
+      };
+
+      int main() {
+          Meter m{10};
+          m.add(7);
+          m.add(-3);
+          std::cout << m.value() << ' ';
+          m.add(5);
+          std::cout << m.value() << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          7 10
+        why: "Correct: -3 is refused, then 7 + 5 would pass 10, so it clamps to max."
+      - t: |
+          4 10
+        why: add refuses negative amounts, so -3 changes nothing.
+      - t: |
+          7 12
+        why: The clamp keeps value_ at most max_ (10).
+      - t: |
+          4 9
+        why: -3 is refused, so value_ stays 7 before adding 5.
+    answer: 0
+    hints:
+      - What does add do with a negative n?
+      - "Room left is max_ - value_. Is 5 bigger than the room?"
+    short: Negative adds are refused; overflowing adds clamp to max. Invariant kept.
+    explain: 'add(7) gives 7. add(-3) returns early. Output "7 ". add(5): room is 10 - 7 = 3, and 5 > 3, so value_ becomes max_ = 10. Output: "7 10" and a newline. Every public call keeps 0 <= value_ <= max_.'
+  - id: w12.l5.c5
+    type: order
+    tags: [ w12.contract, w12.assert ]
+    prompt: "Order heal(): check the precondition, do the work, assert the postcondition, return."
+    lines:
+      - int heal(int hp, int amount, int maxHp) {
+      - "    if (amount < 0) {"
+      - '        throw std::invalid_argument("negative heal");'
+      - "    }"
+      - "    int result = (amount > maxHp - hp) ? maxHp : hp + amount;"
+      - "    assert(result >= hp && result <= maxHp);"
+      - "    return result;"
+      - "}"
+    distractors:
+      - "    return hp + amount;"
+    hints:
+      - Reject bad arguments before doing any work.
+      - Check the result after computing it, before returning it.
+    short: "Precondition check first, then work, then assert the postcondition, then return."
+    explain: "The if at the top checks the caller's promise (always on, since amount may come from anywhere). The clamp does the work without overflow. The assert double-checks our own promise: result is between hp and maxHp. `return hp + amount;` skips the clamp and could exceed maxHp."
+recap:
+  - "Precondition: caller's promise. Postcondition: function's promise."
+  - "Invariant: always true between public calls."
+  - Check untrusted preconditions with if, in every build.
+  - assert your own logic; NDEBUG deletes it.
+  - static_assert fails the build, costs nothing at run time.
+vault:
+  - id: w12.contracts
+    title: Contracts in code
+    code: |-
+      static_assert(sizeof(int) >= 4, "need 32-bit int");  // compile time
+
+      int heal(int hp, int amount, int maxHp) {
+          if (amount < 0) {                                  // precondition: always on
+              throw std::invalid_argument("negative heal");
+          }
+          int result = (amount > maxHp - hp) ? maxHp : hp + amount;
+          assert(result >= hp && result <= maxHp);           // postcondition: debug check
+          return result;
+      }
+    note: "if + throw for untrusted callers; assert for your own logic; static_assert for compile-time facts."
+    defense: false
+reviewTags: [ w6.assert, w12.raii, w12.strategy ]

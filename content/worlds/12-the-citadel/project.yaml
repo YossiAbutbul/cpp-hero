@@ -1,0 +1,431 @@
+# World 12 mini-project: Armory Ledger
+
+id: w12.p
+title: Armory Ledger
+intro: "Keep the Citadel's arrow count honest: read commands like add 50 or take 20, and reject anything that would corrupt the ledger."
+steps:
+  - id: w12.p.s1
+    type: fill
+    tags: [ w12.custom ]
+    prompt: Every ledger problem gets its own exception type. Fill in the standard base class.
+    code: |-
+      #include <stdexcept>
+      #include <string>
+
+      class LedgerError : public std::___ {
+      public:
+          explicit LedgerError(const std::string& msg) : std::runtime_error(msg) {}
+      };
+    accept:
+      - runtime_error
+    placeholder: base class
+    hints:
+      - The constructor passes the message to its base.
+      - A ledger problem only shows up at run time.
+    short: LedgerError derives from std::runtime_error and passes the message up.
+    explain: "Deriving from std::runtime_error gives LedgerError a what() that returns the message. Callers can catch LedgerError specifically, or std::exception generally."
+  - id: w12.p.s2
+    type: write
+    tags: [ w12.throw, w12.custom ]
+    prompt: 'Inside add(), a non-positive amount is a caller mistake. Write the line that throws a LedgerError with the message "amount must be positive".'
+    prelude: |-
+      class LedgerError : public std::runtime_error {
+      public:
+          explicit LedgerError(const std::string& msg) : std::runtime_error(msg) {}
+      };
+    accept:
+      - throw LedgerError("amount must be positive");
+      - throw LedgerError{"amount must be positive"};
+    acceptRe:
+      - ^throw LedgerError[({]"amount must be positive"[)}];$
+    placeholder: throw ...
+    hints:
+      - Start with the keyword throw.
+      - Build a LedgerError with the message in double quotes.
+    short: throw LedgerError("amount must be positive"); reports the bad call.
+    explain: '`throw LedgerError("amount must be positive");` stops add() before stock_ changes, and unwinds to the catch in main. The ledger is never left half-updated.'
+  - id: w12.p.s3
+    type: mcq
+    tags: [ w12.strategy, w12.optional ]
+    prompt: readAmount() returns std::optional<int> for "not a number", but add() THROWS for a bad amount. Why the difference?
+    options:
+      - t: Bad typing is expected and handled right there; a bad call to add() is rarer and handled far away
+        why: "Correct: optional for the everyday, local failure; exceptions for failures reported up to main."
+      - t: Exceptions are faster than optional
+        why: Throwing is actually slow compared to returning. Speed isn't the reason.
+      - t: optional can't hold an int
+        why: std::optional<int> holds an int or nothing. That's exactly what readAmount returns.
+      - t: There's no reason; both should use assert
+        why: Both are input problems. assert is for programmer bugs and vanishes with NDEBUG.
+    answer: 0
+    hints:
+      - How often do players mistype a number?
+      - Who handles each failure, and how far away are they?
+    short: optional for expected local failures; exceptions for ones handled higher up.
+    explain: "Typos are everyday events, handled right where the input is read: optional fits. A rejected add or take is reported up through the Armory class to main's catch, which decides what to print: an exception fits, and the invariant stays safe."
+  - id: w12.p.s4
+    type: order
+    tags: [ w12.catch, w12.catchref ]
+    prompt: Order the command handler inside main's loop. Ledger errors must not end the program.
+    prelude: |-
+      class LedgerError : public std::runtime_error {
+      public:
+          explicit LedgerError(const std::string& msg) : std::runtime_error(msg) {}
+      };
+      class Armory {
+      public:
+          void add(int n) {
+              if (n <= 0) {
+                  throw LedgerError("amount must be positive");
+              }
+              stock_ += n;
+          }
+          int stock() const noexcept { return stock_; }
+
+      private:
+          int stock_{0};
+      };
+      Armory armory;
+      std::optional<int> amount{5};
+    lines:
+      - try {
+      - "    armory.add(*amount);"
+      - "    std::cout << \"Stock: \" << armory.stock() << '\\n';"
+      - "} catch (const LedgerError& e) {"
+      - "    std::cout << \"Rejected: \" << e.what() << '\\n';"
+      - "}"
+    distractors:
+      - "} catch (LedgerError e) {"
+    hints:
+      - The risky call and what depends on it go inside try.
+      - Catch your custom type by const reference.
+    short: "try the ledger call; catch LedgerError by const reference; keep running."
+    explain: "If add() throws, the \"Stock:\" line is skipped and the catch prints the reason. The loop then reads the next command: one bad command doesn't crash the ledger. Catching by value would copy the exception (g++ warns)."
+  - id: w12.p.s5
+    type: predict
+    tags: [ w12.throw, w12.catch ]
+    prompt: "A test run of the take logic, starting with 30 arrows. What does it print?"
+    code: |-
+      #include <iostream>
+      #include <stdexcept>
+      #include <vector>
+
+      void take(int& stock, int arrows) {
+          if (arrows > stock) {
+              throw std::runtime_error("not enough arrows");
+          }
+          stock -= arrows;
+      }
+
+      int main() {
+          int stock{30};
+          std::vector<int> requests{10, 50, 20};
+          for (int request : requests) {
+              try {
+                  take(stock, request);
+                  std::cout << "ok ";
+              } catch (const std::runtime_error& e) {
+                  std::cout << e.what() << ' ';
+              }
+          }
+          std::cout << stock << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          ok not enough arrows ok 0
+        why: "Correct: 30 - 10 = 20, 50 is refused (stock stays 20), then 20 - 20 = 0."
+      - t: |
+          ok not enough arrows
+        why: The exception is caught inside the loop, so the loop and the final print continue.
+      - t: |
+          ok not enough arrows not enough arrows 20
+        why: "After 50 is refused, stock is still 20, and taking 20 is allowed (20 > 20 is false)."
+      - t: |
+          ok ok ok -40
+        why: 50 > 20 throws before the subtraction, so stock never goes negative.
+    answer: 0
+    hints:
+      - Track stock after each request.
+      - A refused request leaves stock unchanged.
+    short: The throw happens before subtracting, so a refused request changes nothing.
+    explain: 'Request 10: stock 20, "ok ". Request 50: 50 > 20 throws before the subtraction, so the catch prints "not enough arrows ". Request 20: 20 > 20 is false, stock 0, "ok ". Then "0". Output: "ok not enough arrows ok 0" and a newline.'
+program: |-
+  #include <iostream>
+  #include <limits>
+  #include <optional>
+  #include <stdexcept>
+  #include <string>
+
+  class LedgerError : public std::runtime_error {
+  public:
+      explicit LedgerError(const std::string& msg) : std::runtime_error(msg) {}
+  };
+
+  class Armory {
+  public:
+      void add(int arrows) {
+          if (arrows <= 0) {
+              throw LedgerError("amount must be positive");
+          }
+          if (arrows > std::numeric_limits<int>::max() - stock_) {
+              throw LedgerError("armory would overflow");
+          }
+          stock_ += arrows;
+      }
+
+      void take(int arrows) {
+          if (arrows <= 0) {
+              throw LedgerError("amount must be positive");
+          }
+          if (arrows > stock_) {
+              throw LedgerError("not enough arrows");
+          }
+          stock_ -= arrows;
+      }
+
+      int stock() const noexcept { return stock_; }
+
+  private:
+      int stock_{0};
+  };
+
+  std::optional<int> readAmount() {
+      int amount{};
+      if (!(std::cin >> amount)) {
+          std::cin.clear();
+          std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+          return std::nullopt;
+      }
+      return amount;
+  }
+
+  int main() {
+      Armory armory;
+      std::string command;
+      while (std::cin >> command) {
+          if (command == "quit") {
+              break;
+          }
+          std::optional<int> amount = readAmount();
+          if (!amount) {
+              std::cout << "Amount must be a whole number.\n";
+              continue;
+          }
+          try {
+              if (command == "add") {
+                  armory.add(*amount);
+              } else if (command == "take") {
+                  armory.take(*amount);
+              } else {
+                  std::cout << "Unknown command.\n";
+                  continue;
+              }
+              std::cout << "Stock: " << armory.stock() << '\n';
+          } catch (const LedgerError& e) {
+              std::cout << "Rejected: " << e.what() << '\n';
+          }
+      }
+      std::cout << "Final stock: " << armory.stock() << '\n';
+      return 0;
+  }
+programStdin: |
+  add 50
+  take 20
+  take 999
+  add abc
+  add 2147483647
+  quit
+stress:
+  intro: The Hydra's scouts are probing the ledger! Seal every crack before they break through.
+  attacks:
+    - input: take 999
+      label: Taking more than we have!
+      challenge:
+        id: w12.p.a1
+        type: harden
+        tags: [ w12.invariant, w12.contract ]
+        prompt: "Stock is 30 and a scout orders take 999. Pick the check that protects the invariant stock_ >= 0."
+        code: |-
+          class Armory {
+          public:
+              void take(int arrows) {
+                  if (arrows <= 0) {
+                      throw LedgerError("amount must be positive");
+                  }
+                  if (___) {
+                      throw LedgerError("not enough arrows");
+                  }
+                  stock_ -= arrows;
+              }
+
+          private:
+              int stock_{0};
+          };
+        prelude: |-
+          class LedgerError : public std::runtime_error {
+          public:
+              explicit LedgerError(const std::string& msg) : std::runtime_error(msg) {}
+          };
+        options:
+          - t: arrows > stock_
+            why: "Correct: refuses exactly the requests that would push stock below 0. Taking all 30 is allowed."
+          - t: arrows >= stock_
+            why: "Refuses take 30 when stock is 30, a perfectly valid request that empties the armory."
+          - t: stock_ < 0
+            why: Checked before subtracting, so stock_ is never negative yet. Always false here.
+          - t: arrows < stock_
+            why: "Inverted: refuses every normal request and lets the overdraft through."
+        answer: 0
+        hints:
+          - After subtracting, stock_ must still be 0 or more.
+          - Is taking exactly everything allowed?
+        short: Refuse when arrows > stock_, before subtracting. The invariant stays intact.
+        explain: "The invariant is stock_ >= 0. stock_ - arrows >= 0 means arrows <= stock_, so refuse when arrows > stock_. The check comes BEFORE the subtraction, so a refused request leaves the ledger untouched."
+        sideBySide:
+          unsafe: |-
+            class Armory {
+            public:
+                void take(int arrows) {
+                    stock_ -= arrows;            // 30 - 999: stock goes negative
+                }
+
+            private:
+                int stock_{0};
+            };
+          hardened: |-
+            class Armory {
+            public:
+                void take(int arrows) {
+                    if (arrows <= 0) {
+                        throw LedgerError("amount must be positive");
+                    }
+                    if (arrows > stock_) {
+                        throw LedgerError("not enough arrows");
+                    }
+                    stock_ -= arrows;
+                }
+
+            private:
+                int stock_{0};
+            };
+    - input: add abc
+      label: Text instead of a number!
+      challenge:
+        id: w12.p.a2
+        type: bug
+        tags: [ w12.validate, w3.cin ]
+        prompt: "After add abc, the ledger silently stops reading ALL later commands. Tap the line that needs fixing, then pick the fix."
+        code: |-
+          std::optional<int> readAmount() {
+              int amount{};
+              if (!(std::cin >> amount)) {
+                  return std::nullopt;
+              }
+              return amount;
+          }
+        bugLine: 3
+        options:
+          - t: std::cin.clear(); and std::cin.ignore(max, '\n'); before returning
+            why: "Correct: clear resets the fail state, ignore drops \"abc\", and the next command reads normally."
+          - t: std::cin.ignore(max, '\n'); alone before returning
+            why: A failed stream ignores nothing. clear() must come first.
+          - t: Throw LedgerError instead of returning
+            why: The stream stays jammed either way, so the loop still ends after the catch.
+          - t: Return 0 instead of std::nullopt
+            why: Adds a fake 0 and still leaves cin jammed.
+        answer: 0
+        hints:
+          - What state is cin in after a failed read?
+          - Remember World 3's two-step recovery.
+        short: After a failed read, clear() then ignore() the bad line, or cin stays jammed.
+        explain: 'A failed read puts cin in the fail state, so `while (std::cin >> command)` ends the loop and every later command is lost. clear() resets the state, ignore(max, newline) throws away "abc". Then readAmount reports nullopt and the ledger keeps going.'
+        sideBySide:
+          unsafe: |-
+            std::optional<int> readAmount() {
+                int amount{};
+                if (!(std::cin >> amount)) {
+                    return std::nullopt;         // cin stays jammed!
+                }
+                return amount;
+            }
+          hardened: |-
+            std::optional<int> readAmount() {
+                int amount{};
+                if (!(std::cin >> amount)) {
+                    std::cin.clear();
+                    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                    return std::nullopt;
+                }
+                return amount;
+            }
+    - input: add 2147483647
+      label: A gigantic delivery!
+      challenge:
+        id: w12.p.a3
+        type: harden
+        tags: [ w12.ub, w3.overflow ]
+        prompt: "Stock is 30 and a scout delivers 2147483647 arrows. Pick the check that stops signed overflow."
+        code: |-
+          class Armory {
+          public:
+              void add(int arrows) {
+                  if (arrows <= 0) {
+                      throw LedgerError("amount must be positive");
+                  }
+                  if (___) {
+                      throw LedgerError("armory would overflow");
+                  }
+                  stock_ += arrows;
+              }
+
+          private:
+              int stock_{0};
+          };
+        prelude: |-
+          class LedgerError : public std::runtime_error {
+          public:
+              explicit LedgerError(const std::string& msg) : std::runtime_error(msg) {}
+          };
+        options:
+          - t: arrows > std::numeric_limits<int>::max() - stock_
+            why: "Correct: max - stock_ can't overflow (stock_ >= 0), and it's exactly the room left."
+          - t: stock_ + arrows > std::numeric_limits<int>::max()
+            why: The addition overflows (UB) before the comparison, and no int exceeds max anyway.
+          - t: stock_ + arrows < 0
+            why: Relies on overflow wrapping. It's UB, so the optimizer may delete this check.
+          - t: arrows > std::numeric_limits<int>::max()
+            why: No int is bigger than the largest int. Always false.
+        answer: 0
+        hints:
+          - Don't do the risky addition to test whether it's risky.
+          - "Move stock_ to the other side: arrows > max - stock_."
+        short: Compare against max - stock_ before adding; that side can't overflow.
+        explain: "stock_ + arrows past INT_MAX is signed overflow: UB, maybe a negative stock, maybe a deleted check. Rearranged, the test arrows > max - stock_ uses only safe math, because stock_ is never negative (the invariant!)."
+        sideBySide:
+          unsafe: |-
+            class Armory {
+            public:
+                void add(int arrows) {
+                    stock_ += arrows;            // 30 + 2147483647: UB
+                }
+
+            private:
+                int stock_{0};
+            };
+          hardened: |-
+            class Armory {
+            public:
+                void add(int arrows) {
+                    if (arrows <= 0) {
+                        throw LedgerError("amount must be positive");
+                    }
+                    if (arrows > std::numeric_limits<int>::max() - stock_) {
+                        throw LedgerError("armory would overflow");
+                    }
+                    stock_ += arrows;
+                }
+
+            private:
+                int stock_{0};
+            };

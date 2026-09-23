@@ -1,0 +1,307 @@
+# World 12 · Lesson 2: Throw and catch
+
+id: w12.l2
+title: Throw and catch
+skill: structure
+shield: false
+concept:
+  short: "throw stops a function and flies up the call stack until a matching catch handles it; skipped code never runs."
+  analogy: "A throw is a signal flare: every frame drops what it's doing until a guard who knows that flare catches it."
+  body:
+    - "Some errors can't be handled where they happen. `drink(hp, -2)` knows the dose is bad, but not what the game should do about it. **`throw`** reports the problem to whoever called: `throw std::invalid_argument(\"dose must be positive\");` (from `<stdexcept>`)."
+    - "Put code that might fail in a **`try`** block, and handle failures in a **`catch`** block right after it: `try { ... } catch (const std::invalid_argument& e) { ... }`. `e.what()` gives the message."
+    - "**Stack unwinding**: after a throw, the current function stops immediately. Its frame is popped, then its caller's, and so on, until a `try` with a matching `catch` is found. The rest of every skipped function never runs, and nothing is returned."
+    - "After the catch block finishes, the program continues **after** the whole try/catch, not back at the throw."
+    - "If no catch matches anywhere, **`std::terminate`** ends the program abruptly (usually with an \"abort\" message). Whether local objects are cleaned up first isn't even guaranteed. An uncaught exception is a crash you chose not to handle."
+    - "Library functions throw too: `std::stoi(\"abc\")` throws `std::invalid_argument`, `std::stoi(\"99999999999\")` throws `std::out_of_range`, and `v.at(10)` on a short vector throws `std::out_of_range`."
+  pitfall: "Common beginner mistake: expecting code after the throwing call to run. When `brew()` throws, the next line in the try block is skipped. Execution jumps straight to the catch."
+demo:
+  code: |-
+    #include <iostream>
+    #include <stdexcept>
+
+    int drink(int hp, int dose) {
+        if (dose <= 0) {
+            throw std::invalid_argument("dose must be positive");
+        }
+        return hp + dose;
+    }
+
+    int brew(int hp, int dose) {
+        std::cout << "Brewing...\n";
+        int result = drink(hp, dose);
+        std::cout << "Brewed!\n";
+        return result;
+    }
+
+    int main() {
+        try {
+            int hp = brew(10, 5);
+            std::cout << "HP " << hp << '\n';
+            hp = brew(hp, -2);
+            std::cout << "HP " << hp << '\n';
+        } catch (const std::invalid_argument& e) {
+            std::cout << "Caught: " << e.what() << '\n';
+        }
+        std::cout << "Still standing!\n";
+        return 0;
+    }
+  steps:
+    - line: 17
+      push:
+        name: main
+      note: Execution starts in main().
+    - line: 18
+      note: "try: watch this block for throws."
+    - line: 19
+      push:
+        name: brew
+        vars:
+          hp: "10"
+          dose: "5"
+      note: "Call brew(10, 5)."
+    - line: 11
+      out: |
+        Brewing...
+    - line: 12
+      push:
+        name: drink
+        vars:
+          hp: "10"
+          dose: "5"
+    - line: 4
+      note: Dose 5 is fine. No throw.
+    - line: 7
+      note: Return 15.
+    - line: 12
+      pop: true
+      vars:
+        result: "15"
+    - line: 13
+      out: |
+        Brewed!
+    - line: 14
+      note: Return 15 to main.
+    - line: 19
+      pop: true
+      vars:
+        hp: "15"
+    - line: 20
+      out: |
+        HP 15
+    - line: 21
+      push:
+        name: brew
+        vars:
+          hp: "15"
+          dose: "-2"
+      note: "Call brew(15, -2). Uh-oh."
+    - line: 11
+      out: |
+        Brewing...
+    - line: 12
+      push:
+        name: drink
+        vars:
+          hp: "15"
+          dose: "-2"
+    - line: 4
+      note: Dose -2 is not positive!
+    - line: 5
+      note: "throw: drink stops right here."
+    - line: 12
+      pop: true
+      note: drink's frame unwinds. It returns nothing.
+    - line: 21
+      pop: true
+      note: "brew unwinds too: Brewed! never prints."
+    - line: 23
+      vars:
+        hp: null
+      shield: Exception caught!
+      note: "A matching catch. The try block's hp is gone."
+    - line: 24
+      out: |
+        Caught: dose must be positive
+      note: e.what() returns the message from the throw.
+    - line: 26
+      out: |
+        Still standing!
+      note: Execution continues after the try/catch. No crash!
+challenges:
+  - id: w12.l2.c1
+    type: predict
+    tags: [ w12.throw, w12.unwind ]
+    prompt: Follow the throw. What does this print?
+    code: |-
+      #include <iostream>
+      #include <stdexcept>
+
+      void openDoor(int key) {
+          std::cout << "A";
+          if (key != 7) {
+              throw std::runtime_error("wrong key");
+          }
+          std::cout << "B";
+      }
+
+      int main() {
+          try {
+              openDoor(7);
+              openDoor(3);
+              std::cout << "C";
+          } catch (const std::runtime_error&) {
+              std::cout << "D";
+          }
+          std::cout << "E\n";
+          return 0;
+      }
+    options:
+      - t: |
+          ABADE
+        why: "Correct: key 7 prints AB, key 3 prints A then throws. C is skipped, D catches, E follows."
+      - t: |
+          ABACDE
+        why: After the throw, the rest of the try block is skipped. C never prints.
+      - t: |
+          ABABDE
+        why: The throw stops openDoor(3) before its B.
+      - t: |
+          ABA
+        why: The exception is caught, so the program keeps going to D and E.
+    answer: 0
+    hints:
+      - Which call throws, and when?
+      - After a catch, execution continues after the whole try/catch.
+    short: The throw skips B and C; catch prints D, then E runs.
+    explain: 'openDoor(7) prints A and B. openDoor(3) prints A, then throws. Unwinding skips its B and the rest of the try block (C). The catch prints D, then execution continues after it: E. Output: "ABADE" and a newline.'
+  - id: w12.l2.c2
+    type: order
+    tags: [ w12.catch ]
+    prompt: "Build it: try to convert text to a number, print it, and handle non-numbers."
+    prelude: std::string text{"12"};
+    lines:
+      - try {
+      - "    int n = std::stoi(text);"
+      - "    std::cout << n << '\\n';"
+      - "} catch (const std::invalid_argument&) {"
+      - '    std::cout << "Not a number\n";'
+      - "}"
+    distractors:
+      - "} catch {"
+      - throw {
+    hints:
+      - The risky work goes inside try.
+      - catch comes right after try's closing brace and names a type.
+    short: "try { risky work } catch (const Type&) { handle it }."
+    explain: 'The risky std::stoi call and the code that depends on it go inside try. If stoi throws std::invalid_argument, the catch runs. A catch always names what it catches: `catch {` alone does not compile.'
+  - id: w12.l2.c3
+    type: mcq
+    tags: [ w12.terminate ]
+    bug: uncaught-exception
+    prompt: An exception is thrown and NO catch anywhere matches it. What happens?
+    options:
+      - t: std::terminate ends the program abruptly
+        why: "Correct: an uncaught exception calls std::terminate, which usually aborts the program on the spot."
+      - t: The throw is ignored and the next line runs
+        why: Throws are never ignored. Unwinding continues until something catches, or the program is terminated.
+      - t: main returns 0 normally
+        why: No normal return happens. The program is killed abruptly, usually with an abort message.
+      - t: It's a compile error
+        why: The compiler can't know whether some caller will catch it, so it compiles fine.
+    answer: 0
+    hints:
+      - Unwinding runs out of frames to search.
+      - The function called at the end has "terminate" in its name.
+    short: An uncaught exception calls std::terminate and the program dies.
+    explain: "If unwinding reaches the top of the program without a matching catch, std::terminate is called, which normally aborts. Whether destructors run first is not even guaranteed. Catch exceptions where you can handle them, and at least once near main."
+  - id: w12.l2.c4
+    type: write
+    tags: [ w12.throw ]
+    prompt: 'Write one line that throws a std::out_of_range with the message "slot too big".'
+    accept:
+      - throw std::out_of_range("slot too big");
+      - throw std::out_of_range{"slot too big"};
+    acceptRe:
+      - ^throw std::out_of_range[({]"slot too big"[)}];$
+    placeholder: throw ...
+    hints:
+      - "Start with the keyword throw, then build the exception object."
+      - The message goes in parentheses, in double quotes.
+    short: throw std::out_of_range("slot too big"); builds and throws it.
+    explain: '`throw` followed by an exception object. std::out_of_range (from <stdexcept>) takes its message in the constructor: `throw std::out_of_range("slot too big");`. A catch can read it back with what().'
+  - id: w12.l2.c5
+    type: bug
+    tags: [ w12.catch, w12.untrusted ]
+    bug: uncaught-exception
+    unsafe: true
+    prompt: "UNSAFE: typing `abc` kills this program with an uncaught exception. Tap the line, then pick the fix."
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string text;
+          std::getline(std::cin, text);
+          int level = std::stoi(text);
+          std::cout << "Level " << level << '\n';
+          return 0;
+      }
+    bugLine: 6
+    options:
+      - t: "Wrap it in try, and catch std::invalid_argument and std::out_of_range"
+        why: "Correct: stoi throws those two. Catch them, report the problem, and exit or retry."
+      - t: Check text.empty() before calling stoi
+        why: 'Stops empty input only. "abc" and "99999999999" still throw.'
+      - t: Mark main as noexcept
+        why: That guarantees terminate on any escaping exception. It's the opposite of handling it.
+      - t: Change int to long
+        why: '"abc" still isn''t a number, so std::stoi still throws.'
+    answer: 0
+    hints:
+      - Which call can throw on bad text?
+      - std::stoi throws two different exception types.
+    short: std::stoi throws on bad text. Catch invalid_argument and out_of_range.
+    explain: 'std::stoi throws std::invalid_argument for "abc" and std::out_of_range for numbers too big for an int. Uncaught, either one calls std::terminate. Wrap the call in try and catch both.'
+    sideBySide:
+      unsafe: |-
+        int level = std::stoi(text);    // "abc": uncaught, terminate!
+        std::cout << "Level " << level << '\n';
+      hardened: |-
+        int level{};
+        try {
+            level = std::stoi(text);
+        } catch (const std::invalid_argument&) {
+            std::cout << "Not a number\n";
+            return 1;
+        } catch (const std::out_of_range&) {
+            std::cout << "Number too big\n";
+            return 1;
+        }
+        std::cout << "Level " << level << '\n';
+      prelude: std::string text{"abc"};
+recap:
+  - throw stops the function and unwinds the stack.
+  - try guards code; catch handles a matching type.
+  - After catch, execution continues below the try/catch.
+  - Uncaught exceptions call std::terminate.
+vault:
+  - id: w12.trycatch
+    title: throw, try, catch
+    code: |-
+      int drink(int hp, int dose) {
+          if (dose <= 0) {
+              throw std::invalid_argument("dose must be positive");
+          }
+          return hp + dose;
+      }
+
+      try {
+          int hp = drink(10, -2);          // throws
+          std::cout << hp << '\n';          // skipped
+      } catch (const std::invalid_argument& e) {
+          std::cout << "Caught: " << e.what() << '\n';
+      }
+    note: A throw skips the rest of every function until a matching catch. Needs <stdexcept>.
+    defense: false
+reviewTags: [ w6.call, w6.return, w12.validate ]

@@ -1,0 +1,306 @@
+# World 12 · Lesson 1: Trust no input
+
+id: w12.l1
+title: Trust no input
+skill: defense
+shield: false
+concept:
+  short: "Everything crossing a boundary is hostile until checked: validate type, range and format, then let only good values in."
+  analogy: The Citadel gate checks every cart, even ones flying your own flag.
+  body:
+    - "A **boundary** is anywhere data enters your code from outside your control: the keyboard, files, network messages, command-line arguments, and even another programmer's call into your function. **Trust no input** from any of them."
+    - "Check three things: **type** (is it a number at all?), **range** (is 500 a sane quantity?), and **format/size** (is the name empty, or 10,000 characters long?)."
+    - "**Allow-list, don't block-list.** Accept only what you know is good (`cmd == \"look\" || cmd == \"move\"`) instead of rejecting what you know is bad (`cmd != \"delete\"`). Attackers are more creative than your block-list."
+    - "**Fail closed.** When a check fails, refuse and report. Never guess a \"close enough\" value and carry on."
+    - "**Validate once, at the gate.** A function like `std::optional<int> readQuantity()` either hands back a checked value or `std::nullopt` (\"no value\"). Inside the walls, code can rely on the checked value instead of re-checking everywhere."
+    - "`std::optional<T>` (from `<optional>`) holds either a `T` or nothing. Test it with `if (qty)` or `qty.has_value()`, read it with `*qty`, or use `qty.value_or(fallback)`. Reading `*qty` when it's empty is undefined behavior, so always test first."
+  pitfall: "Common beginner mistake: checking only that input is a number. `-3` potions and `999999` potions are both numbers, and both are nonsense. Check the range too."
+demo:
+  code: |-
+    #include <iostream>
+    #include <optional>
+
+    std::optional<int> readQuantity() {
+        int qty{};
+        if (!(std::cin >> qty)) {
+            return std::nullopt;
+        }
+        if (qty < 1 || qty > 99) {
+            return std::nullopt;
+        }
+        return qty;
+    }
+
+    int main() {
+        std::optional<int> qty = readQuantity();
+        if (!qty) {
+            std::cout << "Rejected at the gate.\n";
+            return 1;
+        }
+        std::cout << "Buying " << *qty << " potions.\n";
+        return 0;
+    }
+  stdin:
+    - |
+      5
+    - |
+      -3
+  steps:
+    - line: 14
+      push:
+        name: main
+      note: "Run 1. Simulated input: 5"
+    - line: 15
+      push:
+        name: readQuantity
+      note: Call readQuantity() to guard the gate.
+    - line: 4
+      vars:
+        qty: "0"
+      note: Start at 0, never garbage.
+    - line: 5
+      vars:
+        qty: "5"
+      note: The read worked, so it IS a number.
+    - line: 8
+      note: "Range check: 5 is inside 1..99."
+    - line: 11
+      note: Hand back the checked value inside an optional.
+    - line: 15
+      pop: true
+      vars:
+        qty: "5"
+      note: Frame popped. main's qty holds a 5.
+    - line: 16
+      note: "!qty is false: there is a value."
+    - line: 20
+      out: |
+        Buying 5 potions.
+    - line: 21
+      pop: true
+      note: Run 1 done.
+    - line: 14
+      push:
+        name: main
+      note: "Run 2. Simulated input: -3"
+    - line: 15
+      push:
+        name: readQuantity
+    - line: 4
+      vars:
+        qty: "0"
+    - line: 5
+      vars:
+        qty: "-3"
+      note: "-3 IS a number, so the read succeeds."
+    - line: 8
+      shield: Range check!
+      note: "-3 is outside 1..99: rejected."
+    - line: 9
+      note: "std::nullopt means: no value here."
+    - line: 15
+      pop: true
+      vars:
+        qty: nullopt
+      note: main's qty is empty.
+    - line: 16
+      note: "!qty is true: nothing safe to use."
+    - line: 17
+      out: |
+        Rejected at the gate.
+    - line: 18
+      note: Exit with an error code. No bad order placed.
+challenges:
+  - id: w12.l1.c1
+    type: mcq
+    tags: [ w12.untrusted ]
+    prompt: Which of these can your code use WITHOUT checking it first?
+    options:
+      - t: None of them. Check at every boundary.
+        why: "Correct: keyboard, files and network are all outside your control. Check once at the gate."
+      - t: A save file your own game wrote yesterday
+        why: Files get edited, corrupted or truncated. A hand-edited save with gold = -1 is still input.
+      - t: A message from your own server
+        why: Networks drop and mangle data, and attackers can pretend to be your server.
+      - t: Keyboard input, if you asked politely
+        why: Players make typos, and some type nasty input on purpose. Politeness is not validation.
+    answer: 0
+    hints:
+      - Where does each value come from?
+      - Could any of them be changed by someone else?
+    short: Every boundary is hostile. Validate once at the gate, then trust it.
+    explain: "Data from the keyboard, files, the network or command-line arguments can be wrong by accident or on purpose. Validate it where it enters (type, range, format). After that, code inside the walls can use the checked value."
+  - id: w12.l1.c2
+    type: edge
+    tags: [ w12.validate, w12.edge ]
+    prompt: "A shop allows 1 to 99 potions per order. Which quantities slip past this check? Select all."
+    code: |-
+      bool validQuantity(int qty) {
+          return qty <= 99;
+      }
+    options:
+      - t: "0"
+        why: "Slips past: 0 <= 99 is true, but an empty order isn't allowed."
+      - t: "-5"
+        why: "Slips past: -5 <= 99 is true. A negative order could pay the player!"
+      - t: "50"
+        why: A normal order. It should pass, and it does.
+      - t: "99"
+        why: The top of the range. It should pass, and it does.
+      - t: "100"
+        why: Correctly rejected, since 100 <= 99 is false.
+    answers: [ 0, 1 ]
+    hints:
+      - The check only guards one side of the range.
+      - Try the smallest values you can think of.
+    short: "The check guards only the top. 0 and negatives walk in."
+    explain: "A range has two ends. `qty <= 99` guards the top but forgets the bottom, so 0 and every negative number pass. Check both: `qty >= 1 && qty <= 99`. Good edge tests hit both limits and the values just outside them (0, 1, 99, 100)."
+    sideBySide:
+      unsafe: |-
+        bool validQuantity(int qty) {
+            return qty <= 99;           // -5 passes!
+        }
+      hardened: |-
+        bool validQuantity(int qty) {
+            return qty >= 1 && qty <= 99;
+        }
+  - id: w12.l1.c3
+    type: fill
+    tags: [ w12.optional ]
+    prompt: Out-of-range input should give back "no value". Fill in the blank.
+    code: |-
+      #include <optional>
+
+      std::optional<int> parsePercent(int raw) {
+          if (raw < 0 || raw > 100) {
+              return ___;
+          }
+          return raw;
+      }
+    accept:
+      - std::nullopt
+      - "{}"
+      - std::optional<int>{}
+    placeholder: the empty value
+    hints:
+      - An optional can hold a value or... nothing.
+      - "Its name starts with std:: and ends with opt."
+    short: return std::nullopt; hands back an empty optional.
+    explain: "`std::nullopt` is the \"no value\" marker for `std::optional`. The caller tests it with `if (result)` before using `*result`. Returning `{}` also makes an empty optional."
+  - id: w12.l1.c4
+    type: predict
+    tags: [ w12.optional ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+      #include <optional>
+
+      std::optional<int> findKey(int door) {
+          if (door == 3) {
+              return 42;
+          }
+          return std::nullopt;
+      }
+
+      int main() {
+          std::optional<int> a = findKey(3);
+          std::optional<int> b = findKey(7);
+          std::cout << a.has_value() << ' ' << b.has_value() << '\n';
+          std::cout << b.value_or(-1) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          1 0
+          -1
+        why: "Correct: door 3 has a key, door 7 doesn't, so value_or gives the fallback -1."
+      - t: |
+          true false
+          -1
+        why: Without std::boolalpha, bools print as 1 and 0.
+      - t: |
+          1 0
+          0
+        why: value_or returns the fallback you pass in, here -1. An empty optional has no hidden 0.
+      - t: |
+          1 0
+          42
+        why: b came from door 7, which returned std::nullopt. Only a holds 42.
+    answer: 0
+    hints:
+      - Which door returns a real value?
+      - value_or(x) gives x when the optional is empty.
+    short: has_value() prints 1 or 0; value_or gives the fallback when empty.
+    explain: 'a holds 42, b is empty. has_value() prints as 1 and 0. b.value_or(-1) returns the fallback -1. Output: "1 0", then "-1".'
+  - id: w12.l1.c5
+    type: harden
+    tags: [ w12.whitelist, w12.validate ]
+    prompt: "Only two commands exist: look and move. Pick the check that rejects everything else."
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      int main() {
+          std::string cmd;
+          std::cin >> cmd;
+          if (___) {
+              std::cout << "Unknown command\n";
+              return 1;
+          }
+          std::cout << "Running " << cmd << '\n';
+          return 0;
+      }
+    options:
+      - t: cmd != "look" && cmd != "move"
+        why: "Correct: an allow-list. Anything that isn't exactly look or move is refused."
+      - t: cmd == "delete"
+        why: "A block-list: it stops delete, but format, sudo and 1000 others walk in."
+      - t: cmd.empty()
+        why: Stops empty input only. Any non-empty junk is accepted.
+      - t: cmd != "look" || cmd != "move"
+        why: "Always true: no word equals both, so even look and move are rejected."
+    answer: 0
+    hints:
+      - List what is allowed, not what is forbidden.
+      - Reject a command only if it is neither of the two.
+    short: "Allow-list: accept only known-good values, reject everything else."
+    explain: "Block-lists always miss something. An allow-list names the few good values and refuses the rest. `cmd != \"look\" && cmd != \"move\"` is true exactly when cmd is neither."
+    sideBySide:
+      unsafe: |-
+        if (cmd == "delete") {          // block-list: misses everything else
+            std::cout << "Unknown command\n";
+            return 1;
+        }
+      hardened: |-
+        if (cmd != "look" && cmd != "move") {   // allow-list
+            std::cout << "Unknown command\n";
+            return 1;
+        }
+      prelude: std::string cmd;
+recap:
+  - Every boundary is hostile until checked.
+  - Check type, range, and format or size.
+  - Allow-list known-good values; refuse everything else.
+  - std::optional returns a value or std::nullopt.
+vault:
+  - id: w12.gate
+    title: Validate once, at the gate
+    code: |-
+      #include <optional>
+
+      std::optional<int> readQuantity() {
+          int qty{};
+          if (!(std::cin >> qty)) {
+              return std::nullopt;        // not a number
+          }
+          if (qty < 1 || qty > 99) {
+              return std::nullopt;        // out of range
+          }
+          return qty;
+      }
+
+      // caller:
+      // if (auto q = readQuantity()) { use(*q); }
+    note: Check type AND range at the boundary. Test an optional before using *it.
+    defense: false
+reviewTags: [ w3.validate, w3.cin, w6.validate ]

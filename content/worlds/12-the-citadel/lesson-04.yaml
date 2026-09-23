@@ -1,0 +1,359 @@
+# World 12 · Lesson 4: Pick your weapon
+
+id: w12.l4
+title: Pick your weapon
+skill: logic
+shield: false
+concept:
+  short: "Expected, local failures return std::optional or a checked result; rare, far-away failures throw. RAII cleans up either way."
+  analogy: "A torch in a holder goes out by itself when you leave the room, even if you leave running."
+  body:
+    - "C++ gives you several ways to report failure. Pick by **how normal the failure is** and **who can fix it**."
+    - "**`std::optional<T>`**: \"a value, or nothing\". Best for expected, common failures where the reason doesn't matter: parsing input, searching for something that may not exist. The caller must check before using it."
+    - "**Return codes / `bool`**: cheap and simple, but easy to ignore. Mark such functions **`[[nodiscard]]`** so the compiler warns when a caller drops the result. Beware **sentinel values**: returning `-1` for \"failed\" breaks the moment `-1` is also a valid answer (a temperature, a balance)."
+    - "**Exceptions**: for failures that are rare and can't be handled where they happen: a file vanished, a constructor can't build a valid object (constructors can't return an error code!), or something deep in a call chain went wrong. They can't be silently ignored, and they cost nothing until thrown. Don't use them for normal control flow."
+    - "**`assert`**: for programmer bugs that should be impossible (next lesson). Not for user input."
+    - "**Exception safety with RAII** (Resource Acquisition Is Initialization): tie every resource (memory, file, lock) to an object whose **destructor releases it**. During stack unwinding, destructors of every fully built local object still run, in reverse order. So `std::vector`, `std::string`, `std::unique_ptr` and file streams never leak, even when something throws."
+    - "A raw `new` ... `delete` pair is **not** exception safe: if anything in between throws, the `delete` line is skipped and the memory leaks. Let an owning object do the cleanup instead."
+  pitfall: "Common beginner mistake: using -1 (or 0) as an error value for a function whose valid results include -1 (or 0). Use std::optional so \"no value\" can't be confused with a real one."
+demo:
+  code: |-
+    #include <iostream>
+    #include <stdexcept>
+
+    struct Torch {
+        Torch() { std::cout << "Torch lit\n"; }
+        ~Torch() { std::cout << "Torch out\n"; }
+    };
+
+    void exploreCave(int depth) {
+        Torch torch;
+        if (depth > 3) {
+            throw std::runtime_error("cave-in!");
+        }
+        std::cout << "Explored depth " << depth << '\n';
+    }
+
+    int main() {
+        try {
+            exploreCave(2);
+            exploreCave(5);
+        } catch (const std::exception& e) {
+            std::cout << "Caught: " << e.what() << '\n';
+        }
+        return 0;
+    }
+  steps:
+    - line: 16
+      push:
+        name: main
+    - line: 18
+      push:
+        name: exploreCave
+        vars:
+          depth: "2"
+    - line: 9
+      out: |
+        Torch lit
+      vars:
+        torch: lit
+      note: "Constructor runs: the resource is acquired."
+    - line: 13
+      out: |
+        Explored depth 2
+    - line: 14
+      out: |
+        Torch out
+      note: End of scope. The destructor runs automatically.
+    - line: 18
+      pop: true
+    - line: 19
+      push:
+        name: exploreCave
+        vars:
+          depth: "5"
+    - line: 9
+      out: |
+        Torch lit
+      vars:
+        torch: lit
+    - line: 11
+      note: "Depth 5: cave-in! throw."
+    - line: 5
+      out: |
+        Torch out
+      shield: RAII cleanup!
+      note: Unwinding still runs the destructor. Nothing leaks.
+    - line: 19
+      pop: true
+      note: The frame is gone, and the torch safely out.
+    - line: 20
+      note: main's catch matches std::exception.
+    - line: 21
+      out: |
+        Caught: cave-in!
+challenges:
+  - id: w12.l4.c1
+    type: mcq
+    tags: [ w12.strategy, w12.optional ]
+    prompt: "findPlayer(name) searches a list. \"Not found\" happens all the time and is normal. How should it report that?"
+    options:
+      - t: Return std::optional<Player>
+        why: "Correct: an expected, common outcome. The caller checks if (p) before using *p."
+      - t: Throw an exception
+        why: Exceptions are for rare, exceptional failures. A missed search is ordinary control flow.
+      - t: Return a Player with name "-1"
+        why: A magic sentinel is easy to forget to check and could collide with real data.
+      - t: assert that the player exists
+        why: assert is for programmer bugs. A missing name is a normal outcome, and asserts vanish in release builds.
+    answer: 0
+    hints:
+      - Is "not found" rare, or everyday?
+      - Which tool means "a value, or nothing"?
+    short: "Expected, everyday failure: return std::optional."
+    explain: "Choose by how normal the failure is. A search that often finds nothing is not exceptional: std::optional says \"maybe a value\" in the type itself, so callers must check. Exceptions fit rare problems that can't be handled nearby; assert fits impossible-if-correct bugs."
+  - id: w12.l4.c2
+    type: predict
+    tags: [ w12.raii, w12.unwind ]
+    prompt: Destructors during unwinding. What does this print?
+    code: |-
+      #include <iostream>
+      #include <stdexcept>
+
+      struct Guard {
+          char id;
+          explicit Guard(char c) : id{c} { std::cout << '+' << id; }
+          ~Guard() { std::cout << '-' << id; }
+      };
+
+      void patrol() {
+          Guard a{'A'};
+          Guard b{'B'};
+          throw std::runtime_error("ambush");
+      }
+
+      int main() {
+          try {
+              patrol();
+          } catch (const std::exception&) {
+              std::cout << '!';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          +A+B-B-A!
+        why: "Correct: unwinding destroys locals in reverse order, B then A, before the catch body runs."
+      - t: |
+          +A+B-A-B!
+        why: Locals are destroyed in REVERSE order of construction. B was built last, so it goes first.
+      - t: |
+          +A+B!-B-A
+        why: Unwinding finishes (destructors run) before the catch block starts.
+      - t: |
+          +A+B!
+        why: The exception is caught, so destructors are guaranteed to run during unwinding.
+    answer: 0
+    hints:
+      - Last built, first destroyed.
+      - Cleanup happens during unwinding, before the handler runs.
+    short: Unwinding runs destructors in reverse order, then the catch body runs.
+    explain: 'patrol() builds A, then B (prints "+A+B"). The throw unwinds patrol, destroying B then A ("-B-A"). Only then does the catch body run ("!"). Output: "+A+B-B-A!" and a newline. This is why RAII makes code exception safe.'
+  - id: w12.l4.c3
+    type: bug
+    tags: [ w12.raii ]
+    unsafe: true
+    prompt: "UNSAFE: if fillTiles throws, this leaks memory. Tap the line to change, then pick the fix."
+    code: |-
+      void loadMap(int size) {
+          int* tiles = new int[size];
+          fillTiles(tiles, size);
+          drawTiles(tiles, size);
+          delete[] tiles;
+      }
+    prelude: |-
+      void fillTiles(int* tiles, int size) {
+          if (size > 1000) {
+              throw std::length_error("map too big");
+          }
+          for (int i = 0; i < size; ++i) {
+              tiles[i] = 0;
+          }
+      }
+      void drawTiles(const int* tiles, int size) {
+          for (int i = 0; i < size; ++i) {
+              std::cout << tiles[i];
+          }
+      }
+    bugLine: 1
+    options:
+      - t: std::vector<int> tiles(size);  (and pass tiles.data())
+        why: "Correct: the vector owns the memory, and its destructor frees it even during unwinding."
+      - t: Move delete[] tiles; above fillTiles
+        why: Then fillTiles and drawTiles use freed memory. That's use-after-free, which is UB.
+      - t: Use delete tiles; instead of delete[] tiles;
+        why: Mismatched delete is UB, and it still never runs when fillTiles throws.
+      - t: Mark loadMap noexcept
+        why: The throw would call std::terminate. Crashing isn't cleaning up.
+    answer: 0
+    hints:
+      - When fillTiles throws, which line gets skipped?
+      - Let an object's destructor do the cleanup.
+    short: Raw new/delete leaks on a throw. Let std::vector own the memory.
+    explain: "If fillTiles throws, unwinding skips the delete[] line and the array leaks. RAII fixes it: std::vector<int> owns the memory and frees it in its destructor, which runs on normal return AND during unwinding."
+    sideBySide:
+      unsafe: |-
+        void loadMap(int size) {
+            int* tiles = new int[size];
+            fillTiles(tiles, size);      // throws: delete[] is skipped, leak!
+            drawTiles(tiles, size);
+            delete[] tiles;
+        }
+      hardened: |-
+        void loadMap(int size) {
+            std::vector<int> tiles(size);        // RAII: freed automatically
+            fillTiles(tiles.data(), size);
+            drawTiles(tiles.data(), size);
+        }
+  - id: w12.l4.c4
+    type: breakit
+    tags: [ w12.returncode, w12.strategy ]
+    prompt: "The caller treats -1 as \"sensor failed\". Which input breaks that logic?"
+    code: |-
+      // Returns the temperature, or -1 if the read failed.
+      int readTemperature() {
+          int t{};
+          if (!(std::cin >> t)) {
+              return -1;
+          }
+          return t;
+      }
+    options:
+      - t: "-1"
+        why: "Correct: -1 degrees is a real reading, but the caller thinks the sensor failed."
+      - t: abc
+        why: The read fails and -1 is returned. Reported as a failure, which is right.
+      - t: "20"
+        why: A normal reading. Returned as 20, handled correctly.
+      - t: "0"
+        why: 0 is a normal reading and isn't the sentinel, so it works.
+    answer: 0
+    hints:
+      - Can a real temperature equal the error value?
+      - The error value is also a valid answer.
+    short: "A sentinel like -1 collides with valid data. Use std::optional."
+    explain: "Sentinel error values only work when they can never be real answers. Temperatures can be -1, so a real reading is reported as a failure (and a caller who forgets to check uses -1 as data). std::optional<int> separates \"no value\" from every real value."
+    sideBySide:
+      unsafe: |-
+        int readTemperature() {
+            int t{};
+            if (!(std::cin >> t)) {
+                return -1;          // but -1 is a real temperature!
+            }
+            return t;
+        }
+      hardened: |-
+        #include <optional>
+
+        std::optional<int> readTemperature() {
+            int t{};
+            if (!(std::cin >> t)) {
+                return std::nullopt;   // can't be confused with a reading
+            }
+            return t;
+        }
+  - id: w12.l4.c5
+    type: harden
+    tags: [ w12.returncode ]
+    prompt: spendGold reports failure with false, and it's [[nodiscard]]. Pick the check that handles it.
+    code: |-
+      #include <iostream>
+
+      [[nodiscard]] bool spendGold(int& gold, int cost) {
+          if (cost < 0 || cost > gold) {
+              return false;
+          }
+          gold -= cost;
+          return true;
+      }
+
+      int main() {
+          int gold{30};
+          if (___) {
+              std::cout << "Not enough gold!\n";
+              return 1;
+          }
+          std::cout << "Bought! Gold left: " << gold << '\n';
+          return 0;
+      }
+    options:
+      - t: "!spendGold(gold, 50)"
+        why: "Correct: calls it once and runs the error branch exactly when it returns false."
+      - t: spendGold(gold, 50)
+        why: "Inverted: a successful purchase would print \"Not enough gold!\"."
+      - t: gold - 50 < 0
+        why: Re-does the check by hand and never spends the gold. Two copies of the rule drift apart.
+      - t: gold == 0
+        why: Never calls spendGold at all, so nothing is bought or checked.
+    answer: 0
+    hints:
+      - The function's result says whether it worked.
+      - You want the error branch when it returns false.
+    short: "Use the result: if (!spendGold(...)) handles the failure."
+    explain: "A bool result is only useful if the caller checks it. [[nodiscard]] makes the compiler warn when the result is dropped. `if (!spendGold(gold, 50))` calls it once and handles the failure; here 50 > 30, so it prints the error."
+    sideBySide:
+      unsafe: |-
+        [[nodiscard]] bool spendGold(int& gold, int cost) {
+            if (cost < 0 || cost > gold) {
+                return false;
+            }
+            gold -= cost;
+            return true;
+        }
+
+        int gold{30};
+        spendGold(gold, 50);            // ignored: warning, and the item is "bought"
+        std::cout << "Bought!\n";
+      hardened: |-
+        [[nodiscard]] bool spendGold(int& gold, int cost) {
+            if (cost < 0 || cost > gold) {
+                return false;
+            }
+            gold -= cost;
+            return true;
+        }
+
+        int gold{30};
+        if (!spendGold(gold, 50)) {
+            std::cout << "Not enough gold!\n";
+            return 1;
+        }
+        std::cout << "Bought!\n";
+recap:
+  - "Expected, common failure: return std::optional."
+  - "Rare, can't fix here: throw an exception."
+  - "[[nodiscard]] stops callers ignoring return codes."
+  - "RAII: destructors clean up, even while unwinding."
+vault:
+  - id: w12.strategy
+    title: Choosing an error strategy
+    code: |-
+      // expected & common (parse, search)    -> std::optional<T>
+      // simple success/fail                  -> [[nodiscard]] bool
+      // rare, can't handle here, constructors -> throw an exception
+      // "impossible" programmer bug          -> assert(...)
+      // user input                           -> validate with if, never assert
+    expect: skip
+    note: Never use a sentinel like -1 if -1 can be a real answer.
+    defense: false
+  - id: w12.raii
+    title: RAII makes code exception safe
+    code: |-
+      void loadMap(int size) {
+          std::vector<int> tiles(size);   // owns the memory
+          // ... anything here may throw ...
+      }                                   // destructor frees it, always
+    note: Destructors run during unwinding. Raw new/delete pairs leak when something throws.
+    defense: false
+reviewTags: [ w7.at, w12.throw, w12.optional, w12.catchref ]

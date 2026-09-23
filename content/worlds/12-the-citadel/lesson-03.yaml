@@ -1,0 +1,342 @@
+# World 12 · Lesson 3: The exception family
+
+id: w12.l3
+title: The exception family
+skill: structure
+shield: false
+concept:
+  short: "Exceptions form a family tree under std::exception. Catch specific types first, always by const reference; noexcept promises no throws."
+  analogy: "Catch blocks are guards in a line: the first one who recognizes the flare's family takes it, so put specialists first."
+  body:
+    - "The standard exceptions are classes in one family tree. At the root is **`std::exception`** (it has `what()`). Below it: **`std::logic_error`** (bugs the caller could have avoided: `std::invalid_argument`, `std::out_of_range`, `std::length_error`) and **`std::runtime_error`** (problems only visible at run time: `std::overflow_error`, `std::range_error`). `std::bad_alloc` means \"out of memory\"."
+    - "A `catch` for a base class also catches every derived class, because a derived exception **is-a** base (World 11!). Handlers are tried **top to bottom**, and the first match wins. So put **specific types first** and `std::exception` last."
+    - "**Always catch by const reference**: `catch (const std::exception& e)`. Catching by value copies the object, and copying a derived exception into a base variable **slices** it: the extra data and the derived `what()` are lost. g++ warns (`-Wcatch-value`)."
+    - "**Custom exceptions**: derive from `std::runtime_error` or `std::logic_error`, pass the message to the base, and add your own data: `class NotEnoughMana : public std::runtime_error { ... };`. Callers can catch your type specifically, or catch `std::exception` and still get `what()`."
+    - "**Throw objects, never pointers**: `throw MyError(...)`, not `throw new MyError(...)` (nobody deletes it). `catch (...)` catches anything; use it only at the top level or to clean up and rethrow with `throw;`, never to silently swallow errors."
+    - "**`noexcept`** on a function is a promise: \"no exception leaves me\". If one does, `std::terminate` is called immediately; no caller gets a chance to catch it. Mark functions that truly can't fail (simple getters, swaps, moves) `noexcept`. Destructors are `noexcept` automatically: never let an exception escape one."
+  pitfall: "Common beginner mistake: `catch (const std::exception&)` before `catch (const std::out_of_range&)`. The base handler matches first, so the specific one is dead code."
+demo:
+  code: |-
+    #include <iostream>
+    #include <stdexcept>
+
+    class NotEnoughMana : public std::runtime_error {
+    public:
+        explicit NotEnoughMana(int missing)
+            : std::runtime_error("not enough mana"), missing_{missing} {}
+        int missing() const noexcept { return missing_; }
+
+    private:
+        int missing_;
+    };
+
+    void cast(int mana, int cost) {
+        if (cost < 0) {
+            throw std::invalid_argument("negative cost");
+        }
+        if (cost > mana) {
+            throw NotEnoughMana(cost - mana);
+        }
+        std::cout << "Spell cast!\n";
+    }
+
+    void attempt(int cost) {
+        try {
+            cast(10, cost);
+        } catch (const NotEnoughMana& e) {
+            std::cout << e.what() << ": need " << e.missing() << " more\n";
+        } catch (const std::exception& e) {
+            std::cout << "Error: " << e.what() << '\n';
+        }
+    }
+
+    int main() {
+        attempt(3);
+        attempt(12);
+        attempt(-1);
+        return 0;
+    }
+  steps:
+    - line: 33
+      push:
+        name: main
+      note: Three spells, three different endings.
+    - line: 34
+      push:
+        name: attempt
+        vars:
+          cost: "3"
+    - line: 25
+      push:
+        name: cast
+        vars:
+          mana: "10"
+          cost: "3"
+    - line: 20
+      out: |
+        Spell cast!
+      note: "3 fits in 10 mana: no throw."
+    - line: 25
+      pop: true
+      note: Normal return. Both catch blocks are skipped.
+    - line: 34
+      pop: true
+    - line: 35
+      push:
+        name: attempt
+        vars:
+          cost: "12"
+    - line: 25
+      push:
+        name: cast
+        vars:
+          mana: "10"
+          cost: "12"
+    - line: 18
+      note: "12 > 10: throw our custom exception."
+    - line: 26
+      pop: true
+      shield: Caught by exact type!
+      note: The first catch matches NotEnoughMana.
+    - line: 27
+      out: |
+        not enough mana: need 2 more
+      note: what() comes from the base; missing() is ours.
+    - line: 35
+      pop: true
+    - line: 36
+      push:
+        name: attempt
+        vars:
+          cost: "-1"
+    - line: 25
+      push:
+        name: cast
+        vars:
+          mana: "10"
+          cost: "-1"
+    - line: 15
+      note: "Negative cost: throw std::invalid_argument."
+    - line: 26
+      pop: true
+      note: Not a NotEnoughMana, so this catch is skipped.
+    - line: 28
+      shield: Caught by base class!
+      note: invalid_argument is-a std::exception, so this one matches.
+    - line: 29
+      out: |
+        Error: negative cost
+    - line: 36
+      pop: true
+    - line: 37
+      note: Every attempt handled. Specific first, general last.
+challenges:
+  - id: w12.l3.c1
+    type: mcq
+    tags: [ w12.catchref ]
+    prompt: Why write `catch (const std::exception& e)` instead of `catch (std::exception e)`?
+    options:
+      - t: By value copies and slices off the derived part
+        why: "Correct: a NotEnoughMana caught by value becomes a plain std::exception copy. The reference keeps the real object."
+      - t: By value doesn't compile
+        why: It compiles (g++ warns with -Wcatch-value). It's legal but loses information.
+      - t: The reference lets you change the exception
+        why: "const means the opposite: you promise not to change it. The point is avoiding the copy and slice."
+      - t: References are needed for what() to exist
+        why: what() exists either way. By value, it's the base version, so the derived message may be lost.
+    answer: 0
+    hints:
+      - Remember the Slicing Phantom from World 11.
+      - What happens when a derived object is copied into a base variable?
+    short: Catch by const reference to avoid copying and slicing.
+    explain: "Catching by value copies the thrown object into a variable of the catch's type. For a derived exception caught as a base, the derived part is sliced off. A const reference refers to the real thrown object: no copy, no slice, full what()."
+  - id: w12.l3.c2
+    type: review
+    tags: [ w12.hierarchy, w12.catchref ]
+    unsafe: true
+    prompt: "UNSAFE: code review! Tap every dangerous catch line."
+    code: |-
+      try {
+          castSpell(cost);
+      } catch (const std::exception& e) {
+          std::cout << "Error: " << e.what() << '\n';
+      } catch (const std::invalid_argument& e) {
+          std::cout << "Bad cost: " << e.what() << '\n';
+      } catch (std::runtime_error e) {
+          std::cout << e.what() << '\n';
+      } catch (...) {
+      }
+    prelude: |-
+      int cost{-3};
+      auto castSpell = [](int c) {
+          if (c < 0) {
+              throw std::invalid_argument("negative cost");
+          }
+      };
+    dangerous: [ 2, 6, 8 ]
+    lineNotes:
+      "2": "The base class comes first, so it grabs everything. Specific handlers below never run."
+      "4": "Dead code: invalid_argument was already caught by the std::exception handler."
+      "6": "By value: copies the exception and slices any derived part."
+      "8": "catch (...) with an empty body silently swallows every error."
+    hints:
+      - Handlers are tried top to bottom; the first match wins.
+      - Look for a copy, and for a catch that does nothing.
+    short: Specific first, by const reference, and never swallow errors silently.
+    explain: "Line 2 catches std::exception first, so the invalid_argument handler below can never run (g++ warns). Line 6 catches by value, which copies and slices. Line 8 swallows every other error without a trace. Put specific types first, catch by const reference, and handle or report everything."
+    sideBySide:
+      unsafe: |-
+        } catch (const std::exception& e) {        // catches everything first
+            std::cout << "Error: " << e.what() << '\n';
+        } catch (const std::invalid_argument& e) { // dead code
+        } catch (std::runtime_error e) {           // copy + slice
+        } catch (...) {                            // silent swallow
+        }
+      hardened: |-
+        try {
+            castSpell(cost);
+        } catch (const std::invalid_argument& e) {
+            std::cout << "Bad cost: " << e.what() << '\n';
+        } catch (const std::exception& e) {
+            std::cout << "Error: " << e.what() << '\n';
+        }
+      expect: skip
+      prelude: |-
+        int cost{-3};
+        auto castSpell = [](int c) {
+            if (c < 0) {
+                throw std::invalid_argument("negative cost");
+            }
+        };
+  - id: w12.l3.c3
+    type: predict
+    tags: [ w12.hierarchy ]
+    prompt: at(3) on a 3-element vector throws std::out_of_range. What does this print?
+    code: |-
+      #include <iostream>
+      #include <stdexcept>
+      #include <vector>
+
+      int main() {
+          std::vector<int> slots{4, 8, 15};
+          try {
+              std::cout << slots.at(1) << ' ';
+              std::cout << slots.at(3) << ' ';
+              std::cout << "done ";
+          } catch (const std::logic_error&) {
+              std::cout << "logic ";
+          } catch (const std::exception&) {
+              std::cout << "other ";
+          }
+          std::cout << "end\n";
+          return 0;
+      }
+    options:
+      - t: |
+          8 logic end
+        why: "Correct: out_of_range is-a logic_error, so the first handler matches. The rest of try is skipped."
+      - t: |
+          8 other end
+        why: "out_of_range derives from logic_error, so the FIRST handler already matches."
+      - t: |
+          8 done end
+        why: at(3) throws, so the "done" line never runs.
+      - t: |
+          8 logic other end
+        why: Only one handler runs per throw, the first that matches.
+    answer: 0
+    hints:
+      - Is std::out_of_range a kind of std::logic_error?
+      - Only the first matching catch runs.
+    short: out_of_range is-a logic_error, so the first matching handler runs.
+    explain: 'at(1) prints 8 and a space. at(3) throws std::out_of_range, which derives from std::logic_error, so the first handler prints "logic ". Then execution continues after the try/catch: "end". Output: "8 logic end" and a newline.'
+  - id: w12.l3.c4
+    type: fill
+    tags: [ w12.custom ]
+    prompt: Make ManaError a custom exception in the standard family. Fill in the base class.
+    code: |-
+      #include <stdexcept>
+
+      class ManaError : public std::___ {
+      public:
+          explicit ManaError(const char* msg) : std::runtime_error(msg) {}
+      };
+    accept:
+      - runtime_error
+    placeholder: base class
+    hints:
+      - Look at what the constructor passes the message to.
+      - It's a problem that only shows up at run time.
+    short: Derive from std::runtime_error and pass the message to it.
+    explain: "Custom exceptions derive from a standard one, usually std::runtime_error (or std::logic_error for caller mistakes), and pass the message to the base constructor. Now `catch (const std::exception& e)` still works, and e.what() returns the message."
+  - id: w12.l3.c5
+    type: mcq
+    tags: [ w12.noexcept ]
+    unsafe: true
+    prompt: "UNSAFE: what happens when main calls safeHalf(-4) inside a try with a matching catch?"
+    code: |-
+      #include <stdexcept>
+
+      int safeHalf(int x) noexcept {
+          if (x < 0) {
+              throw std::invalid_argument("negative");
+          }
+          return x / 2;
+      }
+    expect: warn
+    options:
+      - t: std::terminate is called; the catch never gets it
+        why: "Correct: an exception leaving a noexcept function calls std::terminate on the spot. g++ even warns."
+      - t: The caller's catch handles it normally
+        why: noexcept is a promise. Breaking it calls std::terminate before any caller can catch.
+      - t: It's a compile error
+        why: It compiles, with a warning that the throw will always call terminate.
+      - t: It returns -2
+        why: The throw happens before the division, and noexcept doesn't cancel the throw.
+    answer: 0
+    hints:
+      - noexcept is a promise that no exception leaves the function.
+      - What does C++ do when that promise is broken?
+    short: An exception escaping a noexcept function calls std::terminate.
+    explain: "noexcept promises that no exception leaves the function. If one tries, std::terminate ends the program immediately; unwinding never reaches the caller's catch. Only mark functions noexcept when they truly can't throw, like simple getters."
+recap:
+  - "Family tree: std::exception, then logic_error and runtime_error."
+  - Catch specific types first, std::exception last.
+  - Always catch by const reference.
+  - Custom exceptions derive from std::runtime_error.
+  - noexcept broken means std::terminate.
+vault:
+  - id: w12.custom-exception
+    title: A custom exception
+    code: |-
+      class NotEnoughMana : public std::runtime_error {
+      public:
+          explicit NotEnoughMana(int missing)
+              : std::runtime_error("not enough mana"), missing_{missing} {}
+          int missing() const noexcept { return missing_; }
+
+      private:
+          int missing_;
+      };
+
+      // try { ... }
+      // catch (const NotEnoughMana& e) { /* specific first */ }
+      // catch (const std::exception& e) { /* general last */ }
+    note: Derive from a standard exception, pass the message up, catch by const reference.
+    defense: false
+  - id: w12.family
+    title: The exception family tree
+    code: |-
+      // std::exception                  what()
+      //   std::logic_error               caller's mistake
+      //     std::invalid_argument        std::stoi("abc")
+      //     std::out_of_range            v.at(99), std::stoi("99999999999")
+      //     std::length_error
+      //   std::runtime_error             only visible at run time
+      //     std::overflow_error
+      //     std::range_error
+      //   std::bad_alloc                 out of memory
+    expect: skip
+    note: A catch for a base type also catches everything below it.
+    defense: false
+reviewTags: [ w8.constref, w12.throw, w12.catch ]

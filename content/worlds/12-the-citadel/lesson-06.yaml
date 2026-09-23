@@ -1,0 +1,356 @@
+# World 12 · Lesson 6: Shield: Hunt UB before it hunts you (Shield lesson)
+
+id: w12.l6
+title: "Shield: Hunt UB before it hunts you"
+skill: defense
+shield: true
+concept:
+  short: "UB can pass every test and still be wrong. Test edge cases, and let warnings and sanitizers hunt."
+  analogy: "UB is a cracked wall painted to look solid: it holds until the day it doesn't."
+  body:
+    - "**Undefined behavior** means the C++ rules say nothing about what happens. The usual sources: reading out of bounds (`v[v.size()]`, `back()` on an empty vector), reading uninitialized variables, **signed overflow**, dividing by zero, following null or dangling pointers, using an iterator or pointer after `push_back` reallocated, `*opt` on an empty optional, and falling off the end of a non-void function."
+    - "**\"It seemed to work\" proves nothing.** The compiler is allowed to assume UB never happens, so the optimizer may delete your later checks or reorder code. The same bug can print the right answer in a debug build, garbage with `-O2`, and crash on a friend's compiler next month. UB doesn't guarantee a crash, which is exactly what makes it dangerous."
+    - "**Edge-case thinking**: for every input, ask: empty? zero? exactly one? negative? the largest and smallest values? just inside and just outside each limit? not a number at all? These are where bugs live."
+    - "**Tiny tests**: a few `assert(f(edge) == expected);` lines in a test `main` catch regressions every time you build. (Real projects use frameworks like GoogleTest or Catch2, but the idea is the same.)"
+    - "**Let tools hunt too**: `-Wall -Wextra` turn on warnings; **`-Werror`** makes every warning an error so none get ignored. **AddressSanitizer** (`-fsanitize=address`) catches out-of-bounds, use-after-free and leaks at run time. **UBSan** (`-fsanitize=undefined`) catches signed overflow, division by zero and more. Add `-g` for line numbers. **clang-tidy** reads your code without running it and flags risky patterns (`bugprone-*` checks)."
+    - "Sanitizers only find bugs on code paths that actually run, so **tests plus sanitizers** is the winning combo: `g++ -std=c++20 -Wall -Wextra -Werror -fsanitize=address,undefined -g tests.cpp`."
+  pitfall: "Common beginner mistake: \"it printed the right number, ship it\". An out-of-bounds read often returns a plausible leftover value. Run your edge tests under the sanitizers before trusting it."
+demo:
+  code: |-
+    #include <cassert>
+    #include <iostream>
+    #include <optional>
+    #include <vector>
+
+    std::optional<int> lastScore(const std::vector<int>& scores) {
+        if (scores.empty()) {
+            return std::nullopt;
+        }
+        return scores.back();
+    }
+
+    int main() {
+        assert(lastScore({}) == std::nullopt);
+        assert(lastScore({7}) == 7);
+        assert(lastScore({3, 9}) == 9);
+        std::cout << "All edge tests passed\n";
+        return 0;
+    }
+  steps:
+    - line: 12
+      push:
+        name: main
+      note: "A tiny test: call the function with edge cases."
+    - line: 13
+      push:
+        name: lastScore
+        vars:
+          scores: "{}"
+      note: "Edge 1: an empty vector."
+    - line: 9
+      crash: "back() on empty: undefined behavior!"
+      note: Without the guard, back() reads memory that isn't there.
+    - line: 6
+      shield: Empty checked!
+      note: "Back to reality: the guard runs first."
+    - line: 7
+      note: Return nullopt instead of reading nothing.
+    - line: 13
+      pop: true
+      note: Test 1 passes.
+    - line: 14
+      push:
+        name: lastScore
+        vars:
+          scores: "{7}"
+      note: "Edge 2: exactly one element."
+    - line: 9
+      note: Not empty, so back() is safe. Returns 7.
+    - line: 14
+      pop: true
+      note: Test 2 passes.
+    - line: 15
+      note: "Normal case: the last of {3, 9} is 9."
+    - line: 16
+      out: |
+        All edge tests passed
+      note: Build with sanitizers to catch what asserts can't.
+challenges:
+  - id: w12.l6.c1
+    type: safe
+    tags: [ w12.ub ]
+    prompt: Safe or UB? The Hydra's heads are snapping. Go fast!
+    seconds: 35
+    items:
+      - code: |-
+          std::vector<int> v;
+          int x = v.back();
+        safe: false
+        why: back() on an empty vector is UB. Check empty() first.
+      - code: |-
+          if (!v.empty()) {
+              x = v.back();
+          }
+        prelude: std::vector<int> v; int x{};
+        safe: true
+        why: The emptiness check runs before back().
+      - code: |-
+          int total;
+          total += 5;
+        safe: false
+        why: total starts with garbage; reading it is UB.
+      - code: |-
+          int big = INT_MAX;
+          big += 1;
+        safe: false
+        why: Signed overflow is UB, even though it often seems to wrap.
+      - code: int y = o.value_or(0);
+        prelude: std::optional<int> o;
+        safe: true
+        why: value_or gives the fallback when the optional is empty.
+      - code: int y = *o;
+        prelude: std::optional<int> o;
+        safe: false
+        why: "*o on an empty optional is UB. Test it first."
+      - code: |-
+          try {
+              std::cout << v.at(5);
+          } catch (const std::out_of_range&) {
+              std::cout << "No slot 5\n";
+          }
+        prelude: std::vector<int> v{1, 2};
+        safe: true
+        why: at() checks the index and throws; the throw is caught.
+      - code: std::cout << v[2];
+        prelude: std::vector<int> v{1, 2};
+        safe: false
+        why: "Index 2 of a 2-element vector is out of bounds: UB, no check."
+    hints:
+      - Look for reads of things that don't exist yet.
+      - "Unchecked: back(), [], *optional, and arithmetic past INT_MAX."
+    short: Check before you read, and never overflow a signed int.
+    explain: "Every unsafe item reads something that isn't there (empty back(), out-of-bounds [], empty *optional, an uninitialized int) or overflows a signed int. The safe versions check first, use a fallback, or use at() inside try."
+  - id: w12.l6.c2
+    type: edge
+    tags: [ w12.edge, w12.ub ]
+    unsafe: true
+    prompt: "UNSAFE: which test inputs expose undefined behavior in average()? Select all."
+    code: |-
+      int average(const std::vector<int>& v) {
+          int sum = 0;
+          for (int x : v) {
+              sum += x;
+          }
+          return sum / static_cast<int>(v.size());
+      }
+    options:
+      - t: "{} (empty)"
+        why: "Exposes it: size is 0, so the function divides by zero. UB."
+      - t: "{2147483647, 1}"
+        why: "Exposes it: the sum passes INT_MAX. Signed overflow is UB."
+      - t: "{-4, -6}"
+        why: "-10 / 2 = -5. Negatives are fine here."
+      - t: "{5}"
+        why: "One element: 5 / 1 = 5. Works."
+      - t: "{1, 2}"
+        why: "3 / 2 = 1 by integer division. Truncated, but defined."
+    answers: [ 0, 1 ]
+    hints:
+      - What is v.size() for an empty vector?
+      - Can the sum of two valid ints be too big for an int?
+    short: "Test empty and huge inputs: division by zero and overflow hide there."
+    explain: "Two classic edge cases: the empty input (divide by zero) and values near INT_MAX (the running sum overflows). Neither shows up with \"normal\" test data. Return std::optional for empty input and sum in a long long."
+    sideBySide:
+      unsafe: |-
+        int average(const std::vector<int>& v) {
+            int sum = 0;
+            for (int x : v) {
+                sum += x;                          // may overflow
+            }
+            return sum / static_cast<int>(v.size());   // empty: divide by 0
+        }
+      hardened: |-
+        std::optional<int> average(const std::vector<int>& v) {
+            if (v.empty()) {
+                return std::nullopt;
+            }
+            long long sum = 0;
+            for (int x : v) {
+                sum += x;
+            }
+            return static_cast<int>(sum / static_cast<long long>(v.size()));
+        }
+  - id: w12.l6.c3
+    type: review
+    tags: [ w12.ub, w7.bounds ]
+    unsafe: true
+    prompt: "UNSAFE: this printed 30 on your machine. Tap every line with undefined behavior anyway."
+    code: |-
+      std::vector<int> hp{10, 20, 30};
+      int total;
+      for (std::size_t i = 0; i <= hp.size(); ++i) {
+          total += hp[i];
+      }
+      int* boss = nullptr;
+      if (hp.size() > 2) {
+          boss = &hp[2];
+      }
+      hp.push_back(40);
+      std::cout << *boss << '\n';
+    dangerous: [ 1, 2, 10 ]
+    lineNotes:
+      "1": "Uninitialized: total starts with garbage, and += reads it."
+      "2": "<= runs one step too far: hp[3] is out of bounds."
+      "9": "push_back may reallocate, moving every element somewhere new."
+      "10": "boss may point at the old, freed storage: dangling read."
+    hints:
+      - Look at a start value, a loop limit, and an old pointer.
+      - What can push_back do to existing elements' addresses?
+    short: "Uninitialized total, off-by-one loop, pointer dangling after push_back: all UB."
+    explain: "Line 1 reads garbage. Line 2's <= reads hp[3], past the end. Line 10 follows a pointer that push_back may have invalidated by moving the elements. It \"printed 30\" by luck: UB doesn't guarantee a crash. Initialize, loop with <, and re-take addresses after growing a vector."
+    sideBySide:
+      unsafe: |-
+        int total;                                      // garbage
+        for (std::size_t i = 0; i <= hp.size(); ++i) {  // one too far
+            total += hp[i];
+        }
+        int* boss = &hp[2];
+        hp.push_back(40);                               // may move elements
+        std::cout << *boss << '\n';                     // dangling
+      hardened: |-
+        int total{0};
+        for (std::size_t i = 0; i < hp.size(); ++i) {
+            total += hp[i];
+        }
+        hp.push_back(40);
+        if (hp.size() > 2) {
+            std::cout << hp[2] << '\n';                 // index after growing
+        }
+      prelude: std::vector<int> hp{10, 20, 30};
+  - id: w12.l6.c4
+    type: mcq
+    tags: [ w12.tools ]
+    prompt: Which build flag makes signed overflow stop the program with a report at run time?
+    options:
+      - t: -fsanitize=undefined
+        why: "Correct: UBSan instruments arithmetic, shifts, divisions and more, and reports UB as it happens."
+      - t: -Werror
+        why: It turns compile-time warnings into errors. It doesn't watch the running program.
+      - t: -fsanitize=address
+        why: ASan hunts memory errors (out of bounds, use-after-free, leaks), not arithmetic overflow.
+      - t: -O2
+        why: Optimization often HIDES UB, or makes it behave differently. It detects nothing.
+    answer: 0
+    hints:
+      - You want a checker for undefined behavior.
+      - The flag's name says what it hunts.
+    short: "UBSan (-fsanitize=undefined) reports signed overflow as it happens."
+    explain: "Sanitizers add checks to the compiled program. UBSan (-fsanitize=undefined) catches signed overflow, division by zero, bad shifts and more; ASan (-fsanitize=address) catches memory errors. Use both in test builds: -fsanitize=address,undefined -g."
+  - id: w12.l6.c5
+    type: harden
+    tags: [ w12.edge, w7.empty ]
+    prompt: "Edge case: nobody in line. Pick the guard that makes queue.front() safe."
+    code: |-
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> queue;
+          int n{};
+          while (std::cin >> n) {
+              queue.push_back(n);
+          }
+          if (___) {
+              std::cout << "No one in line\n";
+              return 1;
+          }
+          std::cout << "First: " << queue.front() << '\n';
+          return 0;
+      }
+    options:
+      - t: queue.empty()
+        why: "Correct: an empty vector has no front. Check before reading it."
+      - t: queue.size() < 0
+        why: size() is unsigned, so it's never below 0. Always false; g++ even warns.
+      - t: queue.front() == 0
+        why: Calls front() on the empty vector to check it. That's the UB we're avoiding.
+      - t: n == 0
+        why: n is the last number typed, not the queue length. An empty input leaves the queue empty anyway.
+    answer: 0
+    hints:
+      - Which inputs make the vector empty?
+      - Ask the vector itself, without reading an element.
+    short: "Guard front() and back() with empty(): the empty input is an edge case."
+    explain: "If the input is empty (or starts with text), no numbers are pushed. front() on an empty vector is UB and may even print a plausible number. Check queue.empty() first."
+    sideBySide:
+      unsafe: |-
+        std::cout << "First: " << queue.front() << '\n';   // empty: UB
+      hardened: |-
+        if (queue.empty()) {
+            std::cout << "No one in line\n";
+            return 1;
+        }
+        std::cout << "First: " << queue.front() << '\n';
+      prelude: std::vector<int> queue;
+  - id: w12.l6.c6
+    type: write
+    tags: [ w12.tools ]
+    expect: skip
+    prompt: "Type the g++ flag that turns every warning into an error, so none get ignored."
+    accept:
+      - "-Werror"
+    placeholder: -W...
+    hints:
+      - It starts with -W.
+      - "Warning becomes... error."
+    short: -Werror makes every warning a build failure.
+    explain: "-Werror turns warnings into errors, so a build with any warning fails. Combined with -Wall -Wextra, it stops warnings from piling up unread. Many teams use it in CI (automatic builds)."
+recap:
+  - UB can pass tests and still be wrong.
+  - "Test edges: empty, zero, one, negative, limits."
+  - Tiny assert tests catch regressions every build.
+  - "-Wall -Wextra -Werror at compile time."
+  - "ASan and UBSan hunt at run time."
+vault:
+  - id: w12.ub-list
+    title: Common UB sources
+    code: |-
+      // v[v.size()], v.back() on empty    -> check size / empty()
+      // int x;  x + 1                      -> always initialize
+      // INT_MAX + 1                        -> check limits first
+      // x / 0, x % 0                       -> check the divisor
+      // *nullptr, dangling pointer/ref     -> check, don't outlive
+      // pointer kept across push_back      -> re-take after growing
+      // *opt when empty                    -> if (opt) or value_or
+      // no return in a non-void function   -> return on every path
+    expect: skip
+    note: UB doesn't guarantee a crash. It can look fine today and fail tomorrow.
+    defense: true
+  - id: w12.edge-tests
+    title: Edge cases + tiny tests
+    code: |-
+      // For every input, test: empty, zero, one,
+      // negative, min/max, just outside the limits, not-a-number.
+      assert(lastScore({}) == std::nullopt);
+      assert(lastScore({7}) == 7);
+      assert(lastScore({3, 9}) == 9);
+    prelude: |-
+      auto lastScore = [](const std::vector<int>& s) -> std::optional<int> {
+          if (s.empty()) {
+              return std::nullopt;
+          }
+          return s.back();
+      };
+    note: Run your tests under sanitizers so hidden UB gets caught.
+    defense: true
+  - id: w12.tools
+    title: Let the tools hunt
+    code: |-
+      g++ -std=c++20 -Wall -Wextra -Werror -g \
+          -fsanitize=address,undefined tests.cpp -o tests
+      ./tests
+      clang-tidy main.cpp -checks='bugprone-*' -- -std=c++20
+    expect: skip
+    note: Warnings as errors, sanitizers in test builds, clang-tidy for a second opinion.
+    defense: true
+reviewTags: [ w7.bounds, w8.sanitizers, w3.overflow, w12.validate, w12.assert ]

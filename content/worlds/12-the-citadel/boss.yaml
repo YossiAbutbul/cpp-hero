@@ -1,0 +1,580 @@
+# World 12 boss: The Chaos Hydra
+
+id: w12.boss
+name: The Chaos Hydra
+art: hydra
+hp: 7
+intro: HSSS! Nine heads, nine errors. Which one will you forget to catch?
+taunt:
+  - My throw flies past your try blocks, straight to std::terminate!
+  - "It seemed to work, didn't it? Heh heh. UB never promised a crash."
+  - Catch me by value and I'll slice right out of your hands.
+  - Your asserts vanish in release. My heads don't.
+rounds:
+  - id: w12.boss.r1
+    type: predict
+    tags: [ w12.unwind, w12.raii ]
+    prompt: The Hydra grows heads until one throws. What does this print?
+    code: |-
+      #include <iostream>
+      #include <stdexcept>
+
+      struct Head {
+          int n;
+          explicit Head(int id) : n{id} { std::cout << "H" << n << ' '; }
+          ~Head() { std::cout << "x" << n << ' '; }
+      };
+
+      void grow(int count) {
+          Head head{count};
+          if (count >= 2) {
+              throw std::runtime_error("too many heads");
+          }
+          grow(count + 1);
+      }
+
+      int main() {
+          try {
+              grow(1);
+          } catch (const std::exception& e) {
+              std::cout << "| " << e.what() << '\n';
+          }
+          return 0;
+      }
+    options:
+      - t: |
+          H1 H2 x2 x1 | too many heads
+        why: "Correct: grow(2) throws, unwinding destroys head 2, then head 1, then the catch runs."
+      - t: |
+          H1 H2 x1 x2 | too many heads
+        why: The newest frame unwinds first, so head 2 is destroyed before head 1.
+      - t: |
+          H1 H2 | too many heads x2 x1
+        why: Destructors run during unwinding, before the catch body starts.
+      - t: |
+          H1 H2 | too many heads
+        why: Every fully built local is destroyed during unwinding. The x's do print.
+    answer: 0
+    hints:
+      - Which call throws, and which frames does it pass through?
+      - Newest frame first; cleanup before the catch body.
+    short: Unwinding pops grow(2) then grow(1), destroying heads 2 and 1.
+    explain: 'grow(1) builds head 1 and calls grow(2), which builds head 2 and throws. Unwinding pops grow(2) (prints "x2 ") then grow(1) ("x1 "), then the catch prints "| too many heads". Output: "H1 H2 x2 x1 | too many heads" and a newline.'
+  - id: w12.boss.r2
+    type: mcq
+    tags: [ w12.strategy ]
+    prompt: A Map constructor can't open its map file. How should it report the failure?
+    options:
+      - t: Throw an exception
+        why: "Correct: constructors can't return a value. Throwing means no half-built Map ever exists."
+      - t: Return -1
+        why: Constructors have no return value at all, so this can't even be written.
+      - t: Set an isValid flag and hope callers check it
+        why: A zombie object that looks alive. Every caller must remember the check forever.
+      - t: assert that the file opened
+        why: Missing files happen in real life, and asserts vanish with NDEBUG.
+    answer: 0
+    hints:
+      - What can a constructor return?
+      - The object should either be fully valid, or not exist.
+    short: Constructors can't return error codes. Throw, so no broken object exists.
+    explain: "A constructor either builds a valid object or fails. Throwing is the only way to fail loudly: the object is never created, and everything it already built is cleaned up by RAII. Flags create zombie objects that callers forget to check."
+  - id: w12.boss.r3
+    type: bug
+    tags: [ w12.catchref, w12.hierarchy ]
+    prompt: 'The Hydra throws length_error("too many heads"), but this prints "std::exception". Tap the line, then pick the fix.'
+    code: |-
+      try {
+          summonHydra(heads);
+      } catch (std::exception e) {
+          std::cout << e.what() << '\n';
+      }
+    prelude: |-
+      int heads{9};
+      auto summonHydra = [](int h) {
+          if (h > 8) {
+              throw std::length_error("too many heads");
+          }
+      };
+    bugLine: 2
+    options:
+      - t: "} catch (const std::exception& e) {"
+        why: "Correct: the reference refers to the real length_error, so what() returns \"too many heads\"."
+      - t: "} catch (std::exception* e) {"
+        why: A pointer handler only catches thrown pointers. The object would go uncaught.
+      - t: "} catch (...) {"
+        why: Catches it, but there's no e, so you can't read the message at all.
+      - t: "} catch (std::logic_error e) {"
+        why: Still a copy that slices, and runtime errors wouldn't match at all.
+    answer: 0
+    hints:
+      - Catching by value makes a copy of the base part only.
+      - Remember the Slicing Phantom.
+    short: Catching by value slices the exception. Catch by const reference.
+    explain: "catch (std::exception e) copies only the std::exception part of the length_error, so its what() is the generic one (g++ prints \"std::exception\"). A const reference binds to the real object: no copy, no slice, and g++'s -Wcatch-value warning goes away."
+    sideBySide:
+      unsafe: |-
+        } catch (std::exception e) {          // copy: sliced!
+            std::cout << e.what() << '\n';    // "std::exception"
+        }
+      hardened: |-
+        try {
+            summonHydra(heads);
+        } catch (const std::exception& e) {
+            std::cout << e.what() << '\n';    // "too many heads"
+        }
+      expect: skip
+  - id: w12.boss.r4
+    type: speed
+    tags: [ w12.throw, w12.catch, w12.assert, w12.static-assert, w12.tools, w12.optional ]
+    prompt: SPEED ROUND! Heads are snapping from every side. Answer fast!
+    seconds: 45
+    items:
+      - q: Which header declares std::runtime_error?
+        options:
+          - <error>
+          - <stdexcept>
+          - <iostream>
+        answer: 1
+      - q: An exception nobody catches calls...
+        options:
+          - std::terminate
+          - std::exit(0)
+          - nothing; it's ignored
+        answer: 0
+      - q: Which catch goes FIRST?
+        options:
+          - const std::exception&
+          - const std::out_of_range&
+          - "..."
+        answer: 1
+      - q: When is static_assert checked?
+        options:
+          - At run time
+          - Only in debug builds
+          - At compile time
+        answer: 2
+      - q: Defining NDEBUG removes...
+        options:
+          - assert
+          - static_assert
+          - throw
+        answer: 0
+      - q: Which sanitizer catches use-after-free?
+        options:
+          - -fsanitize=undefined
+          - -fsanitize=address
+          - -Werror
+        answer: 1
+      - q: What does this print?
+        code: std::cout << o.value_or(3);
+        prelude: std::optional<int> o;
+        options:
+          - "0"
+          - UB
+          - "3"
+        answer: 2
+    hints:
+      - Specific before general; compile time before run time.
+      - "ASan: memory. UBSan: arithmetic and friends."
+    short: stdexcept, terminate, specific first, compile time, assert, ASan, fallback 3.
+    explain: "std::runtime_error lives in <stdexcept>. Uncaught exceptions call std::terminate. Specific handlers go before general ones. static_assert runs at compile time. NDEBUG deletes assert. ASan catches use-after-free. An empty optional's value_or(3) gives 3."
+  - id: w12.boss.r5
+    type: review
+    tags: [ w12.assert, w12.validate, w12.ub ]
+    unsafe: true
+    prompt: "UNSAFE: the Hydra wrote this loot code. Tap every dangerous line."
+    code: |-
+      std::vector<int> loot(size);
+      int index;
+      assert(std::cin >> index);
+      loot[index] = 99;
+      std::cout << loot.at(0) << '\n';
+    prelude: std::size_t size{5};
+    dangerous: [ 1, 2, 3 ]
+    lineNotes:
+      "0": "Fine: the vector owns its memory (RAII)."
+      "1": "Uninitialized: if the read never happens, index is garbage."
+      "2": "With NDEBUG the whole read disappears, not just the check."
+      "3": "No range check: -1 or 99 writes out of bounds. UB."
+      "4": "Fine: at() checks the index and throws if it's bad."
+    hints:
+      - What happens to this code in a release build?
+      - Which index values are actually safe?
+    short: "Initialize, read with if (not assert), and range-check before indexing."
+    explain: "Line 1 leaves index uninitialized. Line 2 hides the read inside assert, so a release build never reads anything and uses garbage. Line 3 indexes without a range check, so -1 or 99 writes out of bounds. Validate input with if, and check 0 <= index < size."
+    sideBySide:
+      unsafe: |-
+        std::vector<int> loot(size);
+        int index;
+        assert(std::cin >> index);   // gone with NDEBUG
+        loot[index] = 99;            // unchecked
+      hardened: |-
+        std::vector<int> loot(size);
+        int index{};
+        if (!(std::cin >> index) || index < 0 || index >= static_cast<int>(loot.size())) {
+            std::cout << "Bad slot\n";
+            return 1;
+        }
+        loot[index] = 99;
+        std::cout << loot.at(0) << '\n';
+      prelude: std::size_t size{5};
+  - id: w12.boss.r6
+    type: predict
+    tags: [ w12.untrusted, w12.catch ]
+    prompt: "\"It seemed to work\": what does std::stoi make of these? (Watch the spaces.)"
+    code: |-
+      #include <iostream>
+      #include <stdexcept>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          std::vector<std::string> inputs{"42abc", "abc", "7"};
+          for (const std::string& text : inputs) {
+              try {
+                  std::cout << std::stoi(text) << ' ';
+              } catch (const std::invalid_argument&) {
+                  std::cout << "bad ";
+              }
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: "42 bad 7 \n"
+        why: "Correct: stoi reads the leading 42 and quietly ignores \"abc\". Only text with no leading number throws."
+      - t: "bad bad 7 \n"
+        why: stoi stops at the first non-digit and returns what it read. "42abc" gives 42, no throw.
+      - t: "42abc bad 7 \n"
+        why: stoi returns an int; it can't return the letters.
+      - t: "42 0 7 \n"
+        why: '"abc" has no number at all, so stoi throws invalid_argument and the catch prints "bad ".'
+    answer: 0
+    hints:
+      - stoi reads as many digits as it can from the start.
+      - It only throws when there are no digits at all.
+    short: 'stoi("42abc") quietly returns 42. Partial input "seems to work".'
+    explain: 'std::stoi parses the leading number and ignores the rest, so "42abc" becomes 42 with no error. "abc" throws invalid_argument. To reject trailing junk, pass a std::size_t* to stoi and check that it consumed the whole string. Output: "42 bad 7 " and a newline.'
+  - id: w12.boss.r7
+    type: edge
+    tags: [ w12.edge, w12.ub ]
+    unsafe: true
+    prompt: "UNSAFE: which test inputs expose undefined behavior? (32-bit int.) Select all."
+    code: |-
+      int percentOf(int part, int whole) {
+          return part * 100 / whole;
+      }
+    options:
+      - t: part 1, whole 0
+        why: "Exposes it: dividing by zero is UB."
+      - t: part 30000000, whole 40000000
+        why: "Exposes it: 30000000 * 100 is 3 billion, past INT_MAX. Signed overflow."
+      - t: part 5, whole 10
+        why: 500 / 10 = 50. Fine.
+      - t: part 10, whole 10
+        why: 1000 / 10 = 100. Fine.
+      - t: part 0, whole 7
+        why: 0 / 7 = 0. Fine.
+    answers: [ 0, 1 ]
+    hints:
+      - Look at the divisor, and at the multiplication.
+      - How big can part * 100 get?
+    short: "Zero divisor and large parts break it: divide by zero, overflow."
+    explain: "Two heads: whole == 0 divides by zero, and a part above about 21 million overflows at part * 100. Both are UB. Validate the inputs, and do the multiplication in long long."
+    sideBySide:
+      unsafe: |-
+        int percentOf(int part, int whole) {
+            return part * 100 / whole;
+        }
+      hardened: |-
+        std::optional<int> percentOf(int part, int whole) {
+            if (whole <= 0 || part < 0 || part > whole) {
+                return std::nullopt;
+            }
+            return static_cast<int>(static_cast<long long>(part) * 100 / whole);
+        }
+  - id: w12.boss.r8
+    type: harden
+    tags: [ w12.catch, w12.terminate ]
+    bug: uncaught-exception
+    prompt: Last line of defense in main. Pick the handler that stops any standard exception from reaching std::terminate.
+    code: |-
+      #include <iostream>
+      #include <stdexcept>
+
+      int runGame() {
+          throw std::runtime_error("hydra bite");
+      }
+
+      int main() {
+          try {
+              return runGame();
+          } catch (___) {
+              std::cout << "Fatal: " << e.what() << '\n';
+              return 1;
+          }
+      }
+    options:
+      - t: const std::exception& e
+        why: "Correct: the root of the family catches every standard exception, by reference, with what()."
+      - t: std::exception e
+        why: Catches it, but copies and slices, so what() may lose the message.
+      - t: "..."
+        why: Catches everything, but there's no e, so e.what() doesn't compile.
+      - t: const std::logic_error& e
+        why: runtime_error isn't a logic_error. It slips past, and terminate is called.
+    answer: 0
+    hints:
+      - Which class is the root of the standard exception family?
+      - Catch by const reference.
+    short: A top-level catch of const std::exception& stops the runaway throw.
+    explain: 'A catch (const std::exception& e) around the top of the program turns any standard exception into a clear message and a clean exit code, instead of an abrupt std::terminate. Output here: "Fatal: hydra bite".'
+    sideBySide:
+      unsafe: |-
+        int main() {
+            return runGame();   // throws: std::terminate
+        }
+      hardened: |-
+        int main() {
+            try {
+                return runGame();
+            } catch (const std::exception& e) {
+                std::cout << "Fatal: " << e.what() << '\n';
+                return 1;
+            }
+        }
+      prelude: |-
+        #include <iostream>
+        #include <stdexcept>
+        int runGame() {
+            throw std::runtime_error("hydra bite");
+        }
+  - id: w12.boss.r9
+    type: mcq
+    tags: [ w12.tools, w12.ub ]
+    prompt: Your tests pass, but one reads past a vector's end and happens to print a sensible number. What catches it?
+    options:
+      - t: Running the tests built with -fsanitize=address
+        why: "Correct: ASan checks every memory access and stops on the out-of-bounds read, with a report."
+      - t: Running the tests again, more times
+        why: UB can print the same plausible number every time. Repetition proves nothing.
+      - t: Building with -O2
+        why: Optimization changes how UB behaves, often hiding it further.
+      - t: Adding more std::cout lines
+        why: Printing may even move memory around and hide the bug. It detects nothing.
+    answer: 0
+    hints:
+      - You need a tool that checks memory accesses while the program runs.
+      - It's the Address... something.
+    short: "AddressSanitizer turns silent out-of-bounds reads into loud reports."
+    explain: "An out-of-bounds read often returns leftover memory that looks fine, so tests pass. AddressSanitizer (-fsanitize=address -g) instruments every access and stops with the exact line. Run your tests under ASan and UBSan."
+defense:
+  - attack: '""'
+    label: An empty name!
+    challenge:
+      id: w12.boss.d1
+      type: harden
+      tags: [ w12.edge, w12.validate ]
+      prompt: The Hydra enters an empty name. Pick the guard that makes front() safe.
+      code: |-
+        #include <iostream>
+        #include <string>
+
+        int main() {
+            std::string name;
+            std::getline(std::cin, name);
+            if (___) {
+                std::cout << "Name can't be empty\n";
+                return 1;
+            }
+            std::cout << "Hero initial: " << name.front() << '\n';
+            return 0;
+        }
+      options:
+        - t: name.empty()
+          why: "Correct: an empty string has no front(). Reject it before reading."
+        - t: name.front() == ' '
+          why: Calls front() on the empty string to check it. That IS the UB.
+        - t: name.size() < 0
+          why: size() is unsigned, so it's never negative. Always false.
+        - t: "!std::cin"
+          why: Reading an empty line succeeds, so the stream is fine. The string is still empty.
+      answer: 0
+      hints:
+        - What can't an empty string give you?
+        - Ask the string without touching a character.
+      short: "Check empty() before front(): the empty input is the edge."
+      explain: "front() on an empty std::string is undefined behavior. An empty line is a perfectly successful read, so checking the stream isn't enough. Check name.empty() first."
+      sideBySide:
+        unsafe: |-
+          std::getline(std::cin, name);
+          std::cout << name.front() << '\n';   // empty: UB
+        hardened: |-
+          std::getline(std::cin, name);
+          if (name.empty()) {
+              std::cout << "Name can't be empty\n";
+              return 1;
+          }
+          std::cout << name.front() << '\n';
+        prelude: std::string name;
+  - attack: abc
+    label: Text instead of a number!
+    challenge:
+      id: w12.boss.d2
+      type: harden
+      tags: [ w12.catch, w12.untrusted ]
+      bug: uncaught-exception
+      prompt: 'The Hydra types "abc" and std::stoi throws. Pick the handler.'
+      code: |-
+        #include <iostream>
+        #include <stdexcept>
+        #include <string>
+
+        int main() {
+            std::string text;
+            std::getline(std::cin, text);
+            try {
+                std::cout << "Level " << std::stoi(text) << '\n';
+            } catch (___) {
+                std::cout << "Not a number\n";
+                return 1;
+            } catch (const std::out_of_range&) {
+                std::cout << "Too big\n";
+                return 1;
+            }
+            return 0;
+        }
+      options:
+        - t: const std::invalid_argument&
+          why: "Correct: that's exactly what stoi throws when there's no number at all."
+        - t: const std::runtime_error&
+          why: invalid_argument is a logic_error, not a runtime_error. It slips past.
+        - t: std::string
+          why: stoi throws an exception object, not a string. No match, so terminate.
+        - t: int
+          why: Only a thrown int matches this. The exception goes uncaught.
+      answer: 0
+      hints:
+        - Which exception does stoi throw for text with no number?
+        - Its name says the argument was invalid.
+      short: 'std::stoi("abc") throws std::invalid_argument. Catch that type.'
+      explain: 'std::stoi throws std::invalid_argument when the text has no leading number, and std::out_of_range when the number is too big. Catch both, by const reference, so "abc" becomes a friendly message instead of std::terminate.'
+      sideBySide:
+        unsafe: std::cout << std::stoi(text) << '\n';
+        hardened: |-
+          try {
+              std::cout << std::stoi(text) << '\n';
+          } catch (const std::invalid_argument&) {
+              std::cout << "Not a number\n";
+          } catch (const std::out_of_range&) {
+              std::cout << "Too big\n";
+          }
+        prelude: std::string text{"abc"};
+  - attack: "99999999999"
+    label: A number too big for an int!
+    challenge:
+      id: w12.boss.d3
+      type: breakit
+      tags: [ w12.catch, w12.hierarchy ]
+      bug: uncaught-exception
+      unsafe: true
+      prompt: "UNSAFE: this catches bad text. Which input still crashes it with an uncaught exception?"
+      code: |-
+        #include <iostream>
+        #include <stdexcept>
+        #include <string>
+
+        int main() {
+            std::string text;
+            std::getline(std::cin, text);
+            try {
+                std::cout << std::stoi(text) << '\n';
+            } catch (const std::invalid_argument&) {
+                std::cout << "Not a number\n";
+            }
+            return 0;
+        }
+      options:
+        - t: "99999999999"
+          why: "Correct: too big for an int, so stoi throws out_of_range. Nobody catches it: terminate."
+        - t: abc
+          why: Caught. That's invalid_argument, which has a handler.
+        - t: "-12"
+          why: A normal negative int. stoi returns -12.
+        - t: 42abc
+          why: stoi reads 42 and ignores the rest. No throw at all.
+      answer: 0
+      hints:
+        - stoi can throw two different types.
+        - Which one has no handler?
+      short: Out-of-range numbers throw std::out_of_range. Catch it too.
+      explain: "std::stoi throws std::out_of_range when the value doesn't fit in an int. With only an invalid_argument handler, it escapes main and std::terminate ends the program. Add a handler for out_of_range (or std::exception after the specific ones)."
+      sideBySide:
+        unsafe: |-
+          try {
+              std::cout << std::stoi(text) << '\n';
+          } catch (const std::invalid_argument&) {
+              std::cout << "Not a number\n";
+          }                                   // out_of_range escapes!
+        hardened: |-
+          try {
+              std::cout << std::stoi(text) << '\n';
+          } catch (const std::invalid_argument&) {
+              std::cout << "Not a number\n";
+          } catch (const std::out_of_range&) {
+              std::cout << "Too big for an int\n";
+          }
+        prelude: std::string text{"99999999999"};
+  - attack: "-1"
+    label: A negative slot!
+    challenge:
+      id: w12.boss.d4
+      type: harden
+      tags: [ w12.validate, w7.bounds ]
+      prompt: The Hydra asks for head slot -1. Pick the check that keeps the index in bounds.
+      code: |-
+        #include <iostream>
+        #include <vector>
+
+        int main() {
+            std::vector<int> heads{3, 5, 8};
+            int slot{};
+            if (!(std::cin >> slot) || ___) {
+                std::cout << "No such head\n";
+                return 1;
+            }
+            std::cout << heads[slot] << '\n';
+            return 0;
+        }
+      options:
+        - t: slot < 0 || slot >= static_cast<int>(heads.size())
+          why: "Correct: both ends of the range are checked, so only 0, 1 and 2 get through."
+        - t: slot >= static_cast<int>(heads.size())
+          why: Guards the top only. -1 walks right in and reads out of bounds.
+        - t: slot < 0
+          why: Guards the bottom only. 3 still reads past the end.
+        - t: slot == -1
+          why: Blocks this one attack. -2 and 3 still get through.
+      answer: 0
+      hints:
+        - A valid index has a smallest AND a largest value.
+        - Check both ends of 0 to size - 1.
+      short: "Check both ends: 0 <= slot < size."
+      explain: "A valid index is 0 up to size - 1. Check both ends before using []. Casting size() to int keeps the comparison signed, so -1 isn't turned into a huge unsigned number."
+      sideBySide:
+        unsafe: |-
+          std::cin >> slot;
+          std::cout << heads[slot] << '\n';   // -1: out of bounds
+        hardened: |-
+          if (!(std::cin >> slot) || slot < 0 || slot >= static_cast<int>(heads.size())) {
+              std::cout << "No such head\n";
+              return 1;
+          }
+          std::cout << heads[slot] << '\n';
+        prelude: std::vector<int> heads{3, 5, 8}; int slot{};
+victory: "Nine heads, all handled! The Hydra dissolves into neatly caught exceptions."
+reward:
+  xp: 350
+  cosmetic: shield-brace
+  bug: uncaught-exception
