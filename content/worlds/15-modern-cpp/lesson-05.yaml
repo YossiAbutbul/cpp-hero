@@ -1,0 +1,188 @@
+# World 15 · Lesson 5: Move: hand it over
+
+id: w15.l5
+title: "Move: hand it over"
+skill: memory
+shield: false
+concept:
+  short: "Moving hands an object's insides to another instead of copying them. The source is left hollow."
+  analogy: "Copying is photocopying a book; moving is handing the book over, leaving you an empty cover."
+  body:
+    - "Copying a big `std::string` or `std::vector` duplicates every character or element. When you don't need the original anymore, **moving** is cheaper: the new object takes over the old one's buffer, and nothing is duplicated."
+    - "`std::move(x)` (from `<utility>`) doesn't move anything by itself. It's a cast that says \"you may steal from x\". The actual moving happens when that result is used to build or assign another object: `std::string b = std::move(a);`, `bag.push_back(std::move(scroll));`."
+    - "After a move, the source is **valid but unspecified**: it's safe to destroy or to assign a new value, but you can't rely on what it contains. Strings and vectors are usually empty, but that isn't promised. Treat it as a hollow husk until you refill it: `a = \"new\";`."
+    - "Moving an `int` or `double` just copies it: there's no buffer to steal. And moving a `const` object silently **copies**, because you can't steal from something you promised not to change."
+    - "You don't need `std::move` on temporaries or on `return local;`: the compiler moves (or skips the copy entirely) automatically. Writing `return std::move(local);` can even make things slower."
+  pitfall: "Common beginner mistake: moving a value into a container, then printing or using the original as if nothing happened. That's use-after-move."
+demo:
+  code: |-
+    #include <iostream>
+    #include <string>
+    #include <utility>
+    #include <vector>
+
+    int main() {
+        std::string scroll = "Fireball";
+        std::vector<std::string> bag;
+        bag.push_back(scroll);
+        bag.push_back(std::move(scroll));
+        scroll = "Blank";
+        std::cout << bag.size() << ' ' << bag[1] << ' ' << scroll << '\n';
+        return 0;
+    }
+  steps:
+    - line: 6
+      vars:
+        scroll: "\"Fireball\""
+      note: One scroll with a spell on it.
+    - line: 7
+      vars:
+        bag: "{}"
+    - line: 8
+      vars:
+        bag: "{\"Fireball\"}"
+      note: "Copy: now two Fireballs exist."
+    - line: 9
+      vars:
+        bag: "{\"Fireball\", \"Fireball\"}"
+        scroll: "(moved-from)"
+      note: "Move: the bag takes the letters; scroll is hollow."
+    - line: 10
+      vars:
+        scroll: "\"Blank\""
+      note: Assigning refills it. Safe to use again.
+    - line: 11
+      out: |
+        2 Fireball Blank
+      note: The moved spell arrived intact.
+challenges:
+  - id: w15.l5.c1
+    type: mcq
+    tags: [ w15.move ]
+    prompt: What does std::move(scroll) do all by itself?
+    options:
+      - t: "Nothing moves yet: it only marks scroll as OK to steal from"
+        why: "Correct: it's a cast. The move happens when something is built or assigned from it."
+      - t: It empties scroll immediately
+        why: "A lone std::move(scroll); changes nothing. The receiving object does the stealing."
+      - t: It deletes scroll
+        why: scroll still exists and will be destroyed normally at the end of its scope.
+      - t: It copies scroll to a safe place
+        why: Moving exists to avoid copies, not to make them.
+    answer: 0
+    hints:
+      - std::move is a cast.
+      - Who actually takes the contents?
+    short: std::move is just a cast; the receiving object does the moving.
+    explain: "`std::move(x)` turns x into an rvalue: a \"this can be stolen from\" label. The move constructor or move assignment of the receiver (`std::string b = std::move(a);`) is what takes the buffer."
+  - id: w15.l5.c2
+    type: predict
+    tags: [ w15.move ]
+    prompt: Moving an int. What does this print?
+    code: |-
+      #include <iostream>
+      #include <utility>
+
+      int main() {
+          int a = 5;
+          int b = std::move(a);
+          std::cout << a << ' ' << b << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          5 5
+        why: "Correct: an int has no buffer to steal, so moving it is just a copy."
+      - t: |
+          0 5
+        why: Ints aren't zeroed by a move. There's nothing to take, so a keeps 5.
+      - t: |
+          5 0
+        why: b gets the value 5 whether it's copied or moved.
+    answer: 0
+    hints:
+      - What could be stolen from an int?
+      - For simple types, a move is a copy.
+    short: Moving an int copies it; a still holds 5.
+    explain: "Moves pay off for types that own a buffer (strings, vectors). For int, double, bool and friends, moving is exactly a copy. Output: \"5 5\" and a newline."
+  - id: w15.l5.c3
+    type: mcq
+    tags: [ w15.move, w2.const ]
+    prompt: What happens to title here?
+    code: |-
+      const std::string title = "Hero";
+      std::string copy = std::move(title);
+    options:
+      - t: "Nothing: a const can't be stolen from, so it's silently copied"
+        why: "Correct: std::move on a const gives a const rvalue, which picks the copy constructor."
+      - t: title becomes empty
+        why: A const object can't be changed, not even by a move.
+      - t: Compile error
+        why: "It compiles fine. That's the sneaky part: it quietly copies."
+      - t: Undefined behavior
+        why: No UB. It's a perfectly legal (if pointless) copy.
+    answer: 0
+    hints:
+      - Moving changes the source. Can a const change?
+      - When moving is impossible, C++ falls back to copying.
+    short: std::move on a const silently copies; title keeps "Hero".
+    explain: "Moving modifies the source, and a const can't be modified, so overload resolution picks the copy constructor. It compiles, runs, and quietly copies. Don't make a variable const if you plan to move from it."
+  - id: w15.l5.c4
+    type: order
+    tags: [ w15.move, w15.use-after-move ]
+    prompt: Move Ana into the roster, then reuse the name variable for Bo. Put the lines in order.
+    lines:
+      - std::string name = "Ana";
+      - std::vector<std::string> roster;
+      - roster.push_back(std::move(name));
+      - name = "Bo";
+      - roster.push_back(name);
+    distractors:
+      - std::cout << name << '\n';
+    hints:
+      - After the move, name is hollow until you assign it.
+      - Refill name before the second push_back.
+    short: "Move, then refill with a new value, then use again."
+    explain: "After `roster.push_back(std::move(name));` name is valid but unspecified. Assigning `name = \"Bo\";` gives it a known value again, so the second push_back is safe. Printing name right after the move would show unspecified contents."
+  - id: w15.l5.c5
+    type: fill
+    tags: [ w15.move, w7.vector ]
+    prompt: The loot won't be used again. Hand it to the save slot without copying 10,000 items.
+    code: |-
+      #include <utility>
+      #include <vector>
+
+      int main() {
+          std::vector<int> loot(10'000, 1);
+          std::vector<int> save = ___(loot);
+          return static_cast<int>(save.size() % 2);
+      }
+    accept:
+      - std::move
+    placeholder: function
+    hints:
+      - It lives in <utility>.
+      - "It says: you may steal from this."
+    short: "std::move(loot) lets save take the buffer; loot is left hollow."
+    explain: "`std::vector<int> save = std::move(loot);` makes save take over loot's buffer: no element is copied. Afterward, don't read loot until you assign it again."
+recap:
+  - Moving hands over the insides; no copy.
+  - "std::move is a cast; the receiver steals."
+  - Moved-from = hollow. Refill before reading.
+  - Moving an int or a const just copies.
+vault:
+  - id: w15.move
+    title: Move basics
+    code: |-
+      #include <utility>
+
+      std::string a = "Fireball";
+      std::string b = std::move(a);   // b takes the letters; a is hollow
+      a = "Blank";                    // refilled: safe to use again
+
+      std::vector<std::string> bag;
+      std::string spell = "Frost";
+      bag.push_back(std::move(spell)); // no copy of the letters
+    note: Moved-from objects are valid but unspecified. Assign before you read.
+    defense: false
+reviewTags: [ w15.optional, w15.auto, w8.byvalue, w7.push-back ]

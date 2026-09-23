@@ -1,0 +1,237 @@
+# World 15 · Lesson 3: enum class: named choices
+
+id: w15.l3
+title: "enum class: named choices"
+skill: structure
+shield: false
+concept:
+  short: "enum class gives a fixed set of named values, scoped with Name:: and never silently turned into ints."
+  analogy: "An enum class is a vending machine with labeled buttons: you press Weather::Rainy, not a mystery number."
+  body:
+    - "An **enumeration** is a type with a fixed list of named values: `enum class Weather { Sunny, Rainy, Stormy };`. A variable of that type can only hold those names: `Weather today = Weather::Rainy;`."
+    - "**Scoped**: the names live inside the enum, so you write `Weather::Rainy`. Two enums can both have a `None` without clashing."
+    - "**Strongly typed**: an enum class never turns into an int by itself. `int n = Weather::Rainy;` is a compile error. When you really need the number, say so: `static_cast<int>(Weather::Rainy)` is `1` (names count from 0 unless you give values)."
+    - "You can pick the values and the underlying type: `enum class Level : std::uint8_t { Low = 1, Mid = 5, High };` (High is 6: one more than the previous)."
+    - "Enums and `switch` are best friends. With `-Wall`, if a switch on an enum has **no default** and misses a name, g++ warns `enumeration value not handled in switch`. Add a new name later and the compiler points at every switch that forgot it."
+    - "Converting **from** an int (say, a menu choice) needs `static_cast<Weather>(n)`, and nothing checks the number is one of the names. Validate the range first."
+  pitfall: "Common beginner mistake: printing an enum class with `std::cout << w;`. There's no built-in output for it: cast to int, or write a function that returns a name."
+demo:
+  code: |-
+    #include <iostream>
+
+    enum class Weather { Sunny, Rainy, Stormy };
+
+    int danger(Weather w) {
+        switch (w) {
+            case Weather::Sunny: return 0;
+            case Weather::Rainy: return 1;
+            case Weather::Stormy: return 5;
+        }
+        return -1;
+    }
+
+    int main() {
+        Weather today = Weather::Rainy;
+        std::cout << danger(today) << '\n';
+        std::cout << static_cast<int>(Weather::Stormy) << '\n';
+        return 0;
+    }
+  steps:
+    - line: 2
+      note: Three named weathers, scoped inside Weather.
+    - line: 14
+      vars:
+        today: "Weather::Rainy"
+      note: Only Weather names fit in a Weather variable.
+    - line: 15
+      note: Ask how dangerous today is.
+    - line: 4
+      push:
+        name: danger
+        vars:
+          w: "Weather::Rainy"
+      note: w holds a Weather, not a loose number.
+    - line: 5
+      note: Every name gets its own case. No default needed.
+    - line: 7
+      note: "Rainy matches: return 1."
+    - line: 15
+      pop: true
+      out: |
+        1
+      note: Back in main with the answer.
+    - line: 16
+      out: |
+        2
+      note: "Cast to see the number: Stormy is the third, 2."
+challenges:
+  - id: w15.l3.c1
+    type: mcq
+    tags: [ w15.enum-class ]
+    prompt: What happens when you compile this?
+    expect: error
+    code: |-
+      #include <iostream>
+
+      enum class Weather { Sunny, Rainy, Stormy };
+
+      int main() {
+          int n = Weather::Rainy;
+          std::cout << n << '\n';
+          return 0;
+      }
+    options:
+      - t: "Compile error: no implicit conversion to int"
+        why: "Correct: enum class values never silently become ints. Use static_cast<int> if you mean it."
+      - t: It prints 1
+        why: That's what a plain enum would do. enum class refuses the silent conversion.
+      - t: It prints Rainy
+        why: Enum names aren't strings, and this line doesn't even compile.
+      - t: It compiles with a warning
+        why: It's a hard error, not a warning. The type system blocks it.
+    answer: 0
+    hints:
+      - Is an enum class allowed to act like an int?
+      - Conversions from enum class must be spelled out.
+    short: enum class never converts to int by itself; that's a compile error.
+    explain: "An enum class is strongly typed. `int n = Weather::Rainy;` is rejected. If you truly need the number, write `static_cast<int>(Weather::Rainy)`, which gives 1."
+  - id: w15.l3.c2
+    type: predict
+    tags: [ w15.enum-class ]
+    prompt: Some names have chosen values. What does this print?
+    code: |-
+      #include <iostream>
+
+      enum class Level { Low = 1, Mid = 5, High };
+
+      int main() {
+          std::cout << static_cast<int>(Level::Low) << ' '
+                    << static_cast<int>(Level::High) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          1 6
+        why: "Correct: Low is 1, and High follows Mid (5), so it's 6."
+      - t: |
+          0 2
+        why: Counting from 0 only happens when no values are given.
+      - t: |
+          1 2
+        why: A name without a value is one more than the name before it, and that's Mid (5).
+      - t: |
+          Low High
+        why: static_cast<int> gives the numbers, not the names.
+    answer: 0
+    hints:
+      - A name without a value takes the previous value plus one.
+      - What comes right before High?
+    short: High has no value, so it's Mid + 1 = 6.
+    explain: "Low = 1 and Mid = 5 are given. High isn't, so it's the previous value plus one: 6. The casts print \"1 6\" and a newline."
+  - id: w15.l3.c3
+    type: write
+    tags: [ w15.enum-class ]
+    prompt: Declare a scoped enum named `Dir` with the values Up and Down, in that order.
+    accept:
+      - "enum class Dir { Up, Down };"
+    acceptRe:
+      - '^enum (class|struct) Dir(:[\w:]+)?\{Up,Down,?\};$'
+    placeholder: enum class ...
+    hints:
+      - "Two words start it: enum class."
+      - Don't forget the ; after the closing brace.
+    short: "enum class Dir { Up, Down }; declares a scoped enum."
+    explain: "`enum class Dir { Up, Down };` creates the type Dir with values Dir::Up (0) and Dir::Down (1). Like a struct, the definition ends with a semicolon after the brace."
+  - id: w15.l3.c4
+    type: harden
+    tags: [ w15.enum-class, w3.validate ]
+    prompt: The player picks a move by number (0 to 2). Pick the check that runs before the cast.
+    code: |-
+      #include <iostream>
+
+      enum class Move { Attack, Defend, Flee };
+
+      int main() {
+          int choice{};
+          if (!(std::cin >> choice) || ___) {
+              std::cout << "Unknown move\n";
+              return 1;
+          }
+          Move m = static_cast<Move>(choice);
+          std::cout << (m == Move::Flee ? "Run!\n" : "Fight!\n");
+          return 0;
+      }
+    options:
+      - t: choice < 0 || choice > 2
+        why: "Correct: only 0, 1 and 2 are real moves. Anything else is rejected before the cast."
+      - t: choice > 2
+        why: "Misses negatives: -7 slips through and becomes a Move with no name."
+      - t: choice == 3
+        why: Blocks one number. 4, 99 and -1 still get through.
+      - t: "false"
+        why: No check at all. static_cast happily makes a nameless Move from 42.
+    answer: 0
+    hints:
+      - Which numbers match a real move?
+      - static_cast doesn't check anything for you.
+    short: "Check 0 to 2 before static_cast: the cast itself checks nothing."
+    explain: "static_cast<Move>(42) compiles and gives a Move that matches no name: every switch and comparison then misses it. Validate the range first, then cast."
+    sideBySide:
+      unsafe: |-
+        std::cin >> choice;
+        Move m = static_cast<Move>(choice);   // 42 becomes a nameless Move
+      hardened: |-
+        if (!(std::cin >> choice) || choice < 0 || choice > 2) {
+            std::cout << "Unknown move\n";
+            return 1;
+        }
+        Move m = static_cast<Move>(choice);
+      prelude: "enum class Move { Attack, Defend, Flee }; int choice{};"
+  - id: w15.l3.c5
+    type: mcq
+    tags: [ w15.enum-class, w4.switch ]
+    prompt: You add Snowy to Weather. danger()'s switch has no default and no Snowy case. What does g++ -Wall do?
+    code: |-
+      enum class Weather { Sunny, Rainy, Stormy, Snowy };
+
+      int danger(Weather w) {
+          switch (w) {
+              case Weather::Sunny: return 0;
+              case Weather::Rainy: return 1;
+              case Weather::Stormy: return 5;
+          }
+          return -1;
+      }
+    expect: warn
+    options:
+      - t: "Warns: enumeration value 'Snowy' not handled in switch"
+        why: "Correct: -Wall checks enum switches without a default and names the missing value."
+      - t: Nothing; it compiles silently
+        why: -Wall includes -Wswitch, which catches exactly this.
+      - t: Compile error
+        why: It's a warning, not an error. It compiles, and Snowy returns -1.
+      - t: Snowy is quietly treated as Sunny
+        why: No case matches Snowy, so the switch is skipped and -1 is returned.
+    answer: 0
+    hints:
+      - "-Wall includes a switch check for enums."
+      - A default would hide the missing case.
+    short: "No default + enum switch: -Wall names every forgotten value."
+    explain: "With no default, g++ -Wall (via -Wswitch) warns about each enum value the switch doesn't handle. That's why switches over enums often skip default: adding a new value makes the compiler point at every place that needs an update."
+recap:
+  - "Scoped names: Weather::Rainy, no clashes."
+  - enum class never silently becomes an int.
+  - "Need the number? static_cast<int>(value)."
+  - Validate ints before static_cast to an enum.
+vault:
+  - id: w15.enum-class
+    title: enum class basics
+    code: |-
+      enum class Weather { Sunny, Rainy, Stormy };        // 0, 1, 2
+      enum class Level : std::uint8_t { Low = 1, Mid = 5, High };  // High = 6
+
+      Weather today = Weather::Rainy;
+      int n = static_cast<int>(today);                    // explicit: 1
+    note: Scoped names, no silent int conversion, pick the underlying type if you need to.
+    defense: false
+reviewTags: [ w4.switch, w4.default, w3.validate, w15.auto ]

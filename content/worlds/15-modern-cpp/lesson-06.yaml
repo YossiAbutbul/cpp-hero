@@ -1,0 +1,388 @@
+# World 15 · Lesson 6: Shield: No leeches, no husks (Shield lesson)
+
+id: w15.l6
+title: "Shield: No leeches, no husks"
+skill: defense
+shield: true
+concept:
+  short: "Capture by value when a lambda outlives its scope, refill moved-from objects before reading, and prefer enum class."
+  analogy: "A [&] capture is a leash to a local: when the local leaves, the lambda is holding a leash to nothing."
+  body:
+    - "**Dangling captures** (the Lambda Leech): `[&x]` or `[&]` stores a reference to x, not a copy. If the lambda is returned, stored in a container or a callback list, and called after x's scope ends, it reads a dead variable: **undefined behavior**."
+    - "Rule: a lambda that **outlives** the current scope captures **by value**: `[x]`, or `[=]`. `[&]` is fine when the lambda runs right away and is thrown away, like the comparator you pass to `std::sort`."
+    - "**Use-after-move** (the Hollow Husk): after `b = std::move(a);`, a is valid but unspecified. Reading it (printing it, pushing it, testing its contents) gives you whatever the library left behind: often empty, not promised. Rule: after a move, only **assign** a new value or let it die."
+    - "**Plain enums** (`enum Color { Red, Green };`) are the old style: their names leak into the surrounding scope (two enums can't both have `None`), and they silently turn into ints, so `Red == Low` from two unrelated enums compiles, and `Red + 7` is just a number. `enum class` blocks all of that. Prefer it."
+    - "Whatever enum you use, validate a number **before** casting it to the enum: a cast never checks the value is one of the names."
+    - "None of these reliably crash. A dangling capture may print the right number today and garbage tomorrow; a moved-from string is usually empty, until it isn't. Compilers rarely warn; tools like clang-tidy (`bugprone-use-after-move`) and AddressSanitizer catch some cases. Good habits come first."
+  pitfall: "Common beginner mistake: \"[&] is shorter, and it worked when I tested it\". It worked because the dead variable's memory hadn't been reused yet."
+demo:
+  code: |-
+    #include <iostream>
+    #include <string>
+    #include <utility>
+
+    auto makeTaunt() {
+        std::string word = "Boo";
+        return [word]() { return word + "!"; };
+    }
+
+    int main() {
+        auto taunt = makeTaunt();
+        std::cout << taunt() << '\n';
+        std::string loot = "gem";
+        std::string bag = std::move(loot);
+        loot = "coin";
+        std::cout << bag << ' ' << loot << '\n';
+        return 0;
+    }
+  steps:
+    - line: 10
+      note: main asks makeTaunt for a lambda.
+    - line: 5
+      push:
+        name: makeTaunt
+        vars:
+          word: "\"Boo\""
+      note: word lives only in makeTaunt's frame.
+    - line: 6
+      crash: "[&word] would leash the lambda to a dying local!"
+      note: "If this were [&word]: a reference to a doomed variable."
+    - line: 6
+      shield: Captured by value!
+      note: "Back to reality: [word] packs its own copy."
+    - line: 7
+      pop: true
+      vars:
+        taunt: "[word=\"Boo\"]"
+      note: The frame is gone. The lambda's copy survives.
+    - line: 11
+      out: |
+        Boo!
+      note: Safe call. No leech.
+    - line: 12
+      vars:
+        loot: "\"gem\""
+    - line: 13
+      vars:
+        bag: "\"gem\""
+        loot: "(moved-from)"
+      note: bag takes the gem. loot is a hollow husk.
+    - line: 15
+      crash: "Printing loot now: unspecified contents!"
+      note: Without line 14, this would read the husk.
+    - line: 14
+      vars:
+        loot: "\"coin\""
+      shield: Refilled before reuse!
+      note: "Back to reality: assign first, then read."
+    - line: 15
+      out: |
+        gem coin
+      note: Both values are known. Husk defeated.
+challenges:
+  - id: w15.l6.c1
+    type: review
+    tags: [ w15.dangling-capture, w15.use-after-move ]
+    unsafe: true
+    prompt: UNSAFE code. Tap every dangerous line, then submit.
+    code: |-
+      #include <functional>
+      #include <iostream>
+      #include <string>
+      #include <utility>
+      #include <vector>
+
+      std::function<int()> makeCounter() {
+          int count = 0;
+          return [&count]() { return ++count; };
+      }
+
+      int main() {
+          std::string hero = "Ana";
+          std::vector<std::string> party;
+          party.push_back(std::move(hero));
+          std::cout << hero << " joined!\n";
+          auto next = makeCounter();
+          std::cout << next() << '\n';
+          std::cout << party[0] << '\n';
+          return 0;
+      }
+    dangerous: [ 8, 15, 17 ]
+    lineNotes:
+      8: "Captures the local count by reference, then escapes makeCounter: a dangling capture."
+      14: "Fine: moving hero into the party is exactly what std::move is for."
+      15: "Use-after-move: hero is hollow. Its contents are unspecified."
+      17: "Calls the leech: ++count on a variable that died with makeCounter. UB."
+      18: Fine. party[0] holds the moved-in "Ana".
+    hints:
+      - Which variables are read after they're moved-from or dead?
+      - A reference capture that leaves its function is a leech.
+    short: "Three leaks: a [&] that escapes, a read after move, a call to the leech."
+    explain: "Line 8 returns a lambda holding a reference to count, which dies when makeCounter returns; line 17 then increments a dead variable (UB: it may print 1, garbage, or crash). Line 15 prints a moved-from string: valid but unspecified. Fix: capture [count] with mutable, and don't read hero after moving it."
+    bug: dangling-capture
+    sideBySide:
+      unsafe: |-
+        auto makeCounter() {
+            int count = 0;
+            return [&count]() { return ++count; };   // leech
+        }
+      hardened: |-
+        auto makeCounter() {
+            int count = 0;
+            return [count]() mutable { return ++count; };   // own copy
+        }
+  - id: w15.l6.c2
+    type: bug
+    tags: [ w15.dangling-capture, w15.capture ]
+    bug: dangling-capture
+    unsafe: true
+    prompt: "UNSAFE: the alarm should print \"Turn 3\", but prints garbage on some machines. Tap the buggy line, then pick the fix."
+    code: |-
+      #include <functional>
+      #include <iostream>
+      #include <vector>
+
+      std::vector<std::function<void()>> alarms;
+
+      void setAlarm(int turn) {
+          alarms.push_back([&turn]() { std::cout << "Turn " << turn << '\n'; });
+      }
+
+      int main() {
+          setAlarm(3);
+          alarms[0]();
+          return 0;
+      }
+    bugLine: 7
+    options:
+      - t: "alarms.push_back([turn]() { std::cout << \"Turn \" << turn << '\\n'; });"
+        why: "Correct: the lambda keeps its own copy of turn, so it's still valid after setAlarm returns."
+      - t: "alarms.push_back([&]() { std::cout << \"Turn \" << turn << '\\n'; });"
+        why: "[&] still captures turn by reference. Same leech, shorter spelling."
+      - t: Call alarms[0]() twice
+        why: Calling it more often reads the dead parameter more often.
+      - t: Make turn a const int&
+        why: The reference would still end up pointing at a temporary that dies after the call.
+    answer: 0
+    hints:
+      - When does the parameter turn stop existing?
+      - The lambda is called after setAlarm has returned.
+    short: The lambda outlives turn; capture it by value with [turn].
+    explain: "turn is a parameter: it dies when setAlarm returns. The stored lambda holds a reference to it, and alarms[0]() reads it later: undefined behavior. It may even print 3 by luck. Capture [turn] so the lambda carries its own copy."
+    sideBySide:
+      unsafe: |-
+        #include <functional>
+
+        std::vector<std::function<void()>> alarms;
+
+        void setAlarm(int turn) {
+            alarms.push_back([&turn]() { std::cout << turn << '\n'; });
+        }
+      hardened: |-
+        #include <functional>
+
+        std::vector<std::function<void()>> alarms;
+
+        void setAlarm(int turn) {
+            alarms.push_back([turn]() { std::cout << turn << '\n'; });
+        }
+  - id: w15.l6.c3
+    type: harden
+    tags: [ w15.use-after-move, w15.move ]
+    bug: use-after-move
+    prompt: msg was moved into the log. What makes it safe to print msg again?
+    code: |-
+      #include <iostream>
+      #include <string>
+      #include <utility>
+      #include <vector>
+
+      int main() {
+          std::string msg = "Victory";
+          std::vector<std::string> log;
+          log.push_back(std::move(msg));
+          ___;
+          std::cout << msg << '\n';
+          return 0;
+      }
+    options:
+      - t: msg = "Next round"
+        why: "Correct: assigning gives the husk a known value again. Now reading it is fine."
+      - t: std::move(msg)
+        why: A lone std::move is just a cast. It changes nothing.
+      - t: log.push_back(msg)
+        why: That reads the hollow msg too, copying unspecified contents into the log.
+      - t: msg += "!"
+        why: Appends to unspecified contents. The result is still unknown.
+    answer: 0
+    hints:
+      - After a move, what's the one safe thing to do with the value?
+      - Give it a brand-new value.
+    short: After a move, assign a new value before reading again.
+    explain: "A moved-from string is valid but unspecified: libstdc++ usually leaves it empty, but nothing promises that. Assigning a new value (or calling clear()) puts it back in a known state."
+    sideBySide:
+      unsafe: |-
+        log.push_back(std::move(msg));
+        std::cout << msg << '\n';   // unspecified contents
+      hardened: |-
+        log.push_back(std::move(msg));
+        msg = "Next round";
+        std::cout << msg << '\n';
+      prelude: std::string msg = "Victory"; std::vector<std::string> log;
+  - id: w15.l6.c4
+    type: edge
+    tags: [ w15.enum-class, w3.validate ]
+    unsafe: true
+    prompt: This checks the potion code before casting. Which inputs still sneak a nameless Potion through? Select all.
+    code: |-
+      #include <iostream>
+
+      enum class Potion { Heal, Mana, Speed };   // 0, 1, 2
+
+      int main() {
+          int code{};
+          if (!(std::cin >> code) || code > 2) {
+              std::cout << "No such potion\n";
+              return 1;
+          }
+          Potion p = static_cast<Potion>(code);
+          std::cout << (p == Potion::Heal ? "Heal\n" : "Other\n");
+          return 0;
+      }
+    options:
+      - t: "-1"
+        why: "Exposes it: -1 isn't above 2, so it passes and becomes a nameless Potion."
+      - t: "3"
+        why: Rejected by code > 2.
+      - t: "0"
+        why: A real potion (Heal). Works as intended.
+      - t: "-50"
+        why: "Exposes it: any negative number passes the one-sided check."
+      - t: "2"
+        why: Speed, a real potion.
+    answers: [ 0, 3 ]
+    hints:
+      - The check only looks at one side.
+      - What about numbers below 0?
+    short: "A one-sided check lets negatives through. Check both ends: 0 to 2."
+    explain: "static_cast<Potion>(-1) compiles and gives a value that matches no name. Validate both ends before casting: code < 0 || code > 2."
+    sideBySide:
+      unsafe: if (!(std::cin >> code) || code > 2) { return 1; }
+      hardened: if (!(std::cin >> code) || code < 0 || code > 2) { return 1; }
+      prelude: int code{};
+  - id: w15.l6.c5
+    type: safe
+    tags: [ w15.dangling-capture, w15.use-after-move, w15.plain-enum ]
+    prompt: Safe or unsafe? The Move Gremlin's minions are coming. Go fast!
+    seconds: 30
+    items:
+      - code: |-
+          std::string b = std::move(a);
+          std::cout << a << '\n';
+        prelude: std::string a = "gem";
+        safe: false
+        why: "Use-after-move: a is hollow, its contents unspecified."
+      - code: |-
+          std::string b = std::move(a);
+          a = "coin";
+          std::cout << a << '\n';
+        prelude: std::string a = "gem";
+        safe: true
+        why: a was refilled before it was read.
+      - code: "std::sort(v.begin(), v.end(), [&](int x, int y) { return x + bias < y + bias; });"
+        prelude: std::vector<int> v{3, 1, 2}; int bias = 1;
+        safe: true
+        why: "[&] is fine here: sort calls the lambda right away, while bias is alive."
+      - code: |-
+          auto makeHp() {
+              int hp = 10;
+              return [&hp]() { return hp; };
+          }
+        safe: false
+        why: "The lambda escapes with a reference to hp, which dies on return."
+      - code: |-
+          auto makeMana() {
+              int mana = 10;
+              return [mana]() { return mana; };
+          }
+        safe: true
+        why: The lambda carries its own copy of mana.
+      - code: |-
+          enum Status { None, Ok };
+          enum Loot { None, Gold };
+        expect: error
+        safe: false
+        why: "Plain enum names leak out: the two Nones clash. enum class keeps them apart."
+      - code: |-
+          enum Color { Red, Green };
+          enum Alert { Low, High };
+          bool same = (Red == Low);
+        safe: false
+        why: Plain enums silently become ints, so unrelated names compare equal.
+      - code: |-
+          enum class Color { Red, Green };
+          Color c = Color::Green;
+        safe: true
+        why: Scoped, strongly typed, no silent ints.
+    hints:
+      - Is anything read after a move, or after its owner died?
+      - Plain enums leak names and turn into ints.
+    short: "Capture by value to escape, refill after moving, and use enum class."
+    explain: "Escaping lambdas capture by value; [&] is only for lambdas used on the spot. Moved-from objects get a new value before any read. Plain enums leak names and compare as ints; enum class doesn't."
+  - id: w15.l6.c6
+    type: mcq
+    tags: [ w15.dangling-capture, w15.capture ]
+    prompt: Which lambda is safe with a [&] capture?
+    options:
+      - t: A comparator passed straight to std::sort
+        why: "Correct: sort uses it and finishes before any captured local goes away."
+      - t: A lambda returned from a function
+        why: It outlives the function's locals. Returned lambdas must capture by value.
+      - t: A callback pushed into a global vector
+        why: It gets called later, after the locals are gone. Leech!
+      - t: A lambda stored and run in the next game turn
+        why: '"Later" is the danger word. Capture by value.'
+    answer: 0
+    hints:
+      - When does each lambda run, compared to the locals it uses?
+      - Only "used right now, then thrown away" is safe.
+    short: "[&] is safe only for lambdas that run and finish right away."
+    explain: "A reference capture is only as alive as the variable it refers to. Lambdas used immediately (std::sort, std::for_each, std::count_if) finish while the locals are alive. Anything returned, stored or called later must capture by value."
+recap:
+  - Escaping lambdas capture by value, never [&].
+  - "[&] is fine for sort-style, on-the-spot lambdas."
+  - After std::move, assign before you read.
+  - Prefer enum class; validate before casting.
+vault:
+  - id: w15.no-leech
+    title: Capture by value to escape
+    code: |-
+      auto makeTaunt(std::string word) {
+          return [word]() { return word + "!"; };      // own copy: safe
+      }
+
+      void sortByBias(std::vector<int>& v, int bias) {
+          std::sort(v.begin(), v.end(),
+                    [&](int x, int y) { return x + bias < y + bias; });  // on the spot: fine
+      }
+    note: "Returned, stored or called later: [x] or [=]. Used right now: [&] is OK."
+    defense: true
+  - id: w15.no-husk
+    title: Refill after a move
+    code: |-
+      std::string a = "gem";
+      std::string b = std::move(a);   // a is now valid but unspecified
+      a = "coin";                     // known again
+      std::cout << a << ' ' << b << '\n';
+    note: "After a move: assign or destroy. Never read the husk."
+    defense: true
+  - id: w15.prefer-enum-class
+    title: Prefer enum class
+    code: |-
+      enum class Status { None, Ok };
+      enum class Loot { None, Gold };   // no clash: Status::None vs Loot::None
+
+      int toCode(Status s) { return static_cast<int>(s); }   // explicit
+    note: Scoped names, no silent ints, no cross-enum comparisons. Validate before casting in.
+    defense: true
+reviewTags: [ w8.dangling, w6.dangling, w15.move, w15.capture, w15.enum-class ]

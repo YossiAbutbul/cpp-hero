@@ -1,0 +1,360 @@
+# World 15 mini-project: Quest Board
+
+id: w15.p
+title: Quest Board
+intro: "Build a quest board: read quests, reject bad ranks, sort by reward with a lambda, and list them with structured bindings."
+steps:
+  - id: w15.p.s1
+    type: write
+    tags: [ w15.enum-class ]
+    prompt: "Quests come in three ranks. Declare a scoped enum named `Rank` with Easy, Hard and Epic, in that order."
+    accept:
+      - "enum class Rank { Easy, Hard, Epic };"
+    acceptRe:
+      - '^enum (class|struct) Rank(:[\w:]+)?\{Easy,Hard,Epic,?\};$'
+    placeholder: enum class ...
+    hints:
+      - "Start with enum class, then the name."
+      - End the definition with ; after the brace.
+    short: "enum class Rank { Easy, Hard, Epic }; gives scoped, typed ranks."
+    explain: "`enum class Rank { Easy, Hard, Epic };` makes Rank::Easy (0), Rank::Hard (1) and Rank::Epic (2). No silent ints, no name clashes."
+  - id: w15.p.s2
+    type: fill
+    tags: [ w15.optional, w15.enum-class ]
+    prompt: toRank turns a typed number into a Rank, or nothing if it's not a real rank. Fill in the "nothing".
+    code: |-
+      #include <optional>
+
+      enum class Rank { Easy, Hard, Epic };
+
+      std::optional<Rank> toRank(int code) {
+          if (code < 0 || code > 2) {
+              return ___;
+          }
+          return static_cast<Rank>(code);
+      }
+
+      int main() {
+          return toRank(7).has_value() ? 1 : 0;
+      }
+    accept:
+      - std::nullopt
+      - "{}"
+      - std::optional<Rank>{}
+    placeholder: empty optional
+    hints:
+      - Not a magic number like -1.
+      - The special "no value" value.
+    short: return std::nullopt; for codes that aren't real ranks.
+    explain: "Out-of-range codes return `std::nullopt`, so the caller must check. The range check happens BEFORE the cast, so no nameless Rank is ever created."
+  - id: w15.p.s3
+    type: fill
+    tags: [ w15.move, w15.optional ]
+    prompt: "The rank checked out. Add the quest, handing over the name's letters instead of copying them."
+    code: |-
+      #include <string>
+      #include <utility>
+      #include <vector>
+
+      enum class Rank { Easy, Hard, Epic };
+
+      struct Quest {
+          std::string name;
+          Rank rank;
+          int reward;
+      };
+
+      int main() {
+          std::vector<Quest> board;
+          std::string name = "Dragon";
+          board.push_back({___(name), Rank::Epic, 500});
+          return static_cast<int>(board.size()) - 1;
+      }
+    accept:
+      - std::move
+    placeholder: function
+    hints:
+      - The name isn't needed after this line.
+      - It's in <utility> and starts with std::.
+    short: "std::move(name) lets the quest take the letters without a copy."
+    explain: "`std::move(name)` lets the new Quest take over name's buffer. name is now a husk, but the next `std::cin >> name` assigns it a fresh value before anyone reads it, so the loop stays safe."
+  - id: w15.p.s4
+    type: order
+    tags: [ w15.lambda, w15.bindings ]
+    prompt: Sort by reward, highest first, then print each quest. Put the lines in order.
+    prelude: "enum class Rank { Easy, Hard, Epic }; struct Quest { std::string name; Rank rank; int reward; }; std::vector<Quest> board{{\"Slime\", Rank::Easy, 10}};"
+    lines:
+      - "std::sort(board.begin(), board.end(),"
+      - "          [](const Quest& a, const Quest& b) { return a.reward > b.reward; });"
+      - "for (const auto& [qname, rank, qreward] : board) {"
+      - "    std::cout << qname << \": \" << qreward << (rank == Rank::Epic ? \" (epic)\" : \"\") << '\\n';"
+      - "}"
+    distractors:
+      - "for (auto [qname, rank, qreward] : board) {"
+    hints:
+      - Sort first, then print in the new order.
+      - Read-only loops use const auto&.
+    short: Sort with a comparator lambda, then unpack each quest by name.
+    explain: "The lambda tells sort that a comes first when its reward is bigger. Then `const auto& [qname, rank, qreward]` names each quest's three parts without copying. The plain auto version would copy every quest."
+  - id: w15.p.s5
+    type: predict
+    tags: [ w15.optional, w15.lambda, w15.bindings ]
+    prompt: "Test run! The input is three quests: `Slime 0 10`, `Dragon 2 500`, `Imp 9 5`. What's the output?"
+    stdin: |
+      Slime 0 10
+      Dragon 2 500
+      Imp 9 5
+    code: |-
+      #include <algorithm>
+      #include <iostream>
+      #include <optional>
+      #include <string>
+      #include <utility>
+      #include <vector>
+
+      enum class Rank { Easy, Hard, Epic };
+
+      struct Quest {
+          std::string name;
+          Rank rank;
+          int reward;
+      };
+
+      std::optional<Rank> toRank(int code) {
+          if (code < 0 || code > 2) {
+              return std::nullopt;
+          }
+          return static_cast<Rank>(code);
+      }
+
+      int main() {
+          std::vector<Quest> board;
+          std::string name;
+          int code{};
+          int reward{};
+          while (std::cin >> name >> code >> reward) {
+              std::optional<Rank> rank = toRank(code);
+              if (!rank || reward < 0) {
+                  std::cout << "Skipped " << name << '\n';
+                  continue;
+              }
+              board.push_back({std::move(name), *rank, reward});
+          }
+          std::sort(board.begin(), board.end(),
+                    [](const Quest& a, const Quest& b) { return a.reward > b.reward; });
+          for (const auto& [qname, rank, qreward] : board) {
+              std::cout << qname << ": " << qreward << (rank == Rank::Epic ? " (epic)" : "") << '\n';
+          }
+          return 0;
+      }
+    options:
+      - t: |
+          Skipped Imp
+          Dragon: 500 (epic)
+          Slime: 10
+        why: "Correct: Imp's rank 9 is rejected while reading; the rest print sorted by reward."
+      - t: |
+          Dragon: 500 (epic)
+          Slime: 10
+          Skipped Imp
+        why: The skip message prints during the reading loop, before the sorted list.
+      - t: |
+          Skipped Imp
+          Slime: 10
+          Dragon: 500 (epic)
+        why: The lambda sorts by reward, highest first.
+      - t: |
+          Skipped Imp
+          Dragon: 500
+          Slime: 10
+        why: Dragon's rank code 2 is Rank::Epic, so it gets the (epic) tag.
+    answer: 0
+    hints:
+      - Which lines print while reading, and which after sorting?
+      - Rank code 2 is the third name.
+    short: Imp is skipped while reading; then Dragon (500) before Slime (10).
+    explain: "The loop reads Slime (ok), Dragon (ok) and Imp (code 9: toRank returns nullopt, so \"Skipped Imp\" prints right away). After the loop, sort puts 500 before 10, and Dragon is Epic."
+program: |-
+  #include <algorithm>
+  #include <iostream>
+  #include <optional>
+  #include <string>
+  #include <utility>
+  #include <vector>
+
+  enum class Rank { Easy, Hard, Epic };
+
+  struct Quest {
+      std::string name;
+      Rank rank;
+      int reward;
+  };
+
+  std::optional<Rank> toRank(int code) {
+      if (code < 0 || code > 2) {
+          return std::nullopt;
+      }
+      return static_cast<Rank>(code);
+  }
+
+  int main() {
+      std::vector<Quest> board;
+      std::string name;
+      int code{};
+      int reward{};
+      while (std::cin >> name >> code >> reward) {
+          std::optional<Rank> rank = toRank(code);
+          if (!rank || reward < 0) {
+              std::cout << "Skipped " << name << '\n';
+              continue;
+          }
+          std::cout << "Added " << name << '\n';
+          board.push_back({std::move(name), *rank, reward});
+      }
+      std::sort(board.begin(), board.end(),
+                [](const Quest& a, const Quest& b) { return a.reward > b.reward; });
+      for (const auto& [qname, rank, qreward] : board) {
+          std::cout << qname << ": " << qreward << (rank == Rank::Epic ? " (epic)" : "") << '\n';
+      }
+      return 0;
+  }
+programStdin: |
+  Slime 0 10
+  Dragon 2 500
+  Imp 9 5
+  Rat -1 3
+stress:
+  intro: Brace for impact! The Move Gremlin scribbles on your quest board. Patch it!
+  attacks:
+    - input: Rat -1 3
+      label: A negative rank code!
+      challenge:
+        id: w15.p.a1
+        type: harden
+        tags: [ w15.enum-class, w15.optional ]
+        prompt: "An early toRank only checked code > 2. Code -1 became a nameless Rank! Pick the guard."
+        code: |-
+          #include <optional>
+
+          enum class Rank { Easy, Hard, Epic };
+
+          std::optional<Rank> toRank(int code) {
+              if (___) {
+                  return std::nullopt;
+              }
+              return static_cast<Rank>(code);
+          }
+
+          int main() {
+              return toRank(-1).has_value() ? 1 : 0;
+          }
+        options:
+          - t: code < 0 || code > 2
+            why: "Correct: only 0, 1 and 2 are real ranks. Both ends are checked before the cast."
+          - t: code > 2
+            why: "That's the original bug: -1 passes and becomes a nameless Rank."
+          - t: code == -1
+            why: Blocks one value. -2 walks right in.
+          - t: static_cast<Rank>(code) == Rank::Easy
+            why: Casts before checking, and rejects the valid Easy rank.
+        answer: 0
+        hints:
+          - "Real ranks are 0, 1 and 2."
+          - "Check both ends: too small and too big."
+        short: "Check both ends, 0 to 2, before casting to Rank."
+        explain: "static_cast<Rank>(-1) compiles and gives a Rank that matches no name: it isn't Easy, Hard or Epic, so every comparison misses it. Check the range first; only valid codes get cast."
+        sideBySide:
+          unsafe: |-
+            std::optional<Rank> toRank(int code) {
+                if (code > 2) {
+                    return std::nullopt;
+                }
+                return static_cast<Rank>(code);   // -1 slips through
+            }
+          hardened: |-
+            std::optional<Rank> toRank(int code) {
+                if (code < 0 || code > 2) {
+                    return std::nullopt;
+                }
+                return static_cast<Rank>(code);
+            }
+          prelude: "enum class Rank { Easy, Hard, Epic };"
+    - input: Imp 9 5
+      label: A rank that doesn't exist!
+      challenge:
+        id: w15.p.a2
+        type: breakit
+        tags: [ w15.optional ]
+        unsafe: true
+        prompt: "UNSAFE: this version forgot to check the optional. Pick the quest line that breaks it."
+        code: |-
+          while (std::cin >> name >> code >> reward) {
+              std::optional<Rank> rank = toRank(code);
+              board.push_back({std::move(name), *rank, reward});
+          }
+        prelude: "enum class Rank { Easy, Hard, Epic }; struct Quest { std::string name; Rank rank; int reward; }; auto toRank = [](int c) -> std::optional<Rank> { if (c < 0 || c > 2) { return std::nullopt; } return static_cast<Rank>(c); }; std::vector<Quest> board; std::string name; int code{}; int reward{};"
+        options:
+          - t: Imp 9 5
+            why: "Correct: toRank(9) is empty, and *rank on an empty optional is UB."
+          - t: Slime 0 10
+            why: Rank 0 is Easy. The optional has a value.
+          - t: Dragon 2 500
+            why: Rank 2 is Epic. Safe to unwrap.
+          - t: Troll 1 0
+            why: A reward of 0 is fine, and rank 1 is Hard.
+        answer: 0
+        hints:
+          - Which code makes toRank return nullopt?
+          - "* never checks."
+        short: Code 9 gives an empty optional; unwrapping it with * is UB.
+        explain: "toRank did its job and returned nothing, but the caller unwrapped it anyway. That's undefined behavior: a junk rank, a crash, or nothing visible. Check the optional first."
+        sideBySide:
+          unsafe: board.push_back({std::move(name), *rank, reward});
+          hardened: |-
+            if (!rank) {
+                std::cout << "Skipped " << name << '\n';
+            } else {
+                board.push_back({std::move(name), *rank, reward});
+            }
+          prelude: "enum class Rank { Easy, Hard, Epic }; struct Quest { std::string name; Rank rank; int reward; }; std::vector<Quest> board; std::string name; int reward{}; std::optional<Rank> rank;"
+    - input: Slime 0 10
+      label: Echo the name after adding!
+      challenge:
+        id: w15.p.a3
+        type: bug
+        tags: [ w15.use-after-move, w15.move ]
+        bug: use-after-move
+        unsafe: true
+        prompt: "UNSAFE: \"Added Slime\" sometimes shows as \"Added \". Tap the buggy line, then pick the fix."
+        code: |-
+          if (!rank || reward < 0) {
+              std::cout << "Skipped " << name << '\n';
+              continue;
+          }
+          board.push_back({std::move(name), *rank, reward});
+          std::cout << "Added " << name << '\n';
+        prelude: "enum class Rank { Easy, Hard, Epic }; struct Quest { std::string name; Rank rank; int reward; }; std::vector<Quest> board; std::string name; int reward{}; std::optional<Rank> rank; for (int i = 0; i < 1; ++i)"
+        bugLine: 5
+        options:
+          - t: Print before the push_back, while name still has its letters
+            why: "Correct: read name first, then move it. Order is everything."
+          - t: "Replace it with std::cout << \"Added \" << std::move(name) << '\\n';"
+            why: Still reads the hollow husk. std::move doesn't bring anything back.
+          - t: Remove std::move from the push_back and keep the order
+            why: Works, but pays for a copy we don't need. Reordering keeps the cheap move.
+          - t: Print board.back().name instead of name, before the push_back
+            why: Before the push_back, back() is the previous quest (or UB on an empty board).
+        answer: 0
+        hints:
+          - What does name hold right after std::move?
+          - Use the value before you hand it away.
+        short: Read name before moving it; after the move it's a husk.
+        explain: "After `std::move(name)`, name's letters live in the quest. Printing name reads a valid but unspecified string (usually empty). Print first, then move. (Printing board.back().name AFTER the push_back also works.)"
+        sideBySide:
+          unsafe: |-
+            board.push_back({std::move(name), *rank, reward});
+            std::cout << "Added " << name << '\n';   // husk
+          hardened: |-
+            std::cout << "Added " << name << '\n';
+            board.push_back({std::move(name), *rank, reward});
+          prelude: "enum class Rank { Easy, Hard, Epic }; struct Quest { std::string name; Rank rank; int reward; }; std::vector<Quest> board; std::string name = \"Slime\"; int reward{10}; std::optional<Rank> rank = Rank::Easy;"

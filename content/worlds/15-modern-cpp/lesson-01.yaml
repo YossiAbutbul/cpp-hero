@@ -1,0 +1,208 @@
+# World 15 · Lesson 1: Lambdas: functions on the spot
+
+id: w15.l1
+title: "Lambdas: functions on the spot"
+skill: toolkit
+shield: false
+concept:
+  short: "A lambda is a tiny unnamed function written right where you need it: [capture](params) { body }."
+  analogy: "A lambda is a sticky note with instructions you hand to std::sort, instead of a whole recipe book."
+  body:
+    - "A **lambda** is a function you write inline: `[](int a, int b) { return a > b; }`. The parts are the **capture list** `[]`, the **parameters** `(int a, int b)` and the **body** `{ ... }`."
+    - "Store one in a variable with `auto`: `auto twice = [](int n) { return n * 2; };` then call it like a function: `twice(4)` is `8`. Every lambda has its own unique type, which is why you need `auto`."
+    - "Lambdas shine with algorithms: `std::sort(v.begin(), v.end(), [](int a, int b) { return a > b; });` sorts from high to low, and `std::count_if(v.begin(), v.end(), [](int h) { return h < 20; })` counts matches."
+    - "A lambda can't see local variables unless it **captures** them. `[limit]` copies `limit` into the lambda **when the lambda is created**: later changes to `limit` don't affect it. `[&limit]` stores a **reference**, so the lambda sees the live variable."
+    - "Shortcuts: `[=]` captures every used local by value, `[&]` every used local by reference. Prefer naming what you capture: it's clearer and safer. To change a by-value copy inside the lambda, mark it `mutable`."
+    - "The return type is deduced from `return`. If you need to spell it: `[](int n) -> double { return n / 2.0; }`."
+  pitfall: "Common beginner mistake: expecting `[x]` to see later changes to x. A by-value capture is a snapshot taken when the lambda is created."
+demo:
+  code: |-
+    #include <algorithm>
+    #include <iostream>
+    #include <vector>
+
+    int main() {
+        std::vector<int> hp{40, 5, 90, 12};
+        int limit = 20;
+        auto isWeak = [limit](int h) { return h < limit; };
+        std::cout << isWeak(5) << '\n';
+        auto weak = std::count_if(hp.begin(), hp.end(), isWeak);
+        std::cout << weak << " weak\n";
+        std::sort(hp.begin(), hp.end(), [](int a, int b) { return a > b; });
+        std::cout << hp[0] << '\n';
+        return 0;
+    }
+  steps:
+    - line: 5
+      vars:
+        hp: "{40, 5, 90, 12}"
+      note: Four monsters and their hit points.
+    - line: 6
+      vars:
+        limit: "20"
+      note: Below 20 hp counts as weak.
+    - line: 7
+      vars:
+        isWeak: "[limit=20]"
+      note: The lambda copies limit into itself right now.
+    - line: 8
+      out: |
+        1
+      note: "Call it like a function: 5 < 20 is true."
+    - line: 9
+      vars:
+        weak: "2"
+      note: count_if calls isWeak on every element.
+    - line: 10
+      out: |
+        2 weak
+      note: 5 and 12 are weak.
+    - line: 11
+      vars:
+        hp: "{90, 40, 12, 5}"
+      note: "An inline lambda tells sort: bigger first."
+    - line: 12
+      out: |
+        90
+      note: The strongest monster is now first.
+challenges:
+  - id: w15.l1.c1
+    type: predict
+    tags: [ w15.capture, w15.lambda ]
+    prompt: One lambda captures by value, one by reference. What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int bonus = 5;
+          auto byValue = [bonus](int x) { return x + bonus; };
+          auto byRef = [&bonus](int x) { return x + bonus; };
+          bonus = 100;
+          std::cout << byValue(1) << ' ' << byRef(1) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          6 101
+        why: "Correct: byValue kept its snapshot 5; byRef sees the live bonus, now 100."
+      - t: |
+          101 101
+        why: "[bonus] copies the value when the lambda is created. Later changes don't reach the copy."
+      - t: |
+          6 6
+        why: "[&bonus] is a reference to the real variable, so it sees 100."
+      - t: |
+          101 6
+        why: Swapped. The by-value lambda is the one frozen at 5.
+    answer: 0
+    hints:
+      - When is a by-value capture copied?
+      - "[&bonus] never copies: it looks at bonus itself."
+    short: "[bonus] is a snapshot (5); [&bonus] sees the live value (100)."
+    explain: "byValue copied bonus (5) when it was created, so it returns 1 + 5 = 6. byRef holds a reference to bonus, which is 100 by the time it's called: 1 + 100 = 101. Output: \"6 101\" and a newline."
+  - id: w15.l1.c2
+    type: fill
+    tags: [ w15.lambda, w7.vector, w14.sort ]
+    prompt: Sort the scores from highest to lowest. Fill in the comparison.
+    code: |-
+      #include <algorithm>
+      #include <vector>
+
+      int main() {
+          std::vector<int> scores{30, 90, 60};
+          std::sort(scores.begin(), scores.end(), [](int a, int b) { return a ___ b; });
+          return 0;
+      }
+    accept:
+      - ">"
+    placeholder: operator
+    hints:
+      - "The lambda answers: should a come before b?"
+      - For high to low, a goes first when it's bigger.
+    short: "Return a > b to put bigger values first."
+    explain: "std::sort asks the lambda \"should a come before b?\". Returning a > b puts larger scores first: 90, 60, 30. (Use > or <, never >=: a comparator must return false for equal elements.)"
+  - id: w15.l1.c3
+    type: mcq
+    tags: [ w15.capture, w15.lambda ]
+    prompt: This lambda uses limit, but its capture list is empty. What happens?
+    expect: error
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int limit = 20;
+          auto isWeak = [](int h) { return h < limit; };
+          std::cout << isWeak(5) << '\n';
+          return 0;
+      }
+    options:
+      - t: "Compile error: limit is not captured"
+        why: "Correct: an empty [] means the lambda can't see local variables."
+      - t: It prints 1
+        why: Lambdas don't see locals automatically. The compiler rejects it before anything runs.
+      - t: It prints 0, because limit is treated as 0
+        why: There's no silent default. Using an uncaptured local is a compile error.
+      - t: It compiles, but it's undefined behavior
+        why: No UB here; the compiler refuses it outright, which is the good kind of failure.
+    answer: 0
+    hints:
+      - What does [] let the lambda see?
+      - Locals must be captured to be used.
+    short: "An empty [] captures nothing; using limit is a compile error."
+    explain: "A lambda only sees local variables it captures. Write [limit] (copy) or [&limit] (reference). Globals and some compile-time constants are exceptions, but a plain local int needs a capture."
+  - id: w15.l1.c4
+    type: order
+    tags: [ w15.lambda, w15.capture ]
+    prompt: Count the heroes with at least 20 hp. Put the lines in order.
+    prelude: std::vector<int> hp{40, 5, 90};
+    lines:
+      - int limit = 20;
+      - "auto isStrong = [limit](int h) { return h >= limit; };"
+      - auto strong = std::count_if(hp.begin(), hp.end(), isStrong);
+      - std::cout << strong << '\n';
+    distractors:
+      - "auto isStrong = [](int h) { return h >= limit; };"
+    hints:
+      - A lambda can only capture a variable that already exists.
+      - The empty-capture version can't see limit.
+    short: Declare limit, capture it, count with the lambda, then print.
+    explain: "limit must exist before the lambda can capture it, and the lambda must exist before count_if uses it. The [] version doesn't compile: limit isn't captured."
+  - id: w15.l1.c5
+    type: write
+    tags: [ w15.lambda ]
+    prompt: Write one line that stores a lambda named `twice`. It takes an int n and returns n * 2.
+    accept:
+      - "auto twice = [](int n) { return n * 2; };"
+    acceptRe:
+      - '^auto twice=\[\]\(int ([A-Za-z_]\w*)\)(->int)?\{return (\1\*2|2\*\1|\1\+\1);\};$'
+    placeholder: auto twice = ...
+    hints:
+      - "Shape: auto name = [](params) { body };"
+      - Nothing to capture, so the brackets stay empty. End with ;
+    short: "auto twice = [](int n) { return n * 2; };"
+    explain: "`auto twice = [](int n) { return n * 2; };` stores the lambda; `twice(4)` returns 8. It needs `auto` because every lambda has its own unnamed type. Don't forget the final `;`: it ends the variable declaration."
+recap:
+  - "Lambda shape: [capture](params) { body }."
+  - Store it with auto; call it like a function.
+  - "[x] copies x at creation; [&x] sees live x."
+  - Great for sort, count_if and friends.
+vault:
+  - id: w15.lambda
+    title: Lambda anatomy
+    code: |-
+      int limit = 20;
+      auto isWeak = [limit](int h) { return h < limit; };   // copy of limit
+      auto seesLive = [&limit](int h) { return h < limit; }; // reference to limit
+      auto twice = [](int n) { return n * 2; };             // captures nothing
+      auto half = [](int n) -> double { return n / 2.0; };  // explicit return type
+    note: "[x] = snapshot copy, [&x] = the real x. Prefer naming captures over [=] / [&]."
+    defense: false
+  - id: w15.lambda-algos
+    title: Lambdas with algorithms
+    code: |-
+      std::vector<int> v{40, 5, 90};
+      std::sort(v.begin(), v.end(), [](int a, int b) { return a > b; });
+      auto small = std::count_if(v.begin(), v.end(), [](int x) { return x < 20; });
+    note: "A comparator returns true when a must come before b. Use > or <, never >=."
+    defense: false
+reviewTags: [ w14.sort, w7.range-for, w6.params, w2.auto ]

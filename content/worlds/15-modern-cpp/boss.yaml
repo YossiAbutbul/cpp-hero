@@ -1,0 +1,480 @@
+# World 15 boss: The Move Gremlin
+
+id: w15.boss
+name: The Move Gremlin
+art: gremlin
+hp: 7
+intro: Heehee! I std::move your values away and leave you hollow husks. Read them!
+taunt:
+  - Capture by reference, go on. I'll call you after your locals are gone.
+  - Your string is empty now. Or is it? Unspecified! Heehee!
+  - Plain enums, please. I love when Red equals Low.
+  - I unwrapped your empty optional. Tasty undefined behavior!
+rounds:
+  - id: w15.boss.r1
+    type: predict
+    tags: [ w15.capture, w15.lambda ]
+    prompt: The Gremlin winds up a mutable lambda. What does this print?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int n = 0;
+          auto tick = [n]() mutable { return ++n; };
+          tick();
+          tick();
+          std::cout << tick() << ' ' << n << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          3 0
+        why: "Correct: the lambda's own copy counts 1, 2, 3; the outer n never changes."
+      - t: |
+          3 3
+        why: "[n] is a copy. mutable lets the lambda change its copy, not the original."
+      - t: |
+          1 0
+        why: The copy lives inside the lambda and keeps its value between calls.
+      - t: |
+          0 0
+        why: Each call really does ++ the lambda's copy.
+    answer: 0
+    hints:
+      - Where does the lambda's n live?
+      - mutable changes the captured copy.
+    short: The lambda counts its own copy to 3; outer n stays 0.
+    explain: "[n] copies n (0) into the lambda. mutable allows ++ on that copy, which persists between calls: 1, 2, 3. The outer n is untouched. Output: \"3 0\" and a newline."
+  - id: w15.boss.r2
+    type: mcq
+    tags: [ w15.use-after-move, w15.move ]
+    bug: use-after-move
+    prompt: "After std::string b = std::move(a);, what do you know about a?"
+    options:
+      - t: "Valid but unspecified: safe to assign or destroy, not to rely on"
+        why: "Correct: that's the standard's promise for moved-from library objects."
+      - t: It's guaranteed to be empty
+        why: Usually empty in practice, but the standard doesn't promise it. Don't rely on it.
+      - t: It's destroyed, so touching it is always UB
+        why: a still exists. Assigning a new value is perfectly fine.
+      - t: It still holds its old text
+        why: The whole point of moving is that b took the text.
+    answer: 0
+    hints:
+      - The standard makes a careful, limited promise.
+      - Which operations don't depend on the current value?
+    short: "Moved-from: valid but unspecified. Assign before you read."
+    explain: "Standard library types are left \"valid but unspecified\" after a move: the object works (you can assign, clear, or destroy it) but its value is unknown. Reading it gives whatever the library left behind."
+  - id: w15.boss.r3
+    type: predict
+    tags: [ w15.bindings, w15.auto ]
+    prompt: "The Gremlin doubles the monsters' hp. What does this print? (Watch the spaces.)"
+    code: |-
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      int main() {
+          std::map<std::string, int> hp{{"Orc", 8}, {"Imp", 3}};
+          for (auto& [name, h] : hp) {
+              h *= 2;
+          }
+          for (const auto& [name, h] : hp) {
+              std::cout << name << h << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: "Imp6 Orc16 \n"
+        why: "Correct: auto& changes the real values, and a map visits keys in sorted order."
+      - t: "Orc16 Imp6 \n"
+        why: A std::map is sorted by key, so Imp comes before Orc.
+      - t: "Imp3 Orc8 \n"
+        why: "auto& [name, h] binds to the real values, so the doubling sticks."
+      - t: "Imp6 Orc16\n"
+        why: Every name is followed by a space, including the last one.
+    answer: 0
+    hints:
+      - Does the first loop change copies or the real values?
+      - In what order does a map visit its keys?
+    short: auto& doubles the real values; the map prints Imp before Orc.
+    explain: "`auto& [name, h]` binds h to each real value, so 3 becomes 6 and 8 becomes 16. std::map iterates in key order: \"Imp\" < \"Orc\". Each entry prints name, hp and a space: \"Imp6 Orc16 \" and a newline."
+  - id: w15.boss.r4
+    type: speed
+    tags: [ w15.lambda, w15.auto, w15.enum-class, w15.optional, w15.move ]
+    prompt: SPEED ROUND! The Gremlin is juggling your values. Answer fast!
+    seconds: 45
+    items:
+      - q: Which capture copies hp into the lambda?
+        options: [ "[hp]", "[&hp]", "[]" ]
+        answer: 0
+      - q: What type is x?
+        code: |-
+          const std::string& ref = name;
+          auto x = ref;
+        prelude: std::string name = "Ana";
+        options: [ "const std::string&", std::string, "std::string&" ]
+        answer: 1
+      - q: What does this print?
+        code: std::cout << std::optional<int>{}.value_or(4);
+        options: [ "0", "4", nothing ]
+        answer: 1
+      - q: What is static_cast<int>(C::B)?
+        code: enum class C { A = 3, B };
+        options: [ "1", "4", "3" ]
+        answer: 1
+      - q: After int b = std::move(a); with a = 7, what is a?
+        options: [ "0", "7", unspecified ]
+        answer: 1
+      - q: Which empties an optional?
+        code: |-
+          std::optional<int> o = 5;
+          o = std::nullopt;
+        options: [ o = std::nullopt, o = 0, "*o = 0" ]
+        answer: 0
+    hints:
+      - Plain auto copies; an int has nothing to steal.
+      - value_or returns its argument when empty.
+    short: "[hp] copies, auto copies, value_or falls back, ints just copy."
+    explain: "[hp] captures by value. auto drops const and &, giving std::string. An empty optional's value_or(4) is 4. B follows A = 3, so it's 4. Moving an int copies it: a stays 7. Assigning std::nullopt empties an optional; 0 is a real value."
+  - id: w15.boss.r5
+    type: bug
+    tags: [ w15.dangling-capture, w15.capture ]
+    bug: dangling-capture
+    unsafe: true
+    prompt: "UNSAFE: the shout should print \"BOO!\", but sometimes prints junk. Tap the buggy line, then pick the fix."
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      auto makeShout(const std::string& word) {
+          return [&word]() { return word + "!"; };
+      }
+
+      int main() {
+          auto shout = makeShout("BOO");
+          std::cout << shout() << '\n';
+          return 0;
+      }
+    bugLine: 4
+    options:
+      - t: "return [word]() { return word + \"!\"; };"
+        why: "Correct: the lambda stores its own std::string copy, so it no longer depends on the temporary."
+      - t: "return [&]() { return word + \"!\"; };"
+        why: "[&] still captures by reference. Same leech."
+      - t: "return [&word]() mutable { return word + \"!\"; };"
+        why: mutable changes nothing about where word lives.
+      - t: Call shout() twice to warm it up
+        why: The temporary "BOO" string is already gone. More calls, more UB.
+    answer: 0
+    hints:
+      - '"BOO" becomes a temporary std::string. When does it die?'
+      - The lambda is called on the next line.
+    short: The temporary "BOO" dies right away; capture word by value.
+    explain: "makeShout(\"BOO\") builds a temporary std::string that dies at the end of that statement. The lambda keeps a reference to it, so shout() reads a dead string: UB. Capturing [word] copies the text into the lambda."
+    sideBySide:
+      unsafe: |-
+        auto makeShout(const std::string& word) {
+            return [&word]() { return word + "!"; };   // leech
+        }
+      hardened: |-
+        auto makeShout(const std::string& word) {
+            return [word]() { return word + "!"; };    // own copy
+        }
+  - id: w15.boss.r6
+    type: harden
+    tags: [ w15.plain-enum, w15.enum-class ]
+    prompt: "Door and Light are both enum class now. Pick the check for \"the door is open\"."
+    code: |-
+      #include <iostream>
+
+      enum class Door { Open, Closed };
+      enum class Light { Off, On };
+
+      int main() {
+          Door d = Door::Closed;
+          if (___) {
+              std::cout << "Walk in\n";
+          }
+          return 0;
+      }
+    options:
+      - t: d == Door::Open
+        why: "Correct: compares a Door with a Door. Clear and type-checked."
+      - t: static_cast<int>(d) == static_cast<int>(Light::Off)
+        why: Compiles, but compares a door to a light. Casts switch off the protection.
+      - t: d == 0
+        why: enum class doesn't compare with ints. Compile error, and a magic number anyway.
+      - t: d == Light::Off
+        why: Different enum types can't be compared. That's the protection working.
+    answer: 0
+    hints:
+      - Compare things of the same type.
+      - Casting to int throws away the type check.
+    short: Compare Door with Door; enum class blocks cross-type mix-ups.
+    explain: "With plain enums, `d == Off` compiles silently (both are just ints), and a typo becomes a bug. enum class rejects cross-type comparisons, so only `d == Door::Open` makes sense. Casting both sides to int brings the old danger back."
+    sideBySide:
+      unsafe: |-
+        enum Door { Open, Closed };
+        enum Light { Off, On };
+
+        bool canEnter(Door d) {
+            return d == On;   // compiles: Closed == On == 1. Wrong!
+        }
+      hardened: |-
+        enum class Door { Open, Closed };
+        enum class Light { Off, On };
+
+        bool canEnter(Door d) {
+            return d == Door::Open;   // d == Light::On won't compile
+        }
+  - id: w15.boss.r7
+    type: edge
+    tags: [ w15.optional, w7.bounds ]
+    bug: out-of-bounds
+    unsafe: true
+    prompt: "UNSAFE: the player picks slot 1 to 3. Which inputs read outside the array? Select all."
+    code: |-
+      #include <array>
+      #include <iostream>
+      #include <optional>
+      #include <string>
+
+      std::optional<int> toIndex(int slot) {
+          if (slot >= 1 && slot <= 3) {
+              return slot - 1;
+          }
+          return std::nullopt;
+      }
+
+      int main() {
+          std::array<std::string, 3> slots{"Sword", "Shield", "Potion"};
+          int slot{};
+          if (!(std::cin >> slot)) {
+              return 1;
+          }
+          std::cout << slots[toIndex(slot).value_or(slot)] << '\n';
+          return 0;
+      }
+    options:
+      - t: "4"
+        why: "Exposes it: toIndex says no, and value_or falls back to 4, past the end."
+      - t: "-1"
+        why: "Exposes it: the fallback -1 becomes a huge index. Out of bounds."
+      - t: "2"
+        why: Valid slot, index 1. Shield.
+      - t: "3"
+        why: Valid slot, index 2. Potion.
+      - t: "100"
+        why: "Exposes it: the fallback is 100 itself. Way out of bounds."
+    answers: [ 0, 1, 4 ]
+    hints:
+      - What does value_or return when toIndex says no?
+      - A fallback must be a value that's always safe.
+    short: The fallback is the bad input itself; check the optional instead.
+    explain: "toIndex correctly returns nothing for bad slots, but value_or(slot) brings the bad number right back, and slots[4] is out of bounds (UB). A fallback must be safe, or skip value_or and check the optional."
+    sideBySide:
+      unsafe: std::cout << slots[toIndex(slot).value_or(slot)] << '\n';
+      hardened: |-
+        if (auto index = toIndex(slot); index) {
+            std::cout << slots[*index] << '\n';
+        } else {
+            std::cout << "No such slot\n";
+        }
+      prelude: 'std::array<std::string, 3> slots{"Sword", "Shield", "Potion"}; int slot{}; auto toIndex = [](int s) -> std::optional<std::size_t> { if (s >= 1 && s <= 3) { return static_cast<std::size_t>(s - 1); } return std::nullopt; };'
+  - id: w15.boss.r8
+    type: predict
+    tags: [ w15.optional, w15.move ]
+    prompt: The Gremlin steals the prize out of an optional. What does this print?
+    code: |-
+      #include <iostream>
+      #include <optional>
+      #include <string>
+      #include <utility>
+
+      int main() {
+          std::optional<std::string> prize = "Crown";
+          std::string won = std::move(*prize);
+          prize = "Cape";
+          std::cout << won << ' ' << *prize << ' ' << prize.has_value() << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          Crown Cape 1
+        why: "Correct: won took Crown, then the husk inside prize was refilled with Cape."
+      - t: |
+          Crown Cape 0
+        why: Moving the string out doesn't empty the optional, and it was refilled anyway.
+      - t: |
+          Cape Cape 1
+        why: won took its own letters before prize was reassigned.
+      - t: |
+          Crown  1
+        why: prize = "Cape" refilled the husk before it was read.
+    answer: 0
+    hints:
+      - Moving the string out leaves a husk inside the optional.
+      - The husk is refilled before anyone reads it.
+    short: won took Crown; prize was refilled with Cape before reading.
+    explain: "std::move(*prize) moves the string out, leaving a moved-from string inside a still-engaged optional. prize = \"Cape\" assigns a new value, so reading it is safe. has_value() is true: 1. Output: \"Crown Cape 1\" and a newline."
+defense:
+  - attack: x
+    label: A direction that doesn't exist!
+    challenge:
+      id: w15.boss.d1
+      type: harden
+      tags: [ w15.optional, w15.enum-class ]
+      prompt: "The Gremlin types `x`. Pick the line that ends toDir safely."
+      code: |-
+        #include <optional>
+
+        enum class Dir { Up, Down };
+
+        std::optional<Dir> toDir(char c) {
+            switch (c) {
+                case 'u': return Dir::Up;
+                case 'd': return Dir::Down;
+            }
+            ___;
+        }
+
+        int main() {
+            return toDir('x').has_value() ? 1 : 0;
+        }
+      options:
+        - t: return std::nullopt
+          why: "Correct: unknown letters produce an empty optional that the caller must check."
+        - t: return Dir::Up
+          why: Silently turns junk into a real move. The caller can't tell it went wrong.
+        - t: return static_cast<Dir>(c)
+          why: "Makes a nameless Dir from 'x' (120). No check, no name."
+        - t: (void)c
+          why: The function then falls off the end without returning. That's UB.
+      answer: 0
+      hints:
+        - What should a function return when the answer is "none"?
+        - The return type is already an optional.
+      short: Unknown input returns std::nullopt; never invent a value.
+      explain: "Falling off the end of a non-void function is UB, and returning a made-up Dir hides the problem. std::nullopt says \"no such direction\" and forces the caller to handle it."
+      sideBySide:
+        unsafe: |-
+          std::optional<Dir> toDir(char c) {
+              switch (c) {
+                  case 'u': return Dir::Up;
+                  case 'd': return Dir::Down;
+              }
+          }   // 'x' falls off the end: UB
+        hardened: |-
+          std::optional<Dir> toDir(char c) {
+              switch (c) {
+                  case 'u': return Dir::Up;
+                  case 'd': return Dir::Down;
+              }
+              return std::nullopt;
+          }
+        prelude: "enum class Dir { Up, Down };"
+  - attack: (no scores)
+    label: An empty scoreboard!
+    challenge:
+      id: w15.boss.d2
+      type: harden
+      tags: [ w15.optional, w7.empty ]
+      prompt: The Gremlin wipes the scoreboard. Pick the guard before max_element is dereferenced.
+      code: |-
+        #include <algorithm>
+        #include <optional>
+        #include <vector>
+
+        std::optional<int> best(const std::vector<int>& v) {
+            if (___) {
+                return std::nullopt;
+            }
+            return *std::max_element(v.begin(), v.end());
+        }
+
+        int main() {
+            return best({}).value_or(0);
+        }
+      options:
+        - t: v.empty()
+          why: "Correct: on an empty vector max_element returns end(), and *end() is UB. Now it never runs."
+        - t: v.size() > 0
+          why: "Inverted: returns nothing for real scores and dereferences end() for empty ones."
+        - t: v[0] == 0
+          why: Reading v[0] on an empty vector is itself out of bounds.
+        - t: "false"
+          why: No guard. *max_element on an empty vector dereferences end().
+      answer: 0
+      hints:
+        - What does max_element return for an empty range?
+        - Check before you dereference.
+      short: Empty vector? Return std::nullopt before dereferencing max_element.
+      explain: "std::max_element on an empty range returns end(). Dereferencing end() is UB. Guard with v.empty() and return std::nullopt, so \"no best score\" is visible in the type."
+      sideBySide:
+        unsafe: |-
+          std::optional<int> best(const std::vector<int>& v) {
+              return *std::max_element(v.begin(), v.end());   // empty: *end()
+          }
+        hardened: |-
+          std::optional<int> best(const std::vector<int>& v) {
+              if (v.empty()) {
+                  return std::nullopt;
+              }
+              return *std::max_element(v.begin(), v.end());
+          }
+  - attack: abc
+    label: Text instead of a rank code!
+    challenge:
+      id: w15.boss.d3
+      type: harden
+      tags: [ w15.enum-class, w3.validate, w3.cin ]
+      bug: cin-fail
+      prompt: "The Gremlin types `abc`. The failed read stores 0, which looks like Easy! Pick the full check."
+      code: |-
+        #include <iostream>
+
+        enum class Rank { Easy, Hard, Epic };
+
+        int main() {
+            int code{};
+            if (___) {
+                std::cout << "Bad rank\n";
+                return 1;
+            }
+            Rank r = static_cast<Rank>(code);
+            std::cout << (r == Rank::Epic ? "Epic!\n" : "Quest added\n");
+            return 0;
+        }
+      options:
+        - t: "!(std::cin >> code) || code < 0 || code > 2"
+          why: "Correct: a failed read stops right there; otherwise the range is checked before the cast."
+        - t: code < 0 || code > 2
+          why: Never reads input, and a failed read's 0 would pass as a valid Easy.
+        - t: "!(std::cin >> code)"
+          why: Catches abc, but 99 still becomes a nameless Rank.
+        - t: code == 0
+          why: Rejects the real Easy rank and lets 99 through.
+      answer: 0
+      hints:
+        - Read and check the read first.
+        - Then check both ends of the range.
+      short: Check the read, then the range, then cast.
+      explain: "Since C++11 a failed int read stores 0, a perfectly valid Easy code. Only the stream knows the read failed. Check the read, then 0..2, then cast."
+      sideBySide:
+        unsafe: |-
+          std::cin >> code;                    // "abc": code = 0
+          Rank r = static_cast<Rank>(code);    // silently Easy
+        hardened: |-
+          if (!(std::cin >> code) || code < 0 || code > 2) {
+              std::cout << "Bad rank\n";
+              return 1;
+          }
+          Rank r = static_cast<Rank>(code);
+        prelude: "enum class Rank { Easy, Hard, Epic }; int code{};"
+victory: "Nooo! My husks... refilled! My leeches... copied! I'm moving out!"
+reward:
+  xp: 300
+  cosmetic: lambda-antennae
+  bug: use-after-move
