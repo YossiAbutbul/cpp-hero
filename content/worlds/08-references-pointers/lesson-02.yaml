@@ -36,34 +36,39 @@ demo:
     }
   steps:
     - line: 11
-      vars:
-        knight: "10"
+      mem:
+        cells:
+          - { name: knight, value: "10", addr: "0x10" }
       note: The knight starts with 10 hp.
     - line: 12
       note: Call healCopy with the knight.
     - line: 2
-      vars:
-        hp: "10 (copy)"
+      mem:
+        cells:
+          - { name: hp (copy), value: "10", addr: "0x40" }
       note: hp is a brand-new box holding a copy.
     - line: 3
-      vars:
-        hp: "15 (copy)"
+      mem:
+        cells:
+          - { name: hp (copy), value: "15" }
       note: Only the copy is healed.
     - line: 13
-      vars:
-        hp: "(gone)"
+      mem:
+        drop: [ hp (copy) ]
       out: |
         10
       note: The copy died at the closing brace. Knight still 10.
     - line: 14
       note: Now call healRef.
     - line: 6
-      vars:
-        hp: "→ knight (alias)"
+      mem:
+        cells:
+          - { name: hp, ref: knight }
       note: This hp is another name for knight.
     - line: 7
-      vars:
-        knight: "15"
+      mem:
+        cells:
+          - { name: knight, value: "15" }
       note: Healing hp heals the real knight.
     - line: 15
       out: |

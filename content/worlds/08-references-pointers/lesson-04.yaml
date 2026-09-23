@@ -31,30 +31,34 @@ demo:
     }
   steps:
     - line: 4
-      vars:
-        "loot[0]": "10"
-        "loot[1]": "20"
-        "loot[2]": "30"
+      mem:
+        cells:
+          - { name: "loot[0]", value: "10", addr: "0x10", group: loot }
+          - { name: "loot[1]", value: "20", addr: "0x14", group: loot }
+          - { name: "loot[2]", value: "30", addr: "0x18", group: loot }
       note: Three ints side by side in memory.
     - line: 5
-      vars:
-        p: "→ loot[0]"
+      mem:
+        cells:
+          - { name: p, ptr: "loot[0]" }
       note: p points at the first element.
     - line: 6
       out: |
         10
       note: "*p reads loot[0]."
     - line: 7
-      vars:
-        p: "→ loot[1]"
+      mem:
+        cells:
+          - { name: p, ptr: "loot[1]" }
       note: "++p steps the arrow one int forward."
     - line: 8
       out: |
         20
       note: Now *p reads loot[1].
     - line: 9
-      vars:
-        view: "→ loot[2] (read-only)"
+      mem:
+        cells:
+          - { name: view, ptr: "loot[2]", readonly: true }
       note: "const int*: may read through view, never write."
     - line: 10
       out: |

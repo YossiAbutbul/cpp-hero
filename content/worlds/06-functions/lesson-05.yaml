@@ -47,70 +47,49 @@ demo:
     - line: 3
       note: "[[nodiscard]]: ignoring this result triggers a warning."
     - line: 16
-      vars:
-        stack: main
-        "main: hp": "10"
+      push: { name: main, vars: { hp: "10" } }
       note: The hero starts with 10 HP.
     - line: 17
-      vars:
-        stack: main > applyDamage
-        "applyDamage: hp": "10"
-        "applyDamage: damage": "-4"
+      push: { name: applyDamage, vars: { hp: "10", damage: "-4" } }
       note: "push frame: applyDamage(hp=10, damage=-4)."
     - line: 4
       shield: Negative damage blocked!
       note: "Guard clause: negative damage would secretly heal."
     - line: 5
-      vars:
-        stack: main
-        "applyDamage: hp": "(gone)"
-        "applyDamage: damage": "(gone)"
+      pop: { returns: "10" }
       note: "pop frame: return 10, unchanged."
     - line: 18
       out: |
         HP: 10
     - line: 19
-      vars:
-        stack: main > applyDamage
-        "applyDamage: hp": "10"
-        "applyDamage: damage": "3"
+      push: { name: applyDamage, vars: { hp: "10", damage: "3" } }
       note: "push frame: applyDamage(hp=10, damage=3)."
     - line: 10
       vars:
-        "applyDamage: result": "7"
+        result: "7"
       note: Both guards pass, so the happy path runs.
     - line: 11
       note: "assert documents our belief: result is positive here."
     - line: 12
-      vars:
-        stack: main
-        "applyDamage: hp": "(gone)"
-        "applyDamage: damage": "(gone)"
-        "applyDamage: result": "(gone)"
+      pop: { returns: "7" }
       note: "pop frame: return 7, copied out by value."
     - line: 20
       vars:
-        "main: hp": "7"
+        hp: "7"
       out: |
         HP: 7
     - line: 21
-      vars:
-        stack: main > applyDamage
-        "applyDamage: hp": "7"
-        "applyDamage: damage": "25"
+      push: { name: applyDamage, vars: { hp: "7", damage: "25" } }
       note: "push frame: applyDamage(hp=7, damage=25)."
     - line: 7
       shield: Overkill clamped!
       note: 25 >= 7, so clamp to 0. HP never goes negative.
     - line: 8
-      vars:
-        stack: main
-        "applyDamage: hp": "(gone)"
-        "applyDamage: damage": "(gone)"
+      pop: { returns: "0" }
       note: "pop frame: return 0."
     - line: 22
       vars:
-        "main: hp": "0"
+        hp: "0"
       out: |
         HP: 0
     - line: 23

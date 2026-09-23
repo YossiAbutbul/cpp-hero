@@ -33,40 +33,31 @@ demo:
     }
   steps:
     - line: 8
-      vars:
-        "main: hp": "3"
+      push: { name: main, vars: { hp: "3" } }
       note: main's hp starts at 3.
     - line: 9
-      vars:
-        "heal: hp": "3"
-        "heal: amount": "5"
+      push: { name: heal, vars: { hp: "3", amount: "5" } }
       note: "push frame: heal(hp=3, amount=5). Both are copies!"
     - line: 3
       vars:
-        "heal: hp": "8"
+        hp: "8"
       note: Only the copy changes. main's hp is still 3.
     - line: 4
-      vars:
-        "heal: hp": "(gone)"
-        "heal: amount": "(gone)"
+      pop: { returns: "8" }
       note: "pop frame: return 8. Nobody stores it!"
     - line: 10
       out: |
         3
       note: main's hp never changed.
     - line: 11
-      vars:
-        "heal: hp": "3"
-        "heal: amount": "5"
+      push: { name: heal, vars: { hp: "3", amount: "5" } }
       note: "push frame again: heal(hp=3, amount=5)."
     - line: 4
-      vars:
-        "heal: hp": "(gone)"
-        "heal: amount": "(gone)"
+      pop: { returns: "8" }
       note: "pop frame: return 8."
     - line: 11
       vars:
-        "main: hp": "8"
+        hp: "8"
       note: This time main stores the result in hp.
     - line: 12
       out: |

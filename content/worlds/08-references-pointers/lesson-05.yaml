@@ -36,37 +36,39 @@ demo:
     }
   steps:
     - line: 3
-      vars:
-        target: "nullptr"
+      mem:
+        cells:
+          - { name: target, ptr: null, addr: "0x10" }
       note: "Born pointing nowhere: known and testable, never garbage."
     - line: 5
-      vars:
-        goblin: "12"
+      mem:
+        cells:
+          - { name: goblin, value: "12", addr: "0x14" }
       note: A goblin lives only inside these braces.
     - line: 6
-      vars:
-        target: "→ goblin"
+      mem:
+        cells:
+          - { name: target, ptr: goblin }
       note: target points at the goblin.
     - line: 7
       out: |
         12
       note: Safe to follow while the goblin exists.
     - line: 9
-      vars:
-        goblin: "(gone)"
-        target: "→ ??? (dangling)"
+      mem:
+        drop: [ goblin ]
       crash: "Dangling pointer: target aims at a dead goblin!"
       note: Without line 8, target would dangle right here.
     - line: 8
-      vars:
-        goblin: "12"
-        target: "nullptr"
+      mem:
+        cells:
+          - { name: goblin, value: "12" }
+          - { name: target, ptr: null }
       shield: Pointer reset!
       note: "Back to reality: we let go before the goblin vanished."
     - line: 9
-      vars:
-        goblin: "(gone)"
-        target: "nullptr"
+      mem:
+        drop: [ goblin ]
       note: The goblin is gone, but target is safely null.
     - line: 10
       shield: nullptr check!

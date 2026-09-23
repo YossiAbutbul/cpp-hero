@@ -48,59 +48,40 @@ demo:
     - line: 5
       note: amount = 10 is a default argument.
     - line: 8
+      push: { name: main }
       note: heal(5) leaves out amount, so it defaults to 10.
     - line: 22
-      vars:
-        stack: main > heal
-        hp: "5"
-        amount: "10"
+      push: { name: heal, vars: { hp: "5", amount: "10" } }
       note: "push frame: heal(hp=5, amount=10)."
     - line: 23
-      vars:
-        stack: main
-        hp: "(gone)"
-        amount: "(gone)"
+      pop: { returns: "15" }
       note: "pop frame: return 15."
     - line: 14
-      vars:
-        stack: main > show(int)
-        value: "15"
+      push: { name: show(int), vars: { value: "15" } }
       note: An int argument picks the show(int) overload.
     - line: 15
       out: |
         HP 15
     - line: 22
-      vars:
-        stack: main > heal
-        hp: "5"
-        amount: "2"
-        value: "(gone)"
+      pop: true
+      push: { name: heal, vars: { hp: "5", amount: "2" } }
       note: "push frame: heal(hp=5, amount=2). No default needed."
     - line: 23
-      vars:
-        stack: main
-        hp: "(gone)"
-        amount: "(gone)"
+      pop: { returns: "7" }
       note: "pop frame: return 7."
     - line: 15
-      vars:
-        stack: main > show(int)
-        value: "7"
+      push: { name: show(int), vars: { value: "7" } }
       out: |
         HP 7
     - line: 10
-      vars:
-        stack: main
-        value: "(gone)"
+      pop: true
       note: Text argument, so the compiler picks the string overload.
     - line: 19
-      vars:
-        stack: main > show(string)
+      push: { name: show(string), vars: { text: '"Full!"' } }
       out: |
         Full!
     - line: 11
-      vars:
-        stack: main
+      pop: true
       note: Three calls, two overloads, one default. Done!
 challenges:
   - id: w6.l3.c1
