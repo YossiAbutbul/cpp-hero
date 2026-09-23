@@ -21,11 +21,11 @@ import { Icon } from '@/ui/Icon';
 import { Card, Screen } from '@/ui/Layout';
 import { Md } from '@/ui/Md';
 import { plural } from '@/ui/format';
-import { RefillRound, useOutOfHearts } from './RefillRound';
-import { Results, sessionTiles } from './Results';
-import { SessionFrame } from './SessionFrame';
-import { SlidePage } from './SlidePage';
-import { useQuit } from './useQuit';
+import { RefillRound } from '@/features/session/RefillRound';
+import { Results, sessionTiles } from '@/features/session/Results';
+import { SessionFrame, SlidePage } from '@/features/session/SessionFrame';
+import { useQuit } from '@/features/session/useQuit';
+import { useRefillPrompt } from '@/features/session/useRefillPrompt';
 import styles from './lesson.module.css';
 
 interface QItem {
@@ -92,7 +92,7 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
   }>(null);
   const [retriedIds, setRetriedIds] = useState<string[]>([]);
   const askQuit = useQuit('lesson');
-  const askRefill = useOutOfHearts();
+  const askRefill = useRefillPrompt();
 
   useEffect(() => {
     game.resetCombo();
@@ -156,7 +156,7 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
   const pageKey = page === 'ch' ? `ch:${qi}` : refill ? 'refill' : page;
 
   let body: ReactNode;
-  if (refill) body = <RefillRound pool={lesson.challenges} onDone={() => setRefill(false)} />;
+  if (refill) body = <RefillRound pool={lesson.challenges} paged onDone={() => setRefill(false)} />;
   else if (page === 'intro')
     body = (
       <SlidePage pageKey="intro">
@@ -171,7 +171,7 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
     );
   else if (page === 'demo' && lesson.demo)
     body = (
-      <SlidePage pageKey="demo">
+      <SlidePage pageKey="demo" enterOnMount>
         <div className={styles.eyebrow}>Watch it run</div>
         <h2 className={styles.h2}>{lesson.title}</h2>
         <CodeDemo demo={lesson.demo} unsafe={lesson.shield && lesson.demo.steps.some((s) => s.crash)} />
@@ -182,7 +182,7 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
     );
   else if (page === 'ch' && item)
     body = (
-      <SlidePage pageKey={pageKey}>
+      <SlidePage pageKey={pageKey} enterOnMount>
         <ChallengeRunner
           key={pageKey}
           challenge={item.ch}
@@ -195,13 +195,13 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
     );
   else if (page === 'recap')
     body = (
-      <SlidePage pageKey="recap">
+      <SlidePage pageKey="recap" enterOnMount>
         <Recap lesson={lesson} onNext={finishLesson} />
       </SlidePage>
     );
   else if (page === 'results' && finish)
     body = (
-      <SlidePage pageKey="results">
+      <SlidePage pageKey="results" enterOnMount>
         <Results
           title="Lesson complete!"
           sub={finish.line}
@@ -231,6 +231,7 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
               )}
             </div>
           }
+          variant="lesson"
           onContinue={() => goBack('/', { dir: 'close' })}
         />
       </SlidePage>
@@ -243,6 +244,7 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
       hearts
       onQuit={() => (page === 'results' ? goBack('/', { dir: 'close' }) : void askQuit())}
       scrollKey={pageKey}
+      variant="lesson"
     >
       {body}
     </SessionFrame>

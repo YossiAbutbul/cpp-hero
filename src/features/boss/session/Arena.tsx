@@ -17,7 +17,7 @@ import { BossArt } from '@/ui/art/Art';
 import { burstAt, shock } from '@/ui/fx/effects';
 import { anim, cancelAnims, pause, pulseClass, reduced } from '@/ui/fx/motion';
 import { shownInput } from './util';
-import styles from './session.module.css';
+import styles from './arena.module.css';
 
 export interface ArenaHandle {
   /** show the incoming hostile input */

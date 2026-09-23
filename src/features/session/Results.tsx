@@ -1,21 +1,26 @@
 /**
- * Session results card (legacy Session.results): Curlo celebrates, stat tiles
- * count up, confetti; big overlays (level-ups, achievements…) queue after it.
+ * End-of-session results (legacy Session.results): Curlo celebrates, stat
+ * tiles count up, confetti, extra lines (unlocks, stat gains), then Continue.
+ * Queued celebrations (level-ups, achievements, cosmetics…) show over it.
  *
- *   <Results title="Lesson complete!" sub={line} tiles={sessionTiles(stats)} onContinue={leave} />
+ *   <Results title="Lesson complete!" sub={line} tiles={sessionTiles(stats)} variant="lesson" onContinue={leave} />
+ *
+ * variant 'boss' (default; boss, project): tighter layout, and Continue waits
+ * for queued celebrations first.
  */
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Curlo } from '@/features/curlo/Curlo';
-import { useCurloReact } from '@/features/curlo/useCurloReact';
 import type { CurloMood } from '@/features/curlo/curloArt';
+import { useCurloReact } from '@/features/curlo/useCurloReact';
 import { Button } from '@/ui/Button';
 import { CountUp } from '@/ui/CountUp';
-import { burstAt, clearConfetti, rain } from '@/ui/fx/effects';
 import { requestCelebrations } from '@/ui/fx/celebrationQueue';
+import { burstAt, clearConfetti, rain } from '@/ui/fx/effects';
 import { popIn, reduced } from '@/ui/fx/motion';
 import { fmtDuration } from '@/ui/format';
 import { Icon, type IconName } from '@/ui/Icon';
-import styles from './lesson.module.css';
+import type { SessionVariant } from './SessionFrame';
+import styles from './session.module.css';
 
 export interface Tile {
   label: string;
@@ -48,17 +53,28 @@ export interface ResultsProps {
   extra?: ReactNode;
   button?: string;
   mood?: CurloMood;
+  variant?: SessionVariant;
   onContinue: () => void;
 }
 
-export function Results({ title, sub, tiles, extra, button = 'Continue', mood = 'celebrate', onContinue }: ResultsProps) {
+export function Results({
+  title,
+  sub,
+  tiles,
+  extra,
+  button = 'Continue',
+  mood = 'celebrate',
+  variant = 'boss',
+  onContinue,
+}: ResultsProps) {
+  const boss = variant === 'boss';
   const curlo = useCurloReact('happy');
   const curloEl = useRef<HTMLDivElement>(null);
   const tilesEl = useRef<HTMLDivElement>(null);
   const btn = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const els = Array.from(tilesEl.current?.children ?? []);
-    els.forEach((t, i) => popIn(t, 250 + i * 110));
+    els.forEach((t, i) => void popIn(t, 250 + i * 110));
     const t1 = window.setTimeout(
       () => {
         curlo.react(mood, 1500);
@@ -72,16 +88,16 @@ export function Results({ title, sub, tiles, extra, button = 'Continue', mood = 
     const t2 = window.setTimeout(() => btn.current?.focus({ preventScroll: true }), 600);
     const t3 = window.setTimeout(() => void requestCelebrations(), reduced() ? 200 : 1500);
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
       clearConfetti();
     };
     // mount only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-    <div className={styles.results} onPointerDown={() => clearConfetti()}>
+    <div className={[styles.results, boss && styles.compact].filter(Boolean).join(' ')} onPointerDown={() => clearConfetti()}>
       <div ref={curloEl} className={styles.resCurlo}>
         <Curlo {...curlo.props} />
       </div>
@@ -89,12 +105,12 @@ export function Results({ title, sub, tiles, extra, button = 'Continue', mood = 
       {sub && <p className={styles.resSub}>{sub}</p>}
       <div ref={tilesEl} className={styles.tiles}>
         {tiles.map((t) => (
-          <div key={t.label} className={`${styles.tileStat} ${styles[t.tone]}`}>
-            <div className={styles.tsL}>
+          <div key={t.label} className={`${styles.tile} ${styles['t_' + t.tone]}`}>
+            <div className={styles.tileL}>
               <Icon name={t.icon} />
               {t.label}
             </div>
-            <div className={styles.tsV}>
+            <div className={styles.tileV}>
               <CountUp value={t.value} from={0} duration={900} format={t.format} />
             </div>
           </div>
@@ -103,16 +119,28 @@ export function Results({ title, sub, tiles, extra, button = 'Continue', mood = 
       {extra}
       <Button
         ref={btn}
-        size="big"
+        size={boss ? undefined : 'big'}
         block
         iconEnd="next"
-        onClick={() => {
+        className={boss ? styles.next : undefined}
+        onClick={async () => {
           clearConfetti();
+          if (boss) await requestCelebrations();
           onContinue();
         }}
       >
         {button}
       </Button>
+    </div>
+  );
+}
+
+/** A highlighted line on the results card ("World 3 unlocked", "Defense stat up!"). */
+export function Gain({ icon, children }: { icon: IconName; children: ReactNode }) {
+  return (
+    <div className={styles.gain}>
+      <Icon name={icon} />
+      <span>{children}</span>
     </div>
   );
 }

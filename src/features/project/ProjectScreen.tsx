@@ -12,14 +12,15 @@ import { useGame } from '@/app/gameContext';
 import { goBack } from '@/app/navigation';
 import type { World } from '@/content/schema';
 import { Arena, type ArenaHandle } from '@/features/boss/session/Arena';
-import { Gain, ResultsCard } from '@/features/boss/session/ResultsCard';
-import { SessionFrame, SlidePage } from '@/features/boss/session/SessionFrame';
-import { useSession, type SessionStats } from '@/features/boss/session/useSession';
 import { shownInput } from '@/features/boss/session/util';
-import sx from '@/features/boss/session/session.module.css';
+import sx from '@/features/boss/session/arena.module.css';
 import { ChallengeRunner, TYPE_LABELS } from '@/features/challenges';
 import { CodeBlock } from '@/features/code';
 import { CurloSays } from '@/features/curlo/SpeechBubble';
+import { Gain, Results, sessionTiles } from '@/features/session/Results';
+import { SessionFrame, SlidePage } from '@/features/session/SessionFrame';
+import { useSession, type SessionStats } from '@/features/session/useSession';
+import ss from '@/features/session/session.module.css';
 import { Button } from '@/ui/Button';
 import { Expander } from '@/ui/Expander';
 import { burstAt } from '@/ui/fx/effects';
@@ -172,7 +173,7 @@ function Build({ w }: { w: World }) {
             block
             variant="coral"
             iconEnd="next"
-            className={sx.next}
+            className={ss.next}
             onClick={() => next({ k: 'attack', i: 0, n: ++seq.current, crashed: false })}
             data-autofocus
           >
@@ -244,10 +245,10 @@ function Build({ w }: { w: World }) {
     }
     case 'results':
       page = (
-        <ResultsCard
+        <Results
           title="Project complete!"
           sub={`The boss of World ${w.num} is awake…`}
-          stats={step.stats}
+          tiles={sessionTiles(step.stats)}
           extra={
             <>
               {attacks.length > 0 && <Gain icon="shield">Stress Test passed: every attack blocked!</Gain>}
@@ -313,7 +314,7 @@ function Reveal({ w, onNext }: { w: World; onNext: () => void }) {
         block
         variant={attacks ? 'coral' : 'sun'}
         iconEnd="next"
-        className={sx.next}
+        className={ss.next}
         onClick={onNext}
         data-autofocus
       >

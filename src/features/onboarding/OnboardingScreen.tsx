@@ -8,7 +8,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 
 import { useGame } from '@/app/gameContext';
 import { navigate } from '@/app/navigation';
 import { STARTER_COLORS } from '@/engine/config';
-import { SlidePage } from '@/features/boss/session/SessionFrame';
+import { SlidePage } from '@/features/session/SessionFrame';
 import { Curlo } from '@/features/curlo/Curlo';
 import { FALLBACK_COLORS, type CurloMood } from '@/features/curlo/curloArt';
 import { SpeechBubble } from '@/features/curlo/SpeechBubble';

@@ -1,4 +1,4 @@
-/** The "Out of hearts!" dialog: 'refill' (quick review round) or 'quit'. See Refill.tsx. */
+/** The "Out of hearts!" dialog: 'refill' (quick review round) or 'quit'. See RefillRound.tsx. */
 import { useCallback } from 'react';
 import { useGame } from '@/app/gameContext';
 import { curloLine } from '@/features/curlo/voice';
@@ -29,4 +29,3 @@ export function useRefillPrompt() {
     return v ?? 'refill';
   }, [dialog, game, store]);
 }
-

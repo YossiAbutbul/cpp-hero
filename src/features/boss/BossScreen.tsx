@@ -16,6 +16,13 @@ import type { Challenge, World } from '@/content/schema';
 import { ChallengeRunner, TYPE_LABELS, type ChallengeResult } from '@/features/challenges';
 import { CurloSays, SpeechBubble } from '@/features/curlo/SpeechBubble';
 import { StoryBubbles } from '@/features/map/StoryBubbles';
+import { RefillRound } from '@/features/session/RefillRound';
+import { Gain, Results, sessionTiles } from '@/features/session/Results';
+import { SessionFrame, SlidePage } from '@/features/session/SessionFrame';
+import { useRefillPrompt } from '@/features/session/useRefillPrompt';
+import { useSession, type SessionStats } from '@/features/session/useSession';
+import { pick, shuffled } from '@/features/session/util';
+import ss from '@/features/session/session.module.css';
 import { BossArt } from '@/ui/art/Art';
 import { Button } from '@/ui/Button';
 import { burstAt, floatText, rain } from '@/ui/fx/effects';
@@ -26,13 +33,8 @@ import { Screen } from '@/ui/Layout';
 import { Md } from '@/ui/Md';
 import { toast } from '@/ui/toast';
 import { Arena, type ArenaHandle } from './session/Arena';
-import { RefillRound } from './session/Refill';
-import { Gain, ResultsCard } from './session/ResultsCard';
-import { SessionFrame, SlidePage } from './session/SessionFrame';
-import { useRefillPrompt } from './session/useRefillPrompt';
-import { useSession, type SessionStats } from './session/useSession';
-import { pick, shownInput, shuffled } from './session/util';
-import sx from './session/session.module.css';
+import { shownInput } from './session/util';
+import sx from './session/arena.module.css';
 import styles from './boss.module.css';
 
 type Step =
@@ -223,7 +225,7 @@ function Battle({ w }: { w: World }) {
       key = `f${step.n}`;
       page = (
         <RefillRound
-          fallback={b.rounds}
+          pool={b.rounds}
           onDone={() => (step.after === 'round' ? nextRound() : setStep({ k: 'defense', i: defIndex.current, n: ++seq.current }))}
         />
       );
@@ -295,10 +297,10 @@ function Battle({ w }: { w: World }) {
       break;
     case 'results':
       page = (
-        <ResultsCard
+        <Results
           title="Boss defeated!"
           sub={`${b.name} won’t bug this world again.`}
-          stats={step.stats}
+          tiles={sessionTiles(step.stats)}
           extra={
             step.unlocked ? (
               <Gain icon="map">
@@ -464,7 +466,7 @@ function DefenseIntro({ onGo }: { onGo: () => void }) {
         <b>Defense!</b>
       </div>
       <CurloSays mood="bracing" text="Hostile inputs incoming! Harden the code so my shield holds!" />
-      <Button block variant="teal" icon="shield" className={sx.next} onClick={onGo} data-autofocus>
+      <Button block variant="teal" icon="shield" className={ss.next} onClick={onGo} data-autofocus>
         Shields up!
       </Button>
     </div>
