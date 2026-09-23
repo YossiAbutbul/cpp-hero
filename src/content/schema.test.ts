@@ -97,3 +97,50 @@ describe('demoStates', () => {
     expect(st[4]!.cells.find((c) => c.name === 'p')).toMatchObject({ ptr: null, dangling: false });
   });
 });
+
+describe('object cards and husks', () => {
+  const hero = { class: 'Hero', fields: { hp_: '30' } };
+  const knight = { class: 'Knight', fields: { armor_: '5' } };
+
+  it('layers are a role of their own', () => {
+    expect(errors([{ line: 0, mem: { cells: [{ name: 'k', layers: [hero, knight] }] } }])).toEqual([]);
+    expect(errors([{ line: 0, mem: { cells: [{ name: 'k', value: '1', layers: [hero] }] } }])).toEqual([
+      'steps.0.mem.cells.0.layers: an object card (layers) cannot also have ptr or value',
+    ]);
+    expect(errors([{ line: 0, mem: { cells: [{ name: 'k', layers: [] }] } }])).toHaveLength(1);
+  });
+
+  it('replays construction, slicing into a reference, and husks', () => {
+    const d = DemoSchema.parse({
+      code,
+      steps: [
+        { line: 0, mem: { cells: [{ name: 'k', layers: [hero] }] } },
+        {
+          line: 1,
+          mem: { cells: [{ name: 'k', layers: [hero, knight] }, { name: 'h', layers: [hero, { ...knight, cut: true }] }] },
+        },
+        {
+          line: 2,
+          vars: { s: '~' },
+          mem: { cells: [{ name: 'h', ref: 'k', readonly: true }, { name: 'p', ptr: 'k' }] },
+        },
+        { line: 3, mem: { cells: [{ name: 'k', layers: [hero, { ...knight, cut: true }] }], drop: ['h'] } },
+        { line: 3, mem: { cells: [{ name: 'h', layers: [hero] }] } },
+      ],
+    });
+    const st = demoStates(d.steps);
+    const cell = (i: number, n: string) => st[i]!.cells.find((c) => c.name === n);
+    expect(cell(0, 'k')!.layers).toHaveLength(1);
+    expect(cell(1, 'k')!.layers).toHaveLength(2);
+    expect(cell(1, 'h')!.layers![1]).toMatchObject({ class: 'Knight', cut: true });
+    expect(cell(2, 'h')).toMatchObject({ ref: 'k' });
+    expect(cell(2, 'h')!.layers).toBeUndefined();
+    expect(st[2]!.frames[0]!.vars).toEqual({ s: '~' });
+    expect(cell(3, 'k')!.layers![1]!.cut).toBe(true);
+    expect(cell(3, 'p')).toMatchObject({ ptr: 'k', dangling: false });
+    expect(cell(3, 'h')).toMatchObject({ dropped: true });
+    expect(cell(4, 'h')).toMatchObject({ layers: [hero], dropped: false });
+    expect(cell(4, 'h')!.ref).toBeUndefined();
+    expect(cell(4, 'h')!.readonly).toBeUndefined(); // the ref's lock goes with its role
+  });
+});

@@ -1,6 +1,17 @@
 # World 11 notes (for the engine / schema owners)
 
-## Proposed: object cards for inheritance demos
+## Done: object cards for inheritance demos
+
+Shipped as a `layers` field on `mem` cells (see content/README.md "Object cards"), not a
+separate `obj` key, so pointers, references and `drop` work on cards for free. Layers
+are `{ class, fields?, cut?, hit? }`; a step restates the whole list. `cut: true` covers
+both slicing (a copy that lost its derived part) and destruction order; `hit: true` is
+the dispatch highlight. Used in l1 (Hero then Knight part built), l2 (`attack` lights
+the Mage part, `wave` the Hero part; `h` is a ref tag), and l5 (the hypothetical
+by-value `h` is a sliced card that turns back into a `const Hero&` tag; `~Mage` cuts the
+Mage part, then `~Hero` leaves a ghost card). The original proposal is kept below.
+
+### Original proposal
 
 REQUIREMENTS §7 asks for "objects as cards, inheritance as linked cards". Today World 11's
 demos show objects with `vars` boxes (`k.hp_`, `k.armor_`) and `mem` cells (a `hero` pointer

@@ -221,7 +221,7 @@ change what is shown. Steps only list changes; everything else stays as it was.
 |---|---|
 | `note` | caption, at most 12 words |
 | `out` | text appended to the output console |
-| `vars: { hp: "3" }` | add/update variable boxes (`"?"` = garbage). `hp: null` removes the box (out of scope) |
+| `vars: { hp: "3" }` | add/update variable boxes (`"?"` = garbage, `"~"` = moved-from husk). `hp: null` removes the box (out of scope) |
 | `push: { name: heal, vars: { hp: "3", amount: "5" } }` | a call-stack frame slides on top, with its parameters as boxes |
 | `pop: true` / `pop: { returns: "8" }` | the top frame slides off (its boxes vanish); `returns` flies back to the caller |
 | `mem: { cells: [...], drop: [...] }` | memory view: cells with pointer arrows (below) |
@@ -251,6 +251,42 @@ fields it gives):
 | `ref: hp` | a reference: an extra name tag on `hp`, no box, no arrow (can't have value/ptr/addr/group) |
 | `group: loot` | cells with the same group sit side by side (an array strip) |
 | `readonly: true` | `const T*` / `const T&`: drawn with a lock |
+| `layers: [...]` | an object card instead of a box (below); can't have `value` or `ptr` |
+
+Giving a cell a new role (`ref`, a box with `value`/`ptr`, or `layers`) clears the old
+one, so a cell can go from a reference tag to a sliced copy and back.
+
+**Husks.** `"~"` as a value (a var, a cell `value`, or a card field) draws a moved-from
+husk: a hollow, faded box marked "moved" (valid but unspecified). Use it right after
+`std::move`; assigning a new value refills the box.
+
+**Object cards.** `layers` lists the object's class parts, base class first. Each layer
+is `{ class, fields?, cut?, hit? }`: `fields` are its data members (values like any
+box), `cut: true` shows the part broken off (sliced away in a copy, or already
+destroyed), `hit: true` glows (the call at this step runs that part's function). The
+card title is the last part that isn't cut, which is the object's type at that
+moment. A step restates the whole `layers` list; a new last layer snaps on
+(construction order), a newly cut one breaks off. Pointers can point at a card, refs
+can tag it, and `drop` turns it into a ghost card.
+
+```yaml
+- line: 4       # Hero's constructor ran
+  mem: { cells: [{ name: k, layers: [{ class: Hero, fields: { hp_: "30" } }] }] }
+- line: 13      # then Knight's
+  mem:
+    cells:
+      - name: k
+        layers:
+          - { class: Hero, fields: { hp_: "30" } }
+          - { class: Knight, fields: { armor_: "5" } }
+- line: 20      # Hero h = k;  (slicing: the copy keeps only the Hero part)
+  mem:
+    cells:
+      - name: h
+        layers:
+          - { class: Hero, fields: { hp_: "30" } }
+          - { class: Knight, fields: { armor_: "5" }, cut: true }
+```
 
 `drop: [goblin]` ends a cell's lifetime: it becomes a ghost slot, and any arrow still
 pointing at it turns red and dashed (dangling). `validate` checks that `ptr`, `ref` and

@@ -105,10 +105,12 @@ CH.content.worlds.push({
     //                                  While call-stack frames are in use, vars change the TOP frame.
     //   push: { name: "heal", vars: { hp: "3" } }   a call-stack frame slides on (params as boxes)
     //   pop: true | { returns: "8" }                the top frame slides off; `returns` travels to the caller
-    //   mem: { cells: [ { name, value?, addr?, ptr?: "<cell>" | null, ref?: "<cell>", group?, readonly? } ],
+    //   mem: { cells: [ { name, value?, addr?, ptr?: "<cell>" | null, ref?: "<cell>", group?, readonly?, layers? } ],
     //          drop: ["<cell>"] }        memory view: cells upsert by name; ptr draws an arrow (null = nullptr stub),
     //                                    ref = extra name tag on the target, group = array strip, drop = lifetime
     //                                    ended (ghost slot; arrows into it turn red/dashed = dangling)
+    //                                    layers: [{ class, fields?, cut?, hit? }] = object card, base part first
+    //   any value "?" = garbage, "~" = moved-from husk (valid but unspecified)
     //   crash: "text" (themed crash animation, for unsafe demos), shield: "text" (shield deflect)
     // Types: DemoStep, DemoFrame, DemoPop, DemoMem, MemCell (src/content/schema.ts). Renderers can call
     // demoStates(steps) (src/content/demoState.ts, re-exported from src/content) to get the full

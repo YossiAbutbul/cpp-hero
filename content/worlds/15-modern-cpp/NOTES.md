@@ -15,9 +15,9 @@ Snippets I'd look at first:
   fragment's `continue;` is inside a loop.
 
 ## Demo visuals (optional)
-- Moved-from objects are shown in `vars` as `"(moved-from)"`. A "husk" style for a box, like a
-  hollow or dashed outline, would fit the Hollow Husk bug. It could be `vars: { loot: "~" }`
-  or a `mem` cell flag such as `moved: true`.
+- **Done:** moved-from husks. `"~"` as a value (in `vars`, a `mem` cell `value`, or an object
+  card field) draws a hollow, faded, striped box marked "moved" that squeezes as it empties.
+  l5 (`scroll`) and l6 (`loot`) use it right after `std::move`.
 - The by-value lambda capture is shown as a var `taunt: "[word=\"Boo\"]"`. A `mem` cell with a
   `ref` would be the natural way to draw a dangling `[&word]` capture (red dashed arrow after
   the frame pops). l6 uses `crash` text for it for now.

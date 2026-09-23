@@ -49,14 +49,21 @@ demo:
     - line: 4
       out: |
         Hero part built
-      vars:
-        k.hp_: "30"
+      mem:
+        cells:
+          - name: k
+            layers:
+              - { class: Hero, fields: { hp_: "30" } }
       note: "Base part first: hp_ becomes 30."
     - line: 13
       out: |
         Knight part built
-      vars:
-        k.armor_: "5"
+      mem:
+        cells:
+          - name: k
+            layers:
+              - { class: Hero, fields: { hp_: "30" } }
+              - { class: Knight, fields: { armor_: "5" } }
       note: "Then Knight's own part: armor_ becomes 5."
     - line: 22
       out: |

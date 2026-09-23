@@ -2,10 +2,10 @@
  * Animated code demo (legacy CH.code.demo): the code types itself, then
  * runs step by step with the current line highlighted, a live output
  * console, variable boxes that fill / update ("?" = uninitialized garbage,
- * wobbling; `vars: { x: null }` removes a box), call-stack frames
- * (`push` / `pop`), a memory view with pointer arrows (`mem`, see
- * CodeDemoViews.tsx), a themed crash (glitch + corrupted console + scrambled
- * boxes) and a shield deflect (Curlo braces, shock ring, teal sparks).
+ * wobbling; "~" = moved-from husk; `vars: { x: null }` removes a box),
+ * call-stack frames (`push` / `pop`), a memory view with pointer arrows and
+ * object cards (`mem`, see CodeDemoViews.tsx), a themed crash (glitch +
+ * corrupted console + scrambled boxes) and a shield deflect (Curlo braces, shock ring, teal sparks).
  * The picture after each step comes from demoStates() (src/content/demoState.ts).
  *
  *   <CodeDemo demo={lesson.demo} unsafe={isUnsafeDemo} onDone={() => setCanContinue(true)} />
@@ -46,7 +46,8 @@ interface OutLine {
 }
 
 const GLYPHS = '▒▓░#@!?%&';
-const junk = () => Array.from({ length: 14 }, () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)]).join('');
+const junk = () =>
+  Array.from({ length: 14 }, () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)]).join('');
 
 export function CodeDemo({ demo, unsafe, autoStart = true, onDone, className }: CodeDemoProps) {
   const steps = demo.steps;
@@ -144,9 +145,13 @@ export function CodeDemo({ demo, unsafe, autoStart = true, onDone, className }: 
           ...Object.values(s.push?.vars ?? {}),
           ...(s.mem?.cells ?? []).map((c) => c.value),
         ];
-        if (s.mem?.drop.length) curlo.react('worried', 1200);
-        else if (vals.some((v) => v === '?')) curlo.react('worried', 700);
-        else if (vals.length || s.push || s.pop) curlo.react('happy', 700);
+        // a reference going away is harmless; a real cell dying is worth a worried look
+        const died = s.mem?.drop.some((n) => states[i]?.cells.find((c) => c.name === n)?.ref === undefined);
+        if (died) curlo.react('worried', 1200);
+        else if (vals.some((v) => v === '?' || v === '~')) curlo.react('worried', 700);
+        else if (s.mem?.cells.some((c) => c.layers?.some((l) => l.cut))) curlo.react('worried', 1000);
+        else if (vals.length || s.push || s.pop || s.mem?.cells.some((c) => c.layers))
+          curlo.react('happy', 700);
       }
       if (s.out != null && s.out !== '') lines.push({ text: String(s.out) });
       if (s.crash) {
@@ -188,7 +193,7 @@ export function CodeDemo({ demo, unsafe, autoStart = true, onDone, className }: 
       if (last) onDoneRef.current?.();
       return !last;
     },
-    [steps, curlo],
+    [steps, states, curlo],
   );
 
   // keep the console scrolled to the newest line
@@ -277,7 +282,13 @@ export function CodeDemo({ demo, unsafe, autoStart = true, onDone, className }: 
                 <span
                   key={k}
                   className={
-                    l.tone === 'dim' ? styles.dim : l.tone === 'ok' ? styles.outOk : l.tone === 'bad' ? styles.outBad : undefined
+                    l.tone === 'dim'
+                      ? styles.dim
+                      : l.tone === 'ok'
+                        ? styles.outOk
+                        : l.tone === 'bad'
+                          ? styles.outBad
+                          : undefined
                   }
                 >
                   {l.text}
@@ -288,7 +299,11 @@ export function CodeDemo({ demo, unsafe, autoStart = true, onDone, className }: 
         </div>
         {usesVars &&
           (usesStack ? (
-            <StackView frames={view?.frames ?? [{ name: '', vars: {} }]} returns={view?.returns} scramble={scramble} />
+            <StackView
+              frames={view?.frames ?? [{ name: '', vars: {} }]}
+              returns={view?.returns}
+              scramble={scramble}
+            />
           ) : (
             <VarBoxes vars={view?.frames[0]?.vars ?? {}} scramble={scramble} />
           ))}

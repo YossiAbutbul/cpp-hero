@@ -43,25 +43,49 @@ demo:
     }
   steps:
     - line: 21
-      vars:
-        m: "Mage"
+      mem:
+        cells:
+          - name: m
+            layers:
+              - { class: Hero }
+              - { class: Mage }
       note: A Mage object, with a Hero part inside.
     - line: 22
       push:
         name: act
-        vars:
-          h: "→ m (a Mage)"
+      mem:
+        cells:
+          - { name: h, ref: m, readonly: true }
       note: "h is a Hero& naming the whole Mage."
     - line: 16
       out: |
         Mage casts
+      mem:
+        cells:
+          - name: m
+            layers:
+              - { class: Hero }
+              - { class: Mage, hit: true }
       note: "attack is virtual: the real type, Mage, decides."
     - line: 17
       out: |
         Hero waves
+      mem:
+        cells:
+          - name: m
+            layers:
+              - { class: Hero, hit: true }
+              - { class: Mage }
       note: "wave isn't virtual: the Hero& type decides."
     - line: 18
       pop: true
+      mem:
+        cells:
+          - name: m
+            layers:
+              - { class: Hero }
+              - { class: Mage }
+        drop: [ h ]
       note: Same object, two different answers!
     - line: 23
       note: Make functions virtual when derived classes should customize them.
