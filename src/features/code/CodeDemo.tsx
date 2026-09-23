@@ -2,8 +2,11 @@
  * Animated code demo (legacy CH.code.demo): the code types itself, then
  * runs step by step with the current line highlighted, a live output
  * console, variable boxes that fill / update ("?" = uninitialized garbage,
- * wobbling), a themed crash (glitch + corrupted console + scrambled boxes)
- * and a shield deflect (Curlo braces, shock ring, teal sparks).
+ * wobbling; `vars: { x: null }` removes a box), call-stack frames
+ * (`push` / `pop`), a memory view with pointer arrows (`mem`, see
+ * CodeDemoViews.tsx), a themed crash (glitch + corrupted console + scrambled
+ * boxes) and a shield deflect (Curlo braces, shock ring, teal sparks).
+ * The picture after each step comes from demoStates() (src/content/demoState.ts).
  *
  *   <CodeDemo demo={lesson.demo} unsafe={isUnsafeDemo} onDone={() => setCanContinue(true)} />
  *
@@ -12,15 +15,17 @@
  * no typing, no particles, faster steps.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { demoStates } from '@/content/demoState';
 import type { Demo } from '@/content/schema';
 import { Curlo } from '@/features/curlo/Curlo';
 import { useCurloReact } from '@/features/curlo/useCurloReact';
 import { SpeechBubble } from '@/features/curlo/SpeechBubble';
 import { Button } from '@/ui/Button';
 import { burstAt, shock } from '@/ui/fx/effects';
-import { anim, pulseClass, reduced, shake } from '@/ui/fx/motion';
+import { pulseClass, reduced, shake } from '@/ui/fx/motion';
 import { Md } from '@/ui/Md';
 import { CodeBlock } from './CodeBlock';
+import { MemView, StackView, VarBoxes } from './CodeDemoViews';
 import { splitLines } from './highlight';
 import styles from './code.module.css';
 
@@ -39,10 +44,6 @@ interface OutLine {
   text: string;
   tone?: 'dim' | 'ok' | 'bad';
 }
-interface VarVal {
-  v: string;
-  garbage: boolean;
-}
 
 const GLYPHS = '▒▓░#@!?%&';
 const junk = () => Array.from({ length: 14 }, () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)]).join('');
@@ -50,16 +51,14 @@ const junk = () => Array.from({ length: 14 }, () => GLYPHS[Math.floor(Math.rando
 export function CodeDemo({ demo, unsafe, autoStart = true, onDone, className }: CodeDemoProps) {
   const steps = demo.steps;
   const total = useMemo(() => splitLines(demo.code).reduce((a, l) => a + l.length, 0), [demo.code]);
-  const varNames = useMemo(() => {
-    const names: string[] = [];
-    for (const s of steps) for (const k of Object.keys(s.vars ?? {})) if (!names.includes(k)) names.push(k);
-    return names;
-  }, [steps]);
+  const states = useMemo(() => demoStates(steps), [steps]);
+  const usesStack = steps.some((s) => s.push);
+  const usesVars = usesStack || steps.some((s) => s.vars && Object.keys(s.vars).length);
+  const usesMem = steps.some((s) => s.mem);
 
   const [reveal, setReveal] = useState<number | undefined>(autoStart && !reduced() && total ? 0 : undefined);
   const [idx, setIdx] = useState(-1);
   const [out, setOut] = useState<OutLine[] | null>(null);
-  const [vars, setVars] = useState<Record<string, VarVal>>({});
   const [scramble, setScramble] = useState(false);
   const [running, setRunning] = useState(false);
   const [note, setNote] = useState(
@@ -76,7 +75,6 @@ export function CodeDemo({ demo, unsafe, autoStart = true, onDone, className }: 
   const consoleEl = useRef<HTMLDivElement>(null);
   const miniEl = useRef<HTMLDivElement>(null);
   const rootEl = useRef<HTMLDivElement>(null);
-  const boxEls = useRef<Record<string, HTMLDivElement | null>>({});
   const onDoneRef = useRef(onDone);
   useEffect(() => {
     onDoneRef.current = onDone;
@@ -125,7 +123,6 @@ export function CodeDemo({ demo, unsafe, autoStart = true, onDone, className }: 
     idxRef.current = -1;
     setIdx(-1);
     setOut(null);
-    setVars({});
     setScramble(false);
     setNote('Press Run, or Step through one line at a time.');
     curlo.react('happy');
@@ -141,28 +138,15 @@ export function CodeDemo({ demo, unsafe, autoStart = true, onDone, className }: 
       idxRef.current = i;
       setIdx(i);
       setNote(s.note ?? '');
-      if (s.vars) {
-        const entries = Object.entries(s.vars);
-        setVars((v) => {
-          const next = { ...v };
-          for (const [k, val] of entries) next[k] = { v: String(val), garbage: String(val) === '?' };
-          return next;
-        });
-        if (!quiet) {
-          for (const [k, val] of entries) {
-            void anim(
-              boxEls.current[k],
-              [
-                { transform: 'scale(.4) rotate(-12deg)' },
-                { transform: 'scale(1.25) rotate(4deg)' },
-                { transform: 'scale(.94)' },
-                { transform: 'none' },
-              ],
-              { duration: 520 },
-            );
-            curlo.react(String(val) === '?' ? 'worried' : 'happy', 700);
-          }
-        }
+      if (!quiet) {
+        const vals = [
+          ...Object.values(s.vars ?? {}),
+          ...Object.values(s.push?.vars ?? {}),
+          ...(s.mem?.cells ?? []).map((c) => c.value),
+        ];
+        if (s.mem?.drop.length) curlo.react('worried', 1200);
+        else if (vals.some((v) => v === '?')) curlo.react('worried', 700);
+        else if (vals.length || s.push || s.pop) curlo.react('happy', 700);
       }
       if (s.out != null && s.out !== '') lines.push({ text: String(s.out) });
       if (s.crash) {
@@ -256,6 +240,7 @@ export function CodeDemo({ demo, unsafe, autoStart = true, onDone, className }: 
 
   const typing = reveal !== undefined;
   const line = idx >= 0 ? steps[idx]?.line : undefined;
+  const view = idx >= 0 ? states[idx] : undefined;
 
   return (
     <div ref={rootEl} className={[styles.demo, className].filter(Boolean).join(' ')}>
@@ -276,7 +261,7 @@ export function CodeDemo({ demo, unsafe, autoStart = true, onDone, className }: 
           <Md text={note} />
         </SpeechBubble>
       </div>
-      <div className={styles.exec + (varNames.length ? '' : ' ' + styles.novars)}>
+      <div className={styles.exec + (usesVars ? '' : ' ' + styles.novars)}>
         <div ref={consoleEl} className={styles.console} role="log" aria-label="Output console">
           <div className={styles.ch}>
             <i />
@@ -301,32 +286,14 @@ export function CodeDemo({ demo, unsafe, autoStart = true, onDone, className }: 
             )}
           </div>
         </div>
-        {varNames.length > 0 && (
-          <div className={styles.vars} aria-label="Variables">
-            {varNames.map((n) => {
-              const v = vars[n];
-              const cls = [styles.vv, v ? (v.garbage ? styles.garbage : styles.full) : '', scramble && v && !v.garbage ? styles.scramble : '']
-                .filter(Boolean)
-                .join(' ');
-              return (
-                <div key={n} className={styles.varbox}>
-                  <div className={styles.vl}>{n}</div>
-                  <div
-                    ref={(el) => {
-                      boxEls.current[n] = el;
-                    }}
-                    className={cls}
-                    aria-live="polite"
-                    aria-label={v ? `${n} = ${v.garbage ? 'uninitialized (garbage)' : v.v}` : `${n}: not set`}
-                  >
-                    {v ? v.v : ' '}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {usesVars &&
+          (usesStack ? (
+            <StackView frames={view?.frames ?? [{ name: '', vars: {} }]} returns={view?.returns} scramble={scramble} />
+          ) : (
+            <VarBoxes vars={view?.frames[0]?.vars ?? {}} scramble={scramble} />
+          ))}
       </div>
+      {usesMem && <MemView cells={view?.cells ?? []} scramble={scramble} />}
       {steps.length > 0 && (
         <div className={styles.btns}>
           <Button variant="teal" icon="play" onClick={run} disabled={running}>
