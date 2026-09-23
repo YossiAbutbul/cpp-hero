@@ -11,7 +11,9 @@
  *   push  adds a frame on top with its `vars`
  *   vars  set/update boxes in the top frame; null removes a box
  *   mem   cells upsert by name (given fields replace earlier ones, the rest are
- *         kept); `drop` marks cells as dead (ghost slots)
+ *         kept); `drop` marks cells as dead (ghost slots). Giving a cell a
+ *         new role (ref / ptr or value / layers) clears the old one, so a
+ *         sliced copy can later turn into a reference tag, and so on.
  */
 import type { DemoStep, MemCell } from './schema.ts';
 
@@ -40,7 +42,12 @@ export interface DemoState {
   returns?: string;
 }
 
-const copyFrames = (fs: DemoFrameState[]) => fs.map((f) => ({ name: f.name, vars: { ...f.vars } }));
+type Role = 'ref' | 'box' | 'obj';
+const role = (c: MemCell): Role | undefined =>
+  c.ref !== undefined ? 'ref' : c.layers ? 'obj' : c.ptr !== undefined || c.value !== undefined ? 'box' : undefined;
+const ROLE_FIELDS: Record<Role, (keyof MemCell)[]> = { ref: ['ref'], box: ['ptr', 'value'], obj: ['layers'] };
+
+const copyFrames =(fs: DemoFrameState[]) => fs.map((f) => ({ name: f.name, vars: { ...f.vars } }));
 
 /** State after each step: result[i] is what the learner sees at steps[i]. */
 export function demoStates(steps: readonly DemoStep[]): DemoState[] {
@@ -63,9 +70,14 @@ export function demoStates(steps: readonly DemoStep[]): DemoState[] {
       for (const c of s.mem.cells) {
         const prev = cells.get(c.name);
         const next: MemCellState = { ...(prev ?? {}), ...c, dropped: false, dangling: false };
-        // A cell that switches between pointer / reference / value drops the old role.
-        if (c.ref !== undefined) delete next.ptr;
-        if (c.ptr !== undefined) delete next.ref;
+        // A cell that switches between reference / pointer or value / object card
+        // drops the old role's fields (and its lock, unless the step restates it).
+        const was = prev && role(prev);
+        const now = role(c);
+        if (was && now && was !== now) {
+          for (const k of ROLE_FIELDS[was]) delete next[k];
+          if (c.readonly === undefined) delete next.readonly;
+        }
         cells.set(c.name, next);
       }
       for (const name of s.mem.drop) {

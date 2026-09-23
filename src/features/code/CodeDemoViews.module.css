@@ -216,7 +216,8 @@
   inset: 0;
   overflow: visible;
   pointer-events: none;
-  z-index: 2;
+  /* under .cells (z-index 1): arrows slip behind boxes and labels */
+  z-index: 0;
 }
 .arrow {
   fill: none;
@@ -242,7 +243,157 @@
   transition: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .arrow {
+  .arrow,
+  .layer {
     transition: none;
   }
+}
+
+/* Labels sit on a solid backing above the arrows (the arrow layer is under the cells). */
+.name,
+.addr {
+  background: var(--card);
+  border-radius: 6px;
+  padding: 0 4px;
+}
+.strip .name,
+.strip .addr {
+  background: var(--bg);
+}
+
+/* ---------- moved-from husk ("~") ---------- */
+.husk.husk,
+.huskBox.huskBox,
+.huskVal.huskVal {
+  border: 3px dashed var(--lock-d);
+  background: repeating-linear-gradient(135deg, transparent 0 6px, var(--bg2) 6px 8px);
+  color: var(--muted);
+  opacity: 0.7;
+  animation: none;
+}
+.huskVal.huskVal {
+  border-width: 2px;
+}
+.huskMark {
+  font-family: var(--f-ui);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ---------- object cards (mem cells with layers) ---------- */
+.obj {
+  display: grid;
+  gap: 8px;
+  min-width: 110px;
+  max-width: 220px;
+  padding: 6px 7px 7px;
+  border-radius: 16px;
+  border: 2px solid var(--line);
+  background: var(--cream);
+  box-shadow: 0 3px 0 var(--line);
+}
+.obj.ghost {
+  box-shadow: none;
+}
+.objType {
+  justify-self: center;
+  font-family: var(--f-code);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #fff;
+  background: var(--tang-d);
+  border-radius: 999px;
+  padding: 0 8px;
+}
+.ghost .objType {
+  background: var(--lock-d);
+}
+.layer {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  padding: 4px 7px;
+  border-radius: 11px;
+  border: 3px solid var(--teal);
+  background: var(--teal-l);
+  color: var(--teal-d);
+  transition:
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.25s,
+    opacity 0.3s;
+}
+.layer1 {
+  border-color: var(--sky);
+  background: var(--sky-l);
+  color: var(--sky-d);
+}
+.layer2 {
+  border-color: var(--sun-d);
+  background: var(--sun-l);
+  color: var(--ink2);
+}
+/* inheritance link: a short rivet joining each part to the one above */
+.layer + .layer::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -11px;
+  width: 6px;
+  height: 8px;
+  margin-left: -3px;
+  border-radius: 3px;
+  background: var(--line);
+}
+.layerClass {
+  font-family: var(--f-code);
+  font-size: 0.74rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.field {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--f-code);
+  font-size: 0.72rem;
+  color: var(--ink2);
+}
+.fieldVal {
+  min-width: 22px;
+  padding: 0 5px;
+  border-radius: 7px;
+  border: 2px solid currentColor;
+  background: var(--card);
+  text-align: center;
+  font-weight: 500;
+}
+.fieldVal.garbage {
+  border-width: 2px;
+}
+.hit {
+  box-shadow:
+    0 0 0 3px var(--sun),
+    0 0 14px var(--sun);
+}
+/* must match CUT in CodeDemoViews.tsx */
+.cut {
+  transform: translate(10px, 7px) rotate(5deg);
+  opacity: 0.5;
+  border-style: dashed;
+  border-color: var(--coral);
+  background: transparent;
+  color: var(--coral-d);
+}
+.cut::before {
+  opacity: 0;
+}
+.ghost .layer {
+  border-style: dashed;
+  border-color: var(--lock-d);
+  background: transparent;
+  color: var(--muted);
 }

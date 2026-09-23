@@ -347,6 +347,20 @@ export const VaultCardSchema = z.strictObject({
 });
 
 /**
+ * One class layer of an object card (mem cell `layers`), base class first:
+ *   class  the class this part comes from, e.g. "Hero"
+ *   fields its data members, e.g. { hp_: "30" }
+ *   cut    this part is gone: sliced off in a copy, or already destroyed
+ *   hit    highlight: the call at this step runs this layer's function
+ */
+export const ObjLayerSchema = z.strictObject({
+  class: z.string().min(1),
+  fields: z.record(z.string(), z.string()).optional(),
+  cut: z.boolean().optional(),
+  hit: z.boolean().optional(),
+});
+
+/**
  * A memory cell in a demo's memory view (`mem`, see docs/ARCHITECTURE.md
  * "Demo memory view"). Cells are keyed by `name`; a later step that names the
  * same cell updates only the fields it gives.
@@ -359,6 +373,10 @@ export const VaultCardSchema = z.strictObject({
  *   group  cells with the same group sit side by side in one strip (arrays)
  *   readonly  a pointer/reference through which the target can't be changed
  *          (const T*, const T&): drawn with a lock
+ *   layers an object card instead of a value box: its class layers, base first
+ *          (see ObjLayerSchema). A later step restates the whole list.
+ * Any value (here, in vars, in layer fields) may be "?" (garbage) or "~" (a
+ * moved-from husk: valid but unspecified).
  */
 export const MemCellSchema = z
   .strictObject({
@@ -369,14 +387,21 @@ export const MemCellSchema = z
     ref: z.string().min(1).optional(),
     group: z.string().min(1).optional(),
     readonly: z.boolean().optional(),
+    layers: z.array(ObjLayerSchema).min(1).optional(),
   })
   .superRefine((c, ctx) => {
-    if (c.ref !== undefined && (c.ptr !== undefined || c.value !== undefined || c.addr !== undefined || c.group)) {
+    if (
+      c.ref !== undefined &&
+      (c.ptr !== undefined || c.value !== undefined || c.addr !== undefined || c.group || c.layers)
+    ) {
       ctx.addIssue({
         code: 'custom',
         path: ['ref'],
-        message: 'a ref cell is only another name: it cannot also have ptr, value, addr or group',
+        message: 'a ref cell is only another name: it cannot also have ptr, value, addr, group or layers',
       });
+    }
+    if (c.layers && (c.ptr !== undefined || c.value !== undefined)) {
+      ctx.addIssue({ code: 'custom', path: ['layers'], message: 'an object card (layers) cannot also have ptr or value' });
     }
     if (c.ref === c.name || (c.ptr !== undefined && c.ptr === c.name)) {
       ctx.addIssue({ code: 'custom', path: [c.ref === c.name ? 'ref' : 'ptr'], message: 'a cell cannot target itself' });
@@ -671,6 +696,7 @@ export type DemoFrame = z.infer<typeof DemoFrameSchema>;
 export type DemoPop = z.infer<typeof DemoPopSchema>;
 export type DemoMem = z.infer<typeof DemoMemSchema>;
 export type MemCell = z.infer<typeof MemCellSchema>;
+export type ObjLayer = z.infer<typeof ObjLayerSchema>;
 export type Demo = z.infer<typeof DemoSchema>;
 export type Concept = z.infer<typeof ConceptSchema>;
 export type Lesson = z.infer<typeof LessonSchema>;
