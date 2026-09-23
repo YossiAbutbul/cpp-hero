@@ -1,0 +1,380 @@
+# World 9 · Lesson 5: Shield: Every byte comes home (Shield lesson)
+
+id: w9.l5
+title: "Shield: Every byte comes home"
+skill: defense
+shield: true
+concept:
+  short: "Give every resource one owner that cleans up automatically: RAII and smart pointers stop leaks, double deletes and use-after-free."
+  analogy: "RAII is a hotel key card: checking in grabs the room, and checking out frees it, even if you leave by the fire exit."
+  body:
+    - "The three heap bugs: a **leak** (memory never deleted, so a long-running game slowly eats all memory), a **double delete** (the same memory freed twice), and **use-after-free** (reading or writing memory after it was deleted). The last two are undefined behavior: they can crash, corrupt other data, or seem fine for months and then fail on another machine. UB doesn't guarantee a crash."
+    - "**RAII** (Resource Acquisition Is Initialization): tie every resource to an object whose lifetime ends at a `}`. The object grabs the resource when it's created and releases it when it's destroyed, on **every** path: normal end, early `return`, `break`, or an exception. `std::vector`, `std::string`, `std::unique_ptr`, `std::shared_ptr` and file streams are all RAII."
+    - "**Prefer, in order**: a plain local, then a container (`std::vector`, `std::string`), then `std::unique_ptr`, then `std::shared_ptr` when ownership is truly shared. A raw `new`/`delete` pair in everyday code is a warning sign. Raw pointers and references are still fine as **non-owning** views of something another owner keeps alive."
+    - "**Rule of Zero**: when everything you hold manages itself, you write no delete, no cleanup code, no special copy code: zero. You'll apply it to your own types in World 10: members like `std::vector` and `std::unique_ptr` make the compiler-generated behavior correct for free."
+    - "Setting a pointer to `nullptr` after `delete` protects that one pointer (deleting nullptr is a no-op), but any **other** copy of the address still dangles. One clear owner is the real fix."
+    - "Tools: AddressSanitizer (`g++ -fsanitize=address -g`) reports heap-use-after-free and double-free the moment they happen, and its LeakSanitizer lists leaked blocks when the program exits (on Linux). Use it while testing."
+  pitfall: "Common beginner mistake: \"the OS frees everything when the program ends, so leaks don't matter\". A game loop that leaks a little every frame runs out of memory long before it ends."
+demo:
+  code: |-
+    #include <iostream>
+    #include <memory>
+
+    int main() {
+        int* raw = new int{40};
+        auto safe = std::make_unique<int>(40);
+        int dmg = 50;
+        if (dmg > *safe) {
+            std::cout << "Knocked out!\n";
+            return 0;
+        }
+        delete raw;
+        return 0;
+    }
+  steps:
+    - line: 4
+      vars:
+        raw: "→ 40"
+      mem:
+        cells:
+          - { name: raw int, value: "40", addr: heap }
+          - { name: raw, ptr: raw int, addr: stack }
+      note: raw owns 40 on the heap. Must remember delete!
+    - line: 5
+      vars:
+        safe: "→ 40"
+      mem:
+        cells:
+          - { name: safe int, value: "40", addr: heap }
+          - { name: safe, ptr: safe int, addr: stack }
+      note: safe owns another 40 and frees itself.
+    - line: 6
+      vars:
+        dmg: "50"
+      note: A big hit is coming.
+    - line: 7
+      note: "50 > 40: we take the early exit."
+    - line: 8
+      out: |
+        Knocked out!
+    - line: 9
+      vars:
+        raw: null
+      mem:
+        drop: [ raw ]
+      crash: "Leak! return skipped delete raw; that 40 is orphaned forever."
+      note: The early return jumps right past line 11.
+    - line: 9
+      vars:
+        safe: null
+        dmg: null
+      mem:
+        drop: [ safe, safe int ]
+      shield: "RAII: unique_ptr freed its int on the way out!"
+      note: safe cleans up on every path, even this one.
+challenges:
+  - id: w9.l5.c1
+    type: review
+    tags: [ w9.uaf, w9.double-delete, w8.dangling ]
+    bug: use-after-free
+    unsafe: true
+    prompt: Code review! Two pointers, one heap int. Tap every dangerous line, then submit.
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int* gold = new int{100};
+          int* alias = gold;
+          std::cout << *gold << '\n';
+          delete gold;
+          std::cout << *alias << '\n';
+          delete alias;
+          return 0;
+      }
+    dangerous: [ 7, 8 ]
+    lineNotes:
+      "4": "Fine for now: alias is a second address of the same int, not a new int."
+      "5": "Fine: the int is still alive."
+      "6": "Frees the int. Now BOTH gold and alias dangle."
+      "7": "Use-after-free: reads memory that was already handed back. UB."
+      "8": "Double delete: the same address freed twice. UB, can corrupt the heap."
+    hints:
+      - After line 6, what does alias point at?
+      - Two pointers, one int. How many deletes?
+    short: Two copies of one address mean use-after-free and double delete.
+    explain: "gold and alias hold the same address. After `delete gold;`, the int is gone, so `*alias` is a use-after-free and `delete alias;` frees it a second time. Both are UB: they might print 100, print junk, crash now, or corrupt the heap and crash later. Setting gold to nullptr wouldn't help alias. Fix: one owner (unique_ptr) and plain non-owning views that aren't used after it lets go."
+    sideBySide:
+      unsafe: |-
+        int* gold = new int{100};
+        int* alias = gold;
+        delete gold;
+        std::cout << *alias << '\n';   // use-after-free
+        delete alias;                  // double delete
+      hardened: |-
+        auto gold = std::make_unique<int>(100);   // the one owner
+        const int& alias = *gold;                 // a view, used while gold lives
+        std::cout << alias << '\n';
+        // no delete: gold frees the int once, at }
+  - id: w9.l5.c2
+    type: breakit
+    tags: [ w9.leak, w3.validate ]
+    bug: memory-leak
+    unsafe: true
+    prompt: UNSAFE code. Which input makes it leak memory?
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int n{};
+          if (!(std::cin >> n) || n <= 0 || n > 100) {
+              return 1;
+          }
+          int* hp = new int[n]{};
+          if (n > 50) {
+              std::cout << "Too many!\n";
+              return 1;
+          }
+          hp[0] = 7;
+          std::cout << hp[0] << '\n';
+          delete[] hp;
+          return 0;
+      }
+    options:
+      - t: "60"
+        why: "Correct: passes validation, allocates, then the n > 50 exit skips delete[]."
+      - t: "10"
+        why: Takes the normal path, which reaches delete[].
+      - t: abc
+        why: Rejected before anything is allocated.
+      - t: "0"
+        why: Rejected by n <= 0 before new[] runs.
+    answer: 0
+    hints:
+      - The leak needs memory allocated, then an exit before delete[].
+      - Which exit comes after the new[]?
+    short: 60 allocates, then an early return skips the delete[].
+    explain: "Inputs 51 to 100 pass validation, allocate the array, then hit `return 1;` before `delete[] hp;`. That memory leaks. Here the OS reclaims it at exit, but the same pattern inside a game loop leaks every frame. The RAII fix: `std::vector<int> hp(n);` frees itself on every path."
+    sideBySide:
+      unsafe: |-
+        int* hp = new int[n]{};
+        if (n > 50) {
+            return 1;        // leak: skips delete[]
+        }
+        delete[] hp;
+      hardened: |-
+        std::vector<int> hp(n);   // RAII: freed on every path
+        if (n > 50) {
+            std::cout << "Too many!\n";
+            return 1;
+        }
+        hp[0] = 7;
+        std::cout << hp[0] << '\n';
+      prelude: int n{60};
+  - id: w9.l5.c3
+    type: harden
+    tags: [ w9.double-delete, w9.delete, w8.nullptr ]
+    bug: double-delete
+    prompt: "Old cleanup code may run `delete p;` again later. What goes in the blank to make that harmless?"
+    code: |-
+      int* p = new int{5};
+      std::cout << *p << '\n';
+      delete p;
+      ___;
+      delete p;
+    options:
+      - t: p = nullptr
+        why: "Correct: deleting nullptr does nothing, so the second delete is harmless."
+      - t: "*p = 0"
+        why: Writes to freed memory. That's use-after-free, and the double delete remains.
+      - t: delete p
+        why: Now it's freed three times. Every extra delete is UB.
+      - t: p++
+        why: The second delete then gets an address new never returned. UB.
+    answer: 0
+    hints:
+      - Which pointer value is safe to delete?
+      - "delete nullptr is a no-op."
+    short: Resetting to nullptr makes a repeated delete a harmless no-op.
+    explain: "`delete nullptr;` is defined to do nothing, so `p = nullptr;` right after the delete defuses a second one. It only protects p itself: other copies of the address still dangle. The real fix is one owner: `auto p = std::make_unique<int>(5);` and no delete at all."
+    sideBySide:
+      unsafe: |-
+        int* p = new int{5};
+        delete p;
+        delete p;            // double delete: UB
+      hardened: |-
+        auto p = std::make_unique<int>(5);   // one owner
+        std::cout << *p << '\n';
+        p.reset();           // freed once, p is now empty
+        p.reset();           // harmless: already empty
+  - id: w9.l5.c4
+    type: edge
+    tags: [ w9.uaf, w4.guard ]
+    bug: use-after-free
+    unsafe: true
+    prompt: "UNSAFE code. Pick ALL inputs that cause a use-after-free."
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int choice{};
+          if (!(std::cin >> choice)) {
+              return 1;
+          }
+          int* shield = new int{3};
+          if (choice <= 1) {
+              delete shield;
+          }
+          if (choice != 0) {
+              std::cout << *shield << '\n';
+          }
+          if (choice > 1) {
+              delete shield;
+          }
+          return 0;
+      }
+    options:
+      - t: "0"
+        why: Deletes, but 0 skips the print. No use after free.
+      - t: "1"
+        why: "Exposes it: 1 <= 1 deletes, then 1 != 0 reads the freed int."
+      - t: "-2"
+        why: "Exposes it: negatives delete too, then the print reads freed memory."
+      - t: "5"
+        why: Prints first, deletes afterwards. That order is fine.
+    answers: [ 1, 2 ]
+    hints:
+      - Trace which ifs run for each input, in order.
+      - Danger needs a delete first and a read after.
+    short: 1 and negatives delete first, then read freed memory.
+    explain: "For any choice <= 1 except 0, the int is deleted and then read: use-after-free, UB (it may even print 3). Inputs 0 and 5 happen to be fine, which is how these bugs hide. Tangled delete logic is the real problem: give the int one owner and check it before use."
+    sideBySide:
+      unsafe: |-
+        int* shield = new int{3};
+        if (choice <= 1) {
+            delete shield;
+        }
+        if (choice != 0) {
+            std::cout << *shield << '\n';   // freed when choice is 1 or negative
+        }
+      hardened: |-
+        auto shield = std::make_unique<int>(3);
+        if (choice <= 1) {
+            shield.reset();                 // shield is now empty
+        }
+        if (choice != 0 && shield) {        // ask the owner first
+            std::cout << *shield << '\n';
+        }
+      prelude: int choice{1};
+  - id: w9.l5.c5
+    type: mcq
+    tags: [ w9.rule-of-zero, w9.raii, w7.vector ]
+    prompt: "Rule of Zero: the player picks how many potions to hold. Which is the best owner?"
+    options:
+      - t: std::vector<int> potions(n);
+        why: "Correct: a container owns and frees its memory. Zero cleanup code for you to write."
+      - t: int* potions = new int[n]{}; plus delete[] later
+        why: Works only if every path reaches delete[]. That's the bug this world fights.
+      - t: std::unique_ptr<int[]> potions
+        why: Safe, but a vector also knows its size, can grow and checks .at().
+      - t: std::shared_ptr<int[]> potions
+        why: Nothing is shared here. Extra cost for nothing.
+    answer: 0
+    hints:
+      - Which option needs zero cleanup code AND knows its size?
+      - You've used it since World 7.
+    short: Prefer a container; it manages memory, so you write zero cleanup code.
+    explain: "Rule of Zero: use members and locals that clean up after themselves, so you write no delete and no cleanup code at all. For a run-time-sized list, std::vector is the clear winner. Reach for unique_ptr for single objects, shared_ptr only for real sharing, and raw new almost never."
+  - id: w9.l5.c6
+    type: safe
+    tags: [ w9.leak, w9.double-delete, w9.uaf, w9.raii ]
+    prompt: Safe or unsafe? The Hoarder's minions are grabbing bytes. Go fast!
+    seconds: 30
+    items:
+      - code: auto p = std::make_unique<int>(5);
+        safe: true
+        why: One owner that frees itself on every path.
+      - code: |-
+          int* p = new int{5};
+          delete p;
+          delete p;
+        safe: false
+        why: Double delete. Undefined behavior.
+      - code: |-
+          int* p = new int{5};
+          delete p;
+          std::cout << *p;
+        safe: false
+        why: Use-after-free. It may even print 5, which is the scary part.
+      - code: std::vector<int> v(n);
+        prelude: int n{3};
+        safe: true
+        why: A container owns its heap memory and frees it.
+      - code: |-
+          int* a = new int[3]{};
+          delete a;
+        safe: false
+        why: new[] must be freed with delete[]. Mismatch is UB.
+      - code: |-
+          int* p = nullptr;
+          delete p;
+        safe: true
+        why: Deleting nullptr is defined to do nothing.
+      - code: |-
+          for (int i = 0; i < 3; ++i) {
+              int* p = new int{i};
+          }
+        safe: false
+        why: Each loop allocates and never deletes. Three leaks.
+      - code: |-
+          auto a = std::make_shared<int>(1);
+          auto b = a;
+        safe: true
+        why: Two owners share one count; freed exactly once.
+      - code: |-
+          auto p = std::make_unique<int>(5);
+          int* view = p.get();
+          delete view;
+        safe: false
+        why: view doesn't own it. p deletes it again later.
+    hints:
+      - Count the deletes, and who owns what.
+      - Is anything used after it was freed?
+    short: "One owner, freed once, never used after: that's safe memory."
+    explain: "Safe code gives every heap object exactly one owner (or one shared count) that frees it automatically. Unsafe code leaks (no delete), double deletes (two), mismatches new[] with delete, or uses memory after freeing it."
+recap:
+  - Leaks, double deletes, use-after-free are the heap bugs.
+  - RAII frees resources on every exit path.
+  - "Prefer locals, then containers, then smart pointers."
+  - "Rule of Zero: write no cleanup code at all."
+vault:
+  - id: w9.raii
+    title: "RAII: one owner, zero deletes"
+    code: |-
+      std::vector<int> potions(n);             // run-time size
+      auto boss = std::make_unique<int>(500);  // single object
+      auto relic = std::make_shared<int>(7);   // truly shared
+      if (n > 50) {
+          return 1;   // all three are freed here too
+      }
+      // no delete anywhere: Rule of Zero
+    prelude: int n{3};
+    note: "Owners free memory at } on every path. Raw pointers may only look, never own."
+    defense: true
+  - id: w9.heapbugs
+    title: The three heap bugs
+    code: |-
+      // LEAK:            new without delete (early return, loop, exception)
+      // DOUBLE DELETE:   same address freed twice
+      // USE-AFTER-FREE:  *p after delete p
+      // Fix all three:   one RAII owner, no manual delete
+    expect: skip
+    note: "All but leaks are UB: they may seem fine, then crash elsewhere. UB never promises a crash."
+    defense: true
+  - id: w9.asan
+    title: Let ASan find heap bugs
+    code: |-
+      g++ -std=c++20 -Wall -Wextra -g -fsanitize=address main.cpp
+    expect: skip
+    note: Reports heap-use-after-free and double-free at once, and leaks at exit (Linux).
+    defense: true
+reviewTags: [ w8.dangling, w8.nullcheck, w9.new, w9.delete, w9.unique, w9.shared ]
