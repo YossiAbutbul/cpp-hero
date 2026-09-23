@@ -4,12 +4,12 @@
 
 The schema has no notion of boss stages, so the Undefined Dragon fakes it:
 
-- `hp: 10` and 12 rounds (the brief's usual range is hp 6–8, 7–9 rounds), plus 5 defense attacks.
+- `hp: 10` and 12 rounds (the brief's usual range is hp 6-8, 7-9 rounds), plus 5 defense attacks.
 - Rounds are grouped in order and every prompt starts with its stage name:
-  - Stage 1 · Scales of Logic (r1–r4): Worlds 1–7
-  - Stage 2 · Wings of Memory (r5–r8): Worlds 8–11
-  - Stage 3 · Fire of Abstraction (r9–r12): Worlds 12–15, ending in a timed `speed` and a timed `safe` round
-  - Defense · The Dragon's Fire (d1–d5): one hostile input per layer (empty string, negative index, huge value, nullptr, endless text)
+  - Stage 1 · Scales of Logic (r1-r4): Worlds 1-7
+  - Stage 2 · Wings of Memory (r5-r8): Worlds 8-11
+  - Stage 3 · Fire of Abstraction (r9-r12): Worlds 12-15, ending in a timed `speed` and a timed `safe` round
+  - Defense · The Dragon's Fire (d1-d5): one hostile input per layer (empty string, negative index, huge value, nullptr, endless text)
 
 Suggested real support (optional, backward compatible):
 
@@ -33,8 +33,8 @@ cover all rounds in order, and the stage hp values must add up to the boss `hp`.
 ## Other notes
 
 - **Tags**: World 16's challenges carry their own `w16.*` concept tags (`w16.ownership`, `w16.virtual`,
-  `w16.exceptions`, `w16.templates`, `w16.stl`, `w16.move`, ...) plus World 1–8 tags where the code really
-  uses them. The reviewTags interleave World 1–8 tags with tags from Worlds 9–15 (checked against the
+  `w16.exceptions`, `w16.templates`, `w16.stl`, `w16.move`, ...) plus World 1-8 tags where the code really
+  uses them. The reviewTags interleave World 1-8 tags with tags from Worlds 9-15 (checked against the
   files present when this was finished) and this world's earlier `w16.*` tags.
 - **Story**: the intro picks up World 15's ending ("every bug we beat was just a scale") and the Dragon's
   "I am every bug you ever fixed" taunt. If W15's victory text changes, the first intro line is the one to align.

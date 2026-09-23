@@ -26,7 +26,7 @@ export interface CodeBlockProps {
   code: string;
   /** cpp (default; shell command lines are detected automatically), shell, or text (no colors) */
   lang?: 'cpp' | 'shell' | 'text';
-  /** red "UNSAFE — don't copy" badge + tinted block */
+  /** red "UNSAFE: don't copy" badge + tinted block */
   unsafe?: boolean;
   /** teal "Hardened" badge */
   safe?: boolean;
@@ -190,7 +190,7 @@ export const CodeBlock = forwardRef<HTMLDivElement, CodeBlockProps>(function Cod
           {unsafe && (
             <span className={`${styles.badge} ${styles.badgeUnsafe}`}>
               <Icon name="warn" />
-              Unsafe — don’t copy
+              Unsafe: don’t copy
             </span>
           )}
           {safe && (

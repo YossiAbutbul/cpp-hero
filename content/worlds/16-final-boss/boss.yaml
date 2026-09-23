@@ -2,11 +2,11 @@
 #
 # Multi-stage by design. The schema has no stage field yet (see NOTES.md), so the
 # rounds are grouped in order and each prompt names its stage:
-#   Stage 1 · Scales of Logic      r1–r4   (Worlds 1–7: loops, switch, unsigned, strings)
-#   Stage 2 · Wings of Memory      r5–r8   (Worlds 8–11: pointers, ownership, objects)
-#   Stage 3 · Fire of Abstraction  r9–r12  (Worlds 12–15: exceptions, STL, templates, UB)
-#   Defense · The Dragon's Fire    d1–d5   (hostile inputs, one per layer)
-# hp 10 (above the usual 6–8) because this is the final, longest fight.
+#   Stage 1 · Scales of Logic      r1-r4   (Worlds 1-7: loops, switch, unsigned, strings)
+#   Stage 2 · Wings of Memory      r5-r8   (Worlds 8-11: pointers, ownership, objects)
+#   Stage 3 · Fire of Abstraction  r9-r12  (Worlds 12-15: exceptions, STL, templates, UB)
+#   Defense · The Dragon's Fire    d1-d5   (hostile inputs, one per layer)
+# hp 10 (above the usual 6-8) because this is the final, longest fight.
 
 id: w16.boss
 name: The Undefined Dragon
@@ -20,7 +20,7 @@ taunt:
   - Undefined means I can do ANYTHING. Even pretend I'm gone.
   - Your pointer still points at me. Go on, follow it.
 rounds:
-  # ---- Stage 1 · Scales of Logic (Worlds 1–7) ----
+  # ---- Stage 1 · Scales of Logic (Worlds 1-7) ----
   - id: w16.boss.r1
     type: predict
     tags: [ w16.flow, w5.continue, w5.break ]
@@ -164,7 +164,7 @@ rounds:
       - Which string gets the "!"?
     short: "The copy becomes CURLO!; name is untouched, still 5 letters."
     explain: "shout copies word into out, uppercases out through char&, and returns out + \"!\". name is passed by const reference and never changes, so its size is 5."
-  # ---- Stage 2 · Wings of Memory (Worlds 8–11) ----
+  # ---- Stage 2 · Wings of Memory (Worlds 8-11) ----
   - id: w16.boss.r5
     type: review
     tags: [ w16.ownership, w16.virtual, w8.nullcheck ]
@@ -342,7 +342,7 @@ rounds:
             return nest->eggs;
         }
       prelude: "struct Nest { int eggs{}; };"
-  # ---- Stage 3 · Fire of Abstraction (Worlds 12–15) ----
+  # ---- Stage 3 · Fire of Abstraction (Worlds 12-15) ----
   - id: w16.boss.r9
     type: predict
     tags: [ w16.exceptions, w16.optional, w16.templates ]
