@@ -33,37 +33,42 @@ demo:
     }
   steps:
     - line: 3
-      vars:
-        hp: "5"
+      mem:
+        cells:
+          - { name: hp, value: "5", addr: "0x10" }
       note: A box for hp.
     - line: 4
-      vars:
-        hp: "5"
-        mana: "8"
+      mem:
+        cells:
+          - { name: mana, value: "8", addr: "0x14" }
       note: Another box for mana.
     - line: 5
-      vars:
-        p: "→ hp"
+      mem:
+        cells:
+          - { name: p, ptr: hp, addr: "0x18" }
       note: "p stores hp's address: an arrow to hp's box."
     - line: 6
       out: |
         5
       note: "*p follows the arrow and reads hp: 5."
     - line: 7
-      vars:
-        hp: "7"
+      mem:
+        cells:
+          - { name: hp, value: "7" }
       note: "*p = 7 writes through the arrow into hp."
     - line: 8
-      vars:
-        p: "→ mana"
+      mem:
+        cells:
+          - { name: p, ptr: mana }
       note: "Reseat! The arrow now points at mana. hp untouched."
     - line: 9
       out: |
         8 7
       note: "*p is mana's 8; hp kept the 7."
     - line: 10
-      vars:
-        p: "nullptr"
+      mem:
+        cells:
+          - { name: p, ptr: null }
       note: p points nowhere now.
     - line: 11
       out: |

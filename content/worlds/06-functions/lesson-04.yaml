@@ -33,47 +33,35 @@ demo:
     }
   steps:
     - line: 8
-      vars:
-        stack: main
-        "main: total": "0"
+      push: { name: main, vars: { total: "0" } }
       note: main's frame holds total.
     - line: 9
-      vars:
-        stack: main > roll
-        "roll: sides": "6"
+      push: { name: roll, vars: { sides: "6" } }
       note: "push frame: roll(sides=6)."
     - line: 3
       vars:
-        "roll: result": "4"
+        result: "4"
       note: "result is a local: it lives only in roll's frame."
     - line: 4
-      vars:
-        stack: main
-        "roll: sides": "(gone)"
-        "roll: result": "(gone)"
+      pop: { returns: "4" }
       note: "pop frame: return 4. sides and result vanish."
     - line: 9
       vars:
-        "main: total": "4"
+        total: "4"
       note: Back in main, total is now 4.
     - line: 10
-      vars:
-        stack: main > roll
-        "roll: sides": "4"
+      push: { name: roll, vars: { sides: "4" } }
       note: "push frame: roll(sides=4). A brand-new frame."
     - line: 3
       vars:
-        "roll: result": "3"
+        result: "3"
       note: A fresh result. Nothing is left over from the last call.
     - line: 4
-      vars:
-        stack: main
-        "roll: sides": "(gone)"
-        "roll: result": "(gone)"
+      pop: { returns: "3" }
       note: "pop frame: return 3."
     - line: 10
       vars:
-        "main: total": "7"
+        total: "7"
       note: total is now 7.
     - line: 11
       out: |

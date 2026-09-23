@@ -30,30 +30,33 @@ demo:
     }
   steps:
     - line: 3
-      vars:
-        hp: "10"
+      mem:
+        cells:
+          - { name: hp, value: "10", addr: "0x10" }
       note: One box, named hp, holding 10.
     - line: 4
-      vars:
-        hp: "10"
-        life: "→ hp (alias)"
+      mem:
+        cells:
+          - { name: life, ref: hp }
       note: life is a second name for the SAME box.
     - line: 5
-      vars:
-        hp: "7"
+      mem:
+        cells:
+          - { name: hp, value: "7" }
       note: "Changing life changes hp: there's only one box."
     - line: 6
       out: |
         7
       note: hp really is 7 now.
     - line: 7
-      vars:
-        mana: "50"
+      mem:
+        cells:
+          - { name: mana, value: "50", addr: "0x14" }
       note: A brand-new box for mana.
     - line: 8
-      vars:
-        hp: "50"
-        life: "→ hp (alias)"
+      mem:
+        cells:
+          - { name: hp, value: "50" }
       note: "No reseating! This copies 50 INTO hp."
     - line: 9
       out: |

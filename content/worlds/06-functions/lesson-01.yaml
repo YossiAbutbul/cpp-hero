@@ -35,30 +35,23 @@ demo:
     }
   steps:
     - line: 10
-      vars:
-        stack: main
+      push: { name: main }
       note: Execution starts in main(), not at the top of the file.
     - line: 11
-      vars:
-        stack: main > greet
+      push: { name: greet }
       note: "push frame: greet(). Jump into its body."
     - line: 3
       out: |
         Curlo reporting!
       note: greet's body runs and prints.
     - line: 4
-      vars:
-        stack: main
+      pop: true
       note: "pop frame: void, so nothing comes back. Resume main."
     - line: 12
-      vars:
-        stack: main > doubleIt
-        x: "21"
+      push: { name: doubleIt, vars: { x: "21" } }
       note: "push frame: doubleIt(x=21)."
     - line: 7
-      vars:
-        stack: main
-        x: "(gone)"
+      pop: { returns: "42" }
       note: "pop frame: return 42. x vanishes with its frame."
     - line: 12
       vars:
