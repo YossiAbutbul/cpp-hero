@@ -48,3 +48,13 @@ other's `.cpp-check/` directory, so results go missing and every snippet reports
 "got error". Suggest a per-run work dir (e.g. `.cpp-check/<pid>/` or `mkdtemp`).
 World 6 passes `npm run check:cpp -- --filter 06-functions` (109 snippets:
 85 clean, 18 warn, 6 error as expected; 16 programs run with matching output).
+
+## Status (tooling pass)
+
+- Resolved (schema): `push: { name, vars }`, `pop: true | { returns }` and `vars: null` exist on
+  demo steps (content/README.md "Demo steps"); `validate` checks pops and removals. Note the
+  field is `push.name`, not `fn`. The W6 demos still use the `stack` box and `(gone)` values;
+  switch them to `push`/`pop` once CodeDemo renders frames (Phase B2a).
+- Resolved: fragments with top-level function/struct definitions are placed at file scope
+  (an empty `int main() {}` is added when nothing else needs to run).
+- Resolved: per-run work dir (`.cpp-check/<pid>-<time>/`).

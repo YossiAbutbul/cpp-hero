@@ -2,7 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { readContentFiles } from '../../scripts/lib/content-fs';
 import { formatIssue, loadContent, type SourceFile } from './load';
 
-const real = readContentFiles();
+/**
+ * The real content, limited to finished worlds (1..n with a boss.yaml), so
+ * worlds that are still being written don't break these tests.
+ */
+const real = (() => {
+  const files = readContentFiles();
+  const done = new Set(files.map((f) => /^content\/worlds\/(\d{2})-[^/]+\/boss\.yaml$/.exec(f.path)?.[1]).filter(Boolean));
+  let last = 0;
+  while (done.has(String(last + 1).padStart(2, '0'))) last++;
+  return files.filter((f) => {
+    const m = /^content\/worlds\/(\d{2})-/.exec(f.path);
+    return !m || Number(m[1]) <= last;
+  });
+})();
 
 /** The real content with one file's text transformed. */
 function withEdit(path: string, edit: (text: string) => string): SourceFile[] {
@@ -13,7 +26,7 @@ function withEdit(path: string, edit: (text: string) => string): SourceFile[] {
 const L1 = 'content/worlds/01-hello-world/lesson-01.yaml';
 const messages = (files: SourceFile[]) => loadContent(files).issues.map(formatIssue);
 
-describe('content loader', () => {
+describe('content loader', { timeout: 60_000 }, () => {
   it('loads and validates the real content', () => {
     const r = loadContent(real);
     expect(r.issues).toEqual([]);
@@ -70,6 +83,17 @@ describe('content loader', () => {
     const msgs = messages([...withEdit(L1, (t) => t + '\n  : : bad'), { path: 'content/worlds/notes.yaml', text: 'x: 1' }]);
     expect(msgs.some((m) => m.startsWith(`${L1}: YAML syntax:`))).toBe(true);
     expect(msgs.some((m) => m.startsWith('content/worlds/notes.yaml: unexpected file'))).toBe(true);
+  });
+
+  it('checks review tags and world-named tags across worlds', () => {
+    const L2 = 'content/worlds/02-variables-types/lesson-01.yaml';
+    let msgs = messages(withEdit(L2, (t) => t.replace(/^reviewTags: \[/m, 'reviewTags: [w3.cin, w1.nope, ')));
+    expect(msgs).toContain(`${L2} › reviewTags[0]: "w3.cin" belongs to a later world; review only earlier or current worlds`);
+    expect(msgs).toContain(`${L2} › reviewTags[1]: no challenge has the tag "w1.nope"`);
+    msgs = messages(withEdit(L2, (t) => t.replace(/^( {4}tags: \[)/m, '$1w1.guessed, ')));
+    expect(msgs).toContain(
+      `${L2} › challenges[0].tags[0]: no World 1 challenge has the tag "w1.guessed"; use an existing w1.* tag`,
+    );
   });
 
   it('requires hierarchical ids that match the file', () => {

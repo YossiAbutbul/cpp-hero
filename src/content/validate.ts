@@ -9,6 +9,8 @@
  *  - references exist: challenge.bug, boss.reward.{bug,cosmetic},
  *    achievement.{test,cosmetic}, quest.event, lesson.reviewTags (a tag some
  *    challenge in the same or an earlier world carries)
+ *  - world-named tags (w4.guard) are carried by a challenge in that world, and
+ *    never name a later world
  */
 import type { ContentIssue, ParsedFile } from './load.ts';
 import { ACHIEVEMENT_KINDS, type Content } from './schema.ts';
@@ -142,9 +144,41 @@ export function crossValidate(
   const allTags = new Set<string>();
   /** tag -> lowest world number (folder NN) with a challenge carrying it */
   const tagFirstWorld = new Map<string, number>();
-  for (const loc of walkChallenges(parsed)) {
+  /** tag -> world numbers (folder NN) with a challenge carrying it */
+  const tagWorlds = new Map<string, Set<number>>();
+  // Only finished worlds (with a boss file) count, so worlds written in parallel
+  // aren't flagged for tags of a world that is still being written.
+  const worldNums = new Set(parsed.filter((p) => p.kind === 'boss').map((p) => Number(p.worldDir.slice(0, 2))));
+  /** "w4.guard" -> 4 when that world is finished (tags named after a world must be carried in it). */
+  const ownWorld = (t: string) => {
+    const m = /^w(\d+)\./.exec(t);
+    return m && worldNums.has(Number(m[1])) ? Number(m[1]) : null;
+  };
+  const challengeLocs = [...walkChallenges(parsed)];
+  for (const loc of challengeLocs) {
     const nn = Number(loc.worldDir.slice(0, 2));
-    loc.ch.tags.forEach((t) => tagFirstWorld.set(t, Math.min(nn, tagFirstWorld.get(t) ?? Infinity)));
+    loc.ch.tags.forEach((t) => {
+      tagFirstWorld.set(t, Math.min(nn, tagFirstWorld.get(t) ?? Infinity));
+      tagWorlds.set(t, (tagWorlds.get(t) ?? new Set()).add(nn));
+    });
+  }
+  /** A world-named tag (w4.x) that no challenge in that world carries: probably a guessed name. */
+  const orphanTag = (t: string) => {
+    const w = ownWorld(t);
+    return w !== null && !tagWorlds.get(t)?.has(w);
+  };
+  for (const loc of challengeLocs) {
+    const nn = Number(loc.worldDir.slice(0, 2));
+    loc.ch.tags.forEach((t, i) => {
+      const w = ownWorld(t);
+      if (w !== null && w > nn) {
+        add(loc.file, `${loc.path}.tags[${i}]`, `"${t}" belongs to a later world (${w})`);
+      } else if (orphanTag(t)) {
+        add(loc.file, `${loc.path}.tags[${i}]`, `no World ${w} challenge has the tag "${t}"; use an existing w${w}.* tag`);
+      }
+    });
+  }
+  for (const loc of challengeLocs) {
     const { ch, file, path } = loc;
     unique(ch.id, file, `${path}.id`, 'challenge');
     const rest = ch.id.startsWith(loc.parentId + '.') ? ch.id.slice(loc.parentId.length) : null;
@@ -167,6 +201,9 @@ export function crossValidate(
     p.data.reviewTags.forEach((t, i) => {
       const tagWorld = /^w(\d+)\./.exec(t);
       if (!allTags.has(t)) add(p.path, `reviewTags[${i}]`, `no challenge has the tag "${t}"`);
+      else if (orphanTag(t)) {
+        add(p.path, `reviewTags[${i}]`, `no World ${ownWorld(t)} challenge has the tag "${t}"; use an existing one`);
+      }
       else if (tagWorld && Number(tagWorld[1]) > nn) {
         add(p.path, `reviewTags[${i}]`, `"${t}" belongs to a later world; review only earlier or current worlds`);
       } else if ((tagFirstWorld.get(t) ?? Infinity) > nn) {

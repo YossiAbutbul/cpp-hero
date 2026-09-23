@@ -21,3 +21,15 @@
   generically ("Our functions hold strong!"). Adjust if W6 ends differently.
 - The project's `removeItem` uses `bag.erase(bag.begin() + slot)` ahead of World 14's
   iterator lesson; the step text explains it as "begin() + n points at slot n".
+
+## Status (tooling pass)
+
+- Resolved: fragments now also get `<vector>`, `<array>`, `<stdexcept>`, `<cstddef>`,
+  `<algorithm>`, `<map>`, `<set>`, `<memory>`, `<numeric>`, `<optional>`, `<utility>`,
+  `<cassert>` (list in content/README.md). The visible `#include` lines in short items may be
+  trimmed; they are harmless if kept.
+- Resolved: per-run work dir.
+- Resolved: cross-world tags. `validate` now also requires a world-named tag (`w4.guard`) to be
+  carried by a challenge in that world (once that world has a boss file); all W1–8 tags pass.
+- Resolved: story. W6's victory now ends with a line pointing at World 7's shelves, and W7's
+  intro opens with "The Scope Sentinel is gone...".

@@ -65,3 +65,14 @@ With `mem`, the demos in this world would add these visuals (the `vars` would st
 - **Tags from parallel worlds**: `reviewTags` may only name tags that some challenge carries. W6/W7 aren't merged yet, so some W8 challenges carry W6/W7 tags themselves where the content really uses them: `w6.params`, `w6.const-ref`, `w6.return`, `w6.scope`, `w7.vector`, `w7.at`, `w7.invalidation`. W4/W5 tags aren't used, because I couldn't confirm their names.
 - **check:cpp and parallel work**: `scripts/check-cpp.ts` exits if there's any validation error anywhere in `content/`, even with `--filter`. Other worlds in progress had errors, so I ran an identical copy of the script from my scratch dir. The copy only (a) skipped that early exit when `--filter` is given and (b) used a private work dir instead of the shared `.cpp-check/`. Suggestion: with `--filter`, only refuse to run on issues in the files that match the filter, and give each run its own work dir (e.g. `.cpp-check-<pid>`) so parallel runs don't clobber each other.
 - **Boss art `wraith`** and the reward ids (`pointer-goggles`, `null-deref`) are used as assigned. Challenge `bug:` fields also use the existing `dangling-pointer`, `dangling-ref` (W6) and `out-of-bounds` (W7).
+
+## Status (tooling pass)
+
+- Resolved (schema): `mem` shipped as proposed (`cells` with `name`, `value`, `addr`, `ptr`
+  (string or null), `ref`, `group`, plus `readonly` for const pointers/refs; `drop`). `validate`
+  checks that `ptr`/`ref`/`drop` name a cell from this or an earlier step. Types: `MemCell`,
+  `DemoMem`; `demoStates(steps)` in src/content/demoState.ts replays them (and marks dangling
+  arrows). The W8 demos still use `vars` text arrows; add `mem` once CodeDemo renders it (B2a).
+- Resolved: `check:cpp --filter w8` only blocks on validation errors in World 8 / shared data,
+  and every run has its own work dir.
+- Resolved: cross-world tags checked (see the W7 notes); W8 tags are consistent with W6/W7.

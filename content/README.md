@@ -92,6 +92,19 @@ Hierarchical and unique: lesson `w1.l2` (must match `lesson-02.yaml`), its chall
 `w1.<name>`. Challenge ids are save keys (spaced repetition), so don't rename them once
 shipped.
 
+## Tags and review
+
+Challenge `tags` are concept names prefixed with their world: `w4.guard`, `w7.vector`.
+A lesson's `reviewTags` pull older challenges back in for review. `validate` checks:
+
+- every `reviewTags` entry is carried by some challenge in the same or an earlier world
+  (never a later one);
+- a tag named after another world (`w4.guard` used in World 7) must really exist in that
+  world, so look the name up in its lesson files instead of guessing. This is only
+  enforced once that world is finished (has a `boss.yaml`).
+
+Each world's `story.intro` picks up where the previous world's `story.victory` ended.
+
 ## Challenge types
 
 Every challenge has: `id`, `type`, `tags`, `prompt`, `hints`, `short`, `explain`,

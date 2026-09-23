@@ -11,3 +11,10 @@
   parallel this blocks or clobbers checks. World 5 was checked in a copy of the repo
   containing only worlds 01-05. A `--world` option that validates/checks one folder and
   a per-run work directory would help.
+
+## Status (tooling pass)
+
+- Resolved: demo `vars` values can be `null` to remove a box. The For-loop demo (lesson-02)
+  now drops `round` with `round: null` after the loop.
+- Resolved: `check:cpp` uses a per-run work dir and `--filter w5` only needs World 5 (and
+  `content/shared/`) to validate. See content/README.md "Checks".

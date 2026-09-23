@@ -76,6 +76,7 @@ demo:
     - line: 8
       vars:
         total: "30"
+        round: null
       out: |
         Total: 30
       note: round is gone now; total lives on.

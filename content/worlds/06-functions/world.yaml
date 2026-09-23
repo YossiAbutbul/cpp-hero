@@ -13,3 +13,4 @@ story:
     - Shh! The Scope Sentinel guards the call stack. It hunts values that outlive their scope!
   victory:
     - The Sentinel's visor cracked! Every function returns safely home. I'm {returning} the favor!
+    - Next stop, the storage shelves of World 7. They are a total mess!
