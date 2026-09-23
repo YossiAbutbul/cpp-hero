@@ -1,0 +1,361 @@
+# World 16 mini-project (capstone): The Bug Log
+
+id: w16.p
+title: The Bug Log
+intro: "Capstone! Log bug reports with a severity, count the dangerous ones, and look bugs up, using every world you've beaten."
+steps:
+  - id: w16.p.s1
+    type: fill
+    tags: [ w16.modern ]
+    prompt: "Severity levels need their own scoped type, so a plain int can't sneak in. Fill in the keyword."
+    code: "enum ___ Severity { Low = 1, Medium, High };"
+    accept:
+      - class
+      - struct
+    placeholder: keyword
+    hints:
+      - The modern, scoped kind of enum.
+      - "Two words: enum ..."
+    short: "enum class keeps Severity scoped and strongly typed."
+    explain: "`enum class Severity` makes you write `Severity::High`, and it won't silently convert to or from int. Any conversion has to be an explicit static_cast, which is exactly where we'll put a check."
+  - id: w16.p.s2
+    type: write
+    tags: [ w16.optional, w16.functions ]
+    prompt: "toSeverity turns a typed number into a Severity, if it's valid. Write the line that goes where the comment is."
+    code: |-
+      #include <optional>
+
+      enum class Severity { Low = 1, Medium, High };
+
+      std::optional<Severity> toSeverity(int level) {
+          if (level < 1 || level > 3) {
+              // your line: no valid Severity
+          }
+          return static_cast<Severity>(level);
+      }
+    accept:
+      - return std::nullopt;
+      - return {};
+    placeholder: return ...
+    hints:
+      - Out of range means "no answer".
+      - The empty optional is spelled std::nullopt.
+    short: "return std::nullopt; says \"no valid Severity\" in the type."
+    explain: "Returning std::nullopt (or `{}`) gives back an empty optional. The caller must check it before using the value, so a 9 can never become a fake Severity."
+  - id: w16.p.s3
+    type: order
+    tags: [ w16.input, w3.validate, w3.cin ]
+    prompt: Read how many reports are coming, and refuse anything that isn't 0 to 100. Order the lines.
+    lines:
+      - "int count{};"
+      - "std::cout << \"How many reports? \";"
+      - "if (!(std::cin >> count) || count < 0 || count > 100) {"
+      - "    std::cout << \"Count must be a number from 0 to 100.\\n\";"
+      - "    return 1;"
+      - "}"
+    distractors:
+      - "std::cin >> count;"
+    hints:
+      - "Declare, prompt, then read and check in one if."
+      - The error message and return go inside the if.
+    short: "Declare, prompt, then read AND range-check in one condition."
+    explain: "Initialize count, prompt, then read and validate together: a failed read short-circuits the ||, and the range check stops negatives and absurd counts. The bare `std::cin >> count;` distractor reads without checking."
+  - id: w16.p.s4
+    type: fill
+    tags: [ w16.lambdas, w16.stl, w16.classes ]
+    prompt: "countAt counts log entries with one severity. What does the lambda capture?"
+    code: |-
+      #include <algorithm>
+      #include <map>
+      #include <string>
+
+      enum class Severity { Low = 1, Medium, High };
+
+      class BugLog {
+      public:
+          std::size_t countAt(Severity sev) const {
+              return static_cast<std::size_t>(std::count_if(entries_.begin(), entries_.end(),
+                  [___](const auto& entry) { return entry.second == sev; }));
+          }
+
+      private:
+          std::map<std::string, Severity> entries_;
+      };
+    accept:
+      - sev
+      - "="
+      - "&"
+      - "&sev"
+    placeholder: capture
+    hints:
+      - The lambda body uses one outside name.
+      - "Capture it by value: just its name."
+    short: "[sev] gives the lambda its own copy of the severity to compare."
+    explain: "The lambda compares each entry's severity with sev, so it must capture sev. By value (`[sev]`) is the safe default; `[&sev]` also works here because count_if finishes before countAt returns."
+  - id: w16.p.s5
+    type: predict
+    tags: [ w16.stl, w7.find ]
+    prompt: "record() does `entries_[name] = sev;`. With plain ints, what does this test print?"
+    code: |-
+      std::map<std::string, int> entries;
+      entries["hydra"] = 3;
+      entries["imp"] = 1;
+      entries["hydra"] = 2;
+      std::cout << entries.size() << ' ' << entries["hydra"] << '\n';
+    options:
+      - t: |
+          2 2
+        why: "Correct: the second hydra report overwrites the first. Two keys, hydra is 2."
+      - t: |
+          3 2
+        why: A map key is unique. Assigning to hydra again replaces its value.
+      - t: |
+          2 3
+        why: The later assignment wins. hydra now holds 2.
+      - t: |
+          3 3
+        why: Keys are unique, and the last assignment wins.
+    answer: 0
+    hints:
+      - Can a map hold the same key twice?
+      - Which assignment to hydra happens last?
+    short: "Same key twice: one entry, and the last value wins."
+    explain: "operator[] finds hydra the second time and overwrites its value, so the map has two entries (hydra, imp) and hydra is 2. Here inserting is what we want; for questions, the log uses find()."
+program: |-
+  #include <algorithm>
+  #include <iostream>
+  #include <map>
+  #include <optional>
+  #include <string>
+
+  enum class Severity { Low = 1, Medium, High };
+
+  std::optional<Severity> toSeverity(int level) {
+      if (level < 1 || level > 3) {
+          return std::nullopt;
+      }
+      return static_cast<Severity>(level);
+  }
+
+  class BugLog {
+  public:
+      void record(const std::string& name, Severity sev) {
+          entries_[name] = sev;
+      }
+
+      std::optional<Severity> find(const std::string& name) const {
+          const auto it = entries_.find(name);
+          if (it == entries_.end()) {
+              return std::nullopt;
+          }
+          return it->second;
+      }
+
+      std::size_t countAt(Severity sev) const {
+          return static_cast<std::size_t>(std::count_if(entries_.begin(), entries_.end(),
+              [sev](const auto& entry) { return entry.second == sev; }));
+      }
+
+      std::size_t size() const { return entries_.size(); }
+
+  private:
+      std::map<std::string, Severity> entries_;
+  };
+
+  int main() {
+      BugLog log;
+      int count{};
+      std::cout << "How many reports? ";
+      if (!(std::cin >> count) || count < 0 || count > 100) {
+          std::cout << "Count must be a number from 0 to 100.\n";
+          return 1;
+      }
+      for (int i = 0; i < count; ++i) {
+          std::string name;
+          int level{};
+          if (!(std::cin >> name >> level)) {
+              std::cout << "Bad report line.\n";
+              return 1;
+          }
+          const auto sev = toSeverity(level);
+          if (!sev) {
+              std::cout << "Skipped " << name << ": severity must be 1 to 3.\n";
+              continue;
+          }
+          log.record(name, *sev);
+      }
+      std::cout << log.size() << " bugs logged, " << log.countAt(Severity::High) << " high.\n";
+
+      std::string query;
+      std::cout << "Look up: ";
+      if (std::cin >> query) {
+          if (const auto sev = log.find(query)) {
+              std::cout << query << ": level " << static_cast<int>(*sev) << '\n';
+          } else {
+              std::cout << query << ": not in the log\n";
+          }
+      }
+      return 0;
+  }
+programStdin: |
+  3
+  hydra 3
+  imp 1
+  goblin 9
+  ghost
+stress:
+  intro: "Final stress test! I'll throw everything the Dragon would. Patch every crack!"
+  attacks:
+    - input: abc
+      label: Text instead of a count!
+      challenge:
+        id: w16.p.a1
+        type: harden
+        tags: [ w16.input, w3.cin, w3.validate ]
+        bug: cin-fail
+        prompt: "The count is `abc`. Pick the condition that stops it (and silly counts) before the loop."
+        code: |-
+          int count{};
+          std::cout << "How many reports? ";
+          if (___) {
+              std::cout << "Count must be a number from 0 to 100.\n";
+              return 1;
+          }
+        options:
+          - t: "!(std::cin >> count) || count < 0 || count > 100"
+            why: "Correct: a failed read short-circuits to the error; otherwise the range is checked."
+          - t: count < 0 || count > 100
+            why: Never reads anything. count is always 0, so the log is always empty.
+          - t: "!(std::cin >> count)"
+            why: Stops abc, but -5 or 2000000000 get through.
+          - t: "!(std::cin >> count) && count > 100"
+            why: "&& needs both: a failed read sets count to 0, and 0 > 100 is false."
+        answer: 0
+        hints:
+          - Read first, then check the range.
+          - "|| stops at the first true part."
+        short: "Read, check the read, then check the range, in that order."
+        explain: "`!(std::cin >> count)` reads and catches abc. Only if that succeeds does || go on to the range checks. Capping at 100 also keeps a hostile count from making the loop wait for millions of lines."
+        sideBySide:
+          unsafe: |-
+            std::cin >> count;
+            for (int i = 0; i < count; ++i) { /* ... */ }
+          hardened: |-
+            if (!(std::cin >> count) || count < 0 || count > 100) {
+                std::cout << "Count must be a number from 0 to 100.\n";
+                return 1;
+            }
+          prelude: int count{};
+    - input: goblin 9
+      label: Severity 9 doesn't exist!
+      challenge:
+        id: w16.p.a2
+        type: harden
+        tags: [ w16.optional, w16.modern, w4.guard ]
+        prompt: "Level 9 would be cast to a Severity with no name. Pick toSeverity's guard."
+        code: |-
+          #include <optional>
+
+          enum class Severity { Low = 1, Medium, High };
+
+          std::optional<Severity> toSeverity(int level) {
+              if (___) {
+                  return std::nullopt;
+              }
+              return static_cast<Severity>(level);
+          }
+        options:
+          - t: level < 1 || level > 3
+            why: "Correct: only 1, 2 and 3 name a real Severity. Everything else is refused."
+          - t: level > 3
+            why: Misses 0 and negatives. Level -2 becomes a nameless Severity.
+          - t: level == 9
+            why: Only blocks this exact attack. The Dragon just tries 10.
+          - t: level < 1 && level > 3
+            why: "No number is both below 1 and above 3: this never refuses anything."
+        answer: 0
+        hints:
+          - Which numbers name a real Severity?
+          - Block both ends of the range.
+        short: "Refuse anything outside 1 to 3 before the cast."
+        explain: "static_cast<Severity>(9) compiles and gives a value that matches no enumerator: every switch and comparison on it goes wrong. Check the range before the cast, and return an empty optional for anything else."
+        sideBySide:
+          unsafe: |-
+            Severity toSeverity(int level) {
+                return static_cast<Severity>(level);   // 9: a nameless Severity
+            }
+          hardened: |-
+            std::optional<Severity> toSeverity(int level) {
+                if (level < 1 || level > 3) {
+                    return std::nullopt;
+                }
+                return static_cast<Severity>(level);
+            }
+          prelude: "enum class Severity { Low = 1, Medium, High };"
+    - input: ghost
+      label: Look up a bug that isn't there!
+      challenge:
+        id: w16.p.a3
+        type: bug
+        tags: [ w16.stl, w7.find ]
+        bug: unchecked-find
+        unsafe: true
+        prompt: "UNSAFE: looking up `ghost` crashes the log, or worse. Tap the buggy line, then pick the fix."
+        code: |-
+          #include <map>
+          #include <optional>
+          #include <string>
+
+          enum class Severity { Low = 1, Medium, High };
+
+          class BugLog {
+          public:
+              std::optional<Severity> find(const std::string& name) const {
+                  return entries_.find(name)->second;
+              }
+
+          private:
+              std::map<std::string, Severity> entries_;
+          };
+        bugLine: 9
+        options:
+          - t: Compare the iterator with end(); return std::nullopt when it matches
+            why: "Correct: a missing name becomes an empty optional. end() is never dereferenced."
+          - t: return entries_[name];
+            why: "Doesn't compile: operator[] can insert, so a const map doesn't have it."
+          - t: return entries_.at(name);
+            why: Safe (it throws), but a missing name is normal. optional fits better than an exception.
+          - t: "return entries_.find(name)->second; // TODO check"
+            why: A comment changes nothing. end() is still dereferenced.
+        answer: 0
+        hints:
+          - What does find() return for a missing key?
+          - Never use -> on end().
+        short: "Check find() against end() before using ->second."
+        explain: "For a missing key, find() returns end(), and end()->second is undefined behavior. It may crash, return garbage, or look fine. Compare with end() first and return std::nullopt for a miss."
+        sideBySide:
+          unsafe: |-
+            class BugLog {
+            public:
+                std::optional<Severity> find(const std::string& name) const {
+                    return entries_.find(name)->second;   // ghost: end()->second
+                }
+
+            private:
+                std::map<std::string, Severity> entries_;
+            };
+          hardened: |-
+            class BugLog {
+            public:
+                std::optional<Severity> find(const std::string& name) const {
+                    const auto it = entries_.find(name);
+                    if (it == entries_.end()) {
+                        return std::nullopt;
+                    }
+                    return it->second;
+                }
+
+            private:
+                std::map<std::string, Severity> entries_;
+            };
+          prelude: "enum class Severity { Low = 1, Medium, High };"

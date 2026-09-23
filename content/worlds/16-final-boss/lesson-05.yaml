@@ -1,0 +1,279 @@
+# World 16 · Lesson 5: Gauntlet V: The STL and modern C++
+
+id: w16.l5
+title: "Gauntlet V: STL and modern C++"
+skill: toolkit
+shield: false
+concept:
+  short: "Gauntlet stage five: check find() against end(), let algorithms loop, and never use moved or dangling things."
+  analogy: "The STL is a toolbox of sharp, tested tools: use the right one, and check the blade before you cut."
+  body:
+    - "**Maps** (World 14): `m.find(key)` returns `m.end()` when the key is missing; compare before using `->second`. `m[key]` **inserts** a default value when the key is missing, so it's a write, not a question."
+    - "**Algorithms** (World 14): `std::count_if`, `std::find`, `std::sort` replace hand-written loops (no off-by-one to get wrong). Their results still need checking: `std::find` returns `end()` when nothing matches."
+    - "**Lambdas** (World 15): capture by value (`[limit]`) when the lambda may outlive the variables around it. `[&]` capturing a local that dies first leaves a dangling reference inside the lambda."
+    - "**Move** (World 15): after `auto b = std::move(a);`, `a` is valid but unspecified. Only assign to it or let it die; don't read it expecting the old value. A moved-from `std::unique_ptr` is null."
+    - "**Modern syntax**: `if (auto it = m.find(k); it != m.end())` keeps the iterator's scope tiny; structured bindings `for (const auto& [name, gold] : m)` name the parts of each pair; `enum class` keeps enumerators scoped and typed."
+  pitfall: "Common mistake: `if (m[\"wraith\"] == 0)` to ask whether a key exists. It quietly adds \"wraith\" to the map."
+demo:
+  code: |-
+    #include <algorithm>
+    #include <iostream>
+    #include <map>
+    #include <string>
+    #include <vector>
+
+    int main() {
+        std::map<std::string, int> bounty{{"beetle", 5}, {"hydra", 40}};
+        if (const auto it = bounty.find("wraith"); it != bounty.end()) {
+            std::cout << it->second << '\n';
+        } else {
+            std::cout << "No bounty for wraith\n";
+        }
+        std::vector<int> hp{12, 0, 7, 0};
+        int limit{5};
+        const auto strong = std::count_if(hp.begin(), hp.end(),
+                                          [limit](int h) { return h > limit; });
+        std::cout << strong << " strong bugs\n";
+        for (const auto& [name, gold] : bounty) {
+            std::cout << name << ": " << gold << '\n';
+        }
+        return 0;
+    }
+  steps:
+    - line: 7
+      vars:
+        bounty: "{beetle: 5, hydra: 40}"
+      note: A map from bug name to bounty gold.
+    - line: 8
+      vars:
+        it: "end()"
+      shield: find() checked!
+      note: "No wraith: find returns end(). We check first."
+    - line: 11
+      out: |
+        No bounty for wraith
+      note: The map is unchanged. find never inserts.
+    - line: 12
+      vars:
+        it: null
+      note: it's scope ended with the if.
+    - line: 13
+      vars:
+        hp: "{12, 0, 7, 0}"
+    - line: 14
+      vars:
+        limit: "5"
+    - line: 16
+      note: "The lambda gets its own copy of limit: [limit]."
+    - line: 15
+      vars:
+        strong: "2"
+      note: "count_if does the loop: 12 and 7 are above 5."
+    - line: 17
+      out: |
+        2 strong bugs
+    - line: 18
+      vars:
+        name: "beetle"
+        gold: "5"
+      note: Structured bindings name both halves of each pair.
+    - line: 19
+      out: |
+        beetle: 5
+    - line: 18
+      vars:
+        name: "hydra"
+        gold: "40"
+    - line: 19
+      out: |
+        hydra: 40
+      note: Maps iterate in key order.
+    - line: 21
+      note: Every tool used, every result checked.
+challenges:
+  - id: w16.l5.c1
+    type: predict
+    tags: [ w16.stl, w7.find ]
+    bug: map-bracket-insert
+    prompt: A careless bounty check. What does this print?
+    code: |-
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      int main() {
+          std::map<std::string, int> gold{{"knight", 10}};
+          if (gold["mage"] == 0) {
+              std::cout << "mage is broke\n";
+          }
+          std::cout << gold.size() << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          mage is broke
+          2
+        why: "Correct: gold[\"mage\"] inserts mage with 0, so the map grows to 2."
+      - t: |
+          mage is broke
+          1
+        why: "operator[] doesn't just look: a missing key gets inserted with value 0."
+      - t: |
+          1
+        why: "The inserted value is 0, so the if is true and the message prints."
+      - t: |
+          2
+        why: The new entry is 0, so 0 == 0 is true and the message prints.
+    answer: 0
+    hints:
+      - What does operator[] do when the key is missing?
+      - A default int is 0.
+    short: "m[key] inserts missing keys. Use find() or contains() to just ask."
+    explain: "gold[\"mage\"] can't find mage, so it inserts {\"mage\", 0} and returns a reference to that 0. The message prints, and the map now has 2 entries. To ask without changing the map, use find() (compare with end()) or C++20's contains()."
+  - id: w16.l5.c2
+    type: bug
+    tags: [ w16.lambdas, w6.lifetime, w8.dangling ]
+    bug: dangling-capture
+    unsafe: true
+    prompt: "UNSAFE: this counter should print 1. Tap the buggy line, then pick the fix."
+    code: |-
+      #include <iostream>
+
+      auto makeCounter() {
+          int count = 0;
+          return [&count]() { return ++count; };
+      }
+
+      int main() {
+          auto next = makeCounter();
+          std::cout << next() << '\n';
+          return 0;
+      }
+    bugLine: 4
+    options:
+      - t: "return [count]() mutable { return ++count; };"
+        why: "Correct: the lambda keeps its own copy; mutable lets it change that copy."
+      - t: "return [&]() { return ++count; };"
+        why: "[&] still captures count by reference. It dies when makeCounter returns."
+      - t: "return [count]() { return ++count; };"
+        why: "Compile error: a by-value capture is const unless the lambda is mutable."
+      - t: "return [&count]() mutable { return ++count; };"
+        why: mutable doesn't change what's captured. It's still a reference to a dead local.
+    answer: 0
+    hints:
+      - When does count die?
+      - The lambda outlives makeCounter. What should it hold?
+    short: "A lambda that outlives its scope must capture by value, not by reference."
+    explain: "count is a local of makeCounter. The returned lambda holds a reference to it, but count dies at the }, so calling next() touches a dead variable: undefined behavior. Capture by value (`[count]`) and add `mutable` so the lambda can update its own copy."
+    sideBySide:
+      unsafe: |-
+        auto makeCounter() {
+            int count = 0;
+            return [&count]() { return ++count; };   // dangles
+        }
+      hardened: |-
+        auto makeCounter() {
+            int count = 0;
+            return [count]() mutable { return ++count; };
+        }
+  - id: w16.l5.c3
+    type: harden
+    tags: [ w16.stl, w7.find ]
+    bug: unchecked-find
+    prompt: Pick the check that makes this search safe when nobody matches.
+    code: |-
+      #include <algorithm>
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          const std::vector<std::string> names{"imp", "wasp", "hydra"};
+          const auto it = std::find(names.begin(), names.end(), "wraith");
+          if (___) {
+              std::cout << "Found at " << (it - names.begin()) << '\n';
+          } else {
+              std::cout << "Not found\n";
+          }
+          return 0;
+      }
+    options:
+      - t: it != names.end()
+        why: "Correct: std::find returns end() when nothing matches. Only a real match gets used."
+      - t: it != nullptr
+        why: "An iterator isn't a pointer you compare with nullptr. Compare with end(); this doesn't compile."
+      - t: "*it == \"wraith\""
+        why: When nothing matches, it IS end(). Dereferencing end() is UB.
+      - t: "!names.empty()"
+        why: The list isn't empty, but wraith still isn't in it.
+    answer: 0
+    hints:
+      - What does std::find return when nothing matches?
+      - "Compare the iterator, don't dereference it."
+    short: "Always compare find()'s result with end() before using it."
+    explain: "Every STL search reports \"not found\" as the end iterator. end() points one past the last element; dereferencing it is undefined behavior. Compare first, then use."
+    sideBySide:
+      unsafe: |-
+        const auto it = std::find(names.begin(), names.end(), "wraith");
+        std::cout << *it << '\n';   // not found: dereferences end()
+      hardened: |-
+        const auto it = std::find(names.begin(), names.end(), "wraith");
+        if (it != names.end()) {
+            std::cout << *it << '\n';
+        }
+      prelude: const std::vector<std::string> names{"imp", "wasp", "hydra"};
+  - id: w16.l5.c4
+    type: mcq
+    tags: [ w16.move ]
+    bug: use-after-move
+    prompt: "`auto b = std::move(a);` where a is a std::string. What may you safely do with a now?"
+    options:
+      - t: Assign it a new value, or let it be destroyed
+        why: "Correct: a is valid but unspecified. Give it a fresh value before relying on it."
+      - t: Read it; it still holds the old text
+        why: "Not guaranteed. Often it's empty, but the standard only promises \"valid\"."
+      - t: Nothing at all; even destroying it is UB
+        why: Moved-from objects must still be destroyable and assignable.
+      - t: Read it; it's guaranteed to be empty
+        why: Common in practice, but not guaranteed for std::string.
+    answer: 0
+    hints:
+      - Moving hands the contents to b.
+      - Valid, but you don't know what's inside.
+    short: "Moved-from means valid but unspecified: assign or destroy, don't read."
+    explain: "std::move lets b take a's contents. a is left in a valid but unspecified state: you may assign to it or destroy it, but reading it expecting any particular value is a bug. (A moved-from std::unique_ptr is guaranteed null, so dereferencing it is UB.)"
+  - id: w16.l5.c5
+    type: order
+    tags: [ w16.stl, w16.modern ]
+    prompt: Look up the imp's bounty safely and print it. Put the lines in order.
+    lines:
+      - "std::map<std::string, int> bounty{{\"imp\", 3}};"
+      - "if (const auto it = bounty.find(\"imp\"); it != bounty.end()) {"
+      - "    std::cout << it->first << \": \" << it->second << '\\n';"
+      - "}"
+    distractors:
+      - "std::cout << bounty[\"ghost\"] << '\\n';"
+    hints:
+      - Build the map before searching it.
+      - "if with an initializer: find, then compare with end()."
+    short: "find in the if's initializer, compare with end(), then use it."
+    explain: "The if-with-initializer keeps `it` scoped to the check. find never inserts, and the comparison with end() guards the use. The distractor `bounty[\"ghost\"]` would silently insert a ghost with 0 gold."
+recap:
+  - "find() then compare with end()."
+  - "m[key] inserts. It's a write, not a question."
+  - Lambdas that outlive locals capture by value.
+  - "Moved-from: assign or destroy, don't read."
+vault:
+  - id: w16.stlchecks
+    title: STL safety checks
+    code: |-
+      std::map<std::string, int> m{{"imp", 3}};
+      if (const auto it = m.find("imp"); it != m.end()) {
+          std::cout << it->second << '\n';
+      }
+      int limit{5};
+      auto above = [limit](int h) { return h > limit; };   // own copy
+      std::cout << above(7) << '\n';
+    note: Check find() against end(). Capture by value when a lambda may outlive its scope.
+    defense: false
+reviewTags: [ w7.find, w14.find-end, w14.bracket-insert, w15.capture, w15.use-after-move, w16.exceptions, w16.templates ]

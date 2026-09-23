@@ -1,0 +1,282 @@
+# World 16 · Lesson 4: Gauntlet IV: Errors and templates
+
+id: w16.l4
+title: "Gauntlet IV: Errors and templates"
+skill: defense
+shield: false
+concept:
+  short: "Gauntlet stage four: report errors honestly with exceptions or optional, and constrain templates so bad types fail early."
+  analogy: "An exception is a fire alarm: it stops normal work and everyone heads to the nearest handler."
+  body:
+    - "**Choosing an error strategy** (World 12): a missing answer that's normal (a lookup that finds nothing) is a `std::optional`. A broken promise the caller can't ignore (a negative size, a corrupt file) is an **exception**. Never an unchecked magic value."
+    - "**Throw and catch**: `throw std::invalid_argument{\"bad hp\"};`. Catch by `const&` so nothing gets sliced: `catch (const std::exception& e)`. Handlers are tried top to bottom, so put the most specific ones first."
+    - "**RAII makes exceptions safe** (World 9): while the exception flies to its handler, every local object's destructor runs. Smart pointers and containers clean up on their own; raw `new` does not."
+    - "**Templates** (World 13): one function for many types, but not for ALL types. `static_assert` or a C++20 concept like `std::integral` rejects wrong types at compile time with a readable message."
+  pitfall: "Common mistake: `catch (std::exception e)` by value. It slices the real exception down to the base class; catch by `const&`."
+demo:
+  code: |-
+    #include <concepts>
+    #include <iostream>
+    #include <stdexcept>
+
+    template <std::integral T>
+    T safeDivide(T a, T b) {
+        if (b == 0) {
+            throw std::domain_error{"divide by zero"};
+        }
+        return a / b;
+    }
+
+    int main() {
+        try {
+            std::cout << safeDivide(20, 4) << '\n';
+            std::cout << safeDivide(7, 0) << '\n';
+            std::cout << "never printed\n";
+        } catch (const std::exception& e) {
+            std::cout << "Caught: " << e.what() << '\n';
+        }
+        return 0;
+    }
+  steps:
+    - line: 4
+      note: "std::integral: only integer types may use this template."
+    - line: 12
+      push:
+        name: main
+      note: Execution starts in main().
+    - line: 14
+      push:
+        name: safeDivide<int>
+        vars:
+          a: "20"
+          b: "4"
+      note: "T is deduced as int. int is integral: allowed."
+    - line: 9
+      note: "b isn't 0, so return 20 / 4."
+    - line: 14
+      pop: true
+      out: |
+        5
+    - line: 15
+      push:
+        name: safeDivide<int>
+        vars:
+          a: "7"
+          b: "0"
+      note: Now the Dragon slips in a zero.
+    - line: 7
+      shield: Exception thrown!
+      note: "b is 0: throw instead of dividing."
+    - line: 17
+      pop: true
+      vars:
+        e: "divide by zero"
+      note: The stack unwinds to the matching catch. Line 16 is skipped.
+    - line: 18
+      out: |
+        Caught: divide by zero
+    - line: 20
+      note: Handled. The program ends normally.
+challenges:
+  - id: w16.l4.c1
+    type: predict
+    tags: [ w16.exceptions, w6.scope ]
+    prompt: The cave collapses mid-explore. What does this print?
+    code: |-
+      #include <iostream>
+      #include <stdexcept>
+
+      struct Torch {
+          ~Torch() { std::cout << "torch out\n"; }
+      };
+
+      void explore() {
+          Torch t;
+          throw std::runtime_error{"cave-in"};
+      }
+
+      int main() {
+          try {
+              explore();
+          } catch (const std::runtime_error& e) {
+              std::cout << "caught " << e.what() << '\n';
+          }
+          return 0;
+      }
+    options:
+      - t: |
+          torch out
+          caught cave-in
+        why: "Correct: leaving explore() destroys t first; then the handler runs."
+      - t: |
+          caught cave-in
+          torch out
+        why: The torch belongs to explore(). It's destroyed while unwinding, before the catch body runs.
+      - t: |
+          caught cave-in
+        why: "Unwinding runs every local destructor. That's what makes RAII work."
+      - t: |
+          torch out
+        why: The runtime_error matches the handler, so it's caught and printed.
+    answer: 0
+    hints:
+      - What happens to explore()'s locals when the exception leaves it?
+      - Destructors run during unwinding, before the handler.
+    short: "Unwinding destroys locals first (torch out), then the handler runs."
+    explain: "When the exception leaves explore(), the stack unwinds: t's destructor runs and prints \"torch out\". Then the matching catch in main runs and prints \"caught cave-in\". This is why RAII types (smart pointers, containers) never leak on an exception."
+  - id: w16.l4.c2
+    type: mcq
+    tags: [ w16.exceptions, w16.optional ]
+    prompt: findPlayer(name) searches the guild roster. A missing name is a normal, expected result. What should it return?
+    options:
+      - t: std::optional<Player>
+        why: "Correct: \"maybe no answer\" is part of the type, and the caller must check."
+      - t: A Player with an empty name
+        why: A magic value. Callers forget to check, and the fake Player spreads.
+      - t: Throw an exception when the name is missing
+        why: Exceptions are for broken promises. A normal miss would turn into try/catch everywhere.
+      - t: A Player* to a local Player
+        why: The local dies when findPlayer returns. The pointer dangles.
+    answer: 0
+    hints:
+      - Is "not found" an error or a normal outcome here?
+      - Which type says "a value, or nothing"?
+    short: "Normal \"no answer\": std::optional. Broken promise: exception."
+    explain: "Choose the error strategy by how surprising the failure is. A lookup that finds nothing is ordinary, so std::optional puts \"maybe nothing\" in the type. Exceptions fit contract violations the caller can't just shrug off."
+  - id: w16.l4.c3
+    type: harden
+    tags: [ w16.templates ]
+    bug: unconstrained-template
+    prompt: average() only makes sense for number types. Pick the compile-time check.
+    code: |-
+      #include <type_traits>
+
+      template <typename T>
+      T average(T a, T b) {
+          static_assert(___, "average needs a number type");
+          return (a + b) / 2;
+      }
+    options:
+      - t: std::is_arithmetic_v<T>
+        why: "Correct: true for int, double and friends; std::string fails with your message."
+      - t: sizeof(T) > 0
+        why: Every complete type has a size, so this never fails.
+      - t: "true"
+        why: Checks nothing. average(std::string, std::string) fails with a cryptic error.
+      - t: T{} == 0
+        why: Not a type check, and it won't even compile for many types.
+    answer: 0
+    hints:
+      - You need a type trait from <type_traits>.
+      - "Which trait means \"integer or floating point\"?"
+    short: "static_assert with a type trait turns misuse into a clear compile error."
+    explain: "`static_assert(std::is_arithmetic_v<T>, \"...\")` stops the build with your message when someone calls average with a non-number. In C++20 you can put it in the signature instead: `template <typename T> requires std::is_arithmetic_v<T>`, or use a concept like `std::integral`."
+    sideBySide:
+      unsafe: |-
+        template <typename T>
+        T average(T a, T b) {
+            return (a + b) / 2;   // any T: cryptic errors deep inside
+        }
+      hardened: |-
+        #include <type_traits>
+
+        template <typename T>
+        T average(T a, T b) {
+            static_assert(std::is_arithmetic_v<T>, "average needs a number type");
+            return (a + b) / 2;
+        }
+  - id: w16.l4.c4
+    type: bug
+    tags: [ w16.exceptions ]
+    expect: warn
+    prompt: The out_of_range handler never runs. Tap the line that steals it, then pick the fix.
+    code: |-
+      #include <iostream>
+      #include <stdexcept>
+
+      int main() {
+          try {
+              throw std::out_of_range{"slot 9"};
+          } catch (const std::exception& e) {
+              std::cout << "general: " << e.what() << '\n';
+          } catch (const std::out_of_range& e) {
+              std::cout << "range: " << e.what() << '\n';
+          }
+          return 0;
+      }
+    bugLine: 6
+    options:
+      - t: Move the std::out_of_range handler above the std::exception one
+        why: "Correct: handlers are tried in order, so the specific one must come first."
+      - t: "Catch by value: catch (std::exception e)"
+        why: Still catches first, and now slices the exception too.
+      - t: Add catch (...) as the first handler
+        why: That catches everything before either handler gets a chance.
+      - t: Remove const from both handlers
+        why: const has nothing to do with the order handlers are tried.
+    answer: 0
+    hints:
+      - Handlers are tried top to bottom.
+      - out_of_range IS a std::exception.
+    short: "Handlers are tried in order: put the specific one before std::exception."
+    explain: "std::out_of_range derives from std::exception, so the first handler matches and the second is dead code (g++ warns about it). Order handlers from most specific to most general."
+    sideBySide:
+      unsafe: |-
+        try {
+            throw std::out_of_range{"slot 9"};
+        } catch (const std::exception& e) {
+            std::cout << "general: " << e.what() << '\n';
+        } catch (const std::out_of_range& e) {   // never reached
+            std::cout << "range: " << e.what() << '\n';
+        }
+      hardened: |-
+        try {
+            throw std::out_of_range{"slot 9"};
+        } catch (const std::out_of_range& e) {
+            std::cout << "range: " << e.what() << '\n';
+        } catch (const std::exception& e) {
+            std::cout << "general: " << e.what() << '\n';
+        }
+  - id: w16.l4.c5
+    type: write
+    tags: [ w16.exceptions, w6.validate ]
+    prompt: "Write one line that throws a std::invalid_argument with the message \"bad hp\"."
+    accept:
+      - throw std::invalid_argument{"bad hp"};
+      - throw std::invalid_argument("bad hp");
+    acceptRe:
+      - ^throw std::invalid_argument ?(\{ ?"bad hp" ?\}|\( ?"bad hp" ?\)) ?;$
+    placeholder: throw ...
+    hints:
+      - "Start with the keyword throw."
+      - "std::invalid_argument takes the message: {\"bad hp\"}."
+    short: "throw std::invalid_argument{\"bad hp\"}; reports a broken promise."
+    explain: "`throw` creates the exception object and starts unwinding to the nearest matching handler. std::invalid_argument (from <stdexcept>) is the standard type for \"this argument breaks the rules\"."
+recap:
+  - "Normal miss: optional. Broken promise: exception."
+  - Catch by const reference, specific handlers first.
+  - Unwinding runs destructors, so RAII never leaks.
+  - Constrain templates with static_assert or concepts.
+vault:
+  - id: w16.errorchoice
+    title: Pick your error strategy
+    code: |-
+      #include <optional>
+      #include <stdexcept>
+
+      std::optional<int> findSlot(int id) {        // "maybe nothing": normal
+          if (id < 0) {
+              return std::nullopt;
+          }
+          return id % 8;
+      }
+
+      int checkedHp(int hp) {                      // broken promise: throw
+          if (hp < 0) {
+              throw std::invalid_argument{"hp must not be negative"};
+          }
+          return hp;
+      }
+    note: optional for ordinary misses, exceptions for violations. Catch by const&.
+    defense: false
+reviewTags: [ w3.divzero, w12.catchref, w12.strategy, w13.staticassert, w13.concepts, w16.classes, w16.virtual ]

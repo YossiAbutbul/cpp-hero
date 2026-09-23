@@ -1,0 +1,321 @@
+# World 16 · Lesson 1: Gauntlet I: Logic and functions
+
+id: w16.l1
+title: "Gauntlet I: Logic and functions"
+skill: logic
+shield: false
+concept:
+  short: "Gauntlet stage one: loops, decisions and functions, each one guarded against bad values."
+  analogy: "The gauntlet is a hallway of old enemies: every door is a world you already beat."
+  body:
+    - "This world is a review with teeth. Each gauntlet lesson mixes several earlier worlds, because real bugs never stay in one chapter."
+    - "**Loops** (World 5): count with `<` against the size, not `<=`. Index vectors with `std::size_t`, or skip the index entirely with a range-for. Every loop needs a way out."
+    - "**Decisions** (World 4): handle every case. A `switch` over an `enum class` still needs a plan for values outside the list, and a function that returns a value must return on **every** path. Falling off the end of a non-void function is undefined behavior."
+    - "**Functions** (World 6): validate parameters at the top with guard clauses, pass big things by `const&`, and return by value. When there may be no answer, say so in the type: `std::optional<int>` (World 15) beats a magic `-1` or `0`."
+    - "**Input** (World 3): check every read (`if (!(std::cin >> x))`), then check the range. Mind operator precedence: `&&` binds tighter than `||`, so write the parentheses you mean."
+  pitfall: "Common mistake in a review: skimming. Old bugs hide in familiar code; read each condition as if you'd never seen it."
+demo:
+  code: |-
+    #include <iostream>
+    #include <optional>
+
+    std::optional<int> safeAverage(int total, int count) {
+        if (count <= 0) {
+            return std::nullopt;
+        }
+        return total / count;
+    }
+
+    int main() {
+        int sum{};
+        for (int hp = 10; hp <= 30; hp += 10) {
+            sum += hp;
+        }
+        const auto avg = safeAverage(sum, 3);
+        if (avg) {
+            std::cout << "Average: " << *avg << '\n';
+        }
+        if (!safeAverage(sum, 0)) {
+            std::cout << "No party, no average\n";
+        }
+        return 0;
+    }
+  steps:
+    - line: 10
+      push:
+        name: main
+      note: Execution starts in main(), as always.
+    - line: 11
+      vars:
+        sum: "0"
+      note: "sum starts at a known 0, never garbage."
+    - line: 12
+      vars:
+        hp: "10"
+      note: "hp runs 10, 20, 30. Here <= is intended."
+    - line: 13
+      vars:
+        sum: "10"
+    - line: 13
+      vars:
+        hp: "20"
+        sum: "30"
+    - line: 13
+      vars:
+        hp: "30"
+        sum: "60"
+      note: "Three passes: 10 + 20 + 30 = 60."
+    - line: 14
+      vars:
+        hp: null
+      note: hp's scope ends with the loop.
+    - line: 15
+      push:
+        name: safeAverage
+        vars:
+          total: "60"
+          count: "3"
+      note: "Call: a new stack frame with copies of the arguments."
+    - line: 4
+      note: "Guard clause first: count is 3, so carry on."
+    - line: 7
+      note: "60 / 3 = 20, returned inside an optional."
+    - line: 15
+      pop: true
+      vars:
+        avg: "20"
+      note: The frame pops; avg holds 20.
+    - line: 17
+      out: |
+        Average: 20
+      note: avg has a value, so *avg is safe.
+    - line: 19
+      push:
+        name: safeAverage
+        vars:
+          total: "60"
+          count: "0"
+      note: Now a party of zero!
+    - line: 5
+      shield: Guard clause!
+      note: "count <= 0: return nullopt, never divide by zero."
+    - line: 19
+      pop: true
+      note: The optional is empty, and the if notices.
+    - line: 20
+      out: |
+        No party, no average
+    - line: 22
+      note: "return 0: stage one cleared!"
+challenges:
+  - id: w16.l1.c1
+    type: predict
+    tags: [ w16.flow, w16.functions, w5.for, w4.ternary ]
+    prompt: A warm-up from three worlds at once. What does this print? (Watch the spaces.)
+    code: |-
+      #include <iostream>
+
+      int bump(int hp) {
+          return hp > 5 ? hp - 5 : 0;
+      }
+
+      int main() {
+          for (int i = 3; i < 12; i += 4) {
+              std::cout << bump(i) << ' ';
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: "0 2 6 \n"
+        why: "Correct: i is 3, 7, 11. bump gives 0, 2, 6, each followed by a space."
+      - t: "-2 2 6 \n"
+        why: "The ternary guards it: 3 > 5 is false, so bump(3) is 0, not -2."
+      - t: "0 2 6 10 \n"
+        why: The next i would be 15, and 15 < 12 is false. Only three passes.
+      - t: "0 2 6\n"
+        why: A space is printed after EVERY number, including the last one.
+    answer: 0
+    hints:
+      - "List the values of i first: start 3, step 4, stop before 12."
+      - The ternary returns 0 when hp is 5 or less.
+    short: "i is 3, 7, 11; bump gives 0, 2, 6, each with a space."
+    explain: "The loop runs for i = 3, 7 and 11 (15 fails i < 12). bump(3) hits the ternary's else branch: 0. bump(7) = 2 and bump(11) = 6. Each is followed by a space, then one newline: \"0 2 6 \" and a newline."
+  - id: w16.l1.c2
+    type: bug
+    tags: [ w16.flow, w5.offbyone, w7.bounds ]
+    bug: off-by-one
+    unsafe: true
+    prompt: "UNSAFE: this should total the party's hp. Tap the buggy line, then pick the fix."
+    code: |-
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> hp{30, 12, 7};
+          int total{};
+          for (std::size_t i = 0; i <= hp.size(); ++i) {
+              total += hp[i];
+          }
+          std::cout << total << '\n';
+          return 0;
+      }
+    bugLine: 6
+    options:
+      - t: for (std::size_t i = 0; i < hp.size(); ++i) {
+        why: "Correct: valid indexes are 0 to size - 1, so stop BEFORE size."
+      - t: for (std::size_t i = 0; i <= hp.size() - 1; ++i) {
+        why: Works here, but an empty vector makes size() - 1 wrap to a huge number.
+      - t: for (int i = 0; i <= hp.size(); ++i) {
+        why: Still reads hp[3], and now compares signed with unsigned too.
+      - t: for (std::size_t i = 1; i <= hp.size(); ++i) {
+        why: Skips hp[0] and still reads hp[3], one past the end.
+    answer: 0
+    hints:
+      - How many passes does <= size make?
+      - The last valid index is size - 1.
+    short: "i <= size() reads one past the end. Use <, or a range-for."
+    explain: "With <=, the loop runs for i = 3 too, and hp[3] is one past the end: undefined behavior. It may add garbage, crash, or seem fine. Use `i < hp.size()`, or better, a range-for, which can't go out of bounds."
+    sideBySide:
+      unsafe: |-
+        for (std::size_t i = 0; i <= hp.size(); ++i) {
+            total += hp[i];   // i == 3: out of bounds
+        }
+      hardened: |-
+        for (const int h : hp) {
+            total += h;
+        }
+      prelude: std::vector<int> hp{30, 12, 7}; int total{};
+  - id: w16.l1.c3
+    type: harden
+    tags: [ w16.functions, w4.default, w6.missing-return ]
+    bug: missing-default
+    prompt: "Every case returns... or does it? `static_cast<Weapon>(7)` gets past the switch. Pick the line for the blank."
+    code: |-
+      enum class Weapon { Sword, Bow, Staff };
+
+      int damage(Weapon w) {
+          switch (w) {
+              case Weapon::Sword: return 8;
+              case Weapon::Bow:   return 5;
+              case Weapon::Staff: return 3;
+          }
+          ___
+      }
+    options:
+      - t: "return 0;  // unknown weapon: no damage"
+        why: "Correct: every path now returns. (Throwing an exception is another good choice.)"
+      - t: "// nothing: every enumerator has a case"
+        why: An out-of-list value falls off the end of a non-void function. That's UB.
+      - t: break;
+        why: "Compile error: break isn't allowed outside a loop or switch."
+      - t: return damage(w);
+        why: Calls itself with the same value forever, until the stack overflows.
+    answer: 0
+    hints:
+      - What happens when a value matches no case?
+      - A non-void function must return on every path.
+    short: "Return on every path, even after a switch that seems complete."
+    explain: "An enum class variable can hold values that aren't in the list (a cast, bad data from a file). Then no case matches, execution leaves the switch and falls off the end of a function that promised an int: undefined behavior. g++ warns with -Wreturn-type. Add a final return (or throw)."
+    sideBySide:
+      unsafe: |-
+        int damage(Weapon w) {
+            switch (w) {
+                case Weapon::Sword: return 8;
+                case Weapon::Bow:   return 5;
+                case Weapon::Staff: return 3;
+            }
+        }   // unknown value: falls off the end (UB)
+      hardened: |-
+        int damage(Weapon w) {
+            switch (w) {
+                case Weapon::Sword: return 8;
+                case Weapon::Bow:   return 5;
+                case Weapon::Staff: return 3;
+            }
+            return 0;
+        }
+      prelude: "enum class Weapon { Sword, Bow, Staff };"
+  - id: w16.l1.c4
+    type: edge
+    tags: [ w16.input, w3.logic, w3.validate, w4.guard ]
+    unsafe: true
+    prompt: "UNSAFE: valid levels are 1 to 99. Which inputs get past this guard? Select all."
+    code: |-
+      #include <iostream>
+
+      int main() {
+          int level{};
+          if (!(std::cin >> level) || level < 1 && level > 99) {
+              std::cout << "Level must be 1 to 99\n";
+              return 1;
+          }
+          std::cout << "Level " << level << " accepted\n";
+          return 0;
+      }
+    options:
+      - t: "0"
+        why: "Exposes it: 0 < 1 is true, but 0 > 99 is false, so && is false. Accepted!"
+      - t: "150"
+        why: "Exposes it: 150 > 99, but 150 < 1 is false. No number is both."
+      - t: abc
+        why: Caught. The read fails, and || short-circuits straight to the error.
+      - t: "50"
+        why: A valid level. It should be accepted, and it is.
+      - t: "-7"
+        why: "Exposes it: -7 < 1, but -7 > 99 is false, so it slips through."
+    answers: [ 0, 1, 4 ]
+    hints:
+      - Can any number be below 1 AND above 99?
+      - "&& binds tighter than ||. Read the condition in that order."
+    short: "No number is below 1 AND above 99: the range check never fires."
+    explain: "`level < 1 && level > 99` is always false, so only a failed read is rejected. Every out-of-range number walks in. The range needs `||`: `level < 1 || level > 99`. g++ even warns about mixing && and || without parentheses."
+    sideBySide:
+      unsafe: |-
+        if (!(std::cin >> level) || level < 1 && level > 99) {
+            return 1;
+        }
+      hardened: |-
+        if (!(std::cin >> level) || level < 1 || level > 99) {
+            std::cout << "Level must be 1 to 99\n";
+            return 1;
+        }
+      prelude: int level{};
+  - id: w16.l1.c5
+    type: order
+    tags: [ w16.functions, w6.validate, w6.params ]
+    prompt: Build a heal function with a guard clause. It rejects bad amounts and caps hp at 100.
+    lines:
+      - "int healCapped(int hp, int amount) {"
+      - "    if (amount < 0 || amount > 100) {"
+      - "        return hp;"
+      - "    }"
+      - "    return std::min(hp + amount, 100);"
+      - "}"
+    distractors:
+      - "    return hp + amount;"
+    hints:
+      - "Guard clause first: reject bad input at the top."
+      - The happy path comes last, capped with std::min.
+    short: "Guard first, then the happy path. Reject bad values before using them."
+    explain: "The guard clause handles the bad amounts first and leaves early, so the last line only ever sees a sane amount. std::min caps the result at 100. The distractor `return hp + amount;` forgets the cap."
+recap:
+  - "Loop with <, or use range-for."
+  - Return a value on every path, even after a switch.
+  - Guard clauses first, happy path last.
+  - "&& binds tighter than ||: write parentheses."
+vault:
+  - id: w16.guardfirst
+    title: Guard first, answer honestly
+    code: |-
+      #include <optional>
+
+      std::optional<int> safeAverage(int total, int count) {
+          if (count <= 0) {
+              return std::nullopt;   // no answer: say so
+          }
+          return total / count;
+      }
+    note: Reject bad values at the top. std::optional says "maybe no answer" in the type.
+    defense: false
+reviewTags: [ w5.offbyone, w4.default, w3.validate, w6.params, w15.optional, w6.missing-return ]

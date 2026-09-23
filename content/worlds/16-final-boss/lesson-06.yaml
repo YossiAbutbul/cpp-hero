@@ -1,0 +1,374 @@
+# World 16 · Lesson 6: Shield: Defense in depth (Shield lesson)
+
+id: w16.l6
+title: "Shield: Defense in depth"
+skill: defense
+shield: true
+concept:
+  short: "No single check is enough: validate input, check bounds and limits, and let the compiler and sanitizers hunt too."
+  analogy: "A castle has a moat, a wall and a gate: an attacker who beats one still faces the next."
+  body:
+    - "**Defense in depth** means layers. Each layer assumes the one before it might fail. This is the habit that beats the Undefined Dragon."
+    - "**Layer 1, the boundary**: never trust input. Check every read (`if (!(std::cin >> x))`), and check the range of what you read. Strings can be empty, numbers negative or huge, pointers null."
+    - "**Layer 2, the operation**: before indexing, check the bounds (or use `.at()`). Before dividing, check the divisor. Before adding, check against `std::numeric_limits`. Before following a pointer, check `nullptr`."
+    - "**Layer 3, the design**: types that can't be misused. `std::optional` for maybe-values, `std::unique_ptr` for ownership, classes that validate in the constructor, `enum class`, `const`, containers instead of raw arrays."
+    - "**Layer 4, the tools**: compile with `-Wall -Wextra -Werror` so warnings can't be ignored. Test with `-fsanitize=address,undefined`: AddressSanitizer catches out-of-bounds and use-after-free, UBSan catches overflow and more, at run time. `assert` documents assumptions *inside* your code; it vanishes in release builds, so it never replaces input validation."
+    - "**Layer 5, the tests**: try the edges on purpose. 0, -1, the largest int, an empty string, a missing key, one past the end."
+    - "Remember: undefined behavior doesn't guarantee a crash. It can pass every test today and fail on another compiler tomorrow. Layers make the bug impossible instead of just unlikely."
+  pitfall: "Common mistake: \"I validated the input, so I'm safe.\" Input checks don't catch a dangling pointer or an index computed wrong three functions later."
+demo:
+  code: |-
+    #include <iostream>
+    #include <limits>
+    #include <vector>
+
+    int main() {
+        std::vector<int> hp{30, 12, 7};
+        int slot{};
+        std::cout << "Slot to heal? ";
+        if (!(std::cin >> slot)) {
+            std::cout << "Numbers only!\n";
+            return 1;
+        }
+        if (slot < 0 || slot >= static_cast<int>(hp.size())) {
+            std::cout << "No such slot\n";
+            return 1;
+        }
+        const int amount = 50;
+        const auto i = static_cast<std::size_t>(slot);
+        if (hp[i] > std::numeric_limits<int>::max() - amount) {
+            return 1;
+        }
+        hp[i] += amount;
+        std::cout << "Slot " << slot << ": " << hp[i] << '\n';
+        return 0;
+    }
+  stdin:
+    - |
+      abc
+    - |
+      3
+    - |
+      1
+  steps:
+    - line: 5
+      vars:
+        hp: "{30, 12, 7}"
+      note: "Three bugs' hp. Valid slots: 0, 1, 2."
+    - line: 6
+      vars:
+        slot: "0"
+    - line: 7
+      out: "Slot to heal? "
+      note: "Run 1. The Dragon types `abc`."
+    - line: 8
+      shield: "Layer 1: read checked!"
+      note: The read fails, so we stop right here.
+    - line: 9
+      out: |
+        Numbers only!
+    - line: 7
+      out: "Slot to heal? "
+      note: "Run 2. The Dragon types `3`."
+    - line: 8
+      vars:
+        slot: "3"
+      note: 3 is a number, so layer 1 lets it through.
+    - line: 21
+      crash: "hp[3]: out of bounds, undefined behavior!"
+      note: Without layer 2, this writes past the end.
+    - line: 12
+      shield: "Layer 2: range checked!"
+      note: "Back to reality: 3 >= size, so it's rejected."
+    - line: 13
+      out: |
+        No such slot
+    - line: 7
+      out: "Slot to heal? "
+      note: "Run 3. A hero types `1`."
+    - line: 8
+      vars:
+        slot: "1"
+    - line: 12
+      note: 1 is in range. Layer 2 passes.
+    - line: 18
+      vars:
+        amount: "50"
+        i: "1"
+      shield: "Layer 3: overflow checked!"
+      note: 12 + 50 can't pass the largest int.
+    - line: 21
+      vars:
+        hp: "{30, 62, 7}"
+    - line: 22
+      out: |
+        Slot 1: 62
+      note: Only input that passed every layer changes anything.
+challenges:
+  - id: w16.l6.c1
+    type: mcq
+    tags: [ w16.tools, w8.sanitizers, w1.warnings ]
+    prompt: "Your code reads memory after it was deleted, but it prints the right answer. Which build flag makes the bug stop the program with a report?"
+    options:
+      - t: -fsanitize=address
+        why: "Correct: AddressSanitizer catches use-after-free and out-of-bounds at run time."
+      - t: -Wall -Wextra
+        why: Warnings are compile-time. They catch many mistakes, but not most use-after-free.
+      - t: -O2
+        why: Optimization can make UB behave even more strangely. It hunts nothing.
+      - t: -std=c++20
+        why: Picks the language version. It adds no run-time checks.
+    answer: 0
+    hints:
+      - The bug happens while the program runs.
+      - Which tool watches memory at run time?
+    short: "AddressSanitizer (-fsanitize=address) catches use-after-free while the program runs."
+    explain: "Compiler warnings work at compile time and catch many mistakes, but a use-after-free usually depends on run-time paths. `g++ -fsanitize=address,undefined -g` instruments the program so it stops with a report the moment it touches freed or out-of-bounds memory, or hits UB like signed overflow."
+  - id: w16.l6.c2
+    type: review
+    tags: [ w16.ub, w7.invalidation, w7.bounds, w3.divzero ]
+    bug: ub-hydra
+    unsafe: true
+    prompt: "UNSAFE: the Dragon hid undefined behavior in here. Tap every line with UB."
+    code: |-
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> hp{10, 20};
+          int* last = &hp.back();
+          hp.push_back(30);
+          std::cout << *last << '\n';
+          for (std::size_t i = 0; i < hp.size(); ++i) {
+              std::cout << hp[i] << '\n';
+          }
+          std::cout << hp[hp.size()] << '\n';
+          int party = 0;
+          std::cout << 100 / party << '\n';
+          return 0;
+      }
+    dangerous: [ 7, 11, 13 ]
+    lineNotes:
+      5: "Taking the address is fine, while the vector doesn't change."
+      6: "push_back may reallocate and move every element."
+      7: "last may point into the freed old block: UB."
+      8: "Fine: size_t index, < size(). Every read is in bounds."
+      11: "hp[size()] is one past the end: UB."
+      13: "Integer division by zero: UB."
+    hints:
+      - "Three different worlds' bugs. Look at pointers, indexes and divisors."
+      - Did anything move after line 5 took an address?
+    short: "Dangling after push_back, one past the end, and division by zero."
+    explain: "Line 7 reads through a pointer that push_back may have invalidated. Line 11 reads one past the end. Line 13 divides by zero. None is guaranteed to crash; the program might even print plausible numbers. -fsanitize=address,undefined would flag each one at run time."
+    sideBySide:
+      unsafe: |-
+        int* last = &hp.back();
+        hp.push_back(30);
+        std::cout << *last << '\n';
+        std::cout << hp[hp.size()] << '\n';
+        std::cout << 100 / party << '\n';
+      hardened: |-
+        hp.push_back(30);
+        const int* last = &hp.back();   // after the change
+        std::cout << *last << '\n';
+        std::cout << hp.at(hp.size() - 1) << '\n';
+        if (party > 0) {
+            std::cout << 100 / party << '\n';
+        }
+      prelude: std::vector<int> hp{10, 20}; int party = 0;
+  - id: w16.l6.c3
+    type: edge
+    tags: [ w16.ub, w16.bounds, w7.empty ]
+    bug: out-of-bounds
+    unsafe: true
+    prompt: "UNSAFE: names is {\"Ana\", \"Bo\"} unless the test says otherwise. Which tests expose UB? Select all."
+    code: |-
+      #include <string>
+      #include <vector>
+
+      char initial(const std::vector<std::string>& names, int i) {
+          return names[i][0];
+      }
+    options:
+      - t: i = 1
+        why: "Fine: names[1] is \"Bo\", and its [0] is 'B'."
+      - t: i = 2
+        why: "Exposes it: names[2] is one past the end."
+      - t: i = -1
+        why: "Exposes it: -1 becomes a huge index. Far out of bounds."
+      - t: "names is {}, i = 0"
+        why: "Exposes it: an empty vector has no element 0."
+      - t: "names is {\"\"}, i = 0"
+        why: "Surprisingly fine: an empty std::string's [0] is its '\\0' terminator."
+    answers: [ 1, 2, 3 ]
+    hints:
+      - "Test the edges: too big, negative, empty."
+      - Which of the two [ ] can go out of bounds?
+    short: "Test too big, negative and empty: the classic edge trio."
+    explain: "The vector index is never checked. i = 2 and i = -1 (converted to an enormous size_t) are out of bounds, and an empty vector has no element 0 at all. The empty string is a trick: `s[s.size()]` is allowed for std::string and gives '\\0'. Still, return std::optional<char> for empty names."
+    sideBySide:
+      unsafe: |-
+        char initial(const std::vector<std::string>& names, int i) {
+            return names[i][0];
+        }
+      hardened: |-
+        #include <optional>
+
+        std::optional<char> initial(const std::vector<std::string>& names, int i) {
+            if (i < 0 || static_cast<std::size_t>(i) >= names.size()) {
+                return std::nullopt;
+            }
+            const std::string& name = names[static_cast<std::size_t>(i)];
+            if (name.empty()) {
+                return std::nullopt;
+            }
+            return name.front();
+        }
+  - id: w16.l6.c4
+    type: harden
+    tags: [ w16.layers, w6.assert, w3.validate ]
+    prompt: The assert documents an assumption. Pick the real validation that makes it true.
+    code: |-
+      #include <cassert>
+      #include <iostream>
+
+      int main() {
+          int count{};
+          if (___) {
+              std::cout << "Count must be 1 to 10\n";
+              return 1;
+          }
+          assert(count >= 1 && count <= 10);
+          std::cout << "Summoning " << count << " guards\n";
+          return 0;
+      }
+    options:
+      - t: "!(std::cin >> count) || count < 1 || count > 10"
+        why: "Correct: reads, checks the read, then the range. The assert can never fire."
+      - t: "false"
+        why: Leaves only the assert, which vanishes in release builds (NDEBUG). Bad input walks in.
+      - t: count < 1 || count > 10
+        why: Nothing is ever read! count is always 0, so it always fails.
+      - t: "!(std::cin >> count)"
+        why: Catches text, but 0 or 500 reach the assert, which crashes debug builds only.
+    answer: 0
+    hints:
+      - assert disappears when NDEBUG is defined.
+      - Read, check the read, then check the range.
+    short: "Validate input with if; assert only documents what must already be true."
+    explain: "assert is for programmer mistakes and is compiled out in release builds, so it can't guard input. Validate with a real if: read, check the read, check the range. Then the assert states an assumption that's guaranteed."
+    sideBySide:
+      unsafe: |-
+        std::cin >> count;
+        assert(count >= 1 && count <= 10);   // gone in release builds
+      hardened: |-
+        if (!(std::cin >> count) || count < 1 || count > 10) {
+            std::cout << "Count must be 1 to 10\n";
+            return 1;
+        }
+        assert(count >= 1 && count <= 10);
+      prelude: int count{};
+  - id: w16.l6.c5
+    type: safe
+    tags: [ w16.ub, w16.ownership, w16.stl, w8.nullcheck ]
+    prompt: Safe or unsafe? The Dragon's hatchlings swarm. Every world at once. Go!
+    seconds: 40
+    items:
+      - code: auto p = std::make_unique<int>(5);
+        safe: true
+        why: One owner, deleted automatically. No leak, no double delete.
+      - code: |-
+          int* p = new int{5};
+          delete p;
+          delete p;
+        safe: false
+        why: "Double delete: the second delete frees memory that's already gone. UB."
+      - code: |-
+          std::optional<int> hp;
+          std::cout << *hp;
+        safe: false
+        why: "hp is empty. Dereferencing an empty optional is UB; check it first."
+      - code: |-
+          if (const auto it = m.find("imp"); it != m.end()) {
+              std::cout << it->second;
+          }
+        prelude: std::map<std::string, int> m;
+        safe: true
+        why: find() is compared with end() before use.
+      - code: |-
+          for (std::size_t i = 0; i < v.size(); ++i) {
+              v[i] *= 2;
+          }
+        prelude: std::vector<int> v{1, 2};
+        safe: true
+        why: "size_t index, < size(): every access is in bounds."
+      - code: |-
+          int* p = nullptr;
+          std::cout << *p;
+        safe: false
+        why: Dereferencing nullptr is UB. Check before following.
+      - code: |-
+          const int* first = &v[0];
+          v.push_back(4);
+          std::cout << *first;
+        prelude: std::vector<int> v{1, 2};
+        safe: false
+        why: push_back may reallocate. first can dangle.
+      - code: |-
+          if (d != 0) {
+              std::cout << n / d;
+          }
+        prelude: int n{8}; int d{};
+        safe: true
+        why: The divisor is checked before dividing.
+    hints:
+      - Look for unchecked pointers, optionals and divisors.
+      - Did a container change after an address was taken?
+    short: "Safe code checks, owns, and re-takes addresses. Unsafe code hopes."
+    explain: "Every unsafe item skips a layer: a double delete (ownership), an unchecked optional or pointer (checks), and an address kept across push_back (invalidation). Each safe item has its check or its owner in place."
+recap:
+  - Layers beat any single check.
+  - "Validate at the boundary; check before every risky operation."
+  - "Build with -Wall -Wextra -Werror; test with sanitizers."
+  - assert documents; it never validates input.
+vault:
+  - id: w16.depth
+    title: Defense in depth
+    code: |-
+      if (!(std::cin >> slot)) {                                  // 1. check the read
+          return 1;
+      }
+      if (slot < 0 || slot >= static_cast<int>(hp.size())) {     // 2. check the range
+          return 1;
+      }
+      const auto i = static_cast<std::size_t>(slot);
+      if (hp[i] > std::numeric_limits<int>::max() - amount) {     // 3. check the math
+          return 1;
+      }
+      hp[i] += amount;
+    prelude: std::vector<int> hp{30, 12, 7}; int slot{}; const int amount = 50;
+    note: Every layer assumes the one before it might fail.
+    defense: true
+  - id: w16.buildflags
+    title: Build like a defender
+    code: |-
+      # while developing: warnings are errors
+      g++ -std=c++20 -Wall -Wextra -Werror main.cpp
+
+      # while testing: catch memory bugs and UB at run time
+      g++ -std=c++20 -g -fsanitize=address,undefined main.cpp
+    expect: skip
+    note: Warnings catch mistakes at compile time; sanitizers catch what only happens at run time.
+    defense: true
+  - id: w16.edgetests
+    title: The edge-case checklist
+    code: |-
+      // Numbers:   0, -1, 1, the largest and smallest int
+      // Text:      "", " ", "abc" where a number is expected
+      // Indexes:   -1, size(), an empty container
+      // Pointers:  nullptr, a target that was deleted or moved
+      // Lookups:   a key that isn't there
+    expect: skip
+    note: Test the edges on purpose. UB that passes a happy-path test is still UB.
+    defense: true
+reviewTags: [ w8.sanitizers, w1.warnings, w12.tools, w12.ub, w3.overflow, w16.bounds, w16.exceptions, w16.stl ]

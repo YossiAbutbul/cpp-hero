@@ -1,0 +1,21 @@
+# World 16: Final Boss. Lessons are lesson-NN.yaml (played in file order).
+# A capstone: five short gauntlet lessons that each mix earlier worlds, a Shield
+# lesson on defense in depth, a capstone project, and the Undefined Dragon.
+
+id: w16
+num: 16
+title: Final Boss
+icon: crown
+blurb: "Everything at once: logic, memory, objects, errors, templates, the STL and modern C++, ending with a full defense gauntlet against the Undefined Dragon."
+story:
+  intro:
+    - "The ground won't stop shaking. Every bug we beat was one of its scales."
+    - The Undefined Dragon. It feeds on unchecked input and forgotten rules.
+    - One last gauntlet, hero. Everything you learned, all at once. Brace yourself!
+  bossIntro:
+    - There it is! The Undefined Dragon, the source of every bug in the Codebase.
+    - Three stages, then its fire. Check everything, trust nothing. I'm right here!
+  victory:
+    - The Dragon is gone. No more bugs pouring in. The Codebase is saved!
+    - You started knowing zero C++. Now you guard a whole world with it.
+    - Thank you, hero. You'll always have a home between my braces. {^_^}

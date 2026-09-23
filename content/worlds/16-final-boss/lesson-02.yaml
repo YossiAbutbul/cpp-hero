@@ -1,0 +1,314 @@
+# World 16 · Lesson 2: Gauntlet II: Collections and memory
+
+id: w16.l2
+title: "Gauntlet II: Collections and memory"
+skill: memory
+shield: false
+concept:
+  short: "Gauntlet stage two: stay in bounds, re-check pointers after containers change, and give every heap object one owner."
+  analogy: "Memory is a hotel: stay in your own room, and don't keep a key to a room that was torn down."
+  body:
+    - "**Bounds** (World 7): `v[i]` is unchecked; past the end is undefined behavior. Use `.at(i)` when an index comes from outside (it throws `std::out_of_range`), or check `i < v.size()` first."
+    - "**Invalidation** (World 7): `push_back` may move every element to a bigger block. Pointers, references and iterators into the old block now **dangle**. Take the address again after the vector changes, or store an index instead."
+    - "**Pointers** (World 8): initialize them, check `nullptr` before following, never return the address of a local."
+    - "**Ownership** (World 9): every heap object needs exactly one owner that deletes it. `std::make_unique` gives you that for free: no leaks, no double delete, no use-after-free. Raw `new`/`delete` is where those three bugs live."
+    - "UB doesn't promise a crash. A dangling pointer often still shows the old value... until the memory is reused."
+  pitfall: "Common mistake: \"it printed 9, so the pointer is fine\". Freed memory keeps its old bytes for a while; the bug waits."
+demo:
+  code: |-
+    #include <iostream>
+    #include <memory>
+    #include <vector>
+
+    int main() {
+        std::vector<int> loot{5, 9};
+        int* best = &loot[1];
+        std::cout << *best << '\n';
+        loot.push_back(12);
+        best = &loot.back();
+        std::cout << *best << '\n';
+        auto shield = std::make_unique<int>(3);
+        std::cout << *shield << '\n';
+        return 0;
+    }
+  steps:
+    - line: 5
+      mem:
+        cells:
+          - { name: "loot[0]", value: "5", group: loot }
+          - { name: "loot[1]", value: "9", group: loot }
+      note: Two values, side by side in one block.
+    - line: 6
+      mem:
+        cells:
+          - { name: best, ptr: "loot[1]" }
+      note: best points at the 9.
+    - line: 7
+      out: |
+        9
+      note: "Following a valid pointer: safe."
+    - line: 8
+      mem:
+        cells:
+          - { name: "new[0]", value: "5", group: new block }
+          - { name: "new[1]", value: "9", group: new block }
+          - { name: "new[2]", value: "12", group: new block }
+        drop: [ "loot[0]", "loot[1]" ]
+      crash: "Reallocated! best points into freed memory."
+      note: "push_back moved everything. Reading *best now is UB."
+    - line: 9
+      mem:
+        cells:
+          - { name: best, ptr: "new[2]" }
+      shield: Pointer refreshed!
+      note: Take the address again, after the vector changed.
+    - line: 10
+      out: |
+        12
+    - line: 11
+      mem:
+        cells:
+          - { name: heap, value: "3" }
+          - { name: shield, ptr: heap }
+      note: "make_unique: one heap int with exactly one owner."
+    - line: 12
+      out: |
+        3
+    - line: 13
+      mem:
+        drop: [ shield, heap ]
+      note: "Scope ends: the unique_ptr deletes its int. No leak."
+challenges:
+  - id: w16.l2.c1
+    type: predict
+    tags: [ w16.bounds, w7.at, w7.bounds ]
+    prompt: The index runs out of room. What does this print?
+    code: |-
+      #include <iostream>
+      #include <stdexcept>
+      #include <vector>
+
+      int main() {
+          std::vector<int> hp{4, 8};
+          try {
+              std::cout << hp.at(1) << '\n';
+              std::cout << hp.at(2) << '\n';
+          } catch (const std::out_of_range&) {
+              std::cout << "Out of range!\n";
+          }
+          return 0;
+      }
+    options:
+      - t: |
+          8
+          Out of range!
+        why: "Correct: hp.at(1) is 8; hp.at(2) throws before printing anything."
+      - t: |
+          8
+          0
+          Out of range!
+        why: ".at() never returns a made-up value. It throws instead of reading past the end."
+      - t: |
+          Out of range!
+        why: "Index 1 is valid (the second element), so 8 prints first."
+      - t: |
+          4
+          Out of range!
+        why: Indexes start at 0, so at(1) is the second element, 8.
+    answer: 0
+    hints:
+      - A 2-element vector has indexes 0 and 1.
+      - .at() checks the index and throws std::out_of_range.
+    short: "at(1) prints 8; at(2) throws, so the catch prints."
+    explain: "hp.at(1) is 8. hp.at(2) is past the end, so .at() throws std::out_of_range before the second line prints anything, and the catch block runs. With hp[2] instead, the read would be undefined behavior."
+  - id: w16.l2.c2
+    type: review
+    tags: [ w16.ownership, w16.pointers, w8.dangling ]
+    bug: use-after-free
+    unsafe: true
+    prompt: "UNSAFE: tap every line that causes undefined behavior."
+    code: |-
+      #include <iostream>
+      #include <memory>
+
+      int* makeHp() {
+          int hp = 10;
+          return &hp;
+      }
+
+      int main() {
+          int* boss = new int{50};
+          int* spare = boss;
+          delete boss;
+          std::cout << *spare << '\n';
+          auto ok = std::make_unique<int>(7);
+          std::cout << *ok << '\n';
+          return 0;
+      }
+    dangerous: [ 5, 12 ]
+    lineNotes:
+      5: "Returns the address of a local. hp dies at the }, so the pointer dangles."
+      9: "Raw new: legal, but std::make_unique would own it for you."
+      10: "A second pointer to the same int. Fine on its own..."
+      11: "...but after delete, BOTH pointers dangle."
+      12: "Use-after-free: spare points at deleted memory. UB, even if it prints 50."
+      13: "make_unique: one owner, deleted automatically. Safe."
+    hints:
+      - "Look for pointers to things that no longer exist."
+      - Two pointers can share one target. What happens after delete?
+    short: "Returning a local's address and reading deleted memory are both UB."
+    explain: "Line 5 hands out the address of a local that dies when makeHp returns. Line 12 reads through spare after line 11 deleted the int: use-after-free. Both are undefined behavior: they may print the old value, garbage, or crash. With make_unique there's one owner and nothing to forget."
+    sideBySide:
+      unsafe: |-
+        int* boss = new int{50};
+        int* spare = boss;
+        delete boss;
+        std::cout << *spare << '\n';   // use-after-free
+      hardened: |-
+        auto boss = std::make_unique<int>(50);
+        const int* view = boss.get();   // non-owning, used while boss lives
+        std::cout << *view << '\n';
+  - id: w16.l2.c3
+    type: harden
+    tags: [ w16.pointers, w8.nullcheck, w8.nullptr ]
+    bug: null-deref
+    prompt: findHero returns nullptr when nobody matches. Pick the check before following the pointer.
+    code: |-
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      const std::string* findHero(const std::vector<std::string>& names, const std::string& who) {
+          for (const auto& n : names) {
+              if (n == who) {
+                  return &n;
+              }
+          }
+          return nullptr;
+      }
+
+      int main() {
+          const std::vector<std::string> party{"Knight", "Mage"};
+          const std::string* hero = findHero(party, "Bard");
+          if (___) {
+              std::cout << "Found " << *hero << '\n';
+          } else {
+              std::cout << "No such hero\n";
+          }
+          return 0;
+      }
+    options:
+      - t: hero != nullptr
+        why: "Correct: only follow the pointer when it points at something."
+      - t: "!hero->empty()"
+        why: Follows the pointer to check it. If hero is null, that's the crash itself.
+      - t: "*hero != \"\""
+        why: Dereferences first, asks questions later. Null makes this UB.
+      - t: party.size() > 0
+        why: The party isn't empty, but Bard still isn't in it. hero is null.
+    answer: 0
+    hints:
+      - What does findHero return when nobody matches?
+      - Check the pointer itself, not what it points at.
+    short: "Check the pointer, not the target: hero != nullptr."
+    explain: "A search that can fail returns nullptr. Check the pointer itself before using `*` or `->`; any check that reads through it has already done the dangerous part. (Pointing into party is safe here: party outlives hero.)"
+    sideBySide:
+      unsafe: |-
+        const std::string* hero = findHero(party, "Bard");
+        std::cout << "Found " << *hero << '\n';   // null: UB
+      hardened: |-
+        const std::string* hero = findHero(party, "Bard");
+        if (hero != nullptr) {
+            std::cout << "Found " << *hero << '\n';
+        } else {
+            std::cout << "No such hero\n";
+        }
+      prelude: |-
+        const std::vector<std::string> party{"Knight", "Mage"};
+        auto findHero = [](const std::vector<std::string>& names, const std::string& who) -> const std::string* {
+            for (const auto& n : names) {
+                if (n == who) {
+                    return &n;
+                }
+            }
+            return nullptr;
+        };
+  - id: w16.l2.c4
+    type: mcq
+    tags: [ w16.ownership ]
+    prompt: A spell object lives on the heap and has exactly one owner. What should hold it?
+    options:
+      - t: std::unique_ptr<Spell>, made with std::make_unique
+        why: "Correct: one owner, deleted automatically at the end of its scope. Can't leak or double delete."
+      - t: A raw Spell* from new, with delete at the end
+        why: Any early return or exception skips the delete (leak). Copies of the pointer invite double delete.
+      - t: std::shared_ptr<Spell> everywhere, just in case
+        why: Works, but it's shared ownership with counting overhead. One owner means unique_ptr.
+      - t: A Spell& to a local Spell
+        why: The local dies at the end of its scope. The reference would dangle.
+    answer: 0
+    hints:
+      - Which smart pointer means "exactly one owner"?
+      - The Rule of Zero prefers types that clean up themselves.
+    short: "One owner: std::unique_ptr via std::make_unique."
+    explain: "std::unique_ptr expresses sole ownership and deletes its object exactly once, even when a function returns early or throws. std::shared_ptr is for real shared ownership. Raw new/delete is where leaks, double deletes and use-after-free come from."
+  - id: w16.l2.c5
+    type: breakit
+    tags: [ w16.bounds, w7.bounds, w3.validate ]
+    bug: out-of-bounds
+    unsafe: true
+    prompt: "UNSAFE: the player picks a slot to inspect. Pick the input that breaks it."
+    code: |-
+      std::vector<int> slots{10, 20, 30};
+      int i{};
+      if (!(std::cin >> i)) {
+          return 1;
+      }
+      if (i >= 0 && i <= static_cast<int>(slots.size())) {
+          std::cout << slots[i] << '\n';
+      }
+    options:
+      - t: "2"
+        why: Index 2 is the last valid slot. Prints 30.
+      - t: "3"
+        why: "Correct: 3 <= size() passes, but slots[3] is one past the end: UB."
+      - t: "-1"
+        why: Caught by i >= 0.
+      - t: abc
+        why: The read fails and the program exits early.
+    answer: 1
+    hints:
+      - Which indexes are valid for 3 slots?
+      - Look closely at <= in the check.
+    short: "<= size() lets index 3 through: one past the end."
+    explain: "The check allows i == size(), and slots[3] reads past the end: undefined behavior. The bound must be `i < size`. Or use slots.at(i), which throws std::out_of_range instead of reading garbage."
+    sideBySide:
+      unsafe: |-
+        if (i >= 0 && i <= static_cast<int>(slots.size())) {
+            std::cout << slots[i] << '\n';   // i == 3: UB
+        }
+      hardened: |-
+        if (i >= 0 && static_cast<std::size_t>(i) < slots.size()) {
+            std::cout << slots[static_cast<std::size_t>(i)] << '\n';
+        }
+      prelude: std::vector<int> slots{10, 20, 30}; int i{3};
+recap:
+  - "Outside index? Use .at() or check < size()."
+  - Re-take pointers after a vector grows.
+  - Check nullptr before * or ->.
+  - "Heap objects: std::make_unique, never raw delete."
+vault:
+  - id: w16.memorylaws
+    title: Four laws of memory
+    code: |-
+      auto owner = std::make_unique<int>(3);   // 1. one owner
+      std::vector<int> v{1, 2};
+      v.push_back(3);
+      const int* last = &v.back();             // 2. address AFTER growing
+      if (last != nullptr) {                   // 3. check before following
+          std::cout << *last << '\n';
+      }
+      std::cout << v.at(1) << '\n';            // 4. checked index from outside
+    note: One owner, fresh addresses, nullptr checks, checked indexes.
+    defense: false
+reviewTags: [ w7.bounds, w8.dangling, w9.unique, w9.uaf, w14.invalidation, w8.nullcheck, w16.flow ]

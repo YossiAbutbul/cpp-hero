@@ -1,0 +1,310 @@
+# World 16 · Lesson 3: Gauntlet III: Objects and polymorphism
+
+id: w16.l3
+title: "Gauntlet III: Objects and polymorphism"
+skill: structure
+shield: false
+concept:
+  short: "Gauntlet stage three: classes guard their invariants, and polymorphic bases need virtual destructors, override, and no slicing."
+  analogy: "A class is a vault with one guarded door: nobody puts a broken value inside."
+  body:
+    - "**Classes** (World 10): keep data `private`, validate in the constructor (throw if the object can't be valid), mark read-only methods `const`, and make one-argument constructors `explicit` so a stray `int` can't silently become an object."
+    - "**Inheritance** (World 11): if you delete a derived object through a base pointer (which `std::unique_ptr<Base>` does), the base destructor **must** be `virtual`. Otherwise it's undefined behavior, and usually the derived part never gets cleaned up."
+    - "Write `override` on every overriding function. If the signature doesn't really match the base, it becomes a compile error instead of a silent new function."
+    - "**Slicing**: copying a derived object into a base **value** (by-value parameter, `Base b = derived;`) cuts off the derived part. Pass polymorphic objects by reference or pointer."
+    - "**Ownership again** (World 9): `std::vector<std::unique_ptr<Base>>` holds a mixed swarm safely. Each element is deleted once, through the virtual destructor."
+  pitfall: "Common mistake: `void attack(Bug b)` for a polymorphic Bug. Every Beetle you pass in turns into a plain Bug."
+demo:
+  code: |-
+    #include <iostream>
+    #include <memory>
+    #include <stdexcept>
+    #include <string>
+    #include <vector>
+
+    class Bug {
+    public:
+        explicit Bug(int hp) : hp_{hp} {
+            if (hp <= 0) {
+                throw std::invalid_argument{"hp must be positive"};
+            }
+        }
+        virtual ~Bug() = default;
+        virtual std::string name() const { return "Bug"; }
+        int hp() const { return hp_; }
+    private:
+        int hp_;
+    };
+
+    class Beetle : public Bug {
+    public:
+        using Bug::Bug;
+        std::string name() const override { return "Beetle"; }
+    };
+
+    int main() {
+        std::vector<std::unique_ptr<Bug>> swarm;
+        swarm.push_back(std::make_unique<Bug>(3));
+        swarm.push_back(std::make_unique<Beetle>(5));
+        for (const auto& b : swarm) {
+            std::cout << b->name() << ' ' << b->hp() << '\n';
+        }
+        return 0;
+    }
+  steps:
+    - line: 26
+      note: main builds a swarm of owned bugs.
+    - line: 27
+      vars:
+        swarm: "{}"
+      note: "Each element is a unique_ptr<Bug>: one owner apiece."
+    - line: 28
+      note: make_unique runs the constructor with hp 3.
+    - line: 9
+      shield: Invariant checked!
+      note: "Constructor guard: 3 > 0, so this Bug is valid."
+    - line: 28
+      vars:
+        swarm: "{Bug 3}"
+      note: The vector owns it now.
+    - line: 29
+      vars:
+        swarm: "{Bug 3, Beetle 5}"
+      note: A Beetle is a Bug, stored through a Bug pointer.
+    - line: 30
+      vars:
+        b: "Bug 3"
+    - line: 31
+      out: |
+        Bug 3
+      note: virtual name() asks the real object.
+    - line: 30
+      vars:
+        b: "Beetle 5"
+    - line: 31
+      out: |
+        Beetle 5
+      note: Beetle's override runs through a Bug pointer.
+    - line: 33
+      vars:
+        b: null
+      note: Scope ends; each bug is deleted via the virtual destructor.
+challenges:
+  - id: w16.l3.c1
+    type: predict
+    tags: [ w16.virtual, w8.byref, w6.constref ]
+    bug: object-slicing
+    prompt: Same Beetle, passed two ways. What does this print?
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      struct Bug {
+          virtual ~Bug() = default;
+          virtual std::string name() const { return "Bug"; }
+      };
+
+      struct Beetle : Bug {
+          std::string name() const override { return "Beetle"; }
+      };
+
+      void byValue(Bug b) { std::cout << b.name() << ' '; }
+      void byRef(const Bug& b) { std::cout << b.name() << '\n'; }
+
+      int main() {
+          Beetle x;
+          byValue(x);
+          byRef(x);
+          return 0;
+      }
+    options:
+      - t: |
+          Bug Beetle
+        why: "Correct: the copy is sliced down to a plain Bug; the reference still sees the Beetle."
+      - t: |
+          Beetle Beetle
+        why: "byValue copies only the Bug part. The copy IS a Bug, so virtual can't help."
+      - t: |
+          Bug Bug
+        why: A reference refers to the real object, so virtual dispatch finds Beetle.
+      - t: |
+          Beetle Bug
+        why: It's the other way around. The by-value copy loses the Beetle part.
+    answer: 0
+    hints:
+      - What gets copied when a Beetle is passed as a Bug by value?
+      - A reference is another name for the real object.
+    short: "By value slices to a Bug; by reference keeps the Beetle."
+    explain: "Passing a Beetle to a `Bug` parameter by value copies only the Bug base part: slicing. The copy is a real Bug, so name() says \"Bug\". The const reference refers to the original Beetle, and virtual dispatch finds Beetle::name()."
+  - id: w16.l3.c2
+    type: bug
+    tags: [ w16.virtual, w16.ownership ]
+    bug: missing-virtual-dtor
+    unsafe: true
+    prompt: "UNSAFE: a Hydra is deleted through a Bug pointer. Tap the buggy line, then pick the fix."
+    code: |-
+      #include <iostream>
+      #include <memory>
+
+      class Bug {
+      public:
+          ~Bug() { std::cout << "Bug gone\n"; }
+      };
+
+      class Hydra : public Bug {
+      public:
+          ~Hydra() { std::cout << "Hydra gone\n"; }
+      };
+
+      int main() {
+          std::unique_ptr<Bug> b = std::make_unique<Hydra>();
+          return 0;
+      }
+    bugLine: 5
+    options:
+      - t: "virtual ~Bug() { std::cout << \"Bug gone\\n\"; }"
+        why: "Correct: deleting through a Bug pointer now runs ~Hydra first, then ~Bug."
+      - t: "virtual ~Hydra() { std::cout << \"Hydra gone\\n\"; }"
+        why: The delete goes through Bug. It's the BASE destructor that must be virtual.
+      - t: "~Bug() = default;"
+        why: Still not virtual. Deleting a Hydra through Bug* stays UB.
+      - t: "~Bug() noexcept { std::cout << \"Bug gone\\n\"; }"
+        why: Destructors are already noexcept. That doesn't make them virtual.
+    answer: 0
+    hints:
+      - The unique_ptr deletes through a Bug pointer.
+      - Which destructor has to be looked up at run time?
+    short: "Deleting through a base pointer needs a virtual base destructor."
+    explain: "unique_ptr<Bug> calls delete on a Bug*. Without a virtual destructor, that's undefined behavior when the object is really a Hydra: typically only ~Bug runs and the Hydra part is never cleaned up. Make the base destructor virtual (or `virtual ~Bug() = default;`)."
+    sideBySide:
+      unsafe: |-
+        class Bug {
+        public:
+            ~Bug() { std::cout << "Bug gone\n"; }
+        };
+      hardened: |-
+        class Bug {
+        public:
+            virtual ~Bug() { std::cout << "Bug gone\n"; }
+        };
+  - id: w16.l3.c3
+    type: fill
+    tags: [ w16.virtual ]
+    prompt: Make the compiler confirm this really overrides the base function.
+    code: |-
+      #include <string>
+
+      struct Bug {
+          virtual ~Bug() = default;
+          virtual std::string name() const { return "Bug"; }
+      };
+
+      struct Wasp : Bug {
+          std::string name() const ___ { return "Wasp"; }
+      };
+    accept:
+      - override
+      - override final
+      - final override
+      - final
+    placeholder: keyword
+    hints:
+      - One word, after const.
+      - It turns a signature typo into a compile error.
+    short: "override makes the compiler check that a base function is really overridden."
+    explain: "`override` asks the compiler to verify that a matching virtual function exists in the base. Misspell the name or forget `const`, and you get a compile error instead of a silent new function that never gets called."
+  - id: w16.l3.c4
+    type: harden
+    tags: [ w16.classes ]
+    bug: broken-invariant
+    prompt: A Shield's durability must stay 0 to 100. Pick the constructor check.
+    code: |-
+      #include <stdexcept>
+
+      class Shield {
+      public:
+          explicit Shield(int durability) : durability_{durability} {
+              if (___) {
+                  throw std::invalid_argument{"durability must be 0 to 100"};
+              }
+          }
+          int durability() const { return durability_; }
+      private:
+          int durability_;
+      };
+    options:
+      - t: durability < 0 || durability > 100
+        why: "Correct: rejects both ends, so no invalid Shield can ever exist."
+      - t: durability < 0 && durability > 100
+        why: "No number is both below 0 and above 100: this never throws."
+      - t: durability > 100
+        why: Misses negatives. Shield{-40} would be built.
+      - t: durability_ == 0
+        why: 0 is valid, and -40 or 500 still get in.
+    answer: 0
+    hints:
+      - Two ends of the range, either one is bad.
+      - "Any bad value: either one or the other."
+    short: "Validate in the constructor: an object is valid from birth, or never exists."
+    explain: "The constructor is the gate. If it throws, the object never exists, so every Shield that does exist obeys the invariant. Private data means nobody can break it later without going through a member function."
+    sideBySide:
+      unsafe: |-
+        class Shield {
+        public:
+            int durability;   // public: anyone can set -40
+        };
+      hardened: |-
+        class Shield {
+        public:
+            explicit Shield(int durability) : durability_{durability} {
+                if (durability < 0 || durability > 100) {
+                    throw std::invalid_argument{"durability must be 0 to 100"};
+                }
+            }
+            int durability() const { return durability_; }
+        private:
+            int durability_;
+        };
+  - id: w16.l3.c5
+    type: mcq
+    tags: [ w16.virtual ]
+    prompt: "The base has `virtual void hit(int dmg);`. A derived class writes `void hit(long dmg) override;`. What happens?"
+    options:
+      - t: Compile error
+        why: "Correct: hit(long) overrides nothing, and override makes the compiler say so."
+      - t: It overrides hit(int) anyway
+        why: "Overriding needs the exact same parameter types. long is not int."
+      - t: It compiles, but calls through the base never reach it
+        why: That's what happens WITHOUT override. With it, the mismatch is caught.
+      - t: The program crashes at run time
+        why: Nothing gets to run. The compiler rejects it first.
+    answer: 0
+    hints:
+      - Do int and long match exactly?
+      - What is override's whole job?
+    short: "override turns a mismatched signature into a compile error."
+    explain: "An override must match the base signature exactly (parameter types, const). hit(long) doesn't, so it would be a brand-new function that base calls never reach. With `override`, the compiler reports the mistake immediately."
+recap:
+  - Private data, validated in the constructor.
+  - Polymorphic base? Virtual destructor.
+  - Write override on every override.
+  - Pass polymorphic objects by reference, never by value.
+vault:
+  - id: w16.polybase
+    title: A safe polymorphic base
+    code: |-
+      #include <string>
+
+      class Bug {
+      public:
+          virtual ~Bug() = default;
+          virtual std::string name() const = 0;
+      };
+
+      class Beetle : public Bug {
+      public:
+          std::string name() const override { return "Beetle"; }
+      };
+    note: "Virtual destructor, override everywhere, and pass by reference or smart pointer."
+    defense: false
+reviewTags: [ w6.constref, w10.invariant, w10.explicit, w11.slicing, w11.virtual-dtor, w16.pointers, w16.ownership ]
