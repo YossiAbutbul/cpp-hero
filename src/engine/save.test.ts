@@ -108,7 +108,7 @@ describe('save format v1', () => {
     expect(() => validateImport(null)).toThrow(/isn’t a Cpp Hero save/);
     expect(() => validateImport({ profile: {}, settings: {} })).toThrow(/version/);
     expect(() => validateImport({ v: 1, profile: {} })).toThrow(/profile or settings/);
-    expect(() => validateImport({ v: 1, profile: {}, settings: {}, lessons: [] })).toThrow(/Lessons/);
+    expect(() => validateImport({ v: 1, profile: {}, settings: {}, lessons: [] })).toThrow(/lesson list/);
     expect(() => parseImport('{nope', NOW)).toThrow(/valid JSON/);
     const back = parseImport(JSON.stringify(playedSave()), NOW);
     expect(back.profile.name).toBe('Ada');

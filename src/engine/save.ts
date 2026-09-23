@@ -184,13 +184,13 @@ export function migrate(input: unknown, now: Date = new Date()): SaveV1 {
 
 /** Light shape check for imported files. Throws SaveError with a friendly message. */
 export function validateImport(o: unknown): asserts o is Record<string, unknown> {
-  if (!isObj(o)) throw new SaveError('That file isn’t a Cpp Hero save.');
-  if (typeof o.v !== 'number') throw new SaveError('Missing save version (v).');
+  if (!isObj(o)) throw new SaveError('That isn’t a Cpp Hero save.');
+  if (typeof o.v !== 'number') throw new SaveError('The save has no version number.');
   if (!isObj(o.profile) || !isObj(o.settings))
     throw new SaveError('The save is missing profile or settings.');
-  if (o.lessons != null && !isObj(o.lessons)) throw new SaveError('Lessons data is malformed.');
+  if (o.lessons != null && !isObj(o.lessons)) throw new SaveError('The save’s lesson list is broken.');
   if (o.worldsUnlocked != null && !Array.isArray(o.worldsUnlocked))
-    throw new SaveError('worldsUnlocked is malformed.');
+    throw new SaveError('The save’s world list is broken.');
 }
 
 export const MAX_IMPORT_CHARS = 3_000_000;
@@ -198,12 +198,12 @@ export const MAX_IMPORT_CHARS = 3_000_000;
 /** Parse + validate + migrate an exported JSON string. Throws SaveError. */
 export function parseImport(json: string, now: Date = new Date()): SaveV1 {
   // A full save (even with thousands of review cards) is well under this; bigger input would only fill up storage.
-  if (json.length > MAX_IMPORT_CHARS) throw new SaveError('That file is too big to be a Cpp Hero save.');
+  if (json.length > MAX_IMPORT_CHARS) throw new SaveError('That’s too big to be a Cpp Hero save.');
   let o: unknown;
   try {
     o = JSON.parse(json);
   } catch {
-    throw new SaveError('That file isn’t valid JSON.');
+    throw new SaveError('That doesn’t look like a save (it isn’t valid JSON).');
   }
   validateImport(o);
   return migrate(o, now);
