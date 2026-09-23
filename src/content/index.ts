@@ -10,6 +10,7 @@ import initial from 'virtual:cpp-hero-content';
 import type { Content } from './schema';
 
 export type * from './schema';
+export { demoStates, type DemoState, type DemoFrameState, type MemCellState } from './demoState';
 
 let current: Content = initial;
 const listeners = new Set<() => void>();

@@ -402,6 +402,15 @@ export const DemoFrameSchema = z.strictObject({
   vars: z.record(z.string(), z.string()).optional(),
 });
 
+/**
+ * Popping the top call-stack frame: `pop: true`, or `pop: { returns: "8" }` to
+ * show the return value travelling back to the caller.
+ */
+export const DemoPopSchema = z.union([
+  z.literal(true),
+  z.strictObject({ returns: z.string().optional() }),
+]);
+
 export const DemoStepSchema = z.strictObject({
   /** 0-based line index into demo.code. */
   line: z.number().int().min(0),
@@ -415,10 +424,11 @@ export const DemoStepSchema = z.strictObject({
    */
   vars: z.record(z.string(), z.string().nullable()).optional(),
   /**
-   * Call stack: `pop: true` removes the top frame (its boxes vanish), then
-   * `push` puts a new frame on top. Order within a step: pop, push, vars, mem.
+   * Call stack: `pop: true` (or `pop: { returns: "8" }`) removes the top
+   * frame (its boxes vanish), then `push` puts a new frame on top.
+   * Order within a step: pop, push, vars, mem.
    */
-  pop: z.literal(true).optional(),
+  pop: DemoPopSchema.optional(),
   push: DemoFrameSchema.optional(),
   /** Memory cells and pointer arrows (see MemCellSchema). */
   mem: DemoMemSchema.optional(),
@@ -658,6 +668,7 @@ export type SpeedItem = z.infer<typeof SpeedItemSchema>;
 export type VaultCard = z.infer<typeof VaultCardSchema>;
 export type DemoStep = z.infer<typeof DemoStepSchema>;
 export type DemoFrame = z.infer<typeof DemoFrameSchema>;
+export type DemoPop = z.infer<typeof DemoPopSchema>;
 export type DemoMem = z.infer<typeof DemoMemSchema>;
 export type MemCell = z.infer<typeof MemCellSchema>;
 export type Demo = z.infer<typeof DemoSchema>;

@@ -4,6 +4,8 @@
  * Compiler: g++ -std=c++20 -Wall -Wextra
  *   - on Windows via WSL (distro from $CHECK_CPP_WSL_DISTRO, default "Ubuntu"),
  *   - otherwise (or when WSL is unavailable) a local g++ / clang++ on PATH,
+ *   - otherwise Docker with the image $CHECK_CPP_DOCKER_IMAGE (default gcc:14),
+ *     if that image is already pulled (the script never pulls it),
  *   - none found → warning and exit 0 (so the check never blocks machines
  *     without a compiler; CI should have one).
  *
@@ -23,12 +25,16 @@
  * there were problems or --keep is given.
  *
  * Options:
- *   --filter <s>   only check snippets whose key or file contains <s>
- *                  (repeatable, or comma-separated: --filter 06-functions,w7.)
- *                  Validation errors only block the run when they are in a
- *                  matching file or in content/shared/; others are warnings.
+ *   --filter <s>   only check some snippets (repeatable, comma-separated, or --filter=<s>):
+ *                    w9 / 9      one world (id prefix w9. or folder content/worlds/09-*)
+ *                    w9.l2       one lesson (also w9.p, w9.boss, w9.l2.c3)
+ *                    other text  snippets whose key or file path contains it (e.g. 06-functions)
+ *                  --world <s> is an alias. Validation errors only block the
+ *                  run when they are in a filtered world/file or in
+ *                  content/shared/; others are printed as warnings.
  *   --jobs <n>     parallel compile workers (default: all CPUs; -j <n> works too)
  *   --keep         keep the work directory for inspection
+ *   --list         print the snippets that would be checked, compile nothing
  */
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -49,13 +55,40 @@ const args = process.argv.slice(2);
 const keep = args.includes('--keep');
 /** Values of a repeatable option, e.g. --filter a --filter b,c → [a, b, c]. */
 const optionValues = (...names: string[]) =>
-  args.flatMap((a, i) => (names.includes(a) && args[i + 1] ? args[i + 1]!.split(',') : [])).filter(Boolean);
-const filters = optionValues('--filter');
+  args
+    .flatMap((a, i) => {
+      const eq = names.find((n) => a.startsWith(n + '='));
+      if (eq) return a.slice(eq.length + 1).split(',');
+      return names.includes(a) && args[i + 1] ? args[i + 1]!.split(',') : [];
+    })
+    .map((f) => f.trim())
+    .filter(Boolean);
+const filters = [...optionValues('--filter', '--world')];
 const jobsArg = Number(optionValues('--jobs', '-j').at(-1));
 const JOBS = Number.isInteger(jobsArg) && jobsArg > 0 ? jobsArg : Math.max(1, cpus().length);
-const matches = (s: string) => !filters.length || filters.some((f) => s.includes(f));
 
-type Backend = { kind: 'wsl'; distro: string } | { kind: 'native'; cxx: string };
+/**
+ * World-shaped filters: "w9", "9" or "w9.l2" (world 9, or one lesson/boss/... in it).
+ * They match by id prefix (so w1 does not match w10) and by the world folder.
+ */
+const WORLD_FILTER = /^w?(\d+)(\..*)?$/;
+const worldDir = (num: string) => `content/worlds/${num.padStart(2, '0')}-`;
+function filterMatches(f: string, key: string, file: string): boolean {
+  const m = WORLD_FILTER.exec(f);
+  if (!m) return key.includes(f) || file.includes(f);
+  const id = `w${Number(m[1])}${m[2] ?? ''}`;
+  const idMatch = (k: string) => k === id || k.startsWith(id + '.');
+  if (m[2] === undefined)
+    return file.startsWith(worldDir(m[1]!)) || idMatch(key) || idMatch(key.replace(/^vault\./, ''));
+  return idMatch(key) || idMatch(key.replace(/^vault\./, ''));
+}
+const matches = (key: string, file = '') =>
+  !filters.length || filters.some((f) => filterMatches(f, key, file));
+
+type Backend =
+  { kind: 'wsl'; distro: string } | { kind: 'docker'; image: string } | { kind: 'native'; cxx: string };
+
+const DOCKER_IMAGE = process.env.CHECK_CPP_DOCKER_IMAGE || 'gcc:14';
 
 function detectBackend(): Backend | null {
   if (process.platform === 'win32') {
@@ -70,6 +103,12 @@ function detectBackend(): Backend | null {
     const r = spawnSync(cxx, ['--version'], { encoding: 'utf8' });
     if (r.status === 0) return { kind: 'native', cxx };
   }
+  // Docker, only with an image that is already present (never pulls on its own).
+  const d = spawnSync('docker', ['image', 'inspect', '--format', '{{.Id}}', DOCKER_IMAGE], {
+    encoding: 'utf8',
+    timeout: 60_000,
+  });
+  if (d.status === 0) return { kind: 'docker', image: DOCKER_IMAGE };
   return null;
 }
 
@@ -93,8 +132,11 @@ function prepare(snips: Snippet[]): void {
 
 const flagsFor = (s: Snippet) => [...BASE_FLAGS, ...(s.wrapped ? FRAGMENT_FLAGS : [])];
 
-/** WSL: one bash script, compiled/run in parallel with xargs, results written next to the sources. */
-function runWsl(snips: Snippet[], distro: string): void {
+/**
+ * WSL / Docker: one bash script, compiled/run in parallel with xargs, results
+ * written next to the sources. `srcDir` is the work dir as the Linux side sees it.
+ */
+function runLinux(snips: Snippet[], srcDir: string, exec: (script: string) => [string, string[]]): void {
   const jobs = snips.map((s, i) => {
     const n = String(i).padStart(4, '0');
     const runs = (s.run?.stdin ?? [])
@@ -112,7 +154,7 @@ function runWsl(snips: Snippet[], distro: string): void {
   const script = [
     'set -u',
     // Work on the Linux side (/mnt/c I/O is slow), then copy the results back.
-    `SRC=${shq(toWslPath(WORK))}`,
+    `SRC=${shq(srcDir)}`,
     'export B=$(mktemp -d)',
     'cp -r "$SRC"/. "$B"/ && cd "$B"',
     `ls ./*.sh | xargs -P ${JOBS} -n 1 bash`,
@@ -120,12 +162,13 @@ function runWsl(snips: Snippet[], distro: string): void {
     'cd / && rm -rf "$B"',
   ].join('\n');
   writeFileSync(join(WORK, 'run-all.bash'), script + '\n');
-  const r = spawnSync('wsl.exe', ['-d', distro, '--', 'bash', toWslPath(join(WORK, 'run-all.bash'))], {
+  const [cmd, argv] = exec(`${srcDir}/run-all.bash`);
+  const r = spawnSync(cmd, argv, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: 20 * 60_000,
   });
-  if (r.status !== 0) throw new Error(`WSL run failed (${r.status}): ${r.stderr || r.stdout}`);
+  if (r.status !== 0) throw new Error(`${cmd} run failed (${r.status}): ${r.stderr || r.stdout || r.error}`);
 }
 
 /** Native: spawn the compiler per snippet with a small concurrency pool. */
@@ -182,20 +225,21 @@ const showWs = (s: string) => JSON.stringify(s);
 async function main(): Promise<void> {
   const { issues, parsed } = loadContentFromDisk();
   const extracted = extractSnippets(parsed);
-  const snippets = extracted.snippets.filter((s) => matches(s.key) || matches(s.file));
-  const skipped = extracted.skipped.filter(matches);
-  // With --filter, only issues in the checked files (or shared data) block the run.
+  const snippets = extracted.snippets.filter((s) => matches(s.key, s.file));
+  const skipped = extracted.skipped.filter((s) => matches('', s));
+  // With --filter, only issues in the checked files, the filtered worlds' folders
+  // or shared data block the run; everything else is a warning.
   const checkedFiles = new Set(snippets.map((s) => s.file));
   const worldDirs = filters.flatMap((f) => {
-    const m = /^w(d+)(.|$)/.exec(f);
-    return m ? [`content/worlds/${m[1]!.padStart(2, '0')}-`] : [];
+    const m = WORLD_FILTER.exec(f);
+    return m ? [worldDir(m[1]!)] : [];
   });
   const blocking = issues.filter(
     (i) =>
       !filters.length ||
       i.file.startsWith('content/shared/') ||
       checkedFiles.has(i.file) ||
-      matches(i.file) ||
+      filters.some((f) => !WORLD_FILTER.test(f) && i.file.includes(f)) ||
       worldDirs.some((d) => i.file.startsWith(d)),
   );
   const other = issues.filter((i) => !blocking.includes(i));
@@ -216,21 +260,41 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  if (args.includes('--list')) {
+    snippets.forEach((s) => console.log(`${s.key}  (${s.file} › ${s.yamlPath}, expect ${s.expect})`));
+    console.log(`${snippets.length} snippets, ${skipped.length} skipped`);
+    return;
+  }
+
   const backend = detectBackend();
   if (!backend) {
     console.warn(
-      'check:cpp: WARNING no C++ compiler found (WSL g++, g++ or clang++). Skipping the C++ check.',
+      `check:cpp: WARNING no C++ compiler found (WSL g++, g++, clang++ or the Docker image ${DOCKER_IMAGE}). ` +
+        `Skipping the C++ check. Fix: install g++ in WSL Ubuntu, or run "docker pull ${DOCKER_IMAGE}".`,
     );
     return;
   }
-  const label = backend.kind === 'wsl' ? `g++ in WSL (${backend.distro})` : backend.cxx;
+  const label =
+    backend.kind === 'wsl'
+      ? `g++ in WSL (${backend.distro})`
+      : backend.kind === 'docker'
+        ? `g++ in Docker (${backend.image})`
+        : backend.cxx;
   console.log(
     `check:cpp: ${snippets.length} snippets, ${skipped.length} skipped (expect: skip), compiler: ${label}, ${JOBS} jobs`,
   );
   const t0 = Date.now();
   prepare(snippets);
-  if (backend.kind === 'wsl') runWsl(snippets, backend.distro);
-  else await runNative(snippets, backend.cxx);
+  if (backend.kind === 'wsl') {
+    const { distro } = backend;
+    runLinux(snippets, toWslPath(WORK), (script) => ['wsl.exe', ['-d', distro, '--', 'bash', script]]);
+  } else if (backend.kind === 'docker') {
+    const { image } = backend;
+    runLinux(snippets, '/work', (script) => [
+      'docker',
+      ['run', '--rm', '--network', 'none', '-v', `${WORK}:/work`, image, 'bash', script],
+    ]);
+  } else await runNative(snippets, backend.cxx);
 
   const failures: string[] = [];
   let ran = 0;

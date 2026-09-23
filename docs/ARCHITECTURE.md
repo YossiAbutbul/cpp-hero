@@ -100,8 +100,19 @@ CH.content.worlds.push({
       { line: 3, out: "Hi!\n", note: "cout prints the text; \\n ends the line." },
       { line: 4, note: "return 0 means success." }
     ],
-    // optional per-step: vars: { hp: "3" } (set/update variable boxes; value "?" = uninitialized/garbage),
-    //                    crash: "text" (themed crash animation, for unsafe demos), shield: "text" (shield deflect)
+    // optional per-step (applied in this order: pop, push, vars, mem):
+    //   vars: { hp: "3", old: null }  set/update variable boxes ("?" = garbage); null removes a box (out of scope).
+    //                                  While call-stack frames are in use, vars change the TOP frame.
+    //   push: { name: "heal", vars: { hp: "3" } }   a call-stack frame slides on (params as boxes)
+    //   pop: true | { returns: "8" }                the top frame slides off; `returns` travels to the caller
+    //   mem: { cells: [ { name, value?, addr?, ptr?: "<cell>" | null, ref?: "<cell>", group?, readonly? } ],
+    //          drop: ["<cell>"] }        memory view: cells upsert by name; ptr draws an arrow (null = nullptr stub),
+    //                                    ref = extra name tag on the target, group = array strip, drop = lifetime
+    //                                    ended (ghost slot; arrows into it turn red/dashed = dangling)
+    //   crash: "text" (themed crash animation, for unsafe demos), shield: "text" (shield deflect)
+    // Types: DemoStep, DemoFrame, DemoPop, DemoMem, MemCell (src/content/schema.ts). Renderers can call
+    // demoStates(steps) (src/content/demoState.ts, re-exported from src/content) to get the full
+    // frames + cells after each step. Details and examples: content/README.md "Demo steps".
   },
   challenges: [ Challenge, … ],  // 3–6, varied types
   recap: ["One-line takeaway", "…"],     // 2–4 bullets

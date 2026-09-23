@@ -7,14 +7,14 @@ challenges are YAML files in [`content/`](content/README.md), validated at build
 
 ## Project status (2026-09-23)
 
-| Area | State |
-| --- | --- |
-| Design | Chosen: **Pop Path** (`designs/5-springboard.html`) with the **original Curlo** mascot, unchanged |
-| Legacy vanilla app | Complete and playable for Worlds 1–3 (`legacy/`, published at https://claude.ai/artifact/TjyqcuJjayUHvTnoTU6jbv). Behavioral + visual reference for the React port |
-| Content | **Worlds 1–8 done** in YAML (41 lessons, 404 challenges, 8 projects, 8 bosses), all compile-checked with g++. Worlds 9–16 not started |
-| React foundation | Done on `main`: scaffold, PWA, YAML pipeline + `validate` + `check:cpp`, engine logic in TS (90 tests), UI primitives, Curlo, CodeBlock/CodeDemo, app shell, router + transitions, screen **stubs** |
-| React screens | **In progress, not on `main`.** Partial work saved on branch **`wip/phase-b2`** (challenge renderers, map pieces, stats pieces, cosmetic art, check:cpp + schema fixes). The map on `main` is still a placeholder list |
-| Firebase login + Vercel deploy | Planned for later, not started |
+| Area                           | State                                                                                                                                                                                                                  |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Design                         | Chosen: **Pop Path** (`designs/5-springboard.html`) with the **original Curlo** mascot, unchanged                                                                                                                      |
+| Legacy vanilla app             | Complete and playable for Worlds 1–3 (`legacy/`, published at https://claude.ai/artifact/TjyqcuJjayUHvTnoTU6jbv). Behavioral + visual reference for the React port                                                     |
+| Content                        | **Worlds 1–8 done** in YAML (41 lessons, 404 challenges, 8 projects, 8 bosses), all compile-checked with g++. Worlds 9–16 not started                                                                                  |
+| React foundation               | Done on `main`: scaffold, PWA, YAML pipeline + `validate` + `check:cpp`, engine logic in TS (90 tests), UI primitives, Curlo, CodeBlock/CodeDemo, app shell, router + transitions, screen **stubs**                    |
+| React screens                  | **In progress, not on `main`.** Partial work saved on branch **`wip/phase-b2`** (challenge renderers, map pieces, stats pieces, cosmetic art, check:cpp + schema fixes). The map on `main` is still a placeholder list |
+| Firebase login + Vercel deploy | Planned for later, not started                                                                                                                                                                                         |
 
 ### How to continue
 
@@ -29,7 +29,7 @@ challenges are YAML files in [`content/`](content/README.md), validated at build
 
 User preferences that apply everywhere: short on-screen text with "Tell me more" for details; no visible scrollbars; code wraps instead of scrolling; inputs size to content; wrong answers get Try again / Show answer; sound off for now (`SOUND_ENABLED` in `src/engine/config.ts`); premium springy transitions; simple names.
 
-To resume with Claude: open this folder in Claude Code and say *"Continue Cpp Hero from the README status"*.
+To resume with Claude: open this folder in Claude Code and say _"Continue Cpp Hero from the README status"_.
 
 ## Getting started
 
@@ -40,16 +40,16 @@ npm install
 npm run dev          # http://localhost:5173 — editing content/*.yaml hot-reloads
 ```
 
-| script                 | what it does                                                                                                                                           |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `npm run dev`          | dev server with hot reload (YAML errors show in the browser overlay)                                                                                   |
-| `npm run build`        | `validate`, type-check, production build to `dist/` (with service worker)                                                                              |
-| `npm run preview`      | serve `dist/` locally                                                                                                                                  |
-| `npm test`             | Vitest unit tests (engine rules, save compatibility, content loader)                                                                                   |
-| `npm run lint`         | ESLint (+ `npm run format` for Prettier)                                                                                                               |
-| `npm run validate`     | check every YAML file against the schema; lists `<file> › <path>: <problem>`                                                                           |
-| `npm run check:cpp`    | compile every C++ snippet (`g++ -std=c++20 -Wall -Wextra`) and run every predict-the-output program; uses WSL g++ on Windows, else g++/clang++ on PATH |
-| `npm run legacy:build` | build the original vanilla app (`legacy/dist`, `.artifact/cpp-hero.html`)                                                                              |
+| script                 | what it does                                                                                                                                                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run dev`          | dev server with hot reload (YAML errors show in the browser overlay)                                                                                                                                                                                               |
+| `npm run build`        | `validate`, type-check, production build to `dist/` (with service worker)                                                                                                                                                                                          |
+| `npm run preview`      | serve `dist/` locally                                                                                                                                                                                                                                              |
+| `npm test`             | Vitest unit tests (engine rules, save compatibility, content loader)                                                                                                                                                                                               |
+| `npm run lint`         | ESLint (+ `npm run format` for Prettier)                                                                                                                                                                                                                           |
+| `npm run validate`     | check every YAML file against the schema; lists `<file> › <path>: <problem>`                                                                                                                                                                                       |
+| `npm run check:cpp`    | compile every C++ snippet (`g++ -std=c++20 -Wall -Wextra`) and run every predict-the-output program; uses WSL g++ on Windows, else g++/clang++ on PATH, else a pulled `gcc:14` Docker image. One world: `npm run check:cpp -- --filter w9` (see content/README.md) |
+| `npm run legacy:build` | build the original vanilla app (`legacy/dist`, `.artifact/cpp-hero.html`)                                                                                                                                                                                          |
 
 ## Layout
 
