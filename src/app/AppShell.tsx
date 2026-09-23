@@ -70,7 +70,7 @@ export function AppShell() {
           <div ref={tabs} className={`${styles.chrome} ${styles.tabsRow}`} aria-hidden={immersive || undefined}>
             <TabBar handle={handle} />
           </div>
-          <UpdatePrompt />
+          <UpdatePrompt installHidden={immersive || !onboarded} />
           <ToastHost />
           <div id="overlay-root" className={styles.overlayRoot} />
           <FxLayer />

@@ -3,17 +3,19 @@
  * The worker checks for updates automatically (on load and every hour); a
  * new version installs in the background, then waits until the learner taps
  * Refresh, so the app never reloads mid-lesson by itself. Also tells the
- * learner once when offline play is ready (as a toast).
+ * learner once when offline play is ready (as a toast), and offers to install the app (InstallPrompt).
  */
 import { useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Button } from '@/ui/Button';
 import { toast } from '@/ui/toast';
+import { InstallPrompt } from './InstallPrompt';
 import styles from './shell.module.css';
 
 const HOUR = 60 * 60 * 1000;
 
-export function UpdatePrompt() {
+/** installHidden: hide the install bar (immersive screens, before onboarding). */
+export function UpdatePrompt({ installHidden }: { installHidden: boolean }) {
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     offlineReady: [offlineReady, setOfflineReady],
@@ -33,7 +35,8 @@ export function UpdatePrompt() {
     setOfflineReady(false);
   }, [offlineReady, setOfflineReady]);
 
-  if (!needRefresh) return null;
+  // One bar at a time: the update bar wins over the install bar.
+  if (!needRefresh) return <InstallPrompt hidden={installHidden} />;
   return (
     <div role="status" className={styles.update}>
       <span>A new version of Cpp Hero is ready.</span>
