@@ -4,12 +4,13 @@ import type { ChallengeOf } from '@/content/schema';
 import { CodeBlock } from '@/features/code';
 import { Icon } from '@/ui/Icon';
 import { finalState, finalTag, looksLikeCode, OptionGrid, useOptionKeys, WhyList } from '../Options';
+import { Actions } from '../Actions';
 import type { RendererProps } from '../types';
 import styles from '../challenges.module.css';
 
 type ChoiceCh = ChallengeOf<'mcq'> | ChallengeOf<'predict'> | ChallengeOf<'breakit'> | ChallengeOf<'harden'>;
 
-export function Choice({ ch, phase, attempt, reveal, submit, actions }: RendererProps) {
+export function Choice({ ch, phase, attempt, reveal, submit }: RendererProps) {
   const c = ch as ChoiceCh;
   const isPredict = c.type === 'predict';
   const isHarden = c.type === 'harden';
@@ -77,7 +78,7 @@ export function Choice({ ch, phase, attempt, reveal, submit, actions }: Renderer
         }
         onPick={pick}
       />
-      {actions(null)}
+      <Actions />
     </>
   );
 }

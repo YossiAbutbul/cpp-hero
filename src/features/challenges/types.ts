@@ -2,11 +2,12 @@
  * Internal contract between the ChallengeRunner and the per-type renderers.
  *
  * A renderer owns its inputs (picked option, typed text, tile order…) and
- * reports an Outcome through `submit`. The runner does the scoring
+ * reports an Outcome through `submit`, and places <Actions check={…} /> (Hint +
+ * Check button) under its inputs. The runner does the scoring
  * (game.answer), the retry flow, hints, effects and the feedback panel, and
  * tells the renderer what to show through `phase` / `attempt` / `reveal`.
  */
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import type { Challenge, ChallengeOf, ChallengeType } from '@/content/schema';
 
 export type Phase = 'answer' | 'soft' | 'done';
@@ -21,8 +22,8 @@ export interface Outcome {
   visible?: ReactNode;
   /** extra content behind "Tell me more" */
   detail?: ReactNode;
-  /** element the confetti / shake starts from */
-  anchor?: Element | null;
+  /** element the confetti / shake starts from (a ref is fine: read after submit) */
+  anchor?: Element | null | RefObject<Element | null>;
   /** timed rounds: fraction right (0..1) + counts */
   score?: number;
   right?: number;
@@ -47,8 +48,6 @@ export interface RendererProps<T extends ChallengeType = ChallengeType> {
   /** final state: mark the correct answer */
   reveal: boolean;
   submit: (o: Outcome) => void;
-  /** renders the actions row (Hint + the big Check button); place it under the inputs */
-  actions: (c: CheckSpec | null) => ReactNode;
 }
 
 export type AnyRenderer = (p: RendererProps) => ReactNode;

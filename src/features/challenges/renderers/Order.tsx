@@ -8,6 +8,7 @@ import type { ChallengeOf } from '@/content/schema';
 import { tokLine } from '@/features/code';
 import { Icon } from '@/ui/Icon';
 import { anim, reduced, SPRING } from '@/ui/fx/motion';
+import { Actions } from '../Actions';
 import type { RendererProps } from '../types';
 import styles from '../challenges.module.css';
 import codeStyles from '@/features/code/code.module.css';
@@ -59,7 +60,7 @@ interface Drag {
   ghost: HTMLElement | null;
 }
 
-export function Order({ ch, phase, reveal, submit, actions }: RendererProps) {
+export function Order({ ch, phase, reveal, submit }: RendererProps) {
   const c = ch as ChallengeOf<'order'>;
   const hasBank = (c.distractors ?? []).length > 0;
   const [items] = useState(() => shuffleItems(c, hasBank));
@@ -304,7 +305,7 @@ export function Order({ ch, phase, reveal, submit, actions }: RendererProps) {
     setSel(null);
     submit({
       correct: good,
-      anchor: progEl.current,
+      anchor: progEl,
       softMsg: `${inPlace} of ${want.length} lines are in the right spot${hasBank && got.length !== want.length ? ', and the line count is off.' : '.'}`,
       detail: (
         <div className={styles.accepted}>
@@ -393,7 +394,7 @@ export function Order({ ch, phase, reveal, submit, actions }: RendererProps) {
       <div className="sr" aria-live="assertive">
         {live}
       </div>
-      {actions({ disabled: prog.length === 0, onClick: check })}
+      <Actions check={{ disabled: prog.length === 0, onClick: check }} />
     </div>
   );
 }

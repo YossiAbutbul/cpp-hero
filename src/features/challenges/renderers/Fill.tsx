@@ -5,6 +5,7 @@ import { matchesAnswer } from '@/engine/matching';
 import { CodeBlock } from '@/features/code';
 import { AutoGrowInput } from '@/ui/AutoGrowInput';
 import { Icon } from '@/ui/Icon';
+import { Actions } from '../Actions';
 import type { RendererProps } from '../types';
 import styles from '../challenges.module.css';
 
@@ -19,7 +20,7 @@ function useFocusSoon(ref: RefObject<HTMLTextAreaElement | null>, key: unknown) 
   }, [ref, key]);
 }
 
-export function Fill({ ch, phase, attempt, submit, actions }: RendererProps) {
+export function Fill({ ch, phase, attempt, submit }: RendererProps) {
   const c = ch as ChallengeOf<'fill'>;
   const [v, setV] = useState('');
   const [good, setGood] = useState(false);
@@ -33,7 +34,7 @@ export function Fill({ ch, phase, attempt, submit, actions }: RendererProps) {
     const also = c.accept.slice(1);
     submit({
       correct: ok,
-      anchor: input.current,
+      anchor: input,
       softMsg: 'Close! Check spelling, symbols and semicolons.',
       visible: ok ? undefined : (
         <div className={styles.rpick}>
@@ -93,12 +94,12 @@ export function Fill({ ch, phase, attempt, submit, actions }: RendererProps) {
         }
       />
       <p className={`${styles.subprompt} small muted`}>Type in the blank, then Check (or Enter).</p>
-      {actions({ disabled: !v.trim(), onClick: check })}
+      <Actions check={{ disabled: !v.trim(), onClick: check }} />
     </>
   );
 }
 
-export function Write({ ch, phase, attempt, submit, actions }: RendererProps) {
+export function Write({ ch, phase, attempt, submit }: RendererProps) {
   const c = ch as ChallengeOf<'write'>;
   const [v, setV] = useState('');
   const [good, setGood] = useState(false);
@@ -112,7 +113,7 @@ export function Write({ ch, phase, attempt, submit, actions }: RendererProps) {
     setGood(ok);
     submit({
       correct: ok,
-      anchor: input.current,
+      anchor: input,
       softMsg: 'Almost! Check names, symbols and the semicolon.',
       visible:
         ok || !sample ? undefined : (
@@ -156,7 +157,7 @@ export function Write({ ch, phase, attempt, submit, actions }: RendererProps) {
         {state && <Icon name={state === 'ok' ? 'ok' : 'no'} className={styles.writeMark} />}
       </div>
       <p className={`${styles.subprompt} small muted`}>Spacing doesn’t matter. Press Enter or Check.</p>
-      {actions({ disabled: !v.trim(), onClick: check })}
+      <Actions check={{ disabled: !v.trim(), onClick: check }} />
     </>
   );
 }
