@@ -1,0 +1,260 @@
+# World 14 · Lesson 3: Iterators: bookmarks into containers
+
+id: w14.l3
+title: "Iterators: bookmarks"
+skill: toolkit
+shield: false
+concept:
+  short: "An iterator marks a position: *it reads the element, ++it moves on, end() is one past the last."
+  analogy: "An iterator is a bookmark: begin() is page one, and end() is the back cover, not a page."
+  body:
+    - "Every standard container hands out **iterators**: `c.begin()` marks the first element and `c.end()` marks the spot **one past the last** one. Together they form a half-open range `[begin, end)`."
+    - "`*it` gives the element the iterator points at, `++it` moves to the next one, and `it != c.end()` tells you there's still an element to read. An empty container has `begin() == end()`."
+    - "For a map, each element is a pair, so use `it->first` and `it->second` (short for `(*it).first`). For a vector, `*it = 5` changes the element; a map's key and a set's values are read-only."
+    - "Iterator types are long (`std::map<std::string, int>::iterator`), so we let `auto` figure them out: `auto it = hp.begin();`. World 15 digs deeper into `auto`."
+    - "Many members return iterators: `m.find(k)` and `s.find(x)` return an iterator to the element, or `end()` when it isn't there. Vector iterators can also jump: `v.begin() + 2`, and `it2 - it1` is the distance (World 7's `erase(bag.begin() + slot)` used this)."
+    - "The range-for you already know is iterators in disguise: it runs from begin() up to (not including) end()."
+  pitfall: "Common beginner mistake: `*v.end()` to read the last element. end() is past the last element: reading it is undefined behavior. Use `v.back()` (only when not empty)."
+demo:
+  code: |-
+    #include <iostream>
+    #include <vector>
+
+    int main() {
+        std::vector<int> hp{10, 20, 30};
+        auto it = hp.begin();
+        std::cout << *it << '\n';
+        ++it;
+        *it += 5;
+        std::cout << *it << '\n';
+        for (auto p = hp.begin(); p != hp.end(); ++p) {
+            std::cout << *p << ' ';
+        }
+        std::cout << '\n';
+        return 0;
+    }
+  steps:
+    - line: 4
+      mem:
+        cells:
+          - { name: "hp[0]", value: "10", group: hp }
+          - { name: "hp[1]", value: "20", group: hp }
+          - { name: "hp[2]", value: "30", group: hp }
+          - { name: "end()", group: hp }
+      note: Three elements; end() sits just past the last.
+    - line: 5
+      mem:
+        cells:
+          - { name: it, ptr: "hp[0]" }
+      note: begin() marks the first element.
+    - line: 6
+      out: |
+        10
+      note: "*it reads the element it marks."
+    - line: 7
+      mem:
+        cells:
+          - { name: it, ptr: "hp[1]" }
+      note: ++it moves the bookmark one step.
+    - line: 8
+      mem:
+        cells:
+          - { name: "hp[1]", value: "25" }
+      note: "*it += 5 changes the real element."
+    - line: 9
+      out: |
+        25
+    - line: 10
+      mem:
+        cells:
+          - { name: p, ptr: "hp[0]" }
+      note: A classic iterator loop starts at begin().
+    - line: 11
+      out: "10 "
+    - line: 10
+      mem:
+        cells:
+          - { name: p, ptr: "hp[1]" }
+    - line: 11
+      out: "25 "
+    - line: 10
+      mem:
+        cells:
+          - { name: p, ptr: "hp[2]" }
+    - line: 11
+      out: "30 "
+    - line: 10
+      mem:
+        cells:
+          - { name: p, ptr: "end()" }
+      note: p reached end(), so the loop stops. Never read *end()!
+    - line: 13
+      out: "\n"
+challenges:
+  - id: w14.l3.c1
+    type: predict
+    tags: [ w14.iterator, w14.begin-end ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<char> v{'a', 'b', 'c', 'd'};
+          auto it = v.begin() + 1;
+          std::cout << *it;
+          ++it;
+          ++it;
+          std::cout << *it << (it + 1 == v.end()) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          bd1
+        why: "Correct: begin() + 1 is 'b', two steps later is 'd', and one past 'd' is end()."
+      - t: |
+          ac1
+        why: begin() + 1 already skips 'a'; it starts at 'b'.
+      - t: |
+          bd0
+        why: "'d' is the last element, so the spot after it IS end()."
+      - t: |
+          bc1
+        why: ++it runs twice, moving from 'b' to 'c' to 'd'.
+    answer: 0
+    hints:
+      - begin() is 'a'. What is begin() + 1?
+      - end() is the spot right after the last element.
+    short: b, then d; one past the last element is end().
+    explain: "it starts at index 1 ('b'). Two ++ move it to 'd', the last element. it + 1 is one past the last, which equals end(), so the comparison prints 1. Output: \"bd1\"."
+  - id: w14.l3.c2
+    type: mcq
+    tags: [ w14.begin-end ]
+    prompt: What does `v.end()` point at?
+    options:
+      - t: The spot one past the last element
+        why: "Correct: it marks where the range stops. There's no element there."
+      - t: The last element
+        why: That's v.end() - 1, or v.back(), and only when v isn't empty.
+      - t: nullptr
+        why: end() is an iterator, not a null pointer. It's a real position, just not an element.
+      - t: The first element, when v is empty
+        why: An empty vector has no elements at all; begin() == end() there.
+    answer: 0
+    hints:
+      - Think of the range as [begin, end).
+      - Is end() included in the range?
+    short: end() is one past the last element; never dereference it.
+    explain: "Ranges are half-open: [begin, end). end() marks the stop line. Reading *end() is undefined behavior, even for a non-empty container."
+  - id: w14.l3.c3
+    type: predict
+    tags: [ w14.iterator, w14.map-iterate ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      int main() {
+          std::map<std::string, int> m{{"b", 2}, {"a", 1}, {"c", 3}};
+          auto it = m.begin();
+          std::cout << it->first << it->second;
+          ++it;
+          std::cout << it->first << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          a1b
+        why: "Correct: begin() is the smallest key \"a\" (value 1); the next key is \"b\"."
+      - t: |
+          b2a
+        why: A map is sorted by key; begin() is the smallest key, not the first one written.
+      - t: |
+          a1c
+        why: ++it moves one step, to the next key in order, "b".
+      - t: |
+          1a2
+        why: first is the key and second the value; key prints first here.
+    answer: 0
+    hints:
+      - In what order does a map store its keys?
+      - it->first is the key, it->second the value.
+    short: begin() is the smallest key; ++it moves to the next key.
+    explain: "The map holds a=1, b=2, c=3 in key order. begin() points at a (prints \"a1\"), ++it moves to b (prints \"b\"). Output: \"a1b\"."
+  - id: w14.l3.c4
+    type: fill
+    tags: [ w14.iterator, w14.begin-end ]
+    prompt: Fill in the comparison that keeps the loop going while there are elements left.
+    code: |-
+      for (auto it = bag.begin(); it ___ bag.end(); ++it) {
+          std::cout << *it << '\n';
+      }
+    prelude: std::set<std::string> bag{"key", "rope"};
+    accept:
+      - "!="
+    placeholder: operator
+    hints:
+      - Keep going until the iterator reaches end().
+      - Set iterators can't be compared with < ; only == and !=.
+    short: Loop while it != end(); stop the moment it reaches end().
+    explain: "it != bag.end() works for every container. Only random-access iterators (vector, array) support <, so != is the universal choice."
+  - id: w14.l3.c5
+    type: order
+    tags: [ w14.iterator ]
+    prompt: Print every element of `v` using an iterator and a while loop.
+    prelude: std::vector<int> v{1, 2};
+    lines:
+      - auto it = v.begin();
+      - "while (it != v.end()) {"
+      - "    std::cout << *it << '\\n';"
+      - "    ++it;"
+      - "}"
+    distractors:
+      - "while (it <= v.end()) {"
+    hints:
+      - Start at begin(), stop at end().
+      - Read the element before moving on.
+    short: Start at begin(), read *it, ++it, stop at end().
+    explain: "Start at begin(), and while it != end(): read *it, then ++it. `it <= v.end()` would also run with it == end() and read past the last element: UB."
+  - id: w14.l3.c6
+    type: mcq
+    tags: [ w14.iterator, w14.map ]
+    prompt: "`it` points at the Curlo entry of a `std::map<std::string, int>`. Which line sets Curlo's value to 12?"
+    options:
+      - t: it->second = 12;
+        why: "Correct: second is the value, and it can be changed through the iterator."
+      - t: it->first = 12;
+        why: first is the key, and keys are const. This doesn't compile.
+      - t: "*it = 12;"
+        why: "*it is the whole pair, not the value. This doesn't compile."
+      - t: it.second = 12;
+        why: The iterator itself has no second; use -> to reach the pair it points at.
+    answer: 0
+    hints:
+      - The value is the pair's second part.
+      - Use -> to reach through the iterator.
+    short: it->second is the value; the key (first) is read-only.
+    explain: "*it is a std::pair<const std::string, int>. it->second = 12 changes the value in place. The key is const, because changing it would break the map's sorting."
+recap:
+  - "Ranges are half-open: [begin(), end())."
+  - "*it reads, ++it moves, it != end() checks."
+  - "Map iterators: it->first key, it->second value."
+  - Never dereference end().
+vault:
+  - id: w14.iterators
+    title: Iterator basics
+    code: |-
+      std::vector<int> v{10, 20, 30};
+      for (auto it = v.begin(); it != v.end(); ++it) {
+          *it += 1;                     // change the element
+      }
+      auto third = v.begin() + 2;       // vectors can jump
+      auto dist = third - v.begin();    // 2
+
+      std::map<std::string, int> m{{"a", 1}};
+      auto mit = m.begin();
+      std::cout << mit->first << mit->second << '\n';
+    note: end() is one past the last element. begin() == end() means empty.
+    defense: false
+reviewTags: [ w7.range-for, w8.deref, w14.map-iterate, w14.set ]

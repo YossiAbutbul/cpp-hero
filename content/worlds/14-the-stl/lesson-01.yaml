@@ -1,0 +1,232 @@
+# World 14 · Lesson 1: Maps: labeled drawers
+
+id: w14.l1
+title: "Maps: labeled drawers"
+skill: toolkit
+shield: false
+concept:
+  short: std::map stores key-value pairs sorted by key; each key appears at most once.
+  analogy: "A map is a cabinet of labeled drawers: find the drawer by its label, not by its position."
+  body:
+    - "A `std::map<Key, Value>` (from `<map>`) links each **key** to one **value**: `std::map<std::string, int> hp;` maps names to hit points."
+    - "`hp[\"Curlo\"] = 10;` writes a value: it creates the entry if the key is new, or overwrites the old value if it exists. Keys are unique: writing the same key twice keeps one entry."
+    - "A map keeps its keys **sorted** (with `<`), no matter what order you insert them. A range-for visits them in key order. Strings sort character by character, so uppercase letters come before lowercase."
+    - "Each element is a `std::pair`: `entry.first` is the key (read-only, because changing it would break the sorting) and `entry.second` is the value. Loop with `for (const auto& entry : hp)` to avoid copying every pair."
+    - "`hp.size()` counts entries, `hp.count(k)` is 1 if the key exists and 0 if not, `hp.erase(k)` removes it, and `hp.at(k)` reads a key that must exist (it throws `std::out_of_range` if it doesn't)."
+    - "Careful: `hp[k]` on a key that doesn't exist **creates** it with a default value (0 for int). Great for counting, sneaky for lookups. The Shield lesson deals with that ghost."
+  pitfall: "Common beginner mistake: expecting a map to remember insertion order. It always sorts by key: \"Zed\" comes after \"Ann\" even if Zed was added first."
+demo:
+  code: |-
+    #include <iostream>
+    #include <map>
+    #include <string>
+
+    int main() {
+        std::map<std::string, int> loot;
+        loot["gems"] = 3;
+        loot["coins"] = 50;
+        loot["gems"] += 2;
+        for (const auto& entry : loot) {
+            std::cout << entry.first << ": " << entry.second << '\n';
+        }
+        std::cout << loot.size() << " kinds\n";
+        return 0;
+    }
+  steps:
+    - line: 5
+      note: An empty map from names to counts.
+    - line: 6
+      vars:
+        loot["gems"]: "3"
+      note: New key "gems" gets the value 3.
+    - line: 7
+      vars:
+        loot["coins"]: "50"
+      note: A second key, a second entry.
+    - line: 8
+      vars:
+        loot["gems"]: "5"
+      note: Same key again? It updates the existing value.
+    - line: 9
+      note: The loop visits keys in sorted order.
+    - line: 10
+      out: "coins: 50\n"
+      note: '"coins" sorts before "gems", so it comes first.'
+    - line: 10
+      out: "gems: 5\n"
+      note: first is the key, second is the value.
+    - line: 12
+      out: "2 kinds\n"
+      note: Two unique keys, so size() is 2.
+    - line: 13
+      note: Every drawer labeled and tidy!
+challenges:
+  - id: w14.l1.c1
+    type: predict
+    tags: [ w14.map, w14.map-iterate ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      int main() {
+          std::map<std::string, int> age;
+          age["Zed"] = 3;
+          age["Ann"] = 5;
+          age["Zed"] = 9;
+          for (const auto& e : age) {
+              std::cout << e.first << '=' << e.second << '\n';
+          }
+          return 0;
+      }
+    options:
+      - t: |
+          Ann=5
+          Zed=9
+        why: "Correct: keys are sorted, and the second write to Zed overwrote the 3."
+      - t: |
+          Zed=9
+          Ann=5
+        why: A map doesn't keep insertion order; it sorts by key.
+      - t: |
+          Ann=5
+          Zed=3
+        why: Writing an existing key replaces its value, so Zed is 9.
+      - t: |
+          Ann=5
+          Zed=3
+          Zed=9
+        why: Keys are unique in a map. There is only one Zed.
+    answer: 0
+    hints:
+      - Can a map hold the same key twice?
+      - In what order does a map keep its keys?
+    short: Keys are unique and sorted; rewriting a key updates its value.
+    explain: 'age["Zed"] = 9 overwrites the earlier 3 (one key, one value). The loop visits keys in sorted order, so Ann comes before Zed: "Ann=5", then "Zed=9".'
+  - id: w14.l1.c2
+    type: mcq
+    tags: [ w14.map-iterate ]
+    prompt: "In `for (const auto& entry : scores)` over a `std::map<std::string, int>`, what is `entry.first`?"
+    options:
+      - t: The key (the std::string)
+        why: "Correct: each element is a pair; first is the key, second is the value."
+      - t: The value (the int)
+        why: That's entry.second.
+      - t: The position of the entry, like 0 or 1
+        why: Maps have no index positions. Elements are found by key.
+      - t: A pointer to the next entry
+        why: entry is a pair holding a key and a value, nothing more.
+    answer: 0
+    hints:
+      - Each element of a map holds two things.
+      - Which one decides the sorting order?
+    short: A map element is a pair; first is the key, second the value.
+    explain: "Every element of a std::map<K, V> is a std::pair<const K, V>. first is the key (const, so you can't change it and break the sort order); second is the value."
+  - id: w14.l1.c3
+    type: fill
+    tags: [ w14.map, w14.map-at ]
+    prompt: "\"sword\" must exist. Fill in the member function that reads it, and throws if it's missing."
+    code: std::cout << prices.___("sword") << '\n';
+    prelude: std::map<std::string, int> prices{{"sword", 30}};
+    accept:
+      - at
+    placeholder: member function
+    hints:
+      - "Vectors have a checked accessor with the same name."
+      - Two letters. It throws std::out_of_range when the key is missing.
+    short: "at(key) reads an existing key and throws if it's missing."
+    explain: "prices.at(\"sword\") returns the value for an existing key. If the key isn't there, at() throws std::out_of_range instead of inventing an entry, which is what [] would do."
+  - id: w14.l1.c4
+    type: write
+    tags: [ w14.map ]
+    prompt: Write one line that sets the value for the key "Curlo" to 10 in the map `hp`.
+    prelude: std::map<std::string, int> hp;
+    accept:
+      - hp["Curlo"] = 10;
+      - hp.insert_or_assign("Curlo", 10);
+    acceptRe:
+      - '^hp ?\[ ?"Curlo" ?\] ?= ?10 ?;$'
+    placeholder: hp...
+    hints:
+      - Square brackets take the key.
+      - "Then assign: = 10; at the end."
+    short: hp["Curlo"] = 10; creates or updates the entry.
+    explain: 'hp["Curlo"] = 10; inserts the key if it''s new, then assigns 10. If Curlo already exists, the old value is replaced. (hp.insert_or_assign("Curlo", 10) does the same.)'
+  - id: w14.l1.c5
+    type: order
+    tags: [ w14.map, w14.map-iterate ]
+    prompt: "Put the lines in order: make a score map, add Curlo's score, then print every entry."
+    lines:
+      - std::map<std::string, int> score;
+      - score["Curlo"] = 7;
+      - "for (const auto& e : score) {"
+      - "    std::cout << e.first << ' ' << e.second << '\\n';"
+      - "}"
+    distractors:
+      - std::map<int> score;
+    hints:
+      - Declare before you use.
+      - A map needs two types, key then value.
+    short: Declare the map, fill it, then loop over its pairs.
+    explain: "Declare `std::map<std::string, int>` (key type, then value type), add an entry with [], then loop with `const auto&` and print first and second. `std::map<int>` doesn't compile: a map needs both types."
+  - id: w14.l1.c6
+    type: predict
+    tags: [ w14.map, w14.map-count ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      int main() {
+          std::map<int, std::string> rank;
+          rank[2] = "silver";
+          rank[1] = "gold";
+          rank[2] = "bronze";
+          std::cout << rank.size() << ' ' << rank.count(1) << ' ' << rank.count(3) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          2 1 0
+        why: "Correct: keys 1 and 2 exist (size 2), key 1 counts 1, key 3 counts 0."
+      - t: |
+          3 1 0
+        why: rank[2] was written twice, but it's still one key. Size is 2.
+      - t: |
+          2 1 1
+        why: No key 3 was ever added, so count(3) is 0.
+      - t: |
+          2 gold 0
+        why: count() returns how many entries have that key, not the value.
+    answer: 0
+    hints:
+      - How many different keys were written?
+      - count(k) in a map can only be 0 or 1.
+    short: size() counts unique keys; count(k) is 1 or 0.
+    explain: "Keys 2 and 1 were added (2 was overwritten, not duplicated), so size() is 2. count(1) is 1 and count(3) is 0. Unlike [], count() never adds a key."
+recap:
+  - A map links unique keys to values.
+  - Keys stay sorted, whatever the insertion order.
+  - "Elements are pairs: first = key, second = value."
+  - at() throws for a missing key; count() just checks.
+vault:
+  - id: w14.map-basics
+    title: std::map basics
+    code: |-
+      #include <map>
+      #include <string>
+
+      std::map<std::string, int> hp{{"Curlo", 10}};
+      hp["Brace"] = 7;                 // insert or overwrite
+      std::size_t n = hp.size();       // 2
+      bool has = hp.count("Curlo") == 1;
+      int c = hp.at("Curlo");          // throws if missing
+      hp.erase("Brace");
+      for (const auto& e : hp) {
+          std::cout << e.first << ' ' << e.second << '\n';
+      }
+    note: "Keys are unique and sorted. Beware: [] on a missing key inserts it."
+    defense: false
+reviewTags: [ w7.vector, w7.range-for, w6.constref, w7.at ]

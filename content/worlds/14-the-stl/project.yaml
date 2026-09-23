@@ -1,0 +1,328 @@
+# World 14 mini-project: Bug Ledger
+
+id: w14.p
+title: Bug Ledger
+intro: "Keep score of every bug we squash: zap, undo, ask and find the top pest, with a map at the heart."
+steps:
+  - id: w14.p.s1
+    type: write
+    tags: [ w14.map ]
+    prompt: The ledger maps bug names to zap counts. Write one line that declares an empty `std::map` named `ledger` from `std::string` to `int`.
+    accept:
+      - std::map<std::string, int> ledger;
+      - std::map<std::string, int> ledger{};
+    acceptRe:
+      - '^std::map ?< ?std::string ?, ?int ?> ledger ?(\{ ?\})? ?;$'
+    placeholder: std::map<...> ledger;
+    hints:
+      - Key type first, then value type.
+      - std::map<std::string, int> ledger;
+    short: std::map<std::string, int> ledger; starts empty.
+    explain: "The key is the bug's name (std::string) and the value is how many times we zapped it (int). A new map is empty; no initialization needed."
+  - id: w14.p.s2
+    type: mcq
+    tags: [ w14.map, w14.bracket-insert ]
+    prompt: '"zap imp" adds one to imp''s count, starting a brand-new bug at 0. Which line does it?'
+    options:
+      - t: ++ledger[bug];
+        why: "Correct: here inserting is exactly what we want. A new bug starts at 0, then becomes 1."
+      - t: ++ledger.at(bug);
+        why: at() throws for a bug we've never zapped, so the first zap would fail.
+      - t: ++ledger.find(bug)->second;
+        why: For a new bug, find returns end(), and incrementing through it is UB.
+      - t: ledger.insert(bug);
+        why: A map stores pairs; inserting just a name doesn't compile.
+    answer: 0
+    hints:
+      - Which access creates a missing key for you?
+      - For counting, insert-or-update is the goal.
+    short: For counting, ++ledger[bug] is the right tool; inserting is intended.
+    explain: "[] is dangerous for questions, but perfect for counting: it inserts a missing key with 0 and returns a reference, so ++ makes it 1. That's the classic word-count idiom."
+  - id: w14.p.s3
+    type: fill
+    tags: [ w14.find-end ]
+    bug: unchecked-find
+    prompt: '"undo slime" takes back a zap. Fill in the blank so a bug we never zapped is reported, not dereferenced.'
+    code: |-
+      auto it = ledger.find(bug);
+      if (it == ledger.___()) {
+          std::cout << "Nothing to undo for " << bug << '\n';
+      } else {
+          it->second -= 1;
+          if (it->second == 0) {
+              ledger.erase(it);
+          }
+      }
+    prelude: std::map<std::string, int> ledger{{"slime", 1}}; std::string bug{"slime"};
+    accept:
+      - end
+    placeholder: member function
+    hints:
+      - What does find return when the key is missing?
+      - One past the last element.
+    short: find returns end() for a missing key; check that first.
+    explain: "find returns ledger.end() for a bug that isn't in the ledger. Only after that check is it->second safe. When the count drops to 0, erase(it) removes the entry, and we never touch it again."
+  - id: w14.p.s4
+    type: order
+    tags: [ w14.find-end, w14.map ]
+    prompt: '"ask imp" prints the count, or "never seen". Put the lines in order.'
+    prelude: std::map<std::string, int> ledger{{"imp", 2}}; std::string bug{"imp"};
+    lines:
+      - "if (auto it = ledger.find(bug); it != ledger.end()) {"
+      - "    std::cout << bug << \": \" << it->second << '\\n';"
+      - "} else {"
+      - "    std::cout << bug << \": never seen\\n\";"
+      - "}"
+    distractors:
+      - "    std::cout << bug << \": \" << ledger[bug] << '\\n';"
+    hints:
+      - Find, check against end(), then use the iterator.
+      - Asking must never insert. Avoid [].
+    short: Find and check in the if, then use it->second.
+    explain: "The if with an initializer finds the bug and checks it != end() in one line, so it->second is only read when it's safe. The distractor uses [], which would add the unknown bug with 0 just by asking."
+  - id: w14.p.s5
+    type: predict
+    tags: [ w14.map, w14.map-iterate ]
+    prompt: "Test run: zap imp twice, zap slime, then erase slime. What does the report print?"
+    code: |-
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      int main() {
+          std::map<std::string, int> ledger;
+          ++ledger["imp"];
+          ++ledger["imp"];
+          ++ledger["slime"];
+          ledger.erase("slime");
+          for (const auto& e : ledger) {
+              std::cout << e.first << ' ' << e.second << '\n';
+          }
+          std::cout << ledger.size() << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          imp 2
+          1
+        why: "Correct: imp was zapped twice; slime was added, then erased. One entry left."
+      - t: |
+          imp 2
+          slime 1
+          2
+        why: erase("slime") removed that entry before the report.
+      - t: |
+          imp 1
+          1
+        why: Each ++ledger["imp"] adds one, so imp reaches 2.
+      - t: |
+          imp 2
+          slime 0
+          2
+        why: erase removes the whole entry; it doesn't set it to 0.
+    answer: 0
+    hints:
+      - How many times was imp zapped?
+      - erase removes the key entirely.
+    short: imp has 2 zaps; slime was erased, leaving one entry.
+    explain: 'The first ++ledger["imp"] inserts imp at 0 then adds 1; the second makes 2. slime is inserted, then erased completely. Report: "imp 2", then size 1.'
+program: |-
+  #include <algorithm>
+  #include <iostream>
+  #include <map>
+  #include <string>
+
+  bool fewerZaps(const std::pair<const std::string, int>& a,
+                 const std::pair<const std::string, int>& b) {
+      return a.second < b.second;
+  }
+
+  int main() {
+      std::map<std::string, int> ledger;
+      std::string cmd;
+      while (std::cin >> cmd) {
+          if (cmd == "top") {
+              auto best = std::max_element(ledger.begin(), ledger.end(), fewerZaps);
+              if (best == ledger.end()) {
+                  std::cout << "Ledger is empty\n";
+              } else {
+                  std::cout << "Top bug: " << best->first << '\n';
+              }
+              continue;
+          }
+          std::string bug;
+          if (!(std::cin >> bug)) {
+              std::cout << "Missing bug name\n";
+              break;
+          }
+          if (cmd == "zap") {
+              ++ledger[bug];
+          } else if (cmd == "undo") {
+              auto it = ledger.find(bug);
+              if (it == ledger.end()) {
+                  std::cout << "Nothing to undo for " << bug << '\n';
+              } else {
+                  it->second -= 1;
+                  if (it->second == 0) {
+                      ledger.erase(it);
+                  }
+              }
+          } else if (cmd == "ask") {
+              if (auto it = ledger.find(bug); it != ledger.end()) {
+                  std::cout << bug << ": " << it->second << '\n';
+              } else {
+                  std::cout << bug << ": never seen\n";
+              }
+          } else {
+              std::cout << "Unknown command: " << cmd << '\n';
+          }
+      }
+      std::cout << "--- ledger ---\n";
+      for (const auto& entry : ledger) {
+          std::cout << entry.first << ' ' << entry.second << '\n';
+      }
+      return 0;
+  }
+programStdin: |
+  top
+  zap imp
+  zap imp
+  zap slime
+  ask imp
+  ask ghost
+  undo slime
+  undo ghost
+  top
+stress:
+  intro: Brace yourself! I'll poke the ledger where bugs love to hide.
+  attacks:
+    - input: ask ghost
+      label: Asking about a bug that was never zapped!
+      challenge:
+        id: w14.p.a1
+        type: harden
+        tags: [ w14.find-end ]
+        bug: unchecked-find
+        prompt: '"ghost" was never zapped. Pick the check that keeps "ask" safe.'
+        code: |-
+          auto it = ledger.find(bug);
+          if (___) {
+              std::cout << bug << ": " << it->second << '\n';
+          } else {
+              std::cout << bug << ": never seen\n";
+          }
+        prelude: std::map<std::string, int> ledger{{"imp", 2}}; std::string bug{"ghost"};
+        options:
+          - t: it != ledger.end()
+            why: "Correct: it->second only runs when find really found the bug."
+          - t: it->second > 0
+            why: For ghost, it is end(), so this reads end() before deciding. UB.
+          - t: ledger[bug] > 0
+            why: No UB, but asking inserts ghost with 0. The ledger grows with every question.
+          - t: it != ledger.begin()
+            why: begin() is the first real entry. This skips imp and still reads end() for ghost.
+        answer: 0
+        hints:
+          - What does find return for a missing key?
+          - Check the iterator itself, before reading through it.
+        short: Compare find's result with end() before reading it->second.
+        explain: "find returns ledger.end() for ghost. Reading it->second through end() is UB, so the check must come first: it != ledger.end()."
+        sideBySide:
+          unsafe: |-
+            auto it = ledger.find(bug);
+            std::cout << bug << ": " << it->second << '\n';   // ghost: UB
+          hardened: |-
+            if (auto it = ledger.find(bug); it != ledger.end()) {
+                std::cout << bug << ": " << it->second << '\n';
+            } else {
+                std::cout << bug << ": never seen\n";
+            }
+          prelude: std::map<std::string, int> ledger{{"imp", 2}}; std::string bug{"ghost"};
+    - input: undo ghost
+      label: Undoing a zap that never happened!
+      challenge:
+        id: w14.p.a2
+        type: bug
+        tags: [ w14.bracket-insert, w14.find-end ]
+        bug: map-bracket-insert
+        prompt: '"undo ghost" leaves "ghost -1" in the report! Tap the buggy line, then pick the fix.'
+        code: |-
+          if (cmd == "undo") {
+              --ledger[bug];
+          }
+        prelude: std::map<std::string, int> ledger; std::string cmd{"undo"}; std::string bug{"ghost"};
+        bugLine: 1
+        options:
+          - t: 'if (auto it = ledger.find(bug); it != ledger.end()) { --it->second; }'
+            why: "Correct: only bugs already in the ledger can be undone. No phantom entries."
+          - t: --ledger.at(bug);
+            why: No phantom, but an unknown bug throws std::out_of_range and ends the program.
+          - t: ledger[bug] = 0;
+            why: Still inserts ghost, and wipes real counts instead of taking one back.
+          - t: --ledger.find(bug)->second;
+            why: For ghost, find returns end(). Decrementing through it is UB.
+        answer: 0
+        hints:
+          - What does [] do when ghost isn't in the map?
+          - Find first, and only change entries that exist.
+        short: "--ledger[bug] invents missing bugs at -1; find them first."
+        explain: "ledger[\"ghost\"] inserts ghost at 0, then -- makes it -1: a bug we never saw now haunts the report. Use find and only change existing entries. (The full program also erases an entry when its count hits 0.)"
+        sideBySide:
+          unsafe: "--ledger[bug];   // ghost appears with -1"
+          hardened: |-
+            if (auto it = ledger.find(bug); it != ledger.end()) {
+                it->second -= 1;
+                if (it->second == 0) {
+                    ledger.erase(it);
+                }
+            } else {
+                std::cout << "Nothing to undo for " << bug << '\n';
+            }
+          prelude: std::map<std::string, int> ledger; std::string bug{"ghost"};
+    - input: top
+      label: Top bug of an empty ledger!
+      challenge:
+        id: w14.p.a3
+        type: harden
+        tags: [ w14.minmax, w14.find-end ]
+        bug: unchecked-find
+        prompt: '"top" runs before any zaps. Pick the check that handles an empty ledger.'
+        code: |-
+          auto best = std::max_element(ledger.begin(), ledger.end(), fewerZaps);
+          if (___) {
+              std::cout << "Ledger is empty\n";
+          } else {
+              std::cout << "Top bug: " << best->first << '\n';
+          }
+        prelude: |-
+          std::map<std::string, int> ledger;
+          auto fewerZaps = [](const std::pair<const std::string, int>& a, const std::pair<const std::string, int>& b) { return a.second < b.second; };
+        options:
+          - t: best == ledger.end()
+            why: "Correct: an empty range makes max_element return end(), so we never read best->first."
+          - t: best == ledger.begin()
+            why: For an empty ledger that works, but it also calls a real top bug "empty" when it's first.
+          - t: ledger.size() > 0
+            why: "Inverted: says empty when it isn't, and reads end() when it is."
+          - t: best->second == 0
+            why: Reads through best before knowing it's valid. For an empty ledger that's UB.
+        answer: 0
+        hints:
+          - What does max_element return for an empty range?
+          - Check the iterator, not a value read through it.
+        short: max_element returns end() for an empty ledger; check it.
+        explain: "With no entries, max_element returns ledger.end(). Reading best->first then would be UB. Comparing with end() catches it, and never misreports a real top bug."
+        sideBySide:
+          unsafe: |-
+            auto best = std::max_element(ledger.begin(), ledger.end(), fewerZaps);
+            std::cout << "Top bug: " << best->first << '\n';   // empty: UB
+          hardened: |-
+            auto best = std::max_element(ledger.begin(), ledger.end(), fewerZaps);
+            if (best == ledger.end()) {
+                std::cout << "Ledger is empty\n";
+            } else {
+                std::cout << "Top bug: " << best->first << '\n';
+            }
+          prelude: |-
+            std::map<std::string, int> ledger;
+            auto fewerZaps = [](const std::pair<const std::string, int>& a, const std::pair<const std::string, int>& b) { return a.second < b.second; };

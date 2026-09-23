@@ -1,0 +1,19 @@
+# World 14: The STL. Lessons are lesson-NN.yaml (played in file order).
+
+id: w14
+num: 14
+title: The STL
+icon: stl
+blurb: "Unlock the Standard Library's treasure chest: maps, sets, iterators and ready-made algorithms, without ever reading past end()."
+story:
+  intro:
+    - The Template Sentinel bowed, and every blueprint knows its types!
+    - Behind it waits the STL, a vault of ready-made templates for us to use.
+    - "But its bookmarks point past the last page. Let's check every end(), hero!"
+  bossIntro:
+    - A chill in the shelves... the Iterator Wraith, the Dangling Wraith's cousin!
+    - It lurks one past the end. Check every find() before you follow it!
+  victory:
+    - The Wraith reached end() and had nowhere left to hide! {^_^}
+    - "But in World 15, something is moving values out and leaving hollow husks..."
+    - Time for Modern C++. Bring your lambdas!

@@ -1,0 +1,479 @@
+# World 14 boss: The Iterator Wraith
+
+id: w14.boss
+name: The Iterator Wraith
+art: wraith
+hp: 7
+intro: "Hssss... I am the Iterator Wraith. I live one past the last element."
+taunt:
+  - Go on, dereference me. I'm just end() in disguise.
+  - Your map[typo] just built me a brand-new home.
+  - One more push_back, and your iterators won't even notice they're dead.
+  - find() found nothing? Trust it anyway, hero...
+rounds:
+  - id: w14.boss.r1
+    type: predict
+    tags: [ w14.bracket-insert, w14.map-iterate ]
+    bug: map-bracket-insert
+    prompt: The Wraith only LOOKS at a key. What does this print?
+    code: |-
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      int main() {
+          std::map<std::string, int> m{{"b", 1}};
+          if (m["a"] == 0) {
+              m["c"] = 3;
+          }
+          std::cout << m.size();
+          for (const auto& e : m) {
+              std::cout << ' ' << e.first;
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          3 a b c
+        why: "Correct: reading m[\"a\"] inserted a with 0, so the if ran and added c."
+      - t: |
+          2 b c
+        why: m["a"] doesn't just look; it inserts "a" with 0.
+      - t: |
+          1 b
+        why: The missing "a" reads as 0 (after being inserted), so the if runs.
+      - t: |
+          3 b a c
+        why: A map keeps keys sorted, so "a" comes first.
+    answer: 0
+    hints:
+      - What does [] do with a key that isn't there?
+      - Maps list keys in sorted order.
+    short: m["a"] inserted a with 0, so the map holds a, b, c.
+    explain: 'm["a"] creates "a" with value 0, so the condition is true and "c" is added too. Three keys, printed sorted: "3 a b c".'
+  - id: w14.boss.r2
+    type: predict
+    tags: [ w14.set, w14.iterator ]
+    prompt: The Wraith shuffles a set. What does this print?
+    code: |-
+      #include <iostream>
+      #include <set>
+
+      int main() {
+          std::set<int> s{3, 1, 4, 1, 5};
+          s.insert(4);
+          s.erase(1);
+          std::cout << s.size() << ' ' << *s.begin() << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          3 3
+        why: "Correct: {1, 3, 4, 5}, 4 is a duplicate, erasing 1 leaves {3, 4, 5}."
+      - t: |
+          4 3
+        why: The second 4 was a duplicate, so the set has 3 values after erasing 1.
+      - t: |
+          3 1
+        why: 1 was erased, so the smallest value left is 3.
+      - t: |
+          5 3
+        why: The duplicate 1 and 4 were never stored twice.
+    answer: 0
+    hints:
+      - Drop duplicates first, then apply insert and erase.
+      - begin() is the smallest remaining value.
+    short: "{3, 4, 5} remains: size 3, smallest 3."
+    explain: "The set starts as {1, 3, 4, 5}. insert(4) changes nothing, erase(1) leaves {3, 4, 5}. It isn't empty, so *s.begin() is safe: 3. Output: \"3 3\"."
+  - id: w14.boss.r3
+    type: mcq
+    tags: [ w14.begin-end, w14.iterator ]
+    prompt: For a vector with 5 elements, what is `v.end() - v.begin()`?
+    options:
+      - t: "5"
+        why: "Correct: end() is one past the last, so the distance is exactly size()."
+      - t: "4"
+        why: That's the index of the last element. end() is one step further.
+      - t: "6"
+        why: end() is only ONE past the last element.
+      - t: Undefined behavior
+        why: Subtracting two valid vector iterators is fine. Only dereferencing end() is UB.
+    answer: 0
+    hints:
+      - The last element is at begin() + 4.
+      - end() is one step after the last element.
+    short: end() - begin() equals size(), because the range is half-open.
+    explain: "The range [begin, end) holds all 5 elements, so the distance is 5. That's why an empty container has begin() == end()."
+  - id: w14.boss.r4
+    type: harden
+    tags: [ w14.bracket-insert, w14.contains ]
+    bug: map-bracket-insert
+    prompt: The Wraith wants you to "just check" the stock with []. Pick the check that adds nothing.
+    code: |-
+      std::map<std::string, int> stock{{"potion", 3}};
+      std::string name{"elixir"};
+      if (___) {
+          std::cout << name << ": " << stock.at(name) << '\n';
+      } else {
+          std::cout << "No " << name << " in stock\n";
+      }
+    options:
+      - t: stock.contains(name)
+        why: "Correct: asks without inserting, and at() then reads a key that surely exists."
+      - t: stock[name] > 0
+        why: "Asking with [] inserts \"elixir\" with 0: a phantom entry."
+      - t: stock.count(name) > 1
+        why: A map's count is only ever 0 or 1. This is never true.
+      - t: stock.find(name)->second > 0
+        why: For elixir, find returns end(); reading ->second is UB.
+    answer: 0
+    hints:
+      - The check itself must not change the map.
+      - C++20 added a member that returns a plain bool.
+    short: contains() checks without inserting; [] would add a phantom.
+    explain: "contains(name) returns true or false and leaves the map alone. [] inserts missing keys; count() > 1 is impossible for a map; ->second through end() is UB."
+    sideBySide:
+      unsafe: |-
+        if (stock[name] > 0) {    // inserts "elixir" with 0
+            std::cout << name << ": " << stock[name] << '\n';
+        }
+      hardened: |-
+        if (stock.contains(name)) {
+            std::cout << name << ": " << stock.at(name) << '\n';
+        } else {
+            std::cout << "No " << name << " in stock\n";
+        }
+      prelude: std::map<std::string, int> stock{{"potion", 3}}; std::string name{"elixir"};
+  - id: w14.boss.r5
+    type: speed
+    tags: [ w14.sort, w14.algo-find, w14.set, w14.bracket-insert, w14.begin-end, w14.accumulate ]
+    prompt: SPEED ROUND! The Wraith flickers between iterators. Answer fast!
+    seconds: 45
+    items:
+      - q: Which header gives std::sort?
+        options:
+          - "<algorithm>"
+          - "<sort>"
+          - "<vector>"
+        answer: 0
+      - q: What does this print?
+        code: |-
+          std::set<int> s{2, 2, 2};
+          std::cout << s.size();
+        options:
+          - "1"
+          - "3"
+          - "0"
+        answer: 0
+      - q: m.find(k) with a missing k returns...
+        options:
+          - m.end()
+          - nullptr
+          - "-1"
+        answer: 0
+      - q: Which one never inserts into a map?
+        options:
+          - m[k]
+          - m.find(k)
+          - ++m[k]
+        answer: 1
+      - q: What is v after this?
+        code: |-
+          std::vector<int> v{3, 1, 2};
+          std::sort(v.begin(), v.end());
+        options:
+          - "{1, 2, 3}"
+          - "{3, 2, 1}"
+          - "{3, 1, 2}"
+        answer: 0
+      - q: When is reading *v.end() allowed?
+        options:
+          - Never
+          - When v isn't empty
+          - Only for sets
+        answer: 0
+      - q: What is the value?
+        code: std::accumulate(v.begin(), v.end(), 0)
+        prelude: std::vector<int> v{1, 2, 3};
+        options:
+          - "6"
+          - "0"
+          - "3"
+        answer: 0
+    hints:
+      - end() is never an element; [] inserts.
+      - Sets drop duplicates; sort goes smallest first.
+    short: Sets drop repeats, find signals end(), [] inserts, sort ascends.
+    explain: "std::sort is in <algorithm>; the set keeps one 2; find reports end(); only find never inserts; sort gives 1 2 3; *end() is never allowed; 1 + 2 + 3 = 6."
+  - id: w14.boss.r6
+    type: bug
+    tags: [ w14.algo-find, w14.find-end ]
+    bug: unchecked-find
+    unsafe: true
+    prompt: "The Wraith asks you to kick \"Imp\" from the party, though nobody's called Imp. Tap the buggy line, then pick the fix."
+    code: |-
+      std::vector<std::string> party{"Curlo", "Brace"};
+      std::string name{"Imp"};
+      auto it = std::find(party.begin(), party.end(), name);
+      party.erase(it);
+    bugLine: 3
+    options:
+      - t: "if (it != party.end()) { party.erase(it); }"
+        why: "Correct: only erase what std::find really found."
+      - t: party.erase(it - 1);
+        why: For a missing name that erases the LAST member. Wrong hero kicked!
+      - t: party.erase(party.begin());
+        why: Removes Curlo, who has nothing to do with Imp.
+      - t: party.pop_back();
+        why: Removes Brace for no reason. The real bug, the unchecked find, is still there.
+    answer: 0
+    hints:
+      - What does std::find return for a missing name?
+      - erase(end()) isn't allowed.
+    short: std::find returns end() when missing; erase(end()) is UB.
+    explain: "No \"Imp\" in the party, so std::find returns party.end(). Erasing end() is undefined behavior: it may corrupt the vector silently. Check the result first."
+    sideBySide:
+      unsafe: |-
+        auto it = std::find(party.begin(), party.end(), name);
+        party.erase(it);    // name missing: erase(end()) is UB
+      hardened: |-
+        auto it = std::find(party.begin(), party.end(), name);
+        if (it != party.end()) {
+            party.erase(it);
+        } else {
+            std::cout << name << " isn't in the party\n";
+        }
+      prelude: std::vector<std::string> party{"Curlo", "Brace"}; std::string name{"Imp"};
+  - id: w14.boss.r7
+    type: predict
+    tags: [ w14.algo-find, w14.count ]
+    prompt: Two algorithms at once. What does this print?
+    code: |-
+      #include <algorithm>
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{5, 3, 8, 3};
+          auto it = std::find(v.begin(), v.end(), 3);
+          std::cout << (it - v.begin()) << ' ' << std::count(v.begin(), v.end(), 3) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          1 2
+        why: "Correct: the FIRST 3 is at index 1, and there are two 3s."
+      - t: |
+          3 2
+        why: it - v.begin() is a position (distance), not the value 3.
+      - t: |
+          2 2
+        why: Indexes start at 0, so the first 3 is at index 1.
+      - t: |
+          1 1
+        why: count counts every 3 in the range, not only the one find stopped at.
+    answer: 0
+    hints:
+      - find stops at the first match.
+      - Subtracting begin() turns an iterator into an index.
+    short: The first 3 is at index 1; count finds two 3s.
+    explain: 'find stops at the first 3 (index 1); it - v.begin() is that distance. count walks the whole range and sees two 3s. Output: "1 2".'
+  - id: w14.boss.r8
+    type: review
+    tags: [ w14.invalidation, w14.find-end, w14.minmax ]
+    bug: iterator-invalidation
+    unsafe: true
+    prompt: "The Wraith's last trick. Tap every dangerous line, then submit."
+    code: |-
+      #include <algorithm>
+      #include <iostream>
+      #include <map>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{1, 2, 3};
+          auto first = v.begin();
+          auto big = std::max_element(v.begin(), v.end());
+          v.push_back(10);
+          std::cout << *first << *big << '\n';
+          std::map<int, int> m;
+          std::cout << m.begin()->second << '\n';
+          return 0;
+      }
+    dangerous: [ 10, 12 ]
+    lineNotes:
+      9: push_back may reallocate, which invalidates every iterator into v. The damage shows on the next line.
+      10: first and big may point into freed memory now. Reading them is UB.
+      12: m is empty, so begin() == end(). Reading ->second is UB.
+    hints:
+      - Which iterators were created before the vector grew?
+      - What does begin() equal for an empty map?
+    short: Iterators die when a vector grows; an empty map's begin() is end().
+    explain: "push_back (line 9) may move the elements, so first and big dangle and line 10 reads through them: UB. Line 12 dereferences begin() of an empty map, which equals end(): UB. Re-fetch iterators after changes, and check for emptiness."
+    sideBySide:
+      unsafe: |-
+        auto first = v.begin();
+        auto big = std::max_element(v.begin(), v.end());
+        v.push_back(10);
+        std::cout << *first << *big << '\n';
+        std::cout << m.begin()->second << '\n';
+      hardened: |-
+        v.push_back(10);
+        auto first = v.begin();                            // fetched after growing
+        auto big = std::max_element(v.begin(), v.end());
+        if (first != v.end() && big != v.end()) {
+            std::cout << *first << *big << '\n';
+        }
+        if (!m.empty()) {
+            std::cout << m.begin()->second << '\n';
+        }
+      prelude: std::vector<int> v{1, 2, 3}; std::map<int, int> m;
+defense:
+  - attack: Sword
+    label: A key with the wrong capital letter!
+    challenge:
+      id: w14.boss.d1
+      type: harden
+      tags: [ w14.find-end, w14.map ]
+      bug: unchecked-find
+      prompt: The Wraith orders a "Sword" (only "sword" exists). Pick the guard.
+      code: |-
+        std::map<std::string, int> shop{{"sword", 30}};
+        std::string item{"Sword"};
+        if (auto it = shop.find(item); ___) {
+            std::cout << "Price: " << it->second << '\n';
+        } else {
+            std::cout << "Not for sale\n";
+        }
+      options:
+        - t: it != shop.end()
+          why: "Correct: \"Sword\" isn't found, so it's end() and the else branch runs."
+        - t: it->second > 0
+          why: For "Sword", it is end(); reading ->second is UB.
+        - t: shop[item] > 0
+          why: Inserts a "Sword" entry with price 0. Phantom stock!
+        - t: shop.size() > 0
+          why: The shop isn't empty, but that says nothing about "Sword". Still reads end().
+      answer: 0
+      hints:
+        - What does find return for an unknown key?
+        - Check the iterator itself.
+      short: Compare find's iterator with end() before using it.
+      explain: "Keys are matched exactly, so \"Sword\" isn't found and find returns shop.end(). Checking it != shop.end() blocks the UB; [] would silently add a phantom entry."
+      sideBySide:
+        unsafe: |-
+          auto it = shop.find(item);
+          std::cout << "Price: " << it->second << '\n';
+        hardened: |-
+          if (auto it = shop.find(item); it != shop.end()) {
+              std::cout << "Price: " << it->second << '\n';
+          } else {
+              std::cout << "Not for sale\n";
+          }
+        prelude: std::map<std::string, int> shop{{"sword", 30}}; std::string item{"Sword"};
+  - attack: "0"
+    label: Zero scores to compare!
+    challenge:
+      id: w14.boss.d2
+      type: breakit
+      tags: [ w14.minmax, w14.find-end ]
+      bug: unchecked-find
+      unsafe: true
+      prompt: "UNSAFE: reads how many scores, then the scores. Which input breaks it?"
+      code: |-
+        #include <algorithm>
+        #include <iostream>
+        #include <vector>
+
+        int main() {
+            int n{};
+            if (!(std::cin >> n) || n < 0 || n > 100) {
+                return 1;
+            }
+            std::vector<int> scores;
+            int s{};
+            for (int i = 0; i < n && std::cin >> s; ++i) {
+                scores.push_back(s);
+            }
+            std::cout << *std::min_element(scores.begin(), scores.end()) << '\n';
+            return 0;
+        }
+      options:
+        - t: 3 5 1 4
+          why: Three scores; the smallest is 1. Fine.
+        - t: "0"
+          why: "Correct: no scores, so min_element returns end(), and * reads it: UB."
+        - t: 2 -1 -1
+          why: Negative scores are still numbers. Prints -1.
+        - t: "-4"
+          why: Rejected by n < 0 before anything else runs.
+      answer: 1
+      hints:
+        - Which input leaves the vector empty?
+        - What does min_element return for an empty range?
+      short: Zero scores leaves an empty range; min_element returns end().
+      explain: "n = 0 passes validation, the loop reads nothing, and min_element on an empty vector returns end(). Dereferencing it is UB. Check for end() (or emptiness) first."
+      sideBySide:
+        unsafe: std::cout << *std::min_element(scores.begin(), scores.end()) << '\n';
+        hardened: |-
+          auto low = std::min_element(scores.begin(), scores.end());
+          if (low == scores.end()) {
+              std::cout << "No scores\n";
+          } else {
+              std::cout << *low << '\n';
+          }
+        prelude: std::vector<int> scores;
+  - attack: erase in a loop
+    label: Removing while walking!
+    challenge:
+      id: w14.boss.d3
+      type: harden
+      tags: [ w14.erase-loop, w14.invalidation, w14.set ]
+      bug: iterator-invalidation
+      prompt: Banish every even id from the set while looping. Pick the line for the blank.
+      code: |-
+        std::set<int> ids{1, 2, 3, 4};
+        for (auto it = ids.begin(); it != ids.end(); ) {
+            if (*it % 2 == 0) {
+                ___;
+            } else {
+                ++it;
+            }
+        }
+      options:
+        - t: it = ids.erase(it)
+          why: "Correct: erase returns the next valid iterator, so the loop never touches a dead one."
+        - t: ids.erase(it)
+          why: it is dead after the erase, and the loop keeps using it.
+        - t: ids.erase(*it)
+          why: Erases by value, but it still dangles, and the loop reuses it.
+        - t: ++it; ids.erase(it)
+          why: Erases the NEXT element instead, possibly end(), which is UB.
+      answer: 0
+      hints:
+        - erase kills the iterator you hand it.
+        - Keep the iterator that erase gives back.
+      short: it = ids.erase(it) keeps walking on a live iterator.
+      explain: "For a set, erase only kills the erased element's iterator, but that's exactly the one the loop holds. Assign erase's return value back to it. C++20: std::erase_if(ids, isEven) with a named test function."
+      sideBySide:
+        unsafe: |-
+          for (auto it = ids.begin(); it != ids.end(); ++it) {
+              if (*it % 2 == 0) {
+                  ids.erase(it);   // it dies here
+              }
+          }
+        hardened: |-
+          for (auto it = ids.begin(); it != ids.end(); ) {
+              if (*it % 2 == 0) {
+                  it = ids.erase(it);
+              } else {
+                  ++it;
+              }
+          }
+        prelude: std::set<int> ids{1, 2, 3, 4};
+victory: "Hsss... end()... at last... The Wraith dissolves into a neat, sorted mist."
+reward:
+  xp: 350
+  cosmetic: iterator-monocle
+  bug: unchecked-find

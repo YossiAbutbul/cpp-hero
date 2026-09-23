@@ -1,0 +1,247 @@
+# World 14 · Lesson 4: <algorithm>: the ready-made toolbox
+
+id: w14.l4
+title: "Algorithms: the toolbox"
+skill: toolkit
+shield: false
+concept:
+  short: "<algorithm> gives ready-made loops like sort, find, count and max_element; each works on a begin-end range."
+  analogy: "Algorithms are power tools: point them at a stretch of shelf, from begin() to end(), and pull the trigger."
+  body:
+    - "`#include <algorithm>` brings dozens of tested loops. You hand each one a range: `std::sort(v.begin(), v.end());` sorts the whole vector, smallest first."
+    - "`std::reverse(first, last)` flips a range. `std::count(first, last, x)` counts copies of x. `std::find(first, last, x)` returns an iterator to the first x, or `last` if there is none."
+    - "`std::min_element` and `std::max_element` return an **iterator** to the smallest or largest element, not the value. On an empty range they return `last`, so check before you dereference."
+    - "Want a custom test? Pass a function by name: with `bool isCrit(int d) { return d >= 10; }`, `std::count_if(v.begin(), v.end(), isCrit)` counts the crits. (Lambdas, coming in World 15, make this even shorter.)"
+    - "`std::accumulate(first, last, start)` from `<numeric>` adds everything up, starting from `start`. The type of `start` is the type of the running total, so use `0.0` for doubles."
+    - "C++20 also has range versions that take the whole container: `std::ranges::sort(v);`. std::sort needs jumping iterators (vector, array, string); a map and a set are already sorted."
+  pitfall: "Common beginner mistake: `std::accumulate(prices.begin(), prices.end(), 0)` on doubles. The 0 makes the total an int, so every fraction is chopped off."
+demo:
+  code: |-
+    #include <algorithm>
+    #include <iostream>
+    #include <numeric>
+    #include <vector>
+
+    int main() {
+        std::vector<int> dmg{7, 2, 9, 2};
+        std::sort(dmg.begin(), dmg.end());
+        std::cout << dmg.front() << ' ' << dmg.back() << '\n';
+        auto twos = std::count(dmg.begin(), dmg.end(), 2);
+        std::cout << twos << '\n';
+        int total = std::accumulate(dmg.begin(), dmg.end(), 0);
+        std::cout << total << '\n';
+        return 0;
+    }
+  steps:
+    - line: 6
+      vars:
+        dmg: "{7, 2, 9, 2}"
+      note: Four damage rolls, in no particular order.
+    - line: 7
+      vars:
+        dmg: "{2, 2, 7, 9}"
+      note: sort over [begin, end) puts them smallest first.
+    - line: 8
+      out: |
+        2 9
+      note: After sorting, front is smallest and back is largest.
+    - line: 9
+      vars:
+        twos: "2"
+      note: count walks the range and counts the 2s.
+    - line: 10
+      out: |
+        2
+    - line: 11
+      vars:
+        total: "20"
+      note: "accumulate adds everything, starting from 0."
+    - line: 12
+      out: |
+        20
+    - line: 13
+      note: No hand-written loops needed!
+challenges:
+  - id: w14.l4.c1
+    type: predict
+    tags: [ w14.sort, w14.reverse ]
+    prompt: What does this print?
+    code: |-
+      #include <algorithm>
+      #include <iostream>
+      #include <vector>
+
+      int main() {
+          std::vector<int> v{4, 1, 3};
+          std::sort(v.begin(), v.end());
+          std::reverse(v.begin(), v.end());
+          for (int x : v) {
+              std::cout << x;
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          431
+        why: "Correct: sorted to 1 3 4, then reversed to 4 3 1."
+      - t: |
+          134
+        why: That's only the sort. reverse then flips it.
+      - t: |
+          314
+        why: That's reversing the original order, but the sort ran first.
+      - t: |
+          4 3 1
+        why: Nothing prints a space between the numbers.
+    answer: 0
+    hints:
+      - Do the steps in order.
+      - Sort gives smallest first; reverse flips that.
+    short: Sort to 1 3 4, reverse to 4 3 1.
+    explain: 'std::sort makes {1, 3, 4}; std::reverse flips it to {4, 3, 1}. No spaces are printed: "431".'
+  - id: w14.l4.c2
+    type: mcq
+    tags: [ w14.algo-find ]
+    prompt: "`std::find(v.begin(), v.end(), 42)` finds no 42. What does it return?"
+    options:
+      - t: v.end()
+        why: "Correct: \"not found\" is reported as the end of the range you searched."
+      - t: "-1"
+        why: That's string::find's npos idea. std::find returns an iterator.
+      - t: nullptr
+        why: It returns an iterator; "not found" is the range's end, not null.
+      - t: It throws an exception
+        why: std::find never throws for a missing value; you must check the result.
+    answer: 0
+    hints:
+      - It returns an iterator, not an index.
+      - Which iterator means "nothing here"?
+    short: std::find returns the range's end when the value isn't found.
+    explain: "Algorithms report \"not found\" by returning the end of the range they searched: v.end() here. Always compare with it before dereferencing."
+  - id: w14.l4.c3
+    type: predict
+    tags: [ w14.accumulate ]
+    prompt: What does this print? (Look closely at the starting value.)
+    code: |-
+      #include <iostream>
+      #include <numeric>
+      #include <vector>
+
+      int main() {
+          std::vector<double> w{1.5, 2.5, 0.5};
+          std::cout << std::accumulate(w.begin(), w.end(), 0) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          3
+        why: "Correct: the start 0 is an int, so the running total is an int: 1, then 3, then 3."
+      - t: |
+          4.5
+        why: That needs a double start value, 0.0. With 0, the total is an int.
+      - t: |
+          4
+        why: "Each step chops, never rounds: 0+1.5 is 1, 1+2.5 is 3, 3+0.5 is 3."
+      - t: |
+          5
+        why: Fractions are chopped at every step, not rounded up.
+    answer: 0
+    hints:
+      - The running total has the type of the third argument.
+      - "0 is an int: each step's fraction is cut off."
+    short: Start value 0 is an int, so each step chops the fraction.
+    explain: "The total's type comes from the start value. With int 0: 0 + 1.5 = 1.5 stored as 1; 1 + 2.5 = 3.5 stored as 3; 3 + 0.5 = 3.5 stored as 3. Use 0.0 to get 4.5."
+  - id: w14.l4.c4
+    type: fill
+    tags: [ w14.minmax ]
+    prompt: Fill in the algorithm that finds the highest score.
+    code: |-
+      auto best = std::___(scores.begin(), scores.end());
+      if (best != scores.end()) {
+          std::cout << "Top score: " << *best << '\n';
+      }
+    prelude: std::vector<int> scores{40, 90, 70};
+    accept:
+      - max_element
+    placeholder: algorithm name
+    hints:
+      - It returns an iterator to the largest element.
+      - Its partner is min_element.
+    short: std::max_element returns an iterator to the largest element.
+    explain: "std::max_element returns an iterator to the largest element, or end() for an empty range. That's why the next line checks it before reading *best."
+  - id: w14.l4.c5
+    type: write
+    tags: [ w14.sort ]
+    prompt: Write one line that sorts the whole vector `names`.
+    prelude: std::vector<std::string> names{"Brace", "Curlo", "Ann"};
+    accept:
+      - std::sort(names.begin(), names.end());
+      - std::ranges::sort(names);
+    acceptRe:
+      - '^std::sort ?\( ?names ?\. ?begin ?\( ?\) ?, ?names ?\. ?end ?\( ?\) ?\) ?;$'
+    placeholder: std::sort...
+    hints:
+      - Algorithms take a begin and an end.
+      - std::sort(first, last);
+    short: std::sort(names.begin(), names.end()); sorts smallest first.
+    explain: "std::sort(names.begin(), names.end()) sorts the whole range with <, so strings end up in alphabetical order. In C++20, std::ranges::sort(names) does the same."
+  - id: w14.l4.c6
+    type: predict
+    tags: [ w14.count ]
+    prompt: A named function as a test. What does this print?
+    code: |-
+      #include <algorithm>
+      #include <iostream>
+      #include <vector>
+
+      bool isCrit(int d) {
+          return d >= 10;
+      }
+
+      int main() {
+          std::vector<int> hits{12, 3, 10, 9};
+          std::cout << std::count_if(hits.begin(), hits.end(), isCrit) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          2
+        why: "Correct: 12 and 10 pass d >= 10."
+      - t: |
+          1
+        why: 10 >= 10 is true too.
+      - t: |
+          3
+        why: 9 is not >= 10.
+      - t: |
+          22
+        why: count_if returns how many passed, not the sum of them.
+    answer: 0
+    hints:
+      - count_if calls isCrit on each element.
+      - Is 10 >= 10?
+    short: count_if counts elements where isCrit returns true; that's 12 and 10.
+    explain: "count_if calls isCrit on each element and counts the trues: 12 (yes), 3 (no), 10 (yes, >= includes 10), 9 (no). Output: 2."
+recap:
+  - "Algorithms take a range: first, last."
+  - Not found means the range's end.
+  - min/max_element return iterators; check for end().
+  - accumulate's start value sets the total's type.
+vault:
+  - id: w14.algorithms
+    title: Algorithm starter kit
+    code: |-
+      #include <algorithm>
+      #include <numeric>
+
+      std::vector<int> v{7, 2, 9, 2};
+      std::sort(v.begin(), v.end());                  // 2 2 7 9
+      std::reverse(v.begin(), v.end());               // 9 7 2 2
+      auto n = std::count(v.begin(), v.end(), 2);     // 2
+      auto at = std::find(v.begin(), v.end(), 7);     // iterator or end()
+      auto hi = std::max_element(v.begin(), v.end()); // iterator or end()
+      int sum = std::accumulate(v.begin(), v.end(), 0);
+    note: Every result that is an iterator can be end(). Check it before using *.
+    defense: false
+reviewTags: [ w7.vector, w6.params, w14.iterator, w14.begin-end, w14.set ]

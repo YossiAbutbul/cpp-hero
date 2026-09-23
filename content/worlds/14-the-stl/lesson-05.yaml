@@ -1,0 +1,399 @@
+# World 14 · Lesson 5: Shield: Guard the iterators (Shield lesson)
+
+id: w14.l5
+title: "Shield: Guard the iterators"
+skill: defense
+shield: true
+concept:
+  short: "Check find() against end(), look keys up without [], and never reuse an iterator after erase or growth."
+  analogy: "An iterator is a bookmark: check it's on a real page, and grab a fresh one after tearing pages out."
+  body:
+    - "**Unchecked find.** `m.find(k)`, `s.find(x)` and `std::find` return `end()` when nothing matches. Dereferencing `end()` is **undefined behavior**: it might print garbage, crash, or seem fine until the day it doesn't. Always check: `if (auto it = m.find(k); it != m.end()) { use it->second }`. (The `auto it = ...;` inside the if keeps `it` scoped to the check.)"
+    - "**Phantom keys.** `m[k]` on a missing key **inserts** k with a default value (0, empty string). So `if (m[name] == 0)` quietly adds `name` to the map, grows `size()`, and can't tell \"missing\" from \"really 0\". For lookups use `find`, `contains` (C++20) or `count`; use `at` when the key must exist (it throws `std::out_of_range`). Save `[]` for when you **want** insert-or-update, like `++counts[word]`."
+    - "**Iterator invalidation.** Changing a container can kill its iterators. `push_back` on a vector may move every element to a new buffer (World 7 showed that for references), so all old iterators dangle. `erase` kills the erased element's iterator (and, for a vector, every one after it)."
+    - "**Erasing in a loop.** `erase` returns an iterator to the next element, so write `it = c.erase(it);` and only `++it` when you didn't erase. `c.erase(it); ++it;` steps from a dead iterator: UB. C++20 shortcuts: `std::erase(v, 0)` and `std::erase_if(v, pred)` do it safely."
+    - "**Empty ranges.** `std::max_element`, `std::min_element` and `*c.begin()` on an empty container all lead to `end()`. Check before reading."
+  pitfall: "Common beginner mistake: `if (stock[item] == 0)` to test whether an item exists. It adds the item to the map, so every typo becomes a new entry."
+demo:
+  code: |-
+    #include <iostream>
+    #include <map>
+    #include <string>
+
+    int main() {
+        std::map<std::string, int> hp{{"Curlo", 10}};
+        std::cout << hp["Brace"] << '\n';
+        std::cout << hp.size() << '\n';
+        auto it = hp.find("Imp");
+        if (it == hp.end()) {
+            std::cout << "No Imp here\n";
+            return 1;
+        }
+        std::cout << it->second << '\n';
+        return 0;
+    }
+  steps:
+    - line: 5
+      vars:
+        hp["Curlo"]: "10"
+      note: One entry, Curlo with 10 hp.
+    - line: 6
+      vars:
+        hp["Brace"]: "0"
+      out: |
+        0
+      crash: Phantom key inserted!
+      note: No Brace yet, so [] quietly created one.
+    - line: 7
+      out: |
+        2
+      note: "Just reading grew the map: size is now 2."
+    - line: 8
+      vars:
+        it: end()
+      note: find() never inserts. No Imp, so it returns end().
+    - line: 13
+      crash: "Reading end(): undefined behavior!"
+      note: "Without the check, it->second would read end(): UB."
+    - line: 9
+      shield: end() checked!
+      note: "Back to reality: the check runs first."
+    - line: 10
+      out: |
+        No Imp here
+    - line: 11
+      note: Leave safely. end() is never dereferenced.
+challenges:
+  - id: w14.l5.c1
+    type: breakit
+    tags: [ w14.find-end, w14.map ]
+    bug: unchecked-find
+    unsafe: true
+    prompt: UNSAFE shop lookup. The player types an item name. Pick the input that breaks it.
+    code: |-
+      #include <iostream>
+      #include <map>
+      #include <string>
+
+      int main() {
+          std::map<std::string, int> price{{"sword", 30}, {"shield", 25}};
+          std::string item;
+          std::cin >> item;
+          auto it = price.find(item);
+          std::cout << it->second << '\n';
+          return 0;
+      }
+    options:
+      - t: sword
+        why: Found, so it prints 30.
+      - t: shield
+        why: Found, so it prints 25.
+      - t: Sword
+        why: "Correct: keys are case-sensitive, find returns end(), and it->second reads end(): UB."
+      - t: sword shield
+        why: ">> stops at the space, so item is \"sword\". Found."
+    answer: 2
+    hints:
+      - What does find return for a key that isn't there?
+      - Map keys are compared exactly, letter case included.
+    short: A missing key makes find return end(); reading it is UB.
+    explain: '"Sword" isn''t a key ("sword" is), so find returns price.end() and it->second reads past the last element. That''s UB: it may print garbage, crash, or look fine today. Check it != price.end() first.'
+    sideBySide:
+      unsafe: |-
+        auto it = price.find(item);
+        std::cout << it->second << '\n';
+      hardened: |-
+        if (auto it = price.find(item); it != price.end()) {
+            std::cout << it->second << '\n';
+        } else {
+            std::cout << "We don't sell " << item << '\n';
+        }
+      prelude: std::map<std::string, int> price{{"sword", 30}}; std::string item{"Sword"};
+  - id: w14.l5.c2
+    type: harden
+    tags: [ w14.invalidation, w14.erase-loop ]
+    bug: iterator-invalidation
+    prompt: Remove every 0 from hp while looping. Pick the line for the blank.
+    code: |-
+      for (auto it = hp.begin(); it != hp.end(); ) {
+          if (*it == 0) {
+              ___;
+          } else {
+              ++it;
+          }
+      }
+    prelude: std::vector<int> hp{0, 5, 0, 7};
+    options:
+      - t: it = hp.erase(it)
+        why: "Correct: erase returns a valid iterator to the next element, so the loop continues safely."
+      - t: hp.erase(it)
+        why: it now points at an erased slot. The loop keeps using a dead iterator.
+      - t: hp.erase(it); ++it
+        why: Moving on from a dead iterator is UB, and it would skip an element anyway.
+      - t: hp.push_back(0)
+        why: Adds instead of removing, may reallocate, and loops forever.
+    answer: 0
+    hints:
+      - erase kills the iterator you pass it.
+      - erase gives you back a fresh iterator. Keep it!
+    short: it = c.erase(it) keeps the loop on a valid iterator.
+    explain: "After erase(it), it is invalid. erase returns an iterator to the element after the removed one, so assign it back and skip the ++. In C++20, std::erase(hp, 0) does the whole loop for you."
+    sideBySide:
+      unsafe: |-
+        for (auto it = hp.begin(); it != hp.end(); ++it) {
+            if (*it == 0) {
+                hp.erase(it);    // it is now dead; ++it is UB
+            }
+        }
+      hardened: |-
+        for (auto it = hp.begin(); it != hp.end(); ) {
+            if (*it == 0) {
+                it = hp.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        // C++20: std::erase(hp, 0);
+      prelude: std::vector<int> hp{0, 5, 0, 7};
+  - id: w14.l5.c3
+    type: review
+    tags: [ w14.invalidation, w14.bracket-insert, w14.erase-loop ]
+    bug: iterator-invalidation
+    unsafe: true
+    prompt: "Code review: tap every dangerous line, then submit."
+    code: |-
+      #include <iostream>
+      #include <map>
+      #include <string>
+      #include <vector>
+
+      int main() {
+          std::map<std::string, int> hp{{"imp", 0}, {"slime", 4}};
+          for (auto it = hp.begin(); it != hp.end(); ++it) {
+              if (it->second == 0) {
+                  hp.erase(it);
+              }
+          }
+          std::vector<int> wave{1, 2, 3};
+          for (auto w = wave.begin(); w != wave.end(); ++w) {
+              if (*w == 2) {
+                  wave.push_back(4);
+              }
+          }
+          std::cout << hp["boss"] << '\n';
+          return 0;
+      }
+    dangerous: [ 9, 15, 18 ]
+    lineNotes:
+      9: "Erases the element it points at; the loop's ++it then uses a dead iterator: UB."
+      15: push_back may reallocate the vector, so w dangles and the loop reads freed memory.
+      18: '"boss" is missing, so [] inserts it with 0 just to print it. Use find.'
+    hints:
+      - Look for iterators still used after their container changed.
+      - One line changes the map just by reading it.
+    short: Erase and push_back kill iterators; [] inserts missing keys.
+    explain: "Line 9: after erase(it), ++it steps from a dead iterator. Line 15: push_back may move all elements, leaving w dangling. Line 18: hp[\"boss\"] inserts a phantom key. The first two are UB: they may seem to work, then fail on another run or compiler."
+    sideBySide:
+      unsafe: |-
+        for (auto it = hp.begin(); it != hp.end(); ++it) {
+            if (it->second == 0) {
+                hp.erase(it);
+            }
+        }
+        for (auto w = wave.begin(); w != wave.end(); ++w) {
+            if (*w == 2) {
+                wave.push_back(4);
+            }
+        }
+        std::cout << hp["boss"] << '\n';
+      hardened: |-
+        for (auto it = hp.begin(); it != hp.end(); ) {
+            if (it->second == 0) {
+                it = hp.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        const std::size_t n = wave.size();
+        for (std::size_t i = 0; i < n; ++i) {
+            if (wave[i] == 2) {
+                wave.push_back(4);
+            }
+        }
+        if (auto b = hp.find("boss"); b != hp.end()) {
+            std::cout << b->second << '\n';
+        }
+      prelude: std::map<std::string, int> hp{{"imp", 0}, {"slime", 4}}; std::vector<int> wave{1, 2, 3};
+  - id: w14.l5.c4
+    type: bug
+    tags: [ w14.minmax, w14.find-end ]
+    bug: unchecked-find
+    unsafe: true
+    prompt: This crashes (or worse) when there are no scores yet. Tap the buggy line, then pick the fix.
+    code: |-
+      int best(const std::vector<int>& scores) {
+          auto it = std::max_element(scores.begin(), scores.end());
+          return *it;
+      }
+    bugLine: 2
+    options:
+      - t: "return it != scores.end() ? *it : 0;"
+        why: "Correct: an empty vector gives end(), which is now checked before reading."
+      - t: return scores.back();
+        why: back() on an empty vector is UB too.
+      - t: return *(it - 1);
+        why: "For an empty vector, end() - 1 is before the first element: even worse."
+      - t: return *scores.begin();
+        why: For an empty vector, begin() == end(). Same UB.
+    answer: 0
+    hints:
+      - What does max_element return for an empty range?
+      - Check the iterator before the *.
+    short: max_element returns end() on empty input; check before dereferencing.
+    explain: "For an empty vector, max_element returns scores.end(), and *it reads past the last (non-existent) element: UB. Check it != scores.end() first and pick a sensible fallback (or report \"no scores yet\")."
+    sideBySide:
+      unsafe: |-
+        int best(const std::vector<int>& scores) {
+            auto it = std::max_element(scores.begin(), scores.end());
+            return *it;               // empty: reads end()
+        }
+      hardened: |-
+        int best(const std::vector<int>& scores) {
+            auto it = std::max_element(scores.begin(), scores.end());
+            return it != scores.end() ? *it : 0;
+        }
+  - id: w14.l5.c5
+    type: edge
+    tags: [ w14.bracket-insert, w14.map ]
+    bug: map-bracket-insert
+    unsafe: true
+    prompt: "The kill tracker should never grow when you merely ask. Which typed names expose the bug? Select all."
+    code: |-
+      std::map<std::string, int> kills{{"imp", 2}};
+      std::string name;
+      std::cin >> name;
+      if (kills[name] == 0) {
+          std::cout << "Never fought " << name << '\n';
+      }
+      std::cout << kills.size() << " kinds tracked\n";
+    options:
+      - t: imp
+        why: imp exists, so [] just reads 2. Size stays 1.
+      - t: slime
+        why: "Exposes it: slime is missing, so [] inserts it and size becomes 2."
+      - t: Imp
+        why: "Exposes it: keys are case-sensitive, so Imp is a new phantom entry."
+      - t: "   imp"
+        why: ">> skips leading spaces and reads \"imp\". It's found."
+    answers: [ 1, 2 ]
+    hints:
+      - What does [] do with a key that isn't there?
+      - Keys are compared exactly, including letter case.
+    short: Any missing name gets inserted by [], growing the map.
+    explain: "kills[name] inserts every missing name with 0, so asking about slime or Imp adds an entry and size() grows. The test also can't tell \"missing\" from \"fought 0 times\". Use contains (or find) for questions."
+    sideBySide:
+      unsafe: |-
+        if (kills[name] == 0) {    // inserts missing names!
+            std::cout << "Never fought " << name << '\n';
+        }
+      hardened: |-
+        if (!kills.contains(name)) {
+            std::cout << "Never fought " << name << '\n';
+        }
+      prelude: std::map<std::string, int> kills{{"imp", 2}}; std::string name{"slime"};
+  - id: w14.l5.c6
+    type: safe
+    tags: [ w14.find-end, w14.bracket-insert, w14.invalidation ]
+    prompt: Safe or unsafe? The Wraith's minions are slipping past end(). Go fast!
+    seconds: 30
+    items:
+      - code: |-
+          if (auto it = m.find("a"); it != m.end()) {
+              std::cout << it->second;
+          }
+        prelude: std::map<std::string, int> m{{"a", 1}};
+        safe: true
+        why: find's result is checked against end() before it's used.
+      - code: std::cout << m.find("zz")->second;
+        prelude: std::map<std::string, int> m{{"a", 1}};
+        safe: false
+        why: '"zz" is missing, so this dereferences end(): UB.'
+      - code: int n = m["zz"];
+        prelude: std::map<std::string, int> m{{"a", 1}};
+        safe: false
+        why: Just reading with [] inserts a phantom "zz" entry.
+      - code: |-
+          if (m.contains("zz")) {
+              std::cout << m.at("zz");
+          }
+        prelude: std::map<std::string, int> m{{"a", 1}};
+        safe: true
+        why: contains() checks without inserting; at() would throw rather than invent a value.
+      - code: |-
+          for (auto it = v.begin(); it != v.end(); ++it) {
+              v.push_back(*it);
+          }
+        prelude: std::vector<int> v{1, 2};
+        safe: false
+        why: push_back while iterating can reallocate; it dangles, and end() keeps moving.
+      - code: std::erase(v, 0);
+        prelude: std::vector<int> v{0, 1, 0};
+        safe: true
+        why: C++20's std::erase removes every 0 with no iterator juggling.
+      - code: |-
+          auto it = std::find(v.begin(), v.end(), 3);
+          v.erase(it);
+        prelude: std::vector<int> v{1, 2};
+        safe: false
+        why: No 3 found, so erase(end()) runs. That's UB.
+      - code: std::cout << *s.begin();
+        prelude: std::set<int> s;
+        safe: false
+        why: The set is empty, so begin() == end(). Reading it is UB.
+    hints:
+      - Every find result needs an end() check.
+      - Watch for [] reads and containers that change mid-loop.
+    short: Check end(), avoid [] for lookups, don't reuse stale iterators.
+    explain: "Safe STL code checks every iterator that might be end(), looks keys up with find/contains/at instead of [], and never keeps using an iterator after the container was changed."
+recap:
+  - Compare every find() result with end().
+  - "Lookups: find, contains or at. Not []."
+  - "Erasing in a loop: it = c.erase(it);"
+  - push_back can invalidate every vector iterator.
+vault:
+  - id: w14.find-guard
+    title: Check find() against end()
+    code: |-
+      if (auto it = hp.find(name); it != hp.end()) {
+          std::cout << it->second << '\n';
+      } else {
+          std::cout << "No " << name << '\n';
+      }
+    prelude: std::map<std::string, int> hp; std::string name{"imp"};
+    note: end() is not an element. Reading it is UB, and it may not crash.
+    defense: true
+  - id: w14.no-phantom-keys
+    title: Look up without inserting
+    code: |-
+      bool has = stock.contains(item);      // C++20
+      bool has2 = stock.count(item) == 1;   // any version
+      int n = stock.at("potion");           // throws if missing
+      ++stock[item];                        // [] only when you WANT insert
+    prelude: std::map<std::string, int> stock{{"potion", 3}}; std::string item{"elixir"};
+    note: "m[k] inserts k when it's missing. Use it to write, not to ask."
+    defense: true
+  - id: w14.erase-loop
+    title: Erase while looping
+    code: |-
+      for (auto it = v.begin(); it != v.end(); ) {
+          if (*it == 0) {
+              it = v.erase(it);   // erase hands back the next one
+          } else {
+              ++it;
+          }
+      }
+      std::erase(v, 0);           // C++20: same thing, one line
+    prelude: std::vector<int> v{0, 1, 0};
+    note: "After erase or push_back, old iterators may be dead. Get fresh ones."
+    defense: true
+reviewTags: [ w7.invalidation, w8.dangling, w14.map, w14.iterator, w14.algo-find, w14.minmax ]

@@ -1,0 +1,251 @@
+# World 14 · Lesson 2: Sets: no duplicates allowed
+
+id: w14.l2
+title: "Sets: no duplicates allowed"
+skill: toolkit
+shield: false
+concept:
+  short: std::set keeps unique values, always sorted; inserting a value that's already there does nothing.
+  analogy: "A set is a guest list at the door: each name gets in once, and the list stays alphabetical."
+  body:
+    - "A `std::set<T>` (from `<set>`) holds **unique** values in **sorted** order. It's like a map with keys but no values."
+    - "`s.insert(x)` adds x if it's new. If x is already there, nothing changes. `insert` even tells you which happened: `s.insert(x).second` is `true` for a new value, `false` for a duplicate."
+    - "Ask \"is it in there?\" with `s.contains(x)` (C++20) or `s.count(x)`, which is 0 or 1. Both are fast even for huge sets: a set is organized for lookups, unlike scanning a vector."
+    - "`s.erase(x)` removes x (and does nothing if it isn't there). `s.size()` counts values. A range-for visits them smallest first."
+    - "There's no `s[0]`: sets have no positions. And you can't change an element in place (it's const), because that could break the sorting. Erase the old value and insert the new one instead."
+  pitfall: "Common beginner mistake: checking `count(x) > 1` to spot a duplicate. In a set, count is only ever 0 or 1, because the duplicate was never stored."
+demo:
+  code: |-
+    #include <iostream>
+    #include <set>
+    #include <string>
+
+    int main() {
+        std::set<std::string> seen;
+        seen.insert("slime");
+        seen.insert("imp");
+        seen.insert("slime");
+        std::cout << seen.size() << '\n';
+        if (seen.contains("imp")) {
+            std::cout << "imp spotted\n";
+        }
+        for (const std::string& bug : seen) {
+            std::cout << bug << '\n';
+        }
+        return 0;
+    }
+  steps:
+    - line: 5
+      vars:
+        seen: "{}"
+      note: An empty set of bug names.
+    - line: 6
+      vars:
+        seen: "{slime}"
+    - line: 7
+      vars:
+        seen: "{imp, slime}"
+      note: "Sorted automatically: imp before slime."
+    - line: 8
+      vars:
+        seen: "{imp, slime}"
+      note: slime is already in. Nothing changes.
+    - line: 9
+      out: |
+        2
+      note: Two unique names, so size() is 2.
+    - line: 10
+      note: contains() asks without adding anything.
+    - line: 11
+      out: |
+        imp spotted
+    - line: 14
+      out: |
+        imp
+      note: Smallest first, in sorted order.
+    - line: 14
+      out: |
+        slime
+    - line: 16
+      note: No duplicates got past the door!
+challenges:
+  - id: w14.l2.c1
+    type: predict
+    tags: [ w14.set ]
+    prompt: What does this print? (Watch the spaces.)
+    code: |-
+      #include <iostream>
+      #include <set>
+
+      int main() {
+          std::set<int> s{5, 1, 5, 3, 1};
+          for (int x : s) {
+              std::cout << x << ' ';
+          }
+          std::cout << '\n' << s.size() << '\n';
+          return 0;
+      }
+    options:
+      - t: "1 3 5 \n3\n"
+        why: "Correct: duplicates vanish, the rest is sorted, and size() is 3."
+      - t: "5 1 3 \n3\n"
+        why: A set doesn't keep the order you gave; it sorts.
+      - t: "1 1 3 5 5 \n5\n"
+        why: A set stores each value only once.
+      - t: "1 3 5\n3\n"
+        why: Every number is followed by a space, including the last.
+    answer: 0
+    hints:
+      - Which values survive when duplicates are dropped?
+      - Every x is followed by a space.
+    short: Duplicates dropped, values sorted, so 1 3 5 and size 3.
+    explain: 'The set keeps {1, 3, 5}: each value once, sorted. Each number prints with a space after it, then a newline, then size() = 3: "1 3 5 ", newline, "3", newline.'
+  - id: w14.l2.c2
+    type: predict
+    tags: [ w14.set, w14.set-insert ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+      #include <set>
+      #include <string>
+
+      int main() {
+          std::set<std::string> badges;
+          bool a = badges.insert("gold").second;
+          bool b = badges.insert("gold").second;
+          std::cout << a << b << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          10
+        why: "Correct: the first insert is new (true, 1), the second is a duplicate (false, 0)."
+      - t: |
+          11
+        why: The second "gold" is a duplicate, so its insert reports false.
+      - t: |
+          01
+        why: "It's the other way around: the FIRST insert is the new one."
+      - t: |
+          truefalse
+        why: Without std::boolalpha, bools print as 1 and 0.
+    answer: 0
+    hints:
+      - ".second tells you whether the value was actually added."
+      - How do bools print by default?
+    short: insert(...).second is true only when the value was new.
+    explain: 'insert returns a pair: an iterator to the element and a bool that is true if it was newly added. "gold" is new the first time (1), a duplicate the second (0). Output: "10".'
+  - id: w14.l2.c3
+    type: mcq
+    tags: [ w14.set, w14.map ]
+    prompt: You track which bug kinds you've defeated. No repeats, and "have I beaten it?" must be fast. Best container?
+    options:
+      - t: std::set<std::string>
+        why: "Correct: unique values and fast lookups are exactly what a set is for."
+      - t: std::vector<std::string>
+        why: Allows duplicates, and checking membership means scanning the whole vector.
+      - t: std::map<std::string, std::string>
+        why: A map works, but you'd store a value you never need. A set is the simple fit.
+      - t: std::array<std::string, 10>
+        why: A fixed size of 10, duplicates allowed, and lookups are a full scan.
+    answer: 0
+    hints:
+      - You only need to remember names, not a value per name.
+      - Which container refuses duplicates by itself?
+    short: Unique values plus fast "is it there?" means std::set.
+    explain: "A set stores each value once and answers contains() quickly, even with thousands of entries. A vector allows duplicates and must be scanned; a map needs a value you don't have."
+  - id: w14.l2.c4
+    type: fill
+    tags: [ w14.contains, w14.set ]
+    prompt: Fill in the member function that checks whether `room` is already in the set (C++20).
+    code: |-
+      if (visited.___(room)) {
+          std::cout << "Been here!\n";
+      }
+    prelude: std::set<int> visited{1, 2}; int room{2};
+    accept:
+      - contains
+      - count
+    placeholder: member function
+    hints:
+      - C++20 added a member with a very literal name.
+      - It returns true if the value is in the set.
+    short: visited.contains(room) is true if room is in the set.
+    explain: "contains(x) (C++20) returns a bool. Before C++20, count(x) does the job: it's 1 or 0 for a set, which converts to true or false."
+  - id: w14.l2.c5
+    type: bug
+    tags: [ w14.set, w14.set-insert ]
+    prompt: "This should report repeated ticket numbers, but it never reports anything. Tap the buggy line, then pick the fix."
+    code: |-
+      std::set<int> tickets;
+      for (int t : scanned) {
+          if (tickets.count(t) > 1) {
+              std::cout << "Duplicate " << t << '\n';
+          }
+          tickets.insert(t);
+      }
+    prelude: std::vector<int> scanned{7, 3, 7};
+    bugLine: 2
+    options:
+      - t: if (tickets.contains(t)) {
+        why: "Correct: before inserting, the ticket is already there only if it was seen earlier."
+      - t: if (tickets.count(t) > 2) {
+        why: A set's count is only ever 0 or 1. This is never true either.
+      - t: if (tickets.count(t) == 1) { tickets.clear();
+        why: Clearing the set throws away every ticket seen so far. Nonsense.
+      - t: if (tickets.size() > 1) {
+        why: That's true as soon as two DIFFERENT tickets arrive. It doesn't check t at all.
+    answer: 0
+    hints:
+      - What values can count() return for a set?
+      - Check before the insert, not after.
+    short: "Set counts are 0 or 1: check contains() before inserting."
+    explain: "A set never stores a duplicate, so count(t) is at most 1 and `> 1` never fires. Check whether t is already present before inserting it: contains(t) (or count(t) == 1). Even shorter: if (!tickets.insert(t).second) { ... }."
+    sideBySide:
+      unsafe: |-
+        if (tickets.count(t) > 1) {    // never true in a set
+            std::cout << "Duplicate " << t << '\n';
+        }
+        tickets.insert(t);
+      hardened: |-
+        if (!tickets.insert(t).second) {   // false = was already there
+            std::cout << "Duplicate " << t << '\n';
+        }
+      prelude: std::set<int> tickets; int t{7};
+  - id: w14.l2.c6
+    type: write
+    tags: [ w14.set ]
+    prompt: 'Write one line that removes "imp" from the set `seen`.'
+    prelude: std::set<std::string> seen{"imp", "slime"};
+    accept:
+      - seen.erase("imp");
+    acceptRe:
+      - '^seen ?\. ?erase ?\( ?"imp" ?\) ?;$'
+    placeholder: seen...
+    hints:
+      - The member that removes things also exists on vectors and maps.
+      - Pass the value itself. Don't forget the ;
+    short: seen.erase("imp"); removes the value if it's there.
+    explain: 'seen.erase("imp") removes the value and returns how many were removed (0 or 1). Erasing a value that isn''t there is safe: nothing happens.'
+recap:
+  - A set stores unique values, always sorted.
+  - insert(x).second tells you if x was new.
+  - contains(x) or count(x) checks membership.
+  - "No [] and no in-place edits: erase, then insert."
+vault:
+  - id: w14.set-basics
+    title: std::set basics
+    code: |-
+      #include <set>
+      #include <string>
+
+      std::set<std::string> seen;
+      bool isNew = seen.insert("imp").second;   // true
+      seen.insert("imp");                        // no effect
+      if (seen.contains("imp")) {                // C++20; else count() == 1
+          std::cout << "imp spotted\n";
+      }
+      seen.erase("imp");
+    note: Unique + sorted + fast lookup. Elements are const; erase and reinsert to change one.
+    defense: false
+reviewTags: [ w14.map, w7.find, w7.push-back, w14.map-iterate ]
