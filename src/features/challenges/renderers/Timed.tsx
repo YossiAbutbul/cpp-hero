@@ -14,6 +14,7 @@ import { Icon } from '@/ui/Icon';
 import { Md } from '@/ui/Md';
 import { overlayCount } from '@/ui/overlay/overlay';
 import { Actions } from '../Actions';
+import { safeItemRight, speedItemRight, timedNeed, timedPass } from '../check';
 import type { RendererProps } from '../types';
 import styles from '../challenges.module.css';
 
@@ -52,8 +53,8 @@ function TimedRound<I>({ cfg, phase, submit }: { cfg: TimedCfg<I> } & Pick<Rende
     if (L.over) return;
     L.over = true;
     const right = L.answers.filter((a) => a?.good).length;
-    const need = Math.ceil((total * 2) / 3);
-    const pass = right >= need;
+    const need = timedNeed(total);
+    const pass = timedPass(right, total);
     setOver({ timeout, right });
     const snapshot = L.answers.slice();
     submit({
@@ -273,7 +274,7 @@ export function Safe({ ch, phase, submit }: RendererProps) {
         </div>
       </>
     ),
-    isRight: (it, k) => (k === 1) === it.safe,
+    isRight: safeItemRight,
     recap: (it, a) => (
       <>
         <code className={styles.snip}>{oneLine(it.code)}</code>
@@ -317,7 +318,7 @@ export function Speed({ ch, phase, submit }: RendererProps) {
         </div>
       </>
     ),
-    isRight: (it, k) => k === it.answer,
+    isRight: speedItemRight,
     recap: (it, a) => (
       <span>
         <b>

@@ -9,6 +9,7 @@ import { tokLine } from '@/features/code';
 import { Icon } from '@/ui/Icon';
 import { anim, reduced, SPRING } from '@/ui/fx/motion';
 import { Actions } from '../Actions';
+import { checkOrder } from '../check';
 import type { RendererProps } from '../types';
 import styles from '../challenges.module.css';
 import codeStyles from '@/features/code/code.module.css';
@@ -300,8 +301,7 @@ export function Order({ ch, phase, reveal, submit }: RendererProps) {
     if (locked) return;
     const got = prog.map((id) => byId(id).t.trim());
     const want = c.lines.map((l) => l.trim());
-    const good = got.length === want.length && got.every((t, i) => t === want[i]);
-    const inPlace = got.filter((t, i) => want[i] != null && t === want[i]).length;
+    const { correct: good, inPlace } = checkOrder(c, got);
     setSel(null);
     submit({
       correct: good,

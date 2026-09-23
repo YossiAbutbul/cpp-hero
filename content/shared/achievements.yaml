@@ -26,8 +26,8 @@
   test: combo:10
 - id: infinite-loop-of-wins
   name: Infinite Loop (the Good Kind)
-  desc: Hit a 25-answer combo.
-  test: combo:25
+  desc: Hit a 12-answer combo.
+  test: combo:12
 - id: warming-up
   name: Warming Up the Compiler
   desc: Keep a 3-day streak.

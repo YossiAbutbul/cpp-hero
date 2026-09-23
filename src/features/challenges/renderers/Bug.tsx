@@ -6,6 +6,7 @@ import { slideUp } from '@/ui/fx/motion';
 import { Icon } from '@/ui/Icon';
 import { finalState, finalTag, OptionGrid, useOptionKeys, WhyList } from '../Options';
 import { Actions } from '../Actions';
+import { checkBug, checkChoice } from '../check';
 import type { RendererProps } from '../types';
 import styles from '../challenges.module.css';
 
@@ -73,9 +74,10 @@ export function Bug({ ch, phase, attempt, canSoft, reveal, submit }: RendererPro
     const next = picks.slice(0, attempt);
     next[attempt] = k;
     setPicks(next);
-    const fixOK = k === c.answer;
+    const fixOK = checkChoice(c, k);
     submit({
-      correct: fixOK && !lineWrong,
+      // line is the bug line here unless lineWrong (a wrong first tap with no retry left)
+      correct: checkBug(c, lineWrong ? (line?.i ?? -1) : c.bugLine, k),
       noRetry: lineWrong,
       pickedWhy: c.options[k]?.why,
       anchor: btns.current[k],
