@@ -33,7 +33,9 @@ export interface WorldPathProps {
 
 export function WorldPath({ worldId, nodes, cur, width, flip, firstView, bestOf, onNode }: WorldPathProps) {
   const lit = litIndex(nodes, cur);
-  const offs = nodes.map((n, i) => (n.kind === 'boss' || i === 0 ? 0 : (OFFS[i % OFFS.length] ?? 0) * (flip ? -1 : 1)));
+  const offs = nodes.map((n, i) =>
+    n.kind === 'boss' || i === 0 ? 0 : (OFFS[i % OFFS.length] ?? 0) * (flip ? -1 : 1),
+  );
   const H = TOP + Math.max(0, nodes.length - 1) * GAP + BOTTOM;
   const amp = Math.min(96, width * 0.27);
   const xy = offs.map((o, i) => ({ x: width / 2 + o * amp, y: TOP + i * GAP }));
@@ -85,7 +87,12 @@ export function WorldPath({ worldId, nodes, cur, width, flip, firstView, bestOf,
       return;
     }
     const kf = [{ strokeDashoffset: L - Lp }, { strokeDashoffset: 0 }];
-    const o = { duration: prev === undefined ? 1300 : 800, delay: prev === undefined ? 300 : 380, easing: 'cubic-bezier(.3,1.1,.5,1)', fill: 'backwards' as const };
+    const o = {
+      duration: prev === undefined ? 1300 : 800,
+      delay: prev === undefined ? 300 : 380,
+      easing: 'cubic-bezier(.3,1.1,.5,1)',
+      fill: 'backwards' as const,
+    };
     for (const p of [pp, gp]) if (p) p.style.strokeDasharray = `${L} ${L + 40}`;
     void anim(gp, kf, o);
     void anim(pp, kf, o).then(() => {
@@ -104,7 +111,11 @@ export function WorldPath({ worldId, nodes, cur, width, flip, firstView, bestOf,
               <path ref={glow} className={styles.glow} d={curve(xy.slice(0, lit + 1))} />
               <path ref={prog} className={styles.prog} d={curve(xy.slice(0, lit + 1))} />
               {(mapMemory.lit.get(worldId) ?? 0) > 0 && (
-                <path ref={before} className={styles.ghost} d={curve(xy.slice(0, (mapMemory.lit.get(worldId) ?? 0) + 1))} />
+                <path
+                  ref={before}
+                  className={styles.ghost}
+                  d={curve(xy.slice(0, (mapMemory.lit.get(worldId) ?? 0) + 1))}
+                />
               )}
             </>
           )}
@@ -115,9 +126,12 @@ export function WorldPath({ worldId, nodes, cur, width, flip, firstView, bestOf,
         const o = offs[i] ?? 0;
         const right = o <= 0.05;
         const off = n.kind === 'boss' ? 62 : st === 'cur' ? 54 : 48;
+        // the next node carries the bobbing START / FIGHT! tip: lift this label clear of it
+        const beforeCur = nodes[i + 1] != null && nodeState(nodes[i + 1]!, cur) === 'cur';
         const best = n.kind === 'lesson' && n.done ? bestOf(n.id) : undefined;
         const pos = { '--o': o, top: TOP + i * GAP } as CSSProperties;
-        const stateTxt = st === 'done' ? 'complete' : st === 'cur' ? 'you are here' : st === 'open' ? 'open' : 'locked';
+        const stateTxt =
+          st === 'done' ? 'complete' : st === 'cur' ? 'you are here' : st === 'open' ? 'open' : 'locked';
         const cls = [
           styles.node,
           styles[st],
@@ -141,18 +155,34 @@ export function WorldPath({ worldId, nodes, cur, width, flip, firstView, bestOf,
               <NodeIcon n={n} st={st} />
             </button>
             <div
-              className={[styles.label, styles['l_' + st], right ? styles.toRight : styles.toLeft].join(' ')}
+              className={[
+                styles.label,
+                styles['l_' + st],
+                right ? styles.toRight : styles.toLeft,
+                beforeCur ? styles.lift : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
               style={{ ...pos, '--off': `${off}px` } as CSSProperties}
               aria-hidden="true"
             >
               <small>
-                {nodeKind(n)}
-                {n.done && (best != null ? ` · ${Math.round(best * 100)}%` : ' · done')}
+                <span>{nodeKind(n)}</span>
+                {n.done && (
+                  <>
+                    {' '}
+                    <span>{best != null ? `· ${Math.round(best * 100)}%` : '· done'}</span>
+                  </>
+                )}
               </small>
               {nodeTitle(n)}
             </div>
             {st === 'cur' && (
-              <div className={styles.tip} style={{ ...pos, top: TOP + i * GAP - (n.kind === 'boss' ? 62 : 52) }} aria-hidden="true">
+              <div
+                className={styles.tip}
+                style={{ ...pos, top: TOP + i * GAP - (n.kind === 'boss' ? 62 : 52) }}
+                aria-hidden="true"
+              >
                 {n.kind === 'boss' ? 'FIGHT!' : 'START'}
               </div>
             )}
@@ -164,7 +194,16 @@ export function WorldPath({ worldId, nodes, cur, width, flip, firstView, bestOf,
 }
 
 const SVG = {
-  check: <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" />,
+  check: (
+    <path
+      d="M5 12.5l4.5 4.5L19 7.5"
+      fill="none"
+      stroke="#fff"
+      strokeWidth="3.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  ),
   star: <path d="M12 2.5l2.8 6 6.5.7-4.9 4.4 1.4 6.4L12 16.8 6.2 20l1.4-6.4L2.7 9.2l6.5-.7z" fill="#fff" />,
   lock: (
     <>
@@ -220,7 +259,15 @@ function NodeIcon({ n, st }: { n: MapNode; st: NodeState }) {
   }
   const shield = n.kind === 'lesson' && n.lesson.shield;
   const main =
-    st === 'lock' ? SVG.lock : n.kind === 'project' ? SVG.project : st === 'done' ? SVG.check : shield ? SVG.shield : SVG.star;
+    st === 'lock'
+      ? SVG.lock
+      : n.kind === 'project'
+        ? SVG.project
+        : st === 'done'
+          ? SVG.check
+          : shield
+            ? SVG.shield
+            : SVG.star;
   return (
     <>
       <Svg>{main}</Svg>

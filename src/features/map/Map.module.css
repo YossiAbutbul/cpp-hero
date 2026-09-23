@@ -397,10 +397,12 @@
 
 .label {
   --amp: min(96px, 27%);
+  /* node centre, from the path's left edge (same maths as .node's left) */
+  --x: calc(50% + var(--o) * var(--amp));
   position: absolute;
   z-index: 2;
   transform: translateY(-50%);
-  max-width: min(140px, 36%);
+  max-width: 150px;
   background: #fff;
   border-radius: 14px;
   padding: 6px 10px;
@@ -409,13 +411,22 @@
   font-size: 0.875rem;
   line-height: 1.2;
   pointer-events: none;
-  overflow-wrap: anywhere;
+  /* break inside a word only when that word alone can't fit */
+  overflow-wrap: break-word;
+  text-wrap: balance;
 }
+/* the box never passes the path edge (6px gutter) and never reaches back over its node */
 .toRight {
-  left: calc(50% + var(--o) * var(--amp) + var(--off));
+  left: calc(var(--x) + var(--off));
+  max-width: min(150px, calc(100% - var(--x) - var(--off) - 6px));
 }
 .toLeft {
-  right: calc(50% - var(--o) * var(--amp) + var(--off));
+  right: calc(100% - var(--x) + var(--off));
+  max-width: min(150px, calc(var(--x) - var(--off) - 6px));
+}
+/* sits above its node's centre so it clears the START tip of the next node */
+.lift {
+  transform: translateY(calc(-100% + 22px));
 }
 .label small {
   display: block;
@@ -424,6 +435,21 @@
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--muted);
+}
+/* "LESSON 2" and "· 95%" each stay whole; the line may break between them */
+.label small span {
+  white-space: nowrap;
+}
+@media (max-width: 400px) {
+  .label {
+    padding: 5px 8px;
+    font-size: 0.8rem;
+    border-radius: 12px;
+  }
+  .label small {
+    font-size: 0.62rem;
+    letter-spacing: 0.05em;
+  }
 }
 .l_cur small {
   color: var(--tang-d);
