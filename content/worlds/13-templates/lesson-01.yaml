@@ -1,0 +1,251 @@
+# World 13 · Lesson 1: One recipe, many types
+
+id: w13.l1
+title: One recipe, many types
+skill: structure
+shield: false
+concept:
+  short: Write a function once with a placeholder type T; the compiler stamps out a version for each type used.
+  analogy: A function template is a cookie cutter; press it into any dough and you get a matching cookie.
+  body:
+    - "Without templates you'd write `int biggest(int, int)`, `double biggest(double, double)`, `std::string biggest(...)`: the same code again and again, once per type. Overloading (World 6) helps with the name, not with the copy-paste."
+    - "A **function template** writes it once. `template <typename T>` introduces a placeholder type called `T`; inside, use `T` like any other type: `T biggest(T a, T b) { return (a > b) ? a : b; }`."
+    - "When you call `biggest(3, 7)`, the compiler **deduces** `T = int` from the arguments and generates (**instantiates**) a real function, `biggest<int>`. `biggest(2.5, 1.5)` makes a second one, `biggest<double>`. This all happens at compile time: no runtime cost."
+    - "`template <class T>` means exactly the same as `template <typename T>`. Modern code usually writes `typename`."
+    - "A template is only a recipe. If you never call it, no code is generated for it. And the type you use must support every operation the body uses: `biggest` needs `>`."
+    - "Templates are usually written entirely in a header, because the compiler needs the whole recipe at every call site to stamp out new versions."
+  pitfall: "Common beginner mistake: thinking a template is one function that takes \"anything\" at runtime. Each type gets its own compiled copy, and a type that can't do what the body does (like `>`) fails to compile."
+demo:
+  code: |-
+    #include <iostream>
+    #include <string>
+
+    template <typename T>
+    T biggest(T a, T b) {
+        if (a > b) {
+            return a;
+        }
+        return b;
+    }
+
+    int main() {
+        std::cout << biggest(3, 7) << '\n';
+        std::cout << biggest(2.5, 1.5) << '\n';
+        std::string x{"axe"};
+        std::string y{"bow"};
+        std::cout << biggest(x, y) << '\n';
+        return 0;
+    }
+  steps:
+    - line: 11
+      note: Execution starts in main().
+    - line: 12
+      note: "biggest(3, 7): both ints, so T is deduced as int."
+    - line: 4
+      push:
+        name: biggest<int>
+        vars:
+          a: "3"
+          b: "7"
+      note: The compiler stamped out biggest<int> for this call.
+    - line: 5
+      note: 3 > 7 is false, so we skip ahead.
+    - line: 8
+      note: "return b: 7."
+    - line: 12
+      pop:
+        returns: "7"
+      out: |
+        7
+      note: Back in main, 7 is printed.
+    - line: 13
+      out: |
+        2.5
+      note: "A second copy: biggest<double>. 2.5 wins."
+    - line: 14
+      vars:
+        x: '"axe"'
+    - line: 15
+      vars:
+        y: '"bow"'
+    - line: 16
+      out: |
+        bow
+      note: "biggest<std::string> compares alphabetically: bow beats axe."
+    - line: 17
+      note: One recipe, three types, zero copy-paste!
+challenges:
+  - id: w13.l1.c1
+    type: mcq
+    tags: [ w13.functpl ]
+    prompt: What does `template <typename T>` in front of a function mean?
+    options:
+      - t: T is a placeholder type; the compiler fills it in for each call
+        why: "Correct: T is deduced per call, and each type gets its own compiled version."
+      - t: T is a variable that can hold any type at runtime
+        why: No runtime magic. The compiler picks T while compiling and stamps out a real function.
+      - t: The function only accepts objects of a class named T
+        why: T is just a name for whatever type gets filled in, like a parameter name.
+      - t: The function returns a template
+        why: The line introduces a type parameter. The return type is whatever you write before the name.
+    answer: 0
+    hints:
+      - Think "blank to fill in", but for a type.
+      - Who fills in the blank, and when?
+    short: T is a placeholder type the compiler fills in at compile time.
+    explain: "`template <typename T>` declares a type parameter named T. At each call, the compiler deduces T (int, double, std::string, ...) and instantiates a real function for that type. Nothing is decided at runtime."
+  - id: w13.l1.c2
+    type: predict
+    tags: [ w13.functpl, w13.deduce ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+
+      template <typename T>
+      T twice(T x) {
+          return x + x;
+      }
+
+      int main() {
+          std::cout << twice(21) << ' ' << twice(1.25) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          42 2.5
+        why: "Correct: twice<int>(21) is 42 and twice<double>(1.25) is 2.5."
+      - t: |
+          42 2
+        why: 1.25 is a double, so T is double. Nothing gets chopped to an int.
+      - t: |
+          2121 2.5
+        why: 21 is an int, so + adds numbers. Only strings would glue together.
+      - t: |
+          42 2.50
+        why: std::cout prints 2.5 without trailing zeros by default.
+    answer: 0
+    hints:
+      - Each call deduces its own T.
+      - What type is 1.25?
+    short: Each call gets its own T; int gives 42, double gives 2.5.
+    explain: "twice(21) deduces T = int: 21 + 21 = 42. twice(1.25) deduces T = double: 1.25 + 1.25 = 2.5. Output: \"42 2.5\" and a newline."
+  - id: w13.l1.c3
+    type: fill
+    tags: [ w13.functpl ]
+    prompt: Fill in the keyword that introduces the type parameter.
+    code: |-
+      template <___ T>
+      T twice(T x) {
+          return x + x;
+      }
+    accept:
+      - typename
+      - class
+    placeholder: keyword
+    hints:
+      - It names a TYPE parameter.
+      - Two keywords work here; modern code prefers the one with "type" in it.
+    short: "template <typename T> (or the older spelling, class T)."
+    explain: "`typename` and `class` mean the same thing inside a template parameter list. `typename` says more clearly that T can be any type, not only a class."
+  - id: w13.l1.c4
+    type: bug
+    tags: [ w13.functpl, w6.return ]
+    prompt: This should print 2.5, but prints 2. Tap the buggy line, then pick the fix.
+    code: |-
+      #include <iostream>
+
+      template <typename T>
+      int biggest(T a, T b) {
+          if (a > b) {
+              return a;
+          }
+          return b;
+      }
+
+      int main() {
+          std::cout << biggest(2.5, 1.5) << '\n';
+          return 0;
+      }
+    bugLine: 3
+    options:
+      - t: T biggest(T a, T b) {
+        why: "Correct: the result has the same type as the inputs, so 2.5 stays 2.5."
+      - t: double biggest(T a, T b) {
+        why: Fixes doubles, but now biggest of two strings can't compile. The return type should follow T.
+      - t: "template <typename T> int biggest(double a, double b) {"
+        why: Still returns int, so 2.5 is still chopped. And T is never used.
+      - t: std::cout << biggest<double>(2.5, 1.5) << '\n';
+        why: T already is double here. The int return type still chops the result.
+    answer: 0
+    hints:
+      - The comparison works. Look at what type comes out.
+      - The return type should change along with T.
+    short: The return type was hard-coded to int; return T instead.
+    explain: "biggest<double> correctly picks 2.5, then the `int` return type silently chops it to 2. Making the return type `T` keeps the result in the same type as the arguments, whatever T is."
+    sideBySide:
+      unsafe: |-
+        template <typename T>
+        int biggest(T a, T b) {   // 2.5 comes out as 2
+            return (a > b) ? a : b;
+        }
+      hardened: |-
+        template <typename T>
+        T biggest(T a, T b) {
+            return (a > b) ? a : b;
+        }
+  - id: w13.l1.c5
+    type: order
+    tags: [ w13.functpl ]
+    prompt: Put the lines in order to define a function template that prints any value in brackets.
+    lines:
+      - template <typename T>
+      - void show(T value) {
+      - "    std::cout << '[' << value << \"]\\n\";"
+      - "}"
+    distractors:
+      - template T show(T value) {
+    hints:
+      - The template line comes first, right before the function.
+      - Then the head, the body, and the closing brace.
+    short: The template line goes right before the function it belongs to.
+    explain: "`template <typename T>` must come immediately before the function, then the head `void show(T value) {`, the body, and `}`. `show(42)` prints [42] and `show(std::string{\"hp\"})` prints [hp]."
+  - id: w13.l1.c6
+    type: write
+    tags: [ w13.functpl, w6.call ]
+    prompt: Using `biggest`, write one line that declares an int `best` holding the bigger of the ints `hp` and `armor`.
+    code: |-
+      template <typename T>
+      T biggest(T a, T b) {
+          return (a > b) ? a : b;
+      }
+    accept:
+      - int best = biggest(hp, armor);
+      - int best{biggest(hp, armor)};
+      - int best = biggest<int>(hp, armor);
+    acceptRe:
+      - ^(int|auto) best(=biggest(<int>)?\((hp,armor|armor,hp)\)|\{biggest(<int>)?\((hp,armor|armor,hp)\)\});$
+    placeholder: int best ...
+    hints:
+      - Call it like any function; the compiler figures out T.
+      - "int best = biggest(..., ...);"
+    short: "int best = biggest(hp, armor); deduces T = int."
+    explain: "`int best = biggest(hp, armor);` calls the template like a normal function. Both arguments are int, so T is deduced as int. Writing `biggest<int>(hp, armor)` works too, but isn't needed."
+recap:
+  - template <typename T> declares a placeholder type.
+  - The compiler deduces T from the arguments.
+  - Each type gets its own compiled copy.
+  - The type must support everything the body does.
+vault:
+  - id: w13.functpl
+    title: Function template
+    code: |-
+      template <typename T>
+      T biggest(T a, T b) {
+          return (a > b) ? a : b;
+      }
+
+      // biggest(3, 7)      -> biggest<int>, 7
+      // biggest(2.5, 1.5)  -> biggest<double>, 2.5
+    note: Write it once; the compiler stamps out one version per type you use.
+    defense: false
+reviewTags: [ w6.overload, w6.params, w6.return ]

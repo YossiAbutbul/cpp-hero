@@ -1,0 +1,395 @@
+# World 13 mini-project: The Blueprint Forge
+
+id: w13.p
+title: The Blueprint Forge
+intro: "Forge two reusable tools for the Codebase armory: a stat clamp for any integer type, and a fixed-size Stash for any item."
+steps:
+  - id: w13.p.s1
+    type: order
+    tags: [ w13.concepts, w13.functpl ]
+    prompt: "Order the lines of `clampStat`: keep a value between lo and hi, for integer types only."
+    lines:
+      - template <std::integral T>
+      - T clampStat(T value, T lo, T hi) {
+      - "    if (value < lo) return lo;"
+      - "    if (value > hi) return hi;"
+      - "    return value;"
+      - "}"
+    distractors:
+      - "    if (value > lo) return hi;"
+    hints:
+      - The template line with the concept comes first.
+      - Handle too-low, then too-high, then return the value unchanged.
+    prelude: "#include <concepts>"
+    short: "Constrained header, then: too low, too high, otherwise unchanged."
+    explain: "`template <std::integral T>` limits clampStat to integer types. The body returns lo for values below the range, hi for values above it, and the value itself otherwise."
+  - id: w13.p.s2
+    type: predict
+    tags: [ w13.functpl, w13.concepts ]
+    prompt: "Test the clamp: what does this print?"
+    code: |-
+      #include <concepts>
+      #include <iostream>
+
+      template <std::integral T>
+      T clampStat(T value, T lo, T hi) {
+          if (value < lo) return lo;
+          if (value > hi) return hi;
+          return value;
+      }
+
+      int main() {
+          std::cout << clampStat(150, 0, 100) << ' '
+                    << clampStat(-5, 0, 100) << ' '
+                    << clampStat(42, 0, 100) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          100 0 42
+        why: "Correct: 150 is capped at 100, -5 is raised to 0, and 42 is already in range."
+      - t: |
+          150 -5 42
+        why: clampStat changes values outside 0..100. Only 42 passes through untouched.
+      - t: |
+          100 -5 42
+        why: -5 is below lo, so the first if returns lo, which is 0.
+      - t: |
+          0 100 42
+        why: Too high returns hi (100) and too low returns lo (0), not the other way round.
+    answer: 0
+    hints:
+      - Which values are outside 0 to 100?
+      - Too low becomes lo; too high becomes hi.
+    short: 150 becomes 100, -5 becomes 0, 42 stays 42.
+    explain: "clampStat(150, 0, 100) hits the second if: 100. clampStat(-5, 0, 100) hits the first: 0. 42 is in range: 42. Output: \"100 0 42\" and a newline."
+  - id: w13.p.s3
+    type: fill
+    tags: [ w13.nontype, w13.classtpl ]
+    prompt: "Now the Stash: any item type T, and a fixed capacity N. Fill in N's type."
+    code: |-
+      template <typename T, ___ N>
+      class Stash {
+      public:
+          std::size_t capacity() const { return N; }
+
+      private:
+          std::array<T, N> slots_{};
+          std::size_t count_{0};
+      };
+    accept:
+      - std::size_t
+      - size_t
+    placeholder: a type
+    hints:
+      - The standard type for sizes.
+      - It's the same type std::array uses for its size.
+    short: "std::size_t N: a compile-time capacity, like std::array's."
+    explain: "N is a non-type template parameter of type std::size_t, the standard size type. Stash<std::string, 2> is a stash of exactly 2 strings, fixed at compile time."
+  - id: w13.p.s4
+    type: harden
+    tags: [ w13.classtpl, w7.bounds ]
+    prompt: "`get(i)` must only return slots that hold an item. Pick the guard."
+    code: |-
+      template <typename T, std::size_t N>
+      class Stash {
+      public:
+          const T& get(std::size_t i) const {
+              if (___) {
+                  throw std::out_of_range{"Stash: no item in that slot"};
+              }
+              return slots_[i];
+          }
+
+      private:
+          std::array<T, N> slots_{};
+          std::size_t count_{0};
+      };
+    options:
+      - t: i >= count_
+        why: "Correct: only slots 0 to count_ - 1 hold items, and count_ is never above N."
+      - t: i >= N
+        why: Stops out-of-bounds reads, but get(1) on a stash holding 1 item returns an empty slot.
+      - t: i > count_
+        why: "Off by one: i == count_ is the first EMPTY slot, and it gets through."
+      - t: i < 0
+        why: std::size_t can never be negative, so this is always false.
+    answer: 0
+    hints:
+      - Which slots actually hold something?
+      - Items fill slots 0, 1, 2, ... up to count_ - 1.
+    short: i >= count_ blocks empty slots and, since count_ <= N, out-of-bounds ones.
+    explain: "The filled slots are 0 to count_ - 1. Checking i >= count_ rejects empty slots and, because count_ never exceeds N, every out-of-bounds index too. Throwing std::out_of_range tells the caller exactly what went wrong."
+    sideBySide:
+      unsafe: |-
+        template <typename T, std::size_t N>
+        class Stash {
+        public:
+            const T& get(std::size_t i) const {
+                return slots_[i];   // get(99): UB
+            }
+
+        private:
+            std::array<T, N> slots_{};
+            std::size_t count_{0};
+        };
+      hardened: |-
+        template <typename T, std::size_t N>
+        class Stash {
+        public:
+            const T& get(std::size_t i) const {
+                if (i >= count_) {
+                    throw std::out_of_range{"Stash: no item in that slot"};
+                }
+                return slots_[i];
+            }
+
+        private:
+            std::array<T, N> slots_{};
+            std::size_t count_{0};
+        };
+  - id: w13.p.s5
+    type: write
+    tags: [ w13.nontype, w13.classtpl ]
+    prompt: Write one line declaring a `Stash` named `bag` that holds up to 2 `std::string`s.
+    code: |-
+      // Stash<T, N> is defined above.
+      // Your line goes in main():
+    accept:
+      - Stash<std::string, 2> bag;
+      - Stash<std::string, 2> bag{};
+    acceptRe:
+      - ^Stash<std::string,2> bag(\{\})?;$
+    placeholder: Stash<...> bag;
+    hints:
+      - Item type first, then capacity.
+      - Stash<std::string, ...> bag;
+    short: Stash<std::string, 2> bag; picks the item type and capacity.
+    explain: "`Stash<std::string, 2> bag;` sets T = std::string and N = 2. Nothing to deduce from, so both go in the angle brackets."
+program: |-
+  #include <array>
+  #include <concepts>
+  #include <cstddef>
+  #include <iostream>
+  #include <stdexcept>
+  #include <string>
+
+  template <std::integral T>
+  T clampStat(T value, T lo, T hi) {
+      if (lo > hi) {
+          throw std::invalid_argument{"clampStat: lo is above hi"};
+      }
+      if (value < lo) return lo;
+      if (value > hi) return hi;
+      return value;
+  }
+
+  template <typename T, std::size_t N>
+  class Stash {
+      static_assert(N > 0, "a Stash needs at least one slot");
+
+  public:
+      bool add(const T& item) {
+          if (count_ >= N) {
+              return false;
+          }
+          slots_[count_] = item;
+          ++count_;
+          return true;
+      }
+
+      const T& get(std::size_t i) const {
+          if (i >= count_) {
+              throw std::out_of_range{"Stash: no item in that slot"};
+          }
+          return slots_[i];
+      }
+
+      std::size_t size() const { return count_; }
+
+  private:
+      std::array<T, N> slots_{};
+      std::size_t count_{0};
+  };
+
+  int main() {
+      std::cout << "HP: " << clampStat(150, 0, 100) << '\n';
+
+      Stash<std::string, 2> bag;
+      bag.add("potion");
+      bag.add("map");
+      if (!bag.add("anvil")) {
+          std::cout << "Bag full: the anvil stays behind.\n";
+      }
+      for (std::size_t i = 0; i < bag.size(); ++i) {
+          std::cout << "Slot " << i << ": " << bag.get(i) << '\n';
+      }
+
+      try {
+          std::cout << bag.get(5) << '\n';
+      } catch (const std::out_of_range& e) {
+          std::cout << "Blocked: " << e.what() << '\n';
+      }
+      return 0;
+  }
+stress:
+  intro: Brace yourself! I'll feed your blueprints the weirdest types and values I can find!
+  attacks:
+    - input: clampStat(50, 100, 0)
+      label: Bounds swapped!
+      challenge:
+        id: w13.p.a1
+        type: harden
+        tags: [ w13.concepts, w6.validate ]
+        prompt: "lo is 100 and hi is 0. The concept is happy (all ints), but the range is nonsense. Pick the guard."
+        code: |-
+          #include <concepts>
+
+          template <std::integral T>
+          T clampStat(T value, T lo, T hi) {
+              if (___) {
+                  throw std::invalid_argument{"clampStat: lo is above hi"};
+              }
+              if (value < lo) return lo;
+              if (value > hi) return hi;
+              return value;
+          }
+        options:
+          - t: lo > hi
+            why: "Correct: an empty range is a caller mistake. Refuse it loudly instead of returning junk."
+          - t: value < lo
+            why: That's a normal case (clamp up to lo), not an error.
+          - t: lo == hi
+            why: A one-value range is odd but valid. Everything clamps to that value.
+          - t: hi < 0
+            why: Negative bounds are fine (think temperature). The ORDER is the problem.
+        answer: 0
+        hints:
+          - The type is fine. What about the relationship between lo and hi?
+          - Which range can no value ever be inside?
+        short: Concepts check types; lo > hi is a value problem. Check it at runtime.
+        explain: "std::integral guarantees all three are integers, not that they make sense together. With lo = 100 and hi = 0, clampStat(50, 100, 0) returns 100, a silent lie. Checking lo > hi turns the mistake into a clear exception."
+        sideBySide:
+          prelude: "#include <concepts>"
+          unsafe: |-
+            template <std::integral T>
+            T clampStat(T value, T lo, T hi) {
+                if (value < lo) return lo;   // lo 100, hi 0: returns 100
+                if (value > hi) return hi;
+                return value;
+            }
+          hardened: |-
+            #include <concepts>
+
+            template <std::integral T>
+            T clampStat(T value, T lo, T hi) {
+                if (lo > hi) {
+                    throw std::invalid_argument{"clampStat: lo is above hi"};
+                }
+                if (value < lo) return lo;
+                if (value > hi) return hi;
+                return value;
+            }
+    - input: clampStat(std::string{"9"}, ...)
+      label: A string posing as a stat!
+      challenge:
+        id: w13.p.a2
+        type: harden
+        tags: [ w13.concepts, w13.constrain ]
+        bug: unconstrained-template
+        prompt: Which template line keeps strings out? (Strings compare alphabetically, so "9" counts as bigger than "10".)
+        code: |-
+          #include <concepts>
+
+          template <___ T>
+          T clampStat(T value, T lo, T hi) {
+              if (value < lo) return lo;
+              if (value > hi) return hi;
+              return value;
+          }
+        options:
+          - t: std::integral
+            why: "Correct: only integer types get in. A string is rejected right at the call."
+          - t: typename
+            why: Lets std::string in. "9" > "10" alphabetically, so it returns "10". Nonsense.
+          - t: class
+            why: Same as typename. Any type gets in.
+          - t: std::copyable
+            why: Strings are copyable, so they still get in.
+        answer: 0
+        hints:
+          - The constraint should describe numbers, not "anything".
+          - A stat is a whole number.
+        short: std::integral stops strings at the door; typename lets them in.
+        explain: "With typename, clampStat(std::string{\"9\"}, std::string{\"0\"}, std::string{\"10\"}) compiles: strings compare letter by letter, and \"9\" > \"10\", so it returns \"10\". std::integral makes that call a compile error."
+        sideBySide:
+          unsafe: |-
+            template <typename T>
+            T clampStat(T value, T lo, T hi) {
+                if (value < lo) return lo;
+                if (value > hi) return hi;
+                return value;
+            }
+          hardened: |-
+            #include <concepts>
+
+            template <std::integral T>
+            T clampStat(T value, T lo, T hi) {
+                if (value < lo) return lo;
+                if (value > hi) return hi;
+                return value;
+            }
+    - input: Stash<int, 0>
+      label: A stash with zero slots!
+      challenge:
+        id: w13.p.a3
+        type: harden
+        tags: [ w13.staticassert, w13.nontype ]
+        prompt: "`Stash<int, 0>` is a typo that compiles into a stash that can never hold anything. Pick the line that rejects it."
+        code: |-
+          template <typename T, std::size_t N>
+          class Stash {
+              ___;
+
+          public:
+              std::size_t capacity() const { return N; }
+
+          private:
+              std::array<T, N> slots_{};
+          };
+        options:
+          - t: static_assert(N > 0, "a Stash needs at least one slot")
+            why: "Correct: N is known at compile time, so the build fails with your message."
+          - t: static_assert(N >= 0, "a Stash needs at least one slot")
+            why: std::size_t is never negative, so this is always true. It blocks nothing.
+          - t: assert(N > 0)
+            why: assert is a runtime statement; it can't sit in a class body.
+          - t: if (N == 0) return
+            why: A class body can't hold statements like if.
+        answer: 0
+        hints:
+          - N is a compile-time value. Check it at compile time.
+          - Zero is the only bad value for a size_t capacity.
+        short: static_assert(N > 0, ...) rejects Stash<int, 0> at compile time.
+        explain: "N is known while compiling, so static_assert can check it. A zero-slot Stash is almost always a typo (0 instead of 10); catching it in the build beats discovering an always-full bag at runtime."
+        sideBySide:
+          unsafe: |-
+            template <typename T, std::size_t N>
+            class Stash {
+            public:
+                std::size_t capacity() const { return N; }   // Stash<int, 0>: 0
+
+            private:
+                std::array<T, N> slots_{};
+            };
+          hardened: |-
+            template <typename T, std::size_t N>
+            class Stash {
+                static_assert(N > 0, "a Stash needs at least one slot");
+
+            public:
+                std::size_t capacity() const { return N; }
+
+            private:
+                std::array<T, N> slots_{};
+            };

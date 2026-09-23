@@ -1,0 +1,327 @@
+# World 13 · Lesson 5: Shield: Constrain your templates (Shield lesson)
+
+id: w13.l5
+title: "Shield: Constrain your templates"
+skill: defense
+shield: true
+concept:
+  short: Constrain templates with static_assert or a concept like std::integral, so wrong types become clear compile errors.
+  analogy: A concept is a bouncer at the template's door; the wrong type doesn't get in, and it's told why.
+  body:
+    - "An unconstrained `template <typename T>` lets **any** type in. If the type doesn't fit, you get a wall of errors from deep inside the template. Worse, some wrong types compile and do nonsense: `twice(std::string{\"ab\"})` happily returns `\"abab\"`."
+    - "**static_assert** checks a condition at compile time and stops the build with your message if it's false: `static_assert(std::is_arithmetic_v<T>, \"needs a number type\");`. Type traits from `<type_traits>`, like `std::is_integral_v<T>` and `std::is_floating_point_v<T>`, answer questions about T."
+    - "**C++20 concepts** put the rule on the door: `template <std::integral T>` only accepts integer types. `std::floating_point<T>`, `std::same_as<T, U>` and friends live in `<concepts>`. The error now points at your call, in one clear line."
+    - "A **requires clause** combines rules: `template <typename T> requires std::integral<T> || std::floating_point<T>`. The short form `void show(std::integral auto n)` works for simple cases."
+    - "Watch the edges: `bool` and `char` count as `std::integral`! If they make no sense, shut them out: `requires (!std::same_as<T, bool>) && std::integral<T>`. (A `!` inside a requires clause needs its own parentheses.)"
+    - "Constraints check the **type**, not the **value**. `template <std::integral T> T perHero(T gold, T heroes)` still divides by zero when heroes is 0. Runtime values still need runtime checks."
+    - "Everything here happens at compile time: zero runtime cost, and a wrong type can never reach the player. It's the cheapest defense there is."
+  pitfall: "Common beginner mistake: leaving templates unconstrained because \"wrong types won't compile anyway\". Some do: strings, bools and chars can slip through and give nonsense. Say what T must be."
+demo:
+  code: |-
+    #include <concepts>
+    #include <iostream>
+    #include <type_traits>
+
+    template <typename T>
+    T half(T hp) {
+        static_assert(std::is_arithmetic_v<T>, "half() needs a number type");
+        return hp / 2;
+    }
+
+    template <std::integral T>
+    bool isEven(T n) {
+        return n % 2 == 0;
+    }
+
+    int main() {
+        std::cout << half(9) << ' ' << half(9.0) << '\n';
+        std::cout << isEven(10) << isEven(7L) << '\n';
+        // isEven(2.5);  // won't compile: double isn't integral
+        return 0;
+    }
+  steps:
+    - line: 6
+      shield: Type checked at compile time!
+      note: "static_assert: T must be a number, or no build."
+    - line: 10
+      note: "The concept is the bouncer: integer types only."
+    - line: 16
+      out: |
+        4 4.5
+      note: int and double both pass the static_assert.
+    - line: 17
+      out: |
+        10
+      note: int and long are integral, so both get in.
+    - line: 18
+      crash: "Unconstrained: error buried deep inside!"
+      note: Without the concept, 2.5 % 2 fails deep in the body.
+    - line: 18
+      shield: "Rejected at the door: double isn't integral!"
+      note: With the concept, the error points right at your call.
+    - line: 19
+      note: Every type was checked before the program ever ran.
+challenges:
+  - id: w13.l5.c1
+    type: mcq
+    tags: [ w13.concepts ]
+    prompt: "`half` is `template <std::integral T> T half(T n)`. Which call is rejected?"
+    options:
+      - t: half(10)
+        why: int is integral. Accepted.
+      - t: half('A')
+        why: Surprise! char is an integral type, so it gets in.
+      - t: half(true)
+        why: Surprise! bool counts as integral too.
+      - t: half(2.5)
+        why: "Correct: double is floating point, not integral, so the concept rejects it."
+    answer: 3
+    hints:
+      - Only one of these is a floating-point type.
+      - char and bool are stored as small integers.
+    short: std::integral rejects double, but lets char and bool in.
+    explain: "std::integral<T> is true for all integer types, and that includes bool and char. Only half(2.5) is rejected. If bool or char make no sense, exclude them explicitly: requires (!std::same_as<T, bool>) && std::integral<T>."
+  - id: w13.l5.c2
+    type: breakit
+    tags: [ w13.constrain, w13.functpl ]
+    bug: unconstrained-template
+    unsafe: true
+    prompt: UNSAFE unconstrained template. Pick the argument that compiles but gives nonsense.
+    code: |-
+      template <typename T>
+      T twice(T x) {
+          return x + x;
+      }
+    options:
+      - t: "21"
+        why: int doubles fine. 42.
+      - t: "1.5"
+        why: double doubles fine. 3.0.
+      - t: std::string{"7"}
+        why: "Correct: + glues strings, so twice returns \"77\" instead of 14. Compiles, silently wrong."
+      - t: "-4"
+        why: Negative ints double fine. -8.
+    answer: 2
+    hints:
+      - Which type has a + that doesn't add numbers?
+      - What does + do to two strings?
+    short: std::string compiles and gives "77". Constrain T to number types.
+    explain: "Nothing stops T = std::string, and + on strings concatenates: twice(std::string{\"7\"}) is \"77\", not 14. No error, no warning. A requires clause (std::integral<T> || std::floating_point<T>) turns this into a clear compile error."
+    sideBySide:
+      unsafe: |-
+        template <typename T>
+        T twice(T x) {
+            return x + x;   // strings: "7" + "7" = "77"
+        }
+      hardened: |-
+        #include <concepts>
+
+        template <typename T> requires std::integral<T> || std::floating_point<T>
+        T twice(T x) {
+            return x + x;
+        }
+  - id: w13.l5.c3
+    type: harden
+    tags: [ w13.staticassert, w13.constrain ]
+    bug: unconstrained-template
+    prompt: "`average(3, 4)` silently returns 3. Pick the line that makes the compiler reject integer types."
+    code: |-
+      #include <type_traits>
+
+      template <typename T>
+      T average(T a, T b) {
+          ___;
+          return (a + b) / 2;
+      }
+    options:
+      - t: static_assert(std::is_floating_point_v<T>, "average needs double or float")
+        why: "Correct: ints (which would truncate) are rejected at compile time, with your message."
+      - t: static_assert(std::is_arithmetic_v<T>, "average needs a number")
+        why: int is arithmetic too, so average(3, 4) still compiles and returns 3.
+      - t: assert(a >= 0)
+        why: Runs at runtime and checks a value, not the type. ints still truncate.
+      - t: static_assert(sizeof(T) > 0, "T must be complete")
+        why: True for every complete type. It blocks nothing.
+    answer: 0
+    hints:
+      - The problem is the type, so check the type.
+      - Which trait is false for int but true for double?
+    short: static_assert(std::is_floating_point_v<T>) rejects int at compile time.
+    explain: "With T = int, (3 + 4) / 2 is integer division: 3. static_assert(std::is_floating_point_v<T>, ...) stops the build for int, long, bool, so callers must pass 3.0 and get 3.5. It costs nothing at runtime."
+    sideBySide:
+      unsafe: |-
+        template <typename T>
+        T average(T a, T b) {
+            return (a + b) / 2;   // average(3, 4) == 3
+        }
+      hardened: |-
+        #include <type_traits>
+
+        template <typename T>
+        T average(T a, T b) {
+            static_assert(std::is_floating_point_v<T>, "average needs double or float");
+            return (a + b) / 2;
+        }
+  - id: w13.l5.c4
+    type: review
+    tags: [ w13.constrain, w13.concepts, w3.divzero ]
+    bug: unconstrained-template
+    unsafe: true
+    prompt: UNSAFE code review. Tap every line that lets something dangerous or nonsensical through.
+    code: |-
+      #include <concepts>
+
+      template <typename T>
+      T twice(T x) { return x + x; }
+
+      template <std::integral T>
+      T percent(T part, T whole) { return part * 100 / whole; }
+
+      template <std::floating_point T>
+      T halfOf(T x) { return x / 2; }
+    dangerous: [ 2, 6 ]
+    lineNotes:
+      "2": "Unconstrained: std::string gets in and twice(\"7\") gives \"77\"."
+      "5": Integer types only. The type is fine...
+      "6": "...but concepts don't check values: whole == 0 divides by zero. UB."
+      "8": Floating point only.
+      "9": Dividing a double by the constant 2 is always safe.
+    hints:
+      - One template has no constraint at all.
+      - A concept checks the type. Who checks the value?
+    short: Constrain every template, and still check values like whole == 0.
+    explain: "Line 2 lets any type into twice, so strings compile and concatenate. Line 6 is constrained to integers, but a concept only checks the type: percent(5, 0) divides by zero (UB), and a huge part can overflow. Add a constraint to twice and a runtime check to percent."
+    sideBySide:
+      prelude: "#include <concepts>"
+      unsafe: |-
+        template <typename T>
+        T twice(T x) { return x + x; }
+
+        template <std::integral T>
+        T percent(T part, T whole) { return part * 100 / whole; }
+      hardened: |-
+        #include <concepts>
+
+        template <typename T> requires std::integral<T> || std::floating_point<T>
+        T twice(T x) { return x + x; }
+
+        template <std::integral T>
+        T percent(T part, T whole) {
+            if (whole == 0) {
+                throw std::invalid_argument{"whole must not be 0"};
+            }
+            return part * 100 / whole;
+        }
+  - id: w13.l5.c5
+    type: safe
+    tags: [ w13.constrain, w13.concepts, w13.staticassert ]
+    prompt: Safe or unsafe? The Sentinel's unchecked blueprints are coming. Go fast!
+    seconds: 30
+    items:
+      - code: |-
+          template <std::integral T>
+          T half(T n) { return n / 2; }
+        prelude: "#include <concepts>"
+        safe: true
+        why: Integer types only, and dividing by the constant 2 is always safe.
+      - code: |-
+          template <typename T>
+          T twice(T x) { return x + x; }
+        safe: false
+        why: "Unconstrained: a std::string gets in and \"doubles\" into nonsense."
+      - code: static_assert(sizeof(int) >= 4, "need at least 32-bit int");
+        safe: true
+        why: Checked at compile time. Costs nothing at runtime.
+      - code: |-
+          template <std::integral T>
+          T perHero(T gold, T heroes) { return gold / heroes; }
+        prelude: "#include <concepts>"
+        safe: false
+        why: "The concept checks the type, not the value: heroes == 0 is UB."
+      - code: |-
+          template <typename T> requires std::floating_point<T>
+          T avg(T a, T b) { return (a + b) / 2; }
+        prelude: "#include <concepts>"
+        safe: true
+        why: Floating point only, so no silent integer truncation.
+      - code: |-
+          std::array<int, 3> slots{};
+          int x = slots[3];
+        safe: false
+        why: Index 3 is one past the end of a size-3 array. UB.
+      - code: |-
+          template <std::integral T>
+          bool isEven(T n) { return n % 2 == 0; }
+        prelude: "#include <concepts>"
+        safe: true
+        why: Integers only, and % 2 never divides by zero.
+    hints:
+      - Look for templates without a constraint.
+      - A constraint on the type doesn't check the values.
+    short: Constrain every template's type, and still check runtime values.
+    explain: "Safe templates say which types they accept (a concept or static_assert) and still guard values, like a divisor of 0. Unconstrained templates and unchecked values are open doors."
+  - id: w13.l5.c6
+    type: fill
+    tags: [ w13.concepts ]
+    prompt: Fill in the concept so `halfOf` accepts only floating-point types (float, double, long double).
+    code: |-
+      #include <concepts>
+
+      template <___ T>
+      T halfOf(T x) {
+          return x / 2;
+      }
+    accept:
+      - std::floating_point
+    placeholder: a concept
+    hints:
+      - The concepts live in namespace std.
+      - The opposite of std::integral.
+    short: "template <std::floating_point T> accepts float, double and long double only."
+    explain: "`std::floating_point` from <concepts> is satisfied only by float, double and long double. halfOf(7) is rejected at the call, with a clear message, instead of quietly returning 3."
+recap:
+  - "static_assert checks types at compile time."
+  - "Concepts guard the door: template <std::integral T>."
+  - bool and char count as std::integral!
+  - Concepts check types, never values.
+vault:
+  - id: w13.staticassert
+    title: static_assert on T
+    code: |-
+      #include <type_traits>
+
+      template <typename T>
+      T average(T a, T b) {
+          static_assert(std::is_floating_point_v<T>, "average needs double or float");
+          return (a + b) / 2;
+      }
+    note: Stops the build with your message when T is wrong. Zero runtime cost.
+    defense: true
+  - id: w13.concepts
+    title: Concepts and requires
+    code: |-
+      #include <concepts>
+
+      template <std::integral T>
+      bool isEven(T n) { return n % 2 == 0; }
+
+      template <typename T> requires (!std::same_as<T, bool>) && std::integral<T>
+      T addBonus(T base, T bonus) { return base + bonus; }
+
+      void show(std::floating_point auto x) { std::cout << x << '\n'; }
+    note: "Say what T must be. Remember: bool and char are std::integral."
+    defense: true
+  - id: w13.typevsvalue
+    title: Types checked, values not
+    code: |-
+      template <std::integral T>
+      T perHero(T gold, T heroes) {
+          if (heroes <= 0) {
+              throw std::invalid_argument{"need at least one hero"};
+          }
+          return gold / heroes;
+      }
+    note: A concept guarantees the type. Zero, negatives and overflow still need runtime checks.
+    prelude: "#include <concepts>"
+    defense: true
+reviewTags: [ w6.assert, w6.validate, w13.functpl, w13.classtpl, w13.nontype ]

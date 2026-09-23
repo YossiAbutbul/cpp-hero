@@ -1,0 +1,270 @@
+# World 13 · Lesson 3: Class templates
+
+id: w13.l3
+title: Class templates
+skill: structure
+shield: false
+concept:
+  short: "A class template is a blueprint for classes: Box<int> and Box<std::string> are two different types."
+  analogy: A class template is a lunchbox mold; each box it makes is shaped for exactly one kind of lunch.
+  body:
+    - "Put `template <typename T>` in front of a class, and `T` can be used for its members and methods: `template <typename T> class Box { T value_; ... };`."
+    - "You choose the type in angle brackets: `Box<int> coins{50};`, `Box<std::string> name{\"Curlo\"};`. `Box<int>` and `Box<std::string>` are completely separate classes: you can't assign one to the other."
+    - "You've used class templates for ages: `std::vector<int>`, `std::array<int, 3>` and `std::optional<int>` are all class templates from the standard library."
+    - "**CTAD** (class template argument deduction, C++17): `Box gem{2.5};` lets the compiler deduce `Box<double>` from the constructor argument. `std::vector v{1, 2, 3};` works the same way. With nothing to deduce from, you must write the type."
+    - "Member functions written inside the class need nothing extra. Written outside, they repeat the template line: `template <typename T> T Box<T>::get() const { return value_; }`."
+    - "A template doesn't make code safe. If `Box<T>::get(i)` indexes without checking, every `Box<int>`, `Box<double>` and `Box<std::string>` gets the same bug."
+  pitfall: "Common beginner mistake: writing `Box coins;` with no type and no initializer. There's nothing to deduce T from, so it doesn't compile. Write `Box<int> coins{0};`."
+demo:
+  code: |-
+    #include <iostream>
+    #include <string>
+
+    template <typename T>
+    class Box {
+    public:
+        explicit Box(T value) : value_{value} {}
+        T get() const { return value_; }
+        void set(T value) { value_ = value; }
+
+    private:
+        T value_;
+    };
+
+    int main() {
+        Box<int> coins{50};
+        Box<std::string> name{"Curlo"};
+        coins.set(coins.get() + 25);
+        std::cout << name.get() << " has " << coins.get() << " coins\n";
+        Box gem{2.5};
+        std::cout << gem.get() << '\n';
+        return 0;
+    }
+  steps:
+    - line: 14
+      note: Execution starts in main().
+    - line: 15
+      vars:
+        coins: "Box<int>{50}"
+      note: "Box<int>: the compiler stamps out a class for int."
+    - line: 16
+      vars:
+        name: 'Box<std::string>{"Curlo"}'
+      note: "A second, separate class: Box<std::string>."
+    - line: 17
+      vars:
+        coins: "Box<int>{75}"
+      note: get() hands over 50, set() stores 75.
+    - line: 18
+      out: |
+        Curlo has 75 coins
+    - line: 19
+      vars:
+        gem: "Box<double>{2.5}"
+      note: "CTAD: 2.5 is a double, so this is Box<double>."
+    - line: 20
+      out: |
+        2.5
+    - line: 21
+      note: One blueprint, three classes!
+challenges:
+  - id: w13.l3.c1
+    type: mcq
+    tags: [ w13.classtpl ]
+    prompt: "`Box` is a class template. Which is true about `Box<int>` and `Box<double>`?"
+    options:
+      - t: They are two different, unrelated types
+        why: "Correct: each type argument stamps out a separate class, like two different structs."
+      - t: They are the same type; only the stored value differs
+        why: The type argument is part of the type. Box<int> and Box<double> don't mix.
+      - t: Box<int> converts to Box<double> automatically
+        why: No conversion exists unless you write one. They're unrelated classes.
+      - t: Box<double> is a derived class of Box<int>
+        why: There's no inheritance between instantiations.
+    answer: 0
+    hints:
+      - Is the part in angle brackets part of the type's name?
+      - Could you assign a std::vector<int> to a std::vector<double>?
+    short: Each type argument makes a separate class; Box<int> and Box<double> don't mix.
+    explain: "A class template is a recipe for classes. Box<int> and Box<double> are two distinct classes, just like std::vector<int> and std::vector<double>, so you can't assign one to the other."
+  - id: w13.l3.c2
+    type: predict
+    tags: [ w13.classtpl, w3.arith ]
+    prompt: What does this print?
+    code: |-
+      #include <iostream>
+
+      template <typename T>
+      class Pair {
+      public:
+          Pair(T first, T second) : first_{first}, second_{second} {}
+          T sum() const { return first_ + second_; }
+
+      private:
+          T first_;
+          T second_;
+      };
+
+      int main() {
+          Pair<int> a{7, 2};
+          Pair<double> b{7, 2};
+          std::cout << a.sum() / 2 << ' ' << b.sum() / 2 << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          4 4.5
+        why: "Correct: a.sum() is the int 9, so 9 / 2 is 4. b.sum() is 9.0, so 4.5."
+      - t: |
+          4.5 4.5
+        why: Pair<int>::sum() returns an int, so 9 / 2 is integer division.
+      - t: |
+          4 4
+        why: Pair<double> stores 7.0 and 2.0; its sum is a double, so / is real division.
+      - t: |
+          9 9
+        why: Both sums are divided by 2 before printing.
+    answer: 0
+    hints:
+      - What type does sum() return in each Pair?
+      - int / int drops the fraction; double / int doesn't.
+    short: Pair<int> does int math (4); Pair<double> does real math (4.5).
+    explain: "Pair<int>::sum() returns the int 9, and 9 / 2 = 4. Pair<double> stored 7.0 and 2.0, so sum() returns 9.0, and 9.0 / 2 = 4.5. Output: \"4 4.5\" and a newline."
+  - id: w13.l3.c3
+    type: fill
+    tags: [ w13.classtpl, w2.string ]
+    prompt: Fill in the type so `label` holds a real string with `.size()`.
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      template <typename T>
+      class Box {
+      public:
+          explicit Box(T value) : value_{value} {}
+          T get() const { return value_; }
+
+      private:
+          T value_;
+      };
+
+      int main() {
+          Box<___> label{"Hero"};
+          std::cout << label.get().size() << '\n';
+          return 0;
+      }
+    accept:
+      - std::string
+    placeholder: a type
+    hints:
+      - '"Hero" alone is a C-style string with no .size().'
+      - "The standard library's string type, with its std:: prefix."
+    short: "Box<std::string> stores a real std::string, which has .size()."
+    explain: "With `Box<std::string>`, T is std::string, the constructor builds one from \"Hero\", and `label.get().size()` is 4. `Box<const char*>` would compile the constructor but fail at `.size()`."
+  - id: w13.l3.c4
+    type: review
+    tags: [ w13.classtpl, w7.bounds ]
+    unsafe: true
+    prompt: UNSAFE class template. Tap every line that can cause undefined behavior.
+    code: |-
+      template <typename T>
+      class Shelf {
+      public:
+          void add(const T& item) { items_.push_back(item); }
+          T get(std::size_t i) const { return items_[i]; }
+          T first() const { return items_.front(); }
+          std::size_t size() const { return items_.size(); }
+
+      private:
+          std::vector<T> items_;
+      };
+    dangerous: [ 4, 5 ]
+    lineNotes:
+      "3": push_back grows the vector safely.
+      "4": "[] doesn't check i: get(99) reads past the end. UB."
+      "5": front() on an empty vector is UB.
+      "6": Only reads the size. Safe.
+    hints:
+      - Which lines read an element that might not exist?
+      - What if the shelf is empty, or i is too big?
+    short: Unchecked [] and front() on empty are UB, for every Shelf<T>.
+    explain: "get(i) uses [] with no check, and first() calls front() even when the shelf is empty. Both are UB: they might crash, or quietly return garbage. Being a template doesn't help: Shelf<int>, Shelf<std::string> and every other Shelf share the bug. Use at(i) and check empty()."
+    sideBySide:
+      unsafe: |-
+        template <typename T>
+        class Shelf {
+        public:
+            T get(std::size_t i) const { return items_[i]; }
+            T first() const { return items_.front(); }
+
+        private:
+            std::vector<T> items_;
+        };
+      hardened: |-
+        template <typename T>
+        class Shelf {
+        public:
+            T get(std::size_t i) const { return items_.at(i); }
+            T first() const {
+                if (items_.empty()) {
+                    throw std::out_of_range{"Shelf is empty"};
+                }
+                return items_.front();
+            }
+
+        private:
+            std::vector<T> items_;
+        };
+  - id: w13.l3.c5
+    type: write
+    tags: [ w13.ctad, w13.classtpl ]
+    prompt: Write one line that creates a `Box` named `hp` holding the int 100, letting the compiler deduce T.
+    code: |-
+      template <typename T>
+      class Box {
+      public:
+          explicit Box(T value) : value_{value} {}
+          T get() const { return value_; }
+
+      private:
+          T value_;
+      };
+    accept:
+      - Box hp{100};
+      - Box hp(100);
+      - auto hp = Box{100};
+    acceptRe:
+      - ^Box hp(\{100\}|\(100\));$
+      - ^auto hp=Box(\{100\}|\(100\));$
+    placeholder: Box hp ...
+    hints:
+      - Leave out the angle brackets; CTAD fills them in.
+      - The constructor argument tells the compiler what T is.
+    short: "Box hp{100}; deduces Box<int> from the argument (CTAD)."
+    explain: "Since C++17, class template argument deduction (CTAD) looks at the constructor argument: 100 is an int, so `Box hp{100};` is a Box<int>. `Box<int> hp{100};` works too. (`Box hp = 100;` fails: the constructor is explicit.)"
+recap:
+  - A class template is a blueprint for classes.
+  - Box<int> and Box<double> are different types.
+  - std::vector and std::array are class templates too.
+  - "CTAD: Box gem{2.5}; deduces Box<double>."
+vault:
+  - id: w13.classtpl
+    title: Class template
+    code: |-
+      template <typename T>
+      class Box {
+      public:
+          explicit Box(T value) : value_{value} {}
+          T get() const { return value_; }
+          void set(T value) { value_ = value; }
+
+      private:
+          T value_;
+      };
+
+      // Box<int> coins{50};
+      // Box<std::string> name{"Curlo"};
+      // Box gem{2.5};   // CTAD: Box<double>
+    note: Each type argument stamps out a separate class. Bugs are copied into every one of them.
+    defense: false
+reviewTags: [ w7.vector, w10.ctor, w10.method, w13.functpl, w13.deduce ]

@@ -1,0 +1,333 @@
+# World 13 · Lesson 4: Numbers as template parameters
+
+id: w13.l4
+title: Numbers as template parameters
+skill: structure
+shield: false
+concept:
+  short: "Template parameters can be values too: template <typename T, std::size_t N> fixes a size at compile time."
+  analogy: N is the number of cups molded into an egg carton; it's set at the factory and never changes.
+  body:
+    - "Besides types, a template can take a compile-time **value**, called a non-type template parameter: `template <typename T, std::size_t N> class Pouch { std::array<T, N> slots_{}; };`. `Pouch<int, 3>` holds exactly 3 ints."
+    - "`std::array<int, 5>` from World 7 works exactly like this: the 5 is a non-type template parameter, so the size is part of the type. `std::array<int, 3>` and `std::array<int, 5>` are different types."
+    - "N must be known at compile time: a literal, a `constexpr` variable, or an expression like `2 * 3`. A runtime value, like an `n` read from `std::cin`, can't be used as N."
+    - "Inside the template, N is a constant. Use it for loop limits and bounds checks: `if (count_ >= N)` means the pouch is full."
+    - "Function templates can deduce N too: `template <typename T, std::size_t N> std::size_t countOf(const std::array<T, N>&)` gets N straight from the array's type."
+    - "**N is not a bodyguard.** `slots_[count_] = item;` when `count_ == N` writes one past the end: undefined behavior. The template knows the size; it's your code that has to check it."
+  pitfall: "Common beginner mistake: checking `count_ > N` instead of `count_ >= N`. Valid indexes run from 0 to N - 1, so index N is already out of bounds."
+demo:
+  code: |-
+    #include <array>
+    #include <cstddef>
+    #include <iostream>
+
+    template <typename T, std::size_t N>
+    class Pouch {
+    public:
+        bool add(T item) {
+            if (count_ >= N) {
+                return false;
+            }
+            slots_[count_] = item;
+            ++count_;
+            return true;
+        }
+        std::size_t size() const { return count_; }
+
+    private:
+        std::array<T, N> slots_{};
+        std::size_t count_{0};
+    };
+
+    int main() {
+        Pouch<int, 2> gems;
+        std::cout << gems.add(5) << gems.add(9) << gems.add(4) << '\n';
+        std::cout << "Holding " << gems.size() << " of 2\n";
+        return 0;
+    }
+  steps:
+    - line: 22
+      note: Execution starts in main().
+    - line: 23
+      vars:
+        gems: "[_, _]"
+        count_: "0"
+      note: "Pouch<int, 2>: N = 2 is baked into the type."
+    - line: 24
+      vars:
+        gems: "[5, 9]"
+        count_: "2"
+      note: 5 and 9 fit. Now count_ equals N.
+    - line: 8
+      shield: "Pouch full: 4 bounced off!"
+      note: "Third add: count_ >= N, so it returns false."
+    - line: 24
+      out: |
+        110
+      note: "true, true, false print as 1, 1, 0."
+    - line: 25
+      out: |
+        Holding 2 of 2
+    - line: 26
+      note: Without the check, slots_[2] would be written. UB!
+challenges:
+  - id: w13.l4.c1
+    type: predict
+    tags: [ w13.nontype, w7.array ]
+    prompt: What does this print?
+    code: |-
+      #include <array>
+      #include <iostream>
+
+      template <typename T, std::size_t N>
+      std::size_t countOf(const std::array<T, N>&) {
+          return N;
+      }
+
+      int main() {
+          std::array<int, 4> hp{};
+          std::array<char, 2> tags{};
+          std::cout << countOf(hp) + countOf(tags) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          6
+        why: "Correct: N is deduced as 4 and then 2 from the array types, and 4 + 2 = 6."
+      - t: |
+          42
+        why: + adds the two numbers; it doesn't glue them together like strings.
+      - t: |
+          4
+        why: countOf(tags) deduces its own N, 2, from std::array<char, 2>.
+      - t: |
+          0
+        why: N is the array's size (its type), not its contents, which are all 0.
+    answer: 0
+    hints:
+      - N is part of each array's type.
+      - Each call deduces its own T and N.
+    short: countOf deduces N from each array's type; 4 + 2 = 6.
+    explain: "std::array<int, 4> matches std::array<T, N> with T = int, N = 4. std::array<char, 2> gives N = 2. The sizes add up to 6. Output: \"6\" and a newline."
+  - id: w13.l4.c2
+    type: mcq
+    tags: [ w13.nontype ]
+    prompt: "`Pouch` is `template <typename T, std::size_t N> class Pouch`. Which line does NOT compile?"
+    options:
+      - t: Pouch<int, 3> a;
+        why: 3 is a literal, known at compile time. Fine.
+      - t: "constexpr std::size_t cap{4}; Pouch<int, cap> b;"
+        why: A constexpr variable is a compile-time constant. Fine.
+      - t: "std::size_t n{}; std::cin >> n; Pouch<int, n> c;"
+        why: "Correct: n is only known at runtime, but N must be fixed while compiling."
+      - t: Pouch<double, 2 * 3> d;
+        why: 2 * 3 is a constant expression, so N = 6. Fine.
+    answer: 2
+    hints:
+      - When is the value of N needed?
+      - Which value isn't known until the program runs?
+    short: N must be known at compile time; a value read from cin isn't.
+    explain: "Non-type template arguments must be compile-time constants: literals, constexpr variables, or constant expressions. A value read from std::cin exists only at runtime. For a runtime size, use std::vector."
+  - id: w13.l4.c3
+    type: harden
+    tags: [ w13.nontype, w7.bounds ]
+    bug: out-of-bounds
+    prompt: Pick the check that stops `add` from writing past the end of the pouch.
+    code: |-
+      template <typename T, std::size_t N>
+      class Pouch {
+      public:
+          bool add(T item) {
+              if (___) {
+                  return false;
+              }
+              slots_[count_] = item;
+              ++count_;
+              return true;
+          }
+
+      private:
+          std::array<T, N> slots_{};
+          std::size_t count_{0};
+      };
+    options:
+      - t: count_ >= N
+        why: "Correct: valid indexes are 0 to N - 1, so once count_ reaches N the pouch is full."
+      - t: count_ > N
+        why: "Off by one: when count_ == N, slots_[N] is one past the end. UB."
+      - t: N == 0
+        why: Only catches a zero-size pouch. A full Pouch<int, 3> still overflows.
+      - t: item >= N
+        why: Compares the item's value, not how full the pouch is.
+    answer: 0
+    hints:
+      - What's the last valid index of an array of size N?
+      - The check must fail exactly when count_ is N.
+    short: Refuse when count_ >= N; index N is already out of bounds.
+    explain: "The pouch has N slots: indexes 0 to N - 1. When count_ reaches N, slots_[count_] would be one past the end, which is UB (it may crash, corrupt a neighbour, or seem fine). `count_ >= N` refuses before writing."
+    sideBySide:
+      unsafe: |-
+        template <typename T, std::size_t N>
+        class Pouch {
+        public:
+            void add(T item) {
+                slots_[count_] = item;   // count_ == N: UB
+                ++count_;
+            }
+
+        private:
+            std::array<T, N> slots_{};
+            std::size_t count_{0};
+        };
+      hardened: |-
+        template <typename T, std::size_t N>
+        class Pouch {
+        public:
+            bool add(T item) {
+                if (count_ >= N) {
+                    return false;
+                }
+                slots_[count_] = item;
+                ++count_;
+                return true;
+            }
+
+        private:
+            std::array<T, N> slots_{};
+            std::size_t count_{0};
+        };
+  - id: w13.l4.c4
+    type: edge
+    tags: [ w13.nontype, w7.bounds, w5.offbyone ]
+    unsafe: true
+    prompt: "UNSAFE: `get` guards a `Pouch<int, 3>`. Pick ALL indexes that slip past the check and cause UB."
+    code: |-
+      template <typename T, std::size_t N>
+      class Pouch {
+      public:
+          T get(int i) const {
+              if (i > static_cast<int>(N)) {
+                  return T{};
+              }
+              return slots_[i];
+          }
+
+      private:
+          std::array<T, N> slots_{};
+      };
+    options:
+      - t: "0"
+        why: The first slot. Valid.
+      - t: "2"
+        why: The last slot of a size-3 pouch. Valid.
+      - t: "3"
+        why: "Exposes it: 3 > 3 is false, so slots_[3] is read, one past the end."
+      - t: "-1"
+        why: "Exposes it: -1 > 3 is false, and a negative index is never valid."
+      - t: "7"
+        why: 7 > 3 is true, so the guard returns T{} safely.
+    answers: [ 2, 3 ]
+    hints:
+      - Try the value exactly equal to N.
+      - Does the check stop anything below zero?
+    short: "> N misses i == N, and negatives slip through. Use std::size_t and >= N."
+    explain: "Valid indexes are 0 to N - 1. `i > N` lets i == N through (one past the end), and a signed int can be negative, which the check never tests. Take a std::size_t (no negatives) and check `i >= N`, or use slots_.at(i)."
+    sideBySide:
+      unsafe: |-
+        template <typename T, std::size_t N>
+        class Pouch {
+        public:
+            T get(int i) const {
+                if (i > static_cast<int>(N)) {
+                    return T{};
+                }
+                return slots_[i];   // 3 and -1 get here
+            }
+
+        private:
+            std::array<T, N> slots_{};
+        };
+      hardened: |-
+        template <typename T, std::size_t N>
+        class Pouch {
+        public:
+            T get(std::size_t i) const {
+                if (i >= N) {
+                    throw std::out_of_range{"no such slot"};
+                }
+                return slots_[i];
+            }
+
+        private:
+            std::array<T, N> slots_{};
+        };
+  - id: w13.l4.c5
+    type: fill
+    tags: [ w13.nontype ]
+    prompt: Fill in the type of the size parameter N.
+    code: |-
+      template <typename T, ___ N>
+      class Pouch {
+          std::array<T, N> slots_{};
+      };
+    accept:
+      - std::size_t
+      - size_t
+    placeholder: a type
+    hints:
+      - It's the standard type for sizes and indexes.
+      - std::array uses the same one for its size.
+    short: "std::size_t N: sizes use std::size_t, like std::array does."
+    explain: "`std::size_t` is the unsigned type the standard library uses for sizes, and it's what std::array<T, N> expects for N. It can't be negative, which is exactly right for a size."
+  - id: w13.l4.c6
+    type: write
+    tags: [ w13.nontype, w13.classtpl ]
+    prompt: Write one line declaring a `Pouch` named `bag` that holds 4 `std::string`s.
+    code: |-
+      template <typename T, std::size_t N>
+      class Pouch {
+      public:
+          std::size_t capacity() const { return N; }
+
+      private:
+          std::array<T, N> slots_{};
+      };
+    accept:
+      - Pouch<std::string, 4> bag;
+      - Pouch<std::string, 4> bag{};
+    acceptRe:
+      - ^Pouch<std::string,4> bag(\{\})?;$
+    placeholder: Pouch<...> bag;
+    hints:
+      - Type first, then size, in the angle brackets.
+      - "Don't forget the std:: prefix on string."
+    short: Pouch<std::string, 4> bag; picks the type and the size.
+    explain: "`Pouch<std::string, 4> bag;` fills in T = std::string and N = 4. There's no constructor argument to deduce them from, so both must be written."
+recap:
+  - Template parameters can be compile-time values.
+  - N must be known while compiling.
+  - Valid indexes are 0 to N - 1.
+  - N knows the size; your code must check it.
+vault:
+  - id: w13.nontype
+    title: Non-type template parameter
+    code: |-
+      template <typename T, std::size_t N>
+      class Pouch {
+      public:
+          bool add(T item) {
+              if (count_ >= N) {
+                  return false;   // full: refuse, don't overflow
+              }
+              slots_[count_] = item;
+              ++count_;
+              return true;
+          }
+
+      private:
+          std::array<T, N> slots_{};
+          std::size_t count_{0};
+      };
+    note: "N is a compile-time constant, part of the type. Check count_ >= N before writing."
+    defense: false
+reviewTags: [ w7.array, w7.bounds, w10.invariant, w13.classtpl ]

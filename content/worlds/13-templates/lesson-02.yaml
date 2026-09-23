@@ -1,0 +1,243 @@
+# World 13 · Lesson 2: Deduction and its traps
+
+id: w13.l2
+title: Deduction and its traps
+skill: structure
+shield: false
+concept:
+  short: "The compiler deduces T from the arguments; if they disagree, name T yourself: biggest<double>(3, 4.5)."
+  analogy: Deduction is a tailor measuring you; explicit arguments are you telling the tailor your size up front.
+  body:
+    - "**Deduction**: for `template <typename T> T biggest(T a, T b)`, the call `biggest(3, 7)` makes T int. Every argument that uses `T` must agree on what T is."
+    - "`biggest(3, 4.5)` does **not** compile: the first argument says `T = int`, the second says `T = double`. Deduction never converts to make them match (a normal function taking `double` would)."
+    - "Fix 1: name T yourself with **explicit template arguments**: `biggest<double>(3, 4.5)`. Now T is double, and 3 converts to 3.0 like in any normal call. Fix 2: make the arguments agree: `biggest(3.0, 4.5)`."
+    - "Fix 3: use two type parameters: `template <typename A, typename B> auto add(A a, B b) { return a + b; }`. The `auto` return type lets the compiler work out the result type (int + double gives double)."
+    - "Choose the explicit type carefully: `biggest<int>(3, 4.5)` also compiles, but 4.5 is chopped to 4 before the comparison. Pick a type that can hold every argument."
+    - "For big types, take `const T&` instead of `T`, just like in World 6: `template <typename T> void show(const T& value)` avoids copying a long `std::string` or `std::vector` on every call."
+  pitfall: "Common beginner mistake: \"fixing\" a deduction error with the first explicit type that compiles. `biggest<int>(3, 4.5)` returns 4, silently. Explicit arguments convert, and conversions can lose data."
+demo:
+  code: |-
+    #include <iostream>
+
+    template <typename T>
+    T biggest(T a, T b) {
+        return (a > b) ? a : b;
+    }
+
+    template <typename A, typename B>
+    auto add(A a, B b) {
+        return a + b;
+    }
+
+    int main() {
+        // biggest(3, 4.5);  // error: is T int or double?
+        std::cout << biggest<double>(3, 4.5) << '\n';
+        std::cout << biggest<int>(3, 4.5) << '\n';
+        std::cout << add(2, 0.5) << '\n';
+        return 0;
+    }
+  steps:
+    - line: 12
+      note: Execution starts in main().
+    - line: 13
+      note: "Commented out: 3 says int, 4.5 says double. Conflict!"
+    - line: 14
+      out: |
+        4.5
+      note: "We pick T = double: 3 becomes 3.0, 4.5 wins."
+    - line: 15
+      out: |
+        4
+      note: "T = int: 4.5 is chopped to 4 first. Careful!"
+    - line: 16
+      out: |
+        2.5
+      note: "Two type parameters: A is int, B is double."
+    - line: 17
+      note: Explicit arguments convert. Pick a type that loses nothing.
+challenges:
+  - id: w13.l2.c1
+    type: mcq
+    tags: [ w13.deduce ]
+    prompt: "`biggest` is `template <typename T> T biggest(T a, T b)`. What happens with `biggest(2, 3.5)`?"
+    options:
+      - t: "Compile error: T can't be both int and double"
+        why: "Correct: deduction gets int from 2 and double from 3.5. It never converts to make them agree."
+      - t: T becomes double and the result is 3.5
+        why: That's what a normal function taking double would do. Template deduction doesn't convert.
+      - t: T becomes int and the result is 3
+        why: Deduction doesn't pick the first argument's type and convert the rest.
+      - t: It compiles with a warning and returns 3.5
+        why: It's a hard error, not a warning. You must resolve the conflict yourself.
+    answer: 0
+    hints:
+      - What does each argument say T is?
+      - Does deduction convert arguments?
+    short: "Deduction conflict: 2 says int, 3.5 says double. Compile error."
+    explain: "Each argument that uses T votes on T. 2 votes int, 3.5 votes double, and deduction doesn't convert, so it fails. Fix it with biggest<double>(2, 3.5) or biggest(2.0, 3.5)."
+  - id: w13.l2.c2
+    type: predict
+    tags: [ w13.deduce, w13.explicit, w3.arith ]
+    prompt: What does this print? (Watch the int division.)
+    code: |-
+      #include <iostream>
+
+      template <typename T>
+      T half(T x) {
+          return x / 2;
+      }
+
+      int main() {
+          std::cout << half(7) << ' ' << half(7.0) << ' ' << half<double>(7) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          3 3.5 3.5
+        why: "Correct: half<int> divides ints (3); the other two use T = double (3.5)."
+      - t: |
+          3.5 3.5 3.5
+        why: half(7) deduces T = int, so 7 / 2 is integer division.
+      - t: |
+          3 3.5 3
+        why: half<double>(7) converts 7 to 7.0 first, so the division is real division.
+      - t: |
+          3 3 3
+        why: 7.0 is a double, so half(7.0) uses T = double.
+    answer: 0
+    hints:
+      - What is T in each of the three calls?
+      - An explicit <double> converts the argument before the body runs.
+    short: "half(7) is int math (3); half(7.0) and half<double>(7) give 3.5."
+    explain: "half(7): T = int, 7 / 2 = 3. half(7.0): T = double, 3.5. half<double>(7): T is forced to double, 7 becomes 7.0, 3.5. Output: \"3 3.5 3.5\" and a newline."
+  - id: w13.l2.c3
+    type: fill
+    tags: [ w13.explicit, w13.deduce ]
+    prompt: This call doesn't compile. Fill in the blank so it compiles and prints 4.5.
+    code: |-
+      #include <iostream>
+
+      template <typename T>
+      T biggest(T a, T b) {
+          return (a > b) ? a : b;
+      }
+
+      int main() {
+          std::cout << biggest___(3, 4.5) << '\n';
+          return 0;
+      }
+    accept:
+      - <double>
+    placeholder: explicit type
+    hints:
+      - Tell the compiler what T is, in angle brackets.
+      - Which type can hold both 3 and 4.5 without losing anything?
+    short: "biggest<double>(3, 4.5): 3 converts to 3.0, and 4.5 wins."
+    explain: "Explicit template arguments go in angle brackets after the name. With T = double, 3 converts to 3.0 and the result is 4.5. `<int>` would compile too, but chop 4.5 to 4."
+  - id: w13.l2.c4
+    type: breakit
+    tags: [ w13.explicit, w2.convert ]
+    prompt: "`bestScore` should return the higher of two scores. Pick the pair that makes it return a WRONG answer."
+    code: |-
+      template <typename T>
+      T biggest(T a, T b) {
+          return (a > b) ? a : b;
+      }
+
+      double bestScore(double a, double b) {
+          return biggest<int>(a, b);
+      }
+    options:
+      - t: 3.0 and 7.0
+        why: Both are whole numbers, so chopping loses nothing. Returns 7.
+      - t: 10.0 and 4.0
+        why: Whole numbers again. Returns 10, which is right.
+      - t: -1.0 and 0.0
+        why: Chopping whole numbers changes nothing. Returns 0.
+      - t: 2.4 and 2.9
+        why: "Correct: both are chopped to 2 before comparing, so it returns 2 instead of 2.9."
+    answer: 3
+    hints:
+      - "biggest<int> converts both arguments to int first."
+      - Which pair has fractions that matter?
+    short: biggest<int> chops fractions first, so 2.4 vs 2.9 returns 2.
+    explain: "The explicit <int> converts both doubles to int before comparing. For 2.4 and 2.9 both become 2, and the result 2 comes back as 2.0 instead of 2.9. Use biggest<double>(a, b), or just biggest(a, b)."
+    sideBySide:
+      unsafe: |-
+        double bestScore(double a, double b) {
+            return biggest<int>(a, b);   // chops the fractions
+        }
+      hardened: |-
+        double bestScore(double a, double b) {
+            return biggest(a, b);   // T deduced as double
+        }
+      prelude: |-
+        template <typename T>
+        T biggest(T a, T b) {
+            return (a > b) ? a : b;
+        }
+  - id: w13.l2.c5
+    type: write
+    tags: [ w13.multiparam ]
+    prompt: "`add` needs two independent type parameters, A and B. Write its template line."
+    code: |-
+      auto add(A a, B b) {
+          return a + b;
+      }
+    expect: error
+    accept:
+      - template <typename A, typename B>
+      - template <class A, class B>
+    acceptRe:
+      - ^template<(typename|class) A,(typename|class) B>$
+    placeholder: template <...>
+    hints:
+      - Same as one parameter, but with a comma.
+      - "template <typename A, ...>"
+    short: "template <typename A, typename B> lets each argument have its own type."
+    explain: "`template <typename A, typename B>` declares two type parameters, deduced separately, so add(2, 0.5) works: A = int, B = double. The `auto` return type becomes double."
+  - id: w13.l2.c6
+    type: mcq
+    tags: [ w13.functpl, w6.constref ]
+    prompt: Why write `const T&` in `template <typename T> void show(const T& value)`?
+    options:
+      - t: T might be big (a long string or vector); a const reference avoids copying it
+        why: "Correct: same rule as World 6. No copy, and const promises show won't change it."
+      - t: Templates can't take parameters by value
+        why: They can. T by value is fine for small types like int.
+      - t: It makes T always deduce as a reference type
+        why: For const T&, T is deduced as the plain type (std::string), not a reference.
+      - t: It's required so the template works with int
+        why: int works either way. The reference helps with big types.
+    answer: 0
+    hints:
+      - What happens to a long std::string passed by value?
+      - Remember const references from World 6.
+    short: const T& avoids copying big types and promises not to modify them.
+    explain: "A template can be instantiated with huge types. Taking `const T&` means no copy for `std::string` or `std::vector`, and const guarantees the function only reads. For tiny types like int, either is fine."
+recap:
+  - Every argument using T must agree on T.
+  - Deduction never converts to make types match.
+  - "Name T yourself: biggest<double>(3, 4.5)."
+  - Explicit arguments convert, and can lose data.
+vault:
+  - id: w13.explicit
+    title: Deduction vs explicit arguments
+    code: |-
+      template <typename T>
+      T biggest(T a, T b) {
+          return (a > b) ? a : b;
+      }
+
+      template <typename A, typename B>
+      auto add(A a, B b) {
+          return a + b;
+      }
+
+      // biggest(3, 4.5);          // error: int or double?
+      // biggest<double>(3, 4.5);  // 4.5
+      // biggest<int>(3, 4.5);     // 4 (!) 4.5 chopped
+      // add(2, 0.5);              // 2.5 (A = int, B = double)
+    note: Deduction never converts. Explicit arguments do, so pick a type that loses nothing.
+    defense: false
+reviewTags: [ w6.constref, w2.convert, w13.functpl ]

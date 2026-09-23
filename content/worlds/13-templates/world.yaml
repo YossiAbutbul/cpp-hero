@@ -1,0 +1,19 @@
+# World 13: Templates. Lessons are lesson-NN.yaml (played in file order).
+
+id: w13
+num: 13
+title: Templates
+icon: template
+blurb: "Write a function or class once and let the compiler stamp out a copy for every type, then put a bouncer on the door so only the right types get in."
+story:
+  intro:
+    - The Chaos Hydra is gone, and the Citadel stands! {^_^}
+    - But behind its walls, the Codebase is full of copy-pasted code. One version per type!
+    - "Let's learn templates: write it once, and the compiler stamps out the rest."
+  bossIntro:
+    - The Template Sentinel guards the blueprint vault. It lets ANY type through!
+    - Only constrained templates can get past it. Brace yourself!
+  victory:
+    - The Sentinel bowed! Every blueprint now says exactly which types it accepts.
+    - "And guess what the whole standard library is built from? Templates!"
+    - The STL awaits in World 14. Pack your iterators!

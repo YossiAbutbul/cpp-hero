@@ -1,0 +1,459 @@
+# World 13 boss: The Template Sentinel
+
+id: w13.boss
+name: The Template Sentinel
+art: sentinel
+hp: 7
+intro: HALT. I GUARD THE BLUEPRINTS. I ADMIT EVERY TYPE. STRINGS. BOOLS. ANYTHING.
+taunt:
+  - TYPENAME T. T CAN BE ANYTHING. HOW GENEROUS OF YOU.
+  - A BOOL IS AN INTEGER. CHECK THE STANDARD.
+  - YOUR CONCEPT CHECKS MY TYPE. WHO CHECKS MY ZERO?
+  - FOUR HUNDRED LINES OF TEMPLATE ERRORS. ENJOY READING.
+rounds:
+  - id: w13.boss.r1
+    type: predict
+    tags: [ w13.deduce, w13.explicit ]
+    prompt: The Sentinel stamps out three copies. What does this print?
+    code: |-
+      #include <iostream>
+
+      template <typename T>
+      T scale(T x) {
+          return x * 3 / 2;
+      }
+
+      int main() {
+          std::cout << scale(5) << ' ' << scale(5.0) << ' ' << scale<int>(5.9) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          7 7.5 7
+        why: "Correct: int math gives 15 / 2 = 7; double gives 7.5; <int> chops 5.9 to 5, then 7."
+      - t: |
+          7.5 7.5 8.85
+        why: scale(5) deduces int, and scale<int> forces int. Only the middle call uses double.
+      - t: |
+          7 7.5 8
+        why: scale<int>(5.9) converts 5.9 to 5 BEFORE the math, so 5 * 3 / 2 = 7.
+      - t: |
+          7 7 7
+        why: 5.0 is a double, so scale(5.0) does real division.
+    answer: 0
+    hints:
+      - What is T in each call?
+      - An explicit <int> converts 5.9 before the body runs.
+    short: "int: 7. double: 7.5. scale<int>(5.9) chops to 5 first: 7."
+    explain: "scale(5): T = int, 15 / 2 = 7. scale(5.0): T = double, 7.5. scale<int>(5.9): 5.9 becomes 5, then 15 / 2 = 7. Output: \"7 7.5 7\" and a newline."
+  - id: w13.boss.r2
+    type: mcq
+    tags: [ w13.deduce ]
+    prompt: "`template <typename T> T biggest(T a, T b)`. The Sentinel calls `biggest(10, 2.5)`. What happens?"
+    options:
+      - t: Compile error; T is deduced as both int and double
+        why: "Correct: deduction never converts. Fix with biggest<double>(10, 2.5)."
+      - t: Returns 10
+        why: It never gets to run. The two arguments disagree about T.
+      - t: Returns 10.0 with T = double
+        why: Only if you write biggest<double>. Deduction alone fails.
+      - t: A runtime exception
+        why: Templates are resolved while compiling. This fails before the program exists.
+    answer: 0
+    hints:
+      - What does each argument say T is?
+      - Does deduction convert?
+    short: "10 says int, 2.5 says double: deduction fails at compile time."
+    explain: "Both parameters are T, so both arguments must deduce the same T. int vs double is a conflict, and deduction doesn't convert. Write biggest<double>(10, 2.5) or biggest(10.0, 2.5)."
+  - id: w13.boss.r3
+    type: predict
+    tags: [ w13.classtpl, w3.arith ]
+    prompt: Two tallies, one blueprint. What does this print?
+    code: |-
+      #include <iostream>
+
+      template <typename T>
+      class Tally {
+      public:
+          void add(T x) { total_ += x; }
+          T total() const { return total_; }
+
+      private:
+          T total_{};
+      };
+
+      int main() {
+          Tally<int> a;
+          Tally<double> b;
+          a.add(3);
+          a.add(4);
+          b.add(0.5);
+          b.add(0.25);
+          std::cout << a.total() / 2 << ' ' << b.total() << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          3 0.75
+        why: "Correct: Tally<int> totals 7, and 7 / 2 is 3. Tally<double> totals 0.75."
+      - t: |
+          3.5 0.75
+        why: a.total() returns an int, so 7 / 2 is integer division.
+      - t: |
+          3 0
+        why: Tally<double> stores doubles, so 0.5 + 0.25 = 0.75 is kept.
+      - t: |
+          7 0.75
+        why: The total is divided by 2 before printing.
+    answer: 0
+    hints:
+      - What type does each Tally store?
+      - "total_{} starts at 0 for both."
+    short: Tally<int> gives 7 / 2 = 3; Tally<double> keeps 0.75.
+    explain: "total_{} starts both at zero. Tally<int>: 3 + 4 = 7, and 7 / 2 = 3. Tally<double>: 0.5 + 0.25 = 0.75. Output: \"3 0.75\" and a newline."
+  - id: w13.boss.r4
+    type: speed
+    tags: [ w13.functpl, w13.classtpl, w13.nontype, w13.concepts, w13.staticassert ]
+    prompt: The Sentinel fires blueprints at you. Answer fast!
+    seconds: 45
+    items:
+      - q: Which keyword starts a template?
+        options: [ template, typename, generic ]
+        answer: 0
+      - q: Box<int> and Box<double> are...
+        options: [ the same type, two different types ]
+        answer: 1
+      - q: Which concept accepts int but rejects double?
+        options: [ std::floating_point, std::integral ]
+        answer: 1
+      - q: Does bool satisfy std::integral?
+        options: [ "Yes", "No" ]
+        answer: 0
+      - q: When does static_assert fire?
+        options: [ At compile time, At runtime ]
+        answer: 0
+      - q: In std::array<int, 5>, the 5 is a...
+        options: [ non-type template parameter, function argument ]
+        answer: 0
+      - q: Does a concept check argument values?
+        options: [ "No, only types", "Yes, at runtime" ]
+        answer: 0
+    hints:
+      - Concepts and static_assert work at compile time.
+      - Remember the bool surprise.
+    short: Templates and their guards all work at compile time, on types.
+    explain: "template starts a template; each type argument makes a separate type; std::integral includes bool; static_assert and concepts are checked while compiling and look at types, never runtime values; std::array's size is a non-type template parameter."
+  - id: w13.boss.r5
+    type: bug
+    tags: [ w13.staticassert ]
+    bug: unconstrained-template
+    prompt: "average(3, 4) compiles and returns 3, while average(3.0, 4.0) is rejected. Tap the buggy line, then pick the fix."
+    code: |-
+      #include <type_traits>
+
+      template <typename T>
+      T average(T a, T b) {
+          static_assert(std::is_integral_v<T>, "average needs double or float");
+          return (a + b) / 2;
+      }
+    bugLine: 4
+    options:
+      - t: static_assert(std::is_floating_point_v<T>, "average needs double or float");
+        why: "Correct: now the check matches the message. Doubles pass; truncating ints are rejected."
+      - t: static_assert(!std::is_integral_v<T>, "average needs double or float");
+        why: Rejects ints, but lets std::string and every other non-integer type in.
+      - t: assert(std::is_floating_point_v<T>);
+        why: A runtime check for a compile-time fact, and it vanishes in release builds.
+      - t: Delete the static_assert
+        why: Then average(3, 4) silently returns 3 again, and strings get in too.
+    answer: 0
+    hints:
+      - Read the message, then read the condition.
+      - Which trait is true for double?
+    short: The check tested is_integral; the message wanted floating point.
+    explain: "The static_assert condition must be TRUE for allowed types. std::is_integral_v<T> is true for int and false for double: the exact opposite of the message. std::is_floating_point_v<T> accepts float, double, long double and rejects the truncating ints."
+    sideBySide:
+      prelude: "#include <type_traits>"
+      unsafe: |-
+        template <typename T>
+        T average(T a, T b) {
+            static_assert(std::is_integral_v<T>, "average needs double or float");
+            return (a + b) / 2;
+        }
+      hardened: |-
+        #include <type_traits>
+
+        template <typename T>
+        T average(T a, T b) {
+            static_assert(std::is_floating_point_v<T>, "average needs double or float");
+            return (a + b) / 2;
+        }
+  - id: w13.boss.r6
+    type: review
+    tags: [ w13.nontype, w7.bounds ]
+    bug: out-of-bounds
+    unsafe: true
+    prompt: UNSAFE ring buffer blueprint. Tap every line that can cause undefined behavior.
+    code: |-
+      template <typename T, std::size_t N>
+      class Ring {
+      public:
+          void put(const T& item) {
+              slots_[next_] = item;
+              next_ = next_ + 1;
+          }
+          T at(std::size_t i) const { return slots_[i]; }
+
+      private:
+          std::array<T, N> slots_{};
+          std::size_t next_{0};
+      };
+    dangerous: [ 4, 7 ]
+    lineNotes:
+      "4": After N puts, next_ == N and this writes past the end. UB.
+      "5": "The root cause: next_ never wraps back to 0. Use (next_ + 1) % N."
+      "7": "[] with an unchecked i: at(99) reads past the end. UB."
+    hints:
+      - What is next_ after N calls to put?
+      - Is i ever checked?
+    short: next_ runs past N, and at(i) never checks i. Both are UB.
+    explain: "put writes slots_[next_] and next_ keeps growing, so the (N+1)th put writes out of bounds. at(i) indexes with []. Both are UB: they may crash or silently corrupt memory. Wrap next_ with % N (and static_assert(N > 0) so % N is safe), and use slots_.at(i)."
+    sideBySide:
+      unsafe: |-
+        template <typename T, std::size_t N>
+        class Ring {
+        public:
+            void put(const T& item) {
+                slots_[next_] = item;
+                next_ = next_ + 1;   // never wraps
+            }
+            T at(std::size_t i) const { return slots_[i]; }
+
+        private:
+            std::array<T, N> slots_{};
+            std::size_t next_{0};
+        };
+      hardened: |-
+        template <typename T, std::size_t N>
+        class Ring {
+            static_assert(N > 0, "a Ring needs at least one slot");
+
+        public:
+            void put(const T& item) {
+                slots_[next_] = item;
+                next_ = (next_ + 1) % N;
+            }
+            T at(std::size_t i) const { return slots_.at(i); }
+
+        private:
+            std::array<T, N> slots_{};
+            std::size_t next_{0};
+        };
+  - id: w13.boss.r7
+    type: edge
+    tags: [ w13.concepts, w3.overflow ]
+    unsafe: true
+    prompt: "UNSAFE: the concept lets only ints in. Pick ALL calls that still cause UB (32-bit int)."
+    code: |-
+      #include <concepts>
+
+      template <std::integral T>
+      T average(T a, T b) {
+          return (a + b) / 2;
+      }
+    options:
+      - t: average(4, 6)
+        why: 10 / 2 = 5. Fine.
+      - t: average(2'000'000'000, 2'000'000'000)
+        why: "Exposes it: a + b is 4 billion, past the int maximum. Signed overflow is UB."
+      - t: average(-3, -5)
+        why: -8 / 2 = -4. Fine.
+      - t: average(2'147'483'647, 1)
+        why: "Exposes it: the largest int plus 1 overflows before the division."
+      - t: average(0, 0)
+        why: 0. Fine.
+    answers: [ 1, 3 ]
+    hints:
+      - The concept checks the type. What about the size of a + b?
+      - The sum can be too big even when the average isn't.
+    short: Concepts check types, not values; a + b can still overflow.
+    explain: "std::integral guarantees integers, not safe arithmetic. a + b overflows for big inputs even when the average itself would fit. std::midpoint(a, b) from <numeric> (C++20) computes it without overflow."
+    sideBySide:
+      prelude: "#include <concepts>"
+      unsafe: |-
+        template <std::integral T>
+        T average(T a, T b) {
+            return (a + b) / 2;   // a + b may overflow
+        }
+      hardened: |-
+        #include <concepts>
+        #include <numeric>
+
+        template <std::integral T>
+        T average(T a, T b) {
+            return std::midpoint(a, b);   // no overflow
+        }
+  - id: w13.boss.r8
+    type: mcq
+    tags: [ w13.concepts, w13.constrain ]
+    bug: unconstrained-template
+    prompt: The final gate. Which template line admits int and double, but rejects std::string?
+    options:
+      - t: template <typename T>
+        why: Admits everything, std::string included.
+      - t: template <std::integral T>
+        why: Rejects std::string, but rejects double too.
+      - t: template <typename T> requires std::integral<T> || std::floating_point<T>
+        why: "Correct: integers OR floating-point types. A string is neither."
+      - t: template <std::floating_point T>
+        why: Rejects std::string, but rejects int too.
+    answer: 2
+    hints:
+      - You need two kinds of number.
+      - Combine two concepts with ||.
+    short: "requires std::integral<T> || std::floating_point<T> admits both kinds of number."
+    explain: "A requires clause can combine concepts with || and &&. std::integral<T> || std::floating_point<T> is true for int, long, double, float (and bool, char: exclude those too if they matter), and false for std::string."
+defense:
+  - attack: std::string{"999"}
+    label: A string posing as HP!
+    challenge:
+      id: w13.boss.d1
+      type: harden
+      tags: [ w13.staticassert, w13.constrain ]
+      bug: unconstrained-template
+      prompt: The Sentinel feeds "999" as HP. Pick the line that stops the build with a clear message.
+      code: |-
+        #include <type_traits>
+
+        template <typename T>
+        T healBy(T hp, T amount) {
+            ___;
+            return hp + amount;
+        }
+      options:
+        - t: static_assert(std::is_arithmetic_v<T>, "healBy needs a number type")
+          why: "Correct: std::string isn't arithmetic, so the build stops with your message."
+        - t: static_assert(true, "healBy needs a number type")
+          why: Always true. It blocks nothing, and "999" + "1" becomes "9991".
+        - t: assert(hp >= 0)
+          why: Runtime, checks a value, and a string can't even be compared with 0.
+        - t: static_assert(sizeof(T) == 4, "healBy needs a number type")
+          why: Checks the size, not the kind. It rejects double and long long, and may admit odd types.
+      answer: 0
+      hints:
+        - Check what kind of type T is.
+        - Which trait is true for int and double, false for std::string?
+      short: "static_assert(std::is_arithmetic_v<T>, ...) keeps strings out."
+      explain: "Unconstrained, healBy(std::string{\"999\"}, std::string{\"1\"}) compiles and returns \"9991\". std::is_arithmetic_v<T> is true for integer and floating-point types (and bool) and false for std::string, so the build fails with your message."
+      sideBySide:
+        unsafe: |-
+          template <typename T>
+          T healBy(T hp, T amount) {
+              return hp + amount;   // strings: "999" + "1" = "9991"
+          }
+        hardened: |-
+          #include <type_traits>
+
+          template <typename T>
+          T healBy(T hp, T amount) {
+              static_assert(std::is_arithmetic_v<T>, "healBy needs a number type");
+              return hp + amount;
+          }
+  - attack: "true"
+    label: A bool sneaks in as a score!
+    challenge:
+      id: w13.boss.d2
+      type: harden
+      tags: [ w13.concepts, w13.constrain ]
+      bug: unconstrained-template
+      prompt: "`addBonus(true, true)` returns true, not 2. Block bool but keep every other integer type."
+      code: |-
+        #include <concepts>
+
+        template <typename T> requires ___
+        T addBonus(T base, T bonus) {
+            return base + bonus;
+        }
+      options:
+        - t: (!std::same_as<T, bool>) && std::integral<T>
+          why: "Correct: integers only, and bool explicitly shut out."
+        - t: std::integral<T>
+          why: bool IS integral, so true + true still gets in.
+        - t: "!std::same_as<T, bool>"
+          why: Blocks bool, but lets std::string and double in. (And a bare ! needs parentheses here.)
+        - t: std::integral<T> || (!std::same_as<T, bool>)
+          why: "|| admits anything that isn't bool, integral or not."
+      answer: 0
+      hints:
+        - You need two rules at once. && or ||?
+        - Put the ! part in its own parentheses.
+      short: "requires (!std::same_as<T, bool>) && std::integral<T> blocks bool."
+      explain: "bool counts as std::integral, and true + true is 2, converted back to bool true. Combining (!std::same_as<T, bool>) && std::integral<T> admits int, long, char... but not bool. In a requires clause, a ! expression needs its own parentheses."
+      sideBySide:
+        prelude: "#include <concepts>"
+        unsafe: |-
+          template <std::integral T>
+          T addBonus(T base, T bonus) {
+              return base + bonus;   // addBonus(true, true) == true
+          }
+        hardened: |-
+          #include <concepts>
+
+          template <typename T> requires (!std::same_as<T, bool>) && std::integral<T>
+          T addBonus(T base, T bonus) {
+              return base + bonus;
+          }
+  - attack: "0"
+    label: Zero heroes to split among!
+    challenge:
+      id: w13.boss.d3
+      type: harden
+      tags: [ w13.concepts, w3.divzero ]
+      prompt: "The type passes the concept. The VALUE 0 doesn't care. Pick the runtime guard."
+      code: |-
+        #include <concepts>
+
+        template <std::integral T>
+        T perHero(T gold, T heroes) {
+            if (___) {
+                throw std::invalid_argument{"need at least one hero"};
+            }
+            return gold / heroes;
+        }
+      options:
+        - t: heroes <= 0
+          why: "Correct: blocks zero (UB) and negative party sizes (nonsense)."
+        - t: heroes == 0
+          why: Stops the UB, but -3 heroes still gives negative shares, and INT_MIN / -1 overflows.
+        - t: "!std::integral<T>"
+          why: Always false here. The concept already checked the type; the value is the problem.
+        - t: gold < heroes
+          why: That just means everyone gets 0. Valid, not dangerous.
+      answer: 0
+      hints:
+        - A concept checks types. Who checks values?
+        - Zero is UB; negatives are nonsense.
+      short: Concepts don't check values; guard heroes <= 0 at runtime.
+      explain: "std::integral only says heroes is an integer. perHero(100, 0) divides by zero: UB, which may crash or return garbage. The runtime check heroes <= 0 blocks zero and negatives before the division."
+      sideBySide:
+        prelude: "#include <concepts>"
+        unsafe: |-
+          template <std::integral T>
+          T perHero(T gold, T heroes) {
+              return gold / heroes;   // heroes 0: UB
+          }
+        hardened: |-
+          #include <concepts>
+
+          template <std::integral T>
+          T perHero(T gold, T heroes) {
+              if (heroes <= 0) {
+                  throw std::invalid_argument{"need at least one hero"};
+              }
+              return gold / heroes;
+          }
+victory: GRR. YOU CONSTRAINED ME. THE BLUEPRINTS ARE YOURS. THE STL AWAITS.
+reward:
+  xp: 300
+  cosmetic: wizard-hat
+  bug: unconstrained-template
