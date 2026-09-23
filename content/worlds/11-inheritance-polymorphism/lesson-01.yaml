@@ -1,0 +1,270 @@
+# World 11 · Lesson 1: Family trees (base and derived classes)
+
+id: w11.l1
+title: Family trees
+skill: structure
+shield: false
+concept:
+  short: "A derived class inherits everything from its base class and adds its own parts: a Knight is a Hero."
+  analogy: "Inheritance is a family recipe: the child recipe starts from the parent's and adds its own twist."
+  body:
+    - "`class Knight : public Hero { ... };` makes Knight a **derived** class of the **base** class Hero. Every Knight has everything a Hero has (data and member functions), plus whatever Knight adds."
+    - "Use inheritance for an **is-a** relationship: a Knight *is a* Hero. For **has-a** (a Hero has a Sword), make the Sword a member instead. That's called composition, and it's often the better choice."
+    - "With `public` inheritance, Hero's public functions stay public on a Knight. Hero's `private` members still exist inside every Knight, but Knight's own code can't touch them: it goes through Hero's public functions. `protected` members are visible to derived classes but not to outside code (use them sparingly: they weaken encapsulation)."
+    - "**Construction order**: the base part is built first, then the derived part. Pass arguments to the base constructor in the initializer list: `Knight(int hp, int armor) : Hero{hp}, armor_{armor} {}`. Destruction runs in reverse: the derived part first, then the base."
+    - "Because a Knight is a Hero, a Knight can be used wherever a Hero reference is expected: `const Hero& h = knight;` works. That's the doorway to polymorphism (next lesson)."
+  pitfall: "Common beginner mistake: writing `class Knight : Hero` without `public`. For a `class`, inheritance is private by default, so outside code can't call Hero's functions on a Knight (a `struct` defaults to public)."
+demo:
+  code: |-
+    #include <iostream>
+
+    class Hero {
+    public:
+        explicit Hero(int hp) : hp_{hp} { std::cout << "Hero part built\n"; }
+        int hp() const { return hp_; }
+
+    private:
+        int hp_;
+    };
+
+    class Knight : public Hero {
+    public:
+        Knight(int hp, int armor) : Hero{hp}, armor_{armor} { std::cout << "Knight part built\n"; }
+        int armor() const { return armor_; }
+
+    private:
+        int armor_;
+    };
+
+    int main() {
+        Knight k{30, 5};
+        std::cout << k.hp() << ' ' << k.armor() << '\n';
+        return 0;
+    }
+  steps:
+    - line: 21
+      note: Building a Knight starts with its Hero part.
+    - line: 13
+      note: "Knight's constructor first hands hp to Hero{hp}."
+    - line: 4
+      out: |
+        Hero part built
+      vars:
+        k.hp_: "30"
+      note: "Base part first: hp_ becomes 30."
+    - line: 13
+      out: |
+        Knight part built
+      vars:
+        k.armor_: "5"
+      note: "Then Knight's own part: armor_ becomes 5."
+    - line: 22
+      out: |
+        30 5
+      note: "hp() is inherited from Hero; armor() is Knight's own."
+    - line: 23
+      note: "One object: a Hero, plus armor. Family!"
+challenges:
+  - id: w11.l1.c1
+    type: predict
+    tags: [ w11.ctor-order, w11.derived ]
+    prompt: Each constructor and destructor prints one letter. What does this print?
+    code: |-
+      #include <iostream>
+
+      class Hero {
+      public:
+          Hero() { std::cout << 'H'; }
+          ~Hero() { std::cout << 'h'; }
+      };
+
+      class Knight : public Hero {
+      public:
+          Knight() { std::cout << 'K'; }
+          ~Knight() { std::cout << 'k'; }
+      };
+
+      int main() {
+          {
+              Knight sir;
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          HKkh
+        why: "Correct: base built first, derived destroyed first. Construction and destruction mirror each other."
+      - t: |
+          KHhk
+        why: "The base part must exist before the Knight part can be built on top of it."
+      - t: |
+          HKhk
+        why: "Destruction runs in reverse: the Knight part goes first, then the Hero part."
+      - t: |
+          K
+        why: "Every Knight contains a Hero part, and both parts get constructed and destroyed."
+    answer: 0
+    hints:
+      - You build a house's foundation before its walls.
+      - Tear-down is the exact reverse of build-up.
+    short: "Base constructed first, derived destroyed first: HKkh."
+    explain: "Creating `sir` builds the Hero part (H), then the Knight part (K). At the closing brace, destruction runs in reverse: Knight part (k), then Hero part (h). Output: \"HKkh\" and a newline."
+  - id: w11.l1.c2
+    type: fill
+    tags: [ w11.base-ctor, w11.derived ]
+    prompt: "Hero has no default constructor. Fill in the initializer so Mage passes hp to its base."
+    code: |-
+      class Hero {
+      public:
+          explicit Hero(int hp) : hp_{hp} {}
+          int hp() const { return hp_; }
+
+      private:
+          int hp_;
+      };
+
+      class Mage : public Hero {
+      public:
+          Mage(int hp, int mana) : ___, mana_{mana} {}
+          int mana() const { return mana_; }
+
+      private:
+          int mana_;
+      };
+    accept:
+      - "Hero{hp}"
+      - "Hero(hp)"
+    placeholder: base initializer
+    hints:
+      - The base part is initialized like a member, by its class name.
+      - "Call Hero's constructor with hp."
+    short: "`Hero{hp}` in the initializer list builds the base part."
+    explain: "The base part is built before the derived members, so its constructor call goes first in the initializer list: `Mage(int hp, int mana) : Hero{hp}, mana_{mana} {}`. Without it, the compiler tries `Hero()`, which doesn't exist, and refuses to compile."
+  - id: w11.l1.c3
+    type: bug
+    tags: [ w11.derived, w11.public-inherit ]
+    expect: error
+    prompt: "This doesn't compile: 'hp' is inaccessible. Tap the buggy line, then pick the fix."
+    code: |-
+      #include <iostream>
+
+      class Hero {
+      public:
+          int hp() const { return 30; }
+      };
+
+      class Knight : Hero {
+      };
+
+      int main() {
+          Knight k;
+          std::cout << k.hp() << '\n';
+          return 0;
+      }
+    bugLine: 7
+    options:
+      - t: "class Knight : public Hero {"
+        why: "Correct: public inheritance keeps Hero's public functions public on a Knight."
+      - t: "class Knight : private Hero {"
+        why: "That's exactly what the default already is for a class. Still inaccessible."
+      - t: Make hp() private in Hero
+        why: "Worse: then nobody outside Hero, not even Knight, could call it."
+      - t: "Change k.hp() to Hero.hp()"
+        why: "Hero is a type, not an object. You need a Knight whose Hero part is public."
+    answer: 0
+    hints:
+      - "What is the default inheritance for a class?"
+      - One missing word before Hero.
+    short: "`class` inherits privately by default; write `public Hero`."
+    explain: "For `class Knight : Hero`, the default is **private** inheritance: Hero's public members become private inside Knight, so `k.hp()` in main is rejected. `class Knight : public Hero` says \"a Knight is a Hero\" to everyone. (A `struct` defaults to public inheritance, but write `public` anyway: it's clearer.)"
+    sideBySide:
+      expect: error
+      unsafe: |-
+        class Hero {
+        public:
+            int hp() const { return 30; }
+        };
+
+        class Knight : Hero {};   // private by default
+
+        int main() {
+            Knight k;
+            return k.hp();   // error: inaccessible
+        }
+      hardened: |-
+        class Hero {
+        public:
+            int hp() const { return 30; }
+        };
+
+        class Knight : public Hero {};
+
+        int main() {
+            Knight k;
+            return k.hp() == 30 ? 0 : 1;
+        }
+  - id: w11.l1.c4
+    type: write
+    tags: [ w11.is-a, w8.constref ]
+    prompt: "Write one line: a const Hero reference named `h` that refers to `knight`."
+    prelude: "class Hero { public: int hp() const { return 30; } }; class Knight : public Hero {}; Knight knight;"
+    accept:
+      - const Hero& h = knight;
+      - const Hero& h{knight};
+      - Hero const& h = knight;
+      - Hero const& h{knight};
+    placeholder: const Hero& ...
+    hints:
+      - A Knight is a Hero, so a Hero reference can name it.
+      - "Pattern: const Type& name = target;"
+    short: "`const Hero& h = knight;` works because a Knight is a Hero."
+    explain: "A derived object can be referred to through a base reference: `const Hero& h = knight;`. No copy is made; h names the whole Knight, but only Hero's functions are visible through it. That base-reference view is where polymorphism starts."
+  - id: w11.l1.c5
+    type: mcq
+    tags: [ w11.is-a, w11.protected ]
+    prompt: Which design is a good fit for inheritance?
+    options:
+      - t: "class Archer : public Hero (an Archer is a Hero)"
+        why: "Correct: a true is-a relationship. Everything true of a Hero is true of an Archer."
+      - t: "class Hero : public Sword (a Hero has a Sword)"
+        why: "That's has-a. Make the Sword a member: class Hero { Sword sword_; };"
+      - t: "class Inventory : public std::vector<int>"
+        why: "An inventory uses a vector; it isn't one. Standard containers aren't built to be bases."
+      - t: "class Potion : public Hero (so Potion can reach Hero's hp)"
+        why: "A Potion isn't a Hero. Pass the Hero to a function instead of inheriting for access."
+    answer: 0
+    hints:
+      - "Read it aloud as \"X is a Y\". Does it sound true?"
+      - Owning something is not the same as being it.
+    short: "Inherit only for is-a. For has-a, use a member."
+    explain: "Inheritance promises that a derived object can stand in anywhere its base is expected. That only makes sense for is-a relationships (Archer is a Hero). A Hero *has* a Sword, an Inventory *uses* a vector, and a Potion *acts on* a Hero: those are members or function parameters, not bases."
+recap:
+  - "class Knight : public Hero: a Knight is a Hero."
+  - Derived classes inherit members and add their own.
+  - "Base built first; destroyed last."
+  - Pass base arguments in the initializer list.
+vault:
+  - id: w11.derive
+    title: Deriving a class
+    code: |-
+      class Hero {
+      public:
+          explicit Hero(int hp) : hp_{hp} {}
+          int hp() const { return hp_; }
+
+      private:
+          int hp_;
+      };
+
+      class Knight : public Hero {   // a Knight is a Hero
+      public:
+          Knight(int hp, int armor) : Hero{hp}, armor_{armor} {}
+          int armor() const { return armor_; }
+
+      private:
+          int armor_;
+      };
+    note: "Base part built first (Hero{hp}), destroyed last. Always write public."
+    defense: false
+reviewTags: [ w10.init-list, w10.private, w10.ctor, w8.constref, w6.params ]

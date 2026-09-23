@@ -1,0 +1,311 @@
+# World 11 · Lesson 3: override (and calling the base version)
+
+id: w11.l3
+title: The override oath
+skill: structure
+shield: false
+concept:
+  short: "Write override on every derived virtual function; the compiler then proves it really replaces a base function."
+  analogy: "`override` is a signed oath, \"I replace Hero's attack\", and the compiler checks the signature before accepting it."
+  body:
+    - "`void attack() const override { ... }` says: this replaces a virtual function of the base. If the base has no virtual function with exactly that signature (same name, same parameter types, same `const`), it's a **compile error**."
+    - "Without `override`, a small slip (`atack`, a missing `const`, `double` instead of `int`) quietly creates a brand-new function. Calls through a base reference keep running the base version, and nothing tells you."
+    - "Reuse the base behavior by naming it: inside Paladin's `title()`, `Hero::title()` runs Hero's version. Then add the extras."
+    - "Write `virtual` only in the base. In derived classes, write `override` alone: it already implies virtual, and it adds the check."
+    - "`final` means \"no further overriding\": `void attack() const final` stops deeper classes from replacing it, and `class Boss final : public Hero` stops anyone deriving from Boss."
+  pitfall: "Common beginner mistake: repeating `virtual` in the derived class instead of writing `override`. It compiles, but gives no check: with a mismatched signature it just starts a new, unrelated virtual function."
+demo:
+  code: |-
+    #include <iostream>
+    #include <string>
+
+    class Hero {
+    public:
+        virtual ~Hero() = default;
+        virtual std::string title() const { return "Hero"; }
+    };
+
+    class Paladin : public Hero {
+    public:
+        std::string title() const override { return "Holy " + Hero::title(); }
+    };
+
+    void announce(const Hero& h) {
+        std::cout << h.title() << '\n';
+    }
+
+    int main() {
+        Paladin p;
+        announce(p);
+        return 0;
+    }
+  steps:
+    - line: 11
+      note: "override: the compiler checks Hero has a matching title()."
+    - line: 19
+      vars:
+        p: "Paladin"
+      note: A Paladin is created.
+    - line: 20
+      push:
+        name: announce
+        vars:
+          h: "→ p (a Paladin)"
+      note: "h is a Hero& naming the Paladin."
+    - line: 15
+      note: "title() is virtual, so Paladin's version runs."
+    - line: 11
+      note: "Hero::title() calls the base version by name."
+    - line: 6
+      note: "The base version returns \"Hero\"."
+    - line: 15
+      out: |
+        Holy Hero
+      note: "Paladin adds \"Holy \" in front."
+    - line: 16
+      pop: true
+      note: announce is done.
+    - line: 21
+      note: One checked override, reusing the base.
+challenges:
+  - id: w11.l3.c1
+    type: mcq
+    tags: [ w11.override ]
+    prompt: "What does writing `override` on a derived function do?"
+    options:
+      - t: Makes the compiler reject it unless it really overrides a base virtual function
+        why: "Correct: it turns silent signature slips into compile errors."
+      - t: Makes the function virtual when the base function isn't
+        why: "override requires the base function to be virtual already. Otherwise: compile error."
+      - t: Calls the base version first, then the derived one
+        why: "Nothing is called automatically. Call Hero::name() yourself if you want the base version."
+      - t: Makes the program faster by skipping dispatch
+        why: "It's a compile-time check only. The generated call is the same."
+    answer: 0
+    hints:
+      - It's a promise the compiler checks.
+      - What happens if the signature doesn't match?
+    short: "override is a compiler-checked promise: \"this replaces a base virtual\"."
+    explain: "`override` changes nothing at run time. It asks the compiler to verify that a base class has a virtual function with the same name, parameters and `const`. If not, it's an error, so a typo can never quietly create a new function."
+  - id: w11.l3.c2
+    type: bug
+    tags: [ w11.override, w11.signature ]
+    unsafe: true
+    prompt: "Through a Hero&, the Rogue still attacks like a Hero. Tap the buggy line, then pick the fix."
+    code: |-
+      #include <iostream>
+
+      class Hero {
+      public:
+          virtual ~Hero() = default;
+          virtual void attack() const { std::cout << "Hero swings\n"; }
+      };
+
+      class Rogue : public Hero {
+      public:
+          void attack() { std::cout << "Rogue stabs\n"; }
+      };
+
+      void act(const Hero& h) {
+          h.attack();
+      }
+
+      int main() {
+          Rogue r;
+          act(r);
+          return 0;
+      }
+    bugLine: 10
+    options:
+      - t: "void attack() const override { std::cout << \"Rogue stabs\\n\"; }"
+        why: "Correct: the signature now matches, and override makes the compiler guarantee it."
+      - t: "virtual void attack() { std::cout << \"Rogue stabs\\n\"; }"
+        why: "Still no const, so it's a new virtual function. Hero& calls still run Hero's."
+      - t: "Remove const from Hero::attack"
+        why: "act holds a const Hero&, so it can no longer call a non-const attack. Compile error."
+      - t: "void attack() override { std::cout << \"Rogue stabs\\n\"; }"
+        why: "Good instinct, but it won't compile: nothing in Hero matches a non-const attack()."
+    answer: 0
+    hints:
+      - Compare the two signatures word by word.
+      - One small keyword is missing after ().
+    short: "Missing const made a new function; `const override` fixes and checks it."
+    explain: "`void attack()` and `void attack() const` are different signatures, so Rogue's function doesn't override: it hides Hero's. Through a `const Hero&`, Hero's version runs. g++ -Wall may warn that Rogue's attack hides the virtual one, but it still compiles. Add `const` to match, and `override` so the compiler proves it."
+    sideBySide:
+      unsafe: |-
+        class Rogue : public Hero {
+        public:
+            void attack() { std::cout << "Rogue stabs\n"; }   // new function!
+        };
+      hardened: |-
+        class Rogue : public Hero {
+        public:
+            void attack() const override { std::cout << "Rogue stabs\n"; }
+        };
+      prelude: "class Hero { public: virtual ~Hero() = default; virtual void attack() const { std::cout << \"Hero swings\\n\"; } };"
+  - id: w11.l3.c3
+    type: fill
+    tags: [ w11.override ]
+    prompt: "Label Ranger's `title` so the compiler checks it replaces Hero's."
+    code: |-
+      class Hero {
+      public:
+          virtual ~Hero() = default;
+          virtual std::string title() const { return "Hero"; }
+      };
+
+      class Ranger : public Hero {
+      public:
+          std::string title() const ___ { return "Ranger"; }
+      };
+    accept:
+      - override
+      - override final
+      - final override
+    placeholder: keyword
+    hints:
+      - It goes after const.
+      - "It says: I replace a base virtual function."
+    short: "`override` goes after the parameter list and const."
+    explain: "`std::string title() const override` promises that Hero has a virtual `title() const`. If someone later renames or changes Hero's version, this line stops compiling instead of silently becoming a separate function."
+  - id: w11.l3.c4
+    type: predict
+    tags: [ w11.base-call, w11.dispatch ]
+    prompt: "The Berserker builds on the base damage. What does this print?"
+    code: |-
+      #include <iostream>
+
+      class Hero {
+      public:
+          virtual ~Hero() = default;
+          virtual int damage() const { return 10; }
+      };
+
+      class Berserker : public Hero {
+      public:
+          int damage() const override { return Hero::damage() * 2 + 1; }
+      };
+
+      int hit(const Hero& h) {
+          return h.damage();
+      }
+
+      int main() {
+          Hero h;
+          Berserker b;
+          std::cout << hit(h) << ' ' << hit(b) << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          10 21
+        why: "Correct: the plain Hero hits for 10; the Berserker doubles Hero's 10 and adds 1."
+      - t: |
+          10 10
+        why: "damage() is virtual, so hit(b) runs Berserker's version."
+      - t: |
+          21 21
+        why: "h really is a plain Hero, so Hero::damage runs for it."
+      - t: |
+          10 22
+        why: "* happens before +: 10 * 2 + 1 = 21."
+    answer: 0
+    hints:
+      - "Hero::damage() always means Hero's version, no dispatch."
+      - "Multiply first, then add."
+    short: "Hero::damage() calls the base version directly: 10 * 2 + 1 = 21."
+    explain: "`hit(h)` calls Hero's damage: 10. `hit(b)` dispatches to Berserker's damage, which calls `Hero::damage()` by name (no dispatch, always Hero's: 10), doubles it and adds 1: 21. Output: \"10 21\" and a newline."
+  - id: w11.l3.c5
+    type: review
+    tags: [ w11.override, w11.signature ]
+    unsafe: true
+    prompt: "Code review! None of Cleric's functions says override. Tap every one that fails to override."
+    code: |-
+      class Hero {
+      public:
+          virtual ~Hero() = default;
+          virtual void heal(int amount) { hp_ += amount; }
+          virtual int armor() const { return 0; }
+          virtual void rest() { hp_ += 1; }
+
+      protected:
+          int hp_{10};
+      };
+
+      class Cleric : public Hero {
+      public:
+          void heal(double amount) { hp_ += static_cast<int>(amount * 2); }
+          int armor() { return 3; }
+          void rest() { hp_ += 5; }
+      };
+    dangerous: [ 13, 14 ]
+    lineNotes:
+      "3": "The base promises heal(int)."
+      "4": "The base promises armor() const."
+      "13": "double instead of int: a new function. hero.heal(5) through a Hero& runs Hero's."
+      "14": "Missing const: a new function. armor() through a Hero& still returns 0."
+      "15": "Matches Hero's rest() exactly, so it really overrides. Still, write override."
+    hints:
+      - Compare each signature with the base, including const.
+      - "Parameter types must match exactly: int is not double."
+    short: "Mismatched signatures silently create new functions; override would catch both."
+    explain: "heal(double) doesn't match heal(int), and armor() without const doesn't match armor() const, so both are new functions that hide the base ones. Calls through a Hero& keep running Hero's heal and armor. Only rest() really overrides. Writing `override` on all three turns the two slips into compile errors you fix immediately."
+    sideBySide:
+      unsafe: |-
+        class Cleric : public Hero {
+        public:
+            void heal(double amount) { hp_ += static_cast<int>(amount * 2); }
+            int armor() { return 3; }
+            void rest() { hp_ += 5; }
+        };
+      hardened: |-
+        class Cleric : public Hero {
+        public:
+            void heal(int amount) override { hp_ += amount * 2; }
+            int armor() const override { return 3; }
+            void rest() override { hp_ += 5; }
+        };
+      prelude: "class Hero { public: virtual ~Hero() = default; virtual void heal(int amount) { hp_ += amount; } virtual int armor() const { return 0; } virtual void rest() { hp_ += 1; } protected: int hp_{10}; };"
+  - id: w11.l3.c6
+    type: order
+    tags: [ w11.override, w11.base-call ]
+    prompt: "Build a Knight whose title adds \"Sir \" to Hero's title. Put the lines in order."
+    prelude: "class Hero { public: virtual ~Hero() = default; virtual std::string title() const { return \"Hero\"; } };"
+    lines:
+      - "class Knight : public Hero {"
+      - "public:"
+      - "    std::string title() const override {"
+      - "        return \"Sir \" + Hero::title();"
+      - "    }"
+      - "};"
+    distractors:
+      - "    virtual std::string title() {"
+    hints:
+      - "Class head, access label, then the function."
+      - "The oath goes after const."
+    short: "Derive publicly, then override title() and reuse Hero::title()."
+    explain: "`class Knight : public Hero {`, then `public:`, then the checked override `std::string title() const override`, whose body calls the base version by name. The distractor lacks `const` and `override`, so it would silently become a new function."
+recap:
+  - Write override on every derived virtual function.
+  - Signature slips become compile errors.
+  - "Base::f() calls the base version."
+  - virtual in the base; override in derived.
+vault:
+  - id: w11.override
+    title: override and base calls
+    code: |-
+      class Hero {
+      public:
+          virtual ~Hero() = default;
+          virtual std::string title() const { return "Hero"; }
+      };
+
+      class Paladin : public Hero {
+      public:
+          std::string title() const override {   // checked by the compiler
+              return "Holy " + Hero::title();      // reuse the base version
+          }
+      };
+    note: "override: compile error unless it truly overrides. final: no further overriding."
+    defense: false
+reviewTags: [ w10.dtor, w6.overload, w11.virtual, w11.dispatch, w11.base-ctor ]

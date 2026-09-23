@@ -1,0 +1,328 @@
+# World 11 · Lesson 4: Abstract classes
+
+id: w11.l4
+title: Blueprints only (abstract classes)
+skill: structure
+shield: false
+concept:
+  short: "A pure virtual function (= 0) has no body. Its class is abstract: only derived classes can be created."
+  analogy: "An abstract class is a job posting: it lists the duties, and only real hires can actually do them."
+  body:
+    - "`virtual int damage() const = 0;` is a **pure virtual** function: the base declares the duty but gives no implementation."
+    - "A class with at least one pure virtual function is **abstract**: `Weapon w;` is a compile error. You can still use `Weapon&`, `Weapon*` and `std::unique_ptr<Weapon>` to refer to real derived objects."
+    - "A derived class must override **every** pure virtual function to become **concrete** (creatable). Miss one and it's abstract too: the compiler names the missing function as soon as you try to create one."
+    - "A class with only pure virtual functions (plus a virtual destructor) is an **interface**: it says *what* every weapon can do, not *how*. Code written against the interface works with every weapon, now and later."
+    - "To own a family of objects, use `std::vector<std::unique_ptr<Weapon>>` and add elements with `std::make_unique<Sword>()`. Each element keeps its real type, and each unique_ptr deletes its object for you (correctly, thanks to the virtual destructor)."
+  pitfall: "Common beginner mistake: `std::vector<Weapon>` for a family of weapons. For an abstract Weapon it doesn't compile; for a concrete base it compiles but slices every element down to a plain base. Store `std::unique_ptr<Weapon>` instead."
+demo:
+  code: |-
+    #include <iostream>
+    #include <memory>
+    #include <vector>
+
+    class Weapon {
+    public:
+        virtual ~Weapon() = default;
+        virtual int damage() const = 0;
+    };
+
+    class Sword : public Weapon {
+    public:
+        int damage() const override { return 7; }
+    };
+
+    class Bow : public Weapon {
+    public:
+        int damage() const override { return 4; }
+    };
+
+    int main() {
+        std::vector<std::unique_ptr<Weapon>> rack;
+        rack.push_back(std::make_unique<Sword>());
+        rack.push_back(std::make_unique<Bow>());
+        int total = 0;
+        for (const auto& w : rack) {
+            total += w->damage();
+        }
+        std::cout << "Total: " << total << '\n';
+        return 0;
+    }
+  steps:
+    - line: 7
+      note: "= 0: every real weapon must provide damage()."
+    - line: 21
+      vars:
+        rack: "{}"
+      note: A rack of owning pointers to any Weapon.
+    - line: 22
+      vars:
+        rack: "{Sword}"
+      mem:
+        cells:
+          - { name: sword, value: "Sword" }
+          - { name: "rack[0]", ptr: sword, group: rack }
+      note: "rack[0] owns a Sword on the heap."
+    - line: 23
+      vars:
+        rack: "{Sword, Bow}"
+      mem:
+        cells:
+          - { name: bow, value: "Bow" }
+          - { name: "rack[1]", ptr: bow, group: rack }
+      note: "rack[1] owns a Bow."
+    - line: 24
+      vars:
+        total: "0"
+    - line: 26
+      vars:
+        total: "7"
+      note: "w points at a Sword: Sword::damage gives 7."
+    - line: 26
+      vars:
+        total: "11"
+      note: "Next, a Bow: Bow::damage adds 4."
+    - line: 28
+      out: |
+        Total: 11
+      note: One loop, every weapon type.
+    - line: 29
+      mem:
+        drop: [ "rack[0]", "rack[1]", sword, bow ]
+      note: The unique_ptrs delete both weapons automatically.
+challenges:
+  - id: w11.l4.c1
+    type: mcq
+    tags: [ w11.abstract, w11.pure-virtual ]
+    prompt: "Weapon is abstract; Sword overrides all of it. Which line does NOT compile?"
+    options:
+      - t: "Weapon w;"
+        why: "Correct: an abstract class can't be created. Which damage() would it run?"
+      - t: "Sword s;"
+        why: "Sword overrides every pure virtual function, so it's concrete."
+      - t: "const Weapon& r = s;"
+        why: "References to an abstract type are fine. r names a real Sword."
+      - t: "std::unique_ptr<Weapon> p = std::make_unique<Sword>();"
+        why: "Pointers to an abstract type are fine. The object is a real Sword."
+    answer: 0
+    hints:
+      - Which line tries to make an object of the abstract type itself?
+      - References and pointers only refer to objects.
+    short: "You can't create an abstract object, only refer to derived ones."
+    explain: "Weapon has a pure virtual `damage()` with no body, so a plain Weapon object would be incomplete: the compiler refuses `Weapon w;`. References, raw pointers and smart pointers to Weapon are fine, as long as the object they refer to is a concrete derived class like Sword."
+  - id: w11.l4.c2
+    type: fill
+    tags: [ w11.pure-virtual ]
+    prompt: "Make `cost` pure virtual: every Spell must define its own."
+    code: |-
+      class Spell {
+      public:
+          virtual ~Spell() = default;
+          virtual int cost() const ___;
+      };
+    accept:
+      - "= 0"
+      - "=0"
+    placeholder: pure specifier
+    hints:
+      - It replaces the function body.
+      - "An equals sign and a number."
+    short: "`= 0` makes a virtual function pure: no body, must override."
+    explain: "`virtual int cost() const = 0;` declares the duty without implementing it. Spell becomes abstract, and every concrete spell must override `cost()`."
+  - id: w11.l4.c3
+    type: bug
+    tags: [ w11.abstract, w11.pure-virtual ]
+    expect: error
+    prompt: "The compiler says: cannot declare 's' to be of abstract type. Tap that line, then pick the fix."
+    code: |-
+      #include <iostream>
+
+      class Weapon {
+      public:
+          virtual ~Weapon() = default;
+          virtual int damage() const = 0;
+          virtual int range() const = 0;
+      };
+
+      class Staff : public Weapon {
+      public:
+          int damage() const override { return 3; }
+      };
+
+      int main() {
+          Staff s;
+          std::cout << s.damage() << '\n';
+          return 0;
+      }
+    bugLine: 15
+    options:
+      - t: "Add int range() const override { return 5; } to Staff"
+        why: "Correct: once every pure virtual is overridden, Staff is concrete and can be created."
+      - t: "Change it to Weapon s;"
+        why: "Weapon is abstract too. Same error, one level up."
+      - t: "Change it to Staff* s;"
+        why: "Compiles, but s is an uninitialized pointer. s->damage() would be UB."
+      - t: "Remove = 0 from range() in Weapon"
+        why: "Then range() is a declared function with no body: a link error, and the duty is gone."
+    answer: 0
+    hints:
+      - Count Weapon's pure virtual functions. How many does Staff override?
+      - A class stays abstract until every duty is done.
+    short: "Staff forgot range(), so it's still abstract. Override every pure virtual."
+    explain: "Weapon has two pure virtual functions, and Staff only overrides `damage()`. A class that leaves any pure virtual function un-overridden is still abstract, so `Staff s;` is rejected (g++ even lists the missing `range`). Add `int range() const override { ... }` to Staff."
+    sideBySide:
+      expect: error
+      unsafe: |-
+        class Staff : public Weapon {
+        public:
+            int damage() const override { return 3; }
+        };   // range() missing: still abstract
+
+        int main() {
+            Staff s;   // error
+            return s.damage();
+        }
+      hardened: |-
+        class Staff : public Weapon {
+        public:
+            int damage() const override { return 3; }
+            int range() const override { return 5; }
+        };
+
+        int main() {
+            Staff s;
+            return s.damage() + s.range() == 8 ? 0 : 1;
+        }
+      prelude: "class Weapon { public: virtual ~Weapon() = default; virtual int damage() const = 0; virtual int range() const = 0; };"
+  - id: w11.l4.c4
+    type: predict
+    tags: [ w11.interface, w11.poly-container, w9.make-unique ]
+    prompt: A spellbook of owned spells. One spell keeps the default rune. What does this print?
+    code: |-
+      #include <iostream>
+      #include <memory>
+      #include <vector>
+
+      class Spell {
+      public:
+          virtual ~Spell() = default;
+          virtual int cost() const = 0;
+          virtual char rune() const { return '*'; }
+      };
+
+      class Fire : public Spell {
+      public:
+          int cost() const override { return 3; }
+          char rune() const override { return 'F'; }
+      };
+
+      class Ice : public Spell {
+      public:
+          int cost() const override { return 2; }
+      };
+
+      int main() {
+          std::vector<std::unique_ptr<Spell>> book;
+          book.push_back(std::make_unique<Ice>());
+          book.push_back(std::make_unique<Fire>());
+          book.push_back(std::make_unique<Ice>());
+          int mana = 10;
+          for (const auto& s : book) {
+              mana -= s->cost();
+              std::cout << s->rune();
+          }
+          std::cout << ' ' << mana << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          *F* 3
+        why: "Correct: Ice keeps Spell's default '*'; Fire overrides it. 10 - 2 - 3 - 2 = 3."
+      - t: |
+          IFI 3
+        why: "Ice never overrides rune(), so it uses Spell's version, '*'."
+      - t: |
+          *F* 5
+        why: "Three spells are cast: Ice 2, Fire 3, Ice 2. That's 7 mana spent."
+      - t: |
+          *** 3
+        why: "rune() is virtual and Fire overrides it, so Fire prints 'F'."
+    answer: 0
+    hints:
+      - A virtual function doesn't have to be pure. Ice inherits rune().
+      - Add up all three costs.
+    short: "Ice inherits the default rune '*'; mana 10 - 7 = 3."
+    explain: "An abstract class can mix pure virtual functions (cost) with normal virtual ones that have a default (rune). Ice doesn't override rune, so it prints '*'; Fire prints 'F'. Mana: 10 - 2 - 3 - 2 = 3. Output: \"*F* 3\" and a newline."
+  - id: w11.l4.c5
+    type: write
+    tags: [ w11.poly-container, w9.make-unique ]
+    prompt: "Write one line that adds a new Bow to `rack` (a std::vector<std::unique_ptr<Weapon>>)."
+    prelude: "class Weapon { public: virtual ~Weapon() = default; virtual int damage() const = 0; }; class Bow : public Weapon { public: int damage() const override { return 4; } }; std::vector<std::unique_ptr<Weapon>> rack;"
+    accept:
+      - rack.push_back(std::make_unique<Bow>());
+      - rack.emplace_back(std::make_unique<Bow>());
+    placeholder: rack.push_back(...);
+    hints:
+      - make_unique creates the Bow and its owner in one step.
+      - "Pattern: rack.push_back(std::make_unique<Type>());"
+    short: "`rack.push_back(std::make_unique<Bow>());` adds an owned Bow."
+    explain: "`std::make_unique<Bow>()` creates a Bow on the heap owned by a `std::unique_ptr<Bow>`, which converts to `std::unique_ptr<Weapon>` as it's pushed. No raw `new`, no manual `delete`, and the Bow keeps its real type."
+  - id: w11.l4.c6
+    type: harden
+    tags: [ w11.poly-container, w11.slicing, w9.make-unique ]
+    bug: object-slicing
+    prompt: "Pick the element type that stores any weapon whole and cleans up automatically."
+    code: |-
+      std::vector<___> rack;
+      rack.push_back(std::make_unique<Sword>());
+      std::cout << rack[0]->damage() << '\n';
+    prelude: "class Weapon { public: virtual ~Weapon() = default; virtual int damage() const = 0; }; class Sword : public Weapon { public: int damage() const override { return 7; } };"
+    options:
+      - t: std::unique_ptr<Weapon>
+        why: "Correct: each element owns a whole object of its real type and deletes it for you."
+      - t: Weapon
+        why: "Abstract, so it can't compile. For a concrete base, every element would be sliced."
+      - t: Weapon*
+        why: "Holds any weapon, but raw owning pointers leak unless you delete each one by hand."
+      - t: Weapon&
+        why: "References can't be stored in a vector: they can't be reseated or default-built."
+    answer: 0
+    hints:
+      - You need a pointer that also owns its object.
+      - "World 9's favorite smart pointer."
+    short: "`std::vector<std::unique_ptr<Weapon>>`: no slicing, no leaks."
+    explain: "A vector of base *values* slices (or, for an abstract base, won't compile). A vector of raw pointers keeps each object whole but makes you delete everything by hand. `std::unique_ptr<Weapon>` gives both: the real object stays whole, and it's deleted automatically, through Weapon's virtual destructor."
+    sideBySide:
+      unsafe: |-
+        std::vector<Weapon*> rack;
+        rack.push_back(new Sword{});   // who deletes it?
+        std::cout << rack[0]->damage() << '\n';
+      hardened: |-
+        std::vector<std::unique_ptr<Weapon>> rack;
+        rack.push_back(std::make_unique<Sword>());
+        std::cout << rack[0]->damage() << '\n';
+      prelude: "class Weapon { public: virtual ~Weapon() = default; virtual int damage() const = 0; }; class Sword : public Weapon { public: int damage() const override { return 7; } };"
+recap:
+  - "= 0 makes a function pure virtual."
+  - Abstract classes can't be created directly.
+  - Override every pure virtual to be concrete.
+  - "Own families with vector<unique_ptr<Base>>."
+vault:
+  - id: w11.abstract
+    title: Abstract base + owned family
+    code: |-
+      class Weapon {                 // abstract: an interface
+      public:
+          virtual ~Weapon() = default;
+          virtual int damage() const = 0;
+      };
+
+      class Sword : public Weapon {
+      public:
+          int damage() const override { return 7; }
+      };
+
+      std::vector<std::unique_ptr<Weapon>> rack;
+      rack.push_back(std::make_unique<Sword>());
+    note: "Can't create a Weapon, only Weapon-shaped references and pointers to real weapons."
+    defense: false
+reviewTags: [ w7.vector, w8.nullptr, w11.virtual, w11.override, w11.base-call ]

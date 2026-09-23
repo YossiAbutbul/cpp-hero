@@ -1,0 +1,287 @@
+# World 11 · Lesson 2: Virtual functions
+
+id: w11.l2
+title: Many voices (virtual)
+skill: structure
+shield: false
+concept:
+  short: "Mark a base function virtual, and calls through a base reference or pointer run the object's real version."
+  analogy: "A virtual function is a job title: shout \"Hero, attack!\" and each hero attacks in their own style."
+  body:
+    - "Through a `Hero&` or `Hero*`, C++ normally calls **Hero's** version of a function. The choice is made at compile time from the reference's type. That's **static binding**."
+    - "Write `virtual` in the base: `virtual void attack() const { ... }`. Now the call is decided at **run time** from the object's real type (**dynamic dispatch**). A Mage behind a `Hero&` attacks like a Mage."
+    - "That's **polymorphism** (\"many forms\"): one interface, many behaviors. A function written once for `const Hero&` works for every hero type, even ones invented next year."
+    - "Dispatch only happens through references and pointers. `mage.attack()` already knows it's a Mage. And a `Hero` *variable* copied from a Mage is just a Hero (that's slicing: see the Shield lesson)."
+    - "Once a function is virtual in the base, the matching derived function is virtual too. Next lesson you'll label it `override` so the compiler checks the match. (You'll also see `virtual ~Hero() = default;` in every base from now on: the Shield lesson explains why it matters.)"
+  pitfall: "Common beginner mistake: forgetting `virtual` in the base. The derived function then only *hides* the base one: calls through a `Hero&` quietly run Hero's version, with no error and no warning."
+demo:
+  code: |-
+    #include <iostream>
+
+    class Hero {
+    public:
+        virtual ~Hero() = default;
+        virtual void attack() const { std::cout << "Hero swings\n"; }
+        void wave() const { std::cout << "Hero waves\n"; }
+    };
+
+    class Mage : public Hero {
+    public:
+        void attack() const { std::cout << "Mage casts\n"; }
+        void wave() const { std::cout << "Mage waves\n"; }
+    };
+
+    void act(const Hero& h) {
+        h.attack();
+        h.wave();
+    }
+
+    int main() {
+        Mage m;
+        act(m);
+        return 0;
+    }
+  steps:
+    - line: 21
+      vars:
+        m: "Mage"
+      note: A Mage object, with a Hero part inside.
+    - line: 22
+      push:
+        name: act
+        vars:
+          h: "→ m (a Mage)"
+      note: "h is a Hero& naming the whole Mage."
+    - line: 16
+      out: |
+        Mage casts
+      note: "attack is virtual: the real type, Mage, decides."
+    - line: 17
+      out: |
+        Hero waves
+      note: "wave isn't virtual: the Hero& type decides."
+    - line: 18
+      pop: true
+      note: Same object, two different answers!
+    - line: 23
+      note: Make functions virtual when derived classes should customize them.
+challenges:
+  - id: w11.l2.c1
+    type: predict
+    tags: [ w11.virtual, w11.static-bind, w8.pointer ]
+    prompt: One function is virtual, one isn't. What does this print?
+    code: |-
+      #include <iostream>
+
+      class Hero {
+      public:
+          virtual ~Hero() = default;
+          virtual int power() const { return 1; }
+          int level() const { return 1; }
+      };
+
+      class Knight : public Hero {
+      public:
+          int power() const { return 5; }
+          int level() const { return 9; }
+      };
+
+      int main() {
+          Knight k;
+          Hero* p = &k;
+          std::cout << p->power() << ' ' << p->level() << ' ' << k.level() << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          5 1 9
+        why: "Correct: virtual power() follows the object; level() follows the pointer type, except when called on k directly."
+      - t: |
+          5 9 9
+        why: "level() isn't virtual, so p->level() uses the pointer's type, Hero."
+      - t: |
+          1 1 9
+        why: "power() is virtual, so the Knight's version runs even through a Hero*."
+      - t: |
+          1 1 1
+        why: "k.level() is called on a Knight directly, so Knight::level runs."
+    answer: 0
+    hints:
+      - Virtual asks the object; non-virtual asks the pointer's type.
+      - "k.level() has no pointer involved at all."
+    short: "Virtual follows the object; non-virtual follows the pointer's type."
+    explain: "`p` is a `Hero*` pointing at a Knight. `p->power()` is virtual, so the Knight's version runs: 5. `p->level()` isn't virtual, so the pointer's type (Hero) decides: 1. `k.level()` is called on the Knight itself: 9. Output: \"5 1 9\" and a newline."
+  - id: w11.l2.c2
+    type: mcq
+    tags: [ w11.virtual, w11.dispatch ]
+    prompt: "Mage overrides Hero's virtual `cast()`. In which call does Mage's version run?"
+    options:
+      - t: "Through a const Hero& that refers to a Mage"
+        why: "Correct: references and pointers to a base dispatch on the real object type."
+      - t: "On a Hero variable initialized from a Mage (Hero h = mage;)"
+        why: "h is a copy of only the Hero part: a real Hero. Hero::cast runs."
+      - t: "Through a Hero* that points at a plain Hero"
+        why: "The object really is a Hero, so Hero's version is the right one."
+      - t: "Never: C++ always picks the version from the declared type"
+        why: "That's true for non-virtual functions only. virtual switches to the run-time type."
+    answer: 0
+    hints:
+      - Dispatch needs a reference or a pointer.
+      - Does the object really contain a Mage?
+    short: "A virtual call through a base reference or pointer uses the real object."
+    explain: "Dynamic dispatch needs two things: a `virtual` function, and a call through a reference or pointer to an object that really is a Mage. A `Hero` variable made from a Mage holds only the Hero part (slicing), so it's a Hero, and Hero's version runs."
+  - id: w11.l2.c3
+    type: fill
+    tags: [ w11.virtual ]
+    prompt: "Make `describe` dispatch on the real object type when called through a Hero&."
+    code: |-
+      #include <iostream>
+
+      class Hero {
+      public:
+          virtual ~Hero() = default;
+          ___ void describe() const { std::cout << "A hero\n"; }
+      };
+    accept:
+      - virtual
+    placeholder: keyword
+    hints:
+      - The destructor above already uses it.
+      - Seven letters, starts with v.
+    short: "`virtual` in the base turns on run-time dispatch."
+    explain: "Writing `virtual` on the base declaration makes every call through a `Hero&` or `Hero*` look up the real object's version at run time. Derived classes then replace it (and label that with `override`, next lesson)."
+  - id: w11.l2.c4
+    type: bug
+    tags: [ w11.virtual, w11.static-bind ]
+    prompt: "This should print \"Arrow volley!\" but prints \"...\". Tap the buggy line, then pick the fix."
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      class Hero {
+      public:
+          virtual ~Hero() = default;
+          std::string battleCry() const { return "..."; }
+      };
+
+      class Archer : public Hero {
+      public:
+          std::string battleCry() const { return "Arrow volley!"; }
+      };
+
+      void shout(const Hero& h) {
+          std::cout << h.battleCry() << '\n';
+      }
+
+      int main() {
+          Archer a;
+          shout(a);
+          return 0;
+      }
+    bugLine: 6
+    options:
+      - t: "virtual std::string battleCry() const { return \"...\"; }"
+        why: "Correct: now calls through a Hero& check the real type, and Archer's version runs."
+      - t: "Make shout take Hero h by value"
+        why: "A copy would be a plain Hero (sliced). Still prints \"...\", and copies too."
+      - t: "Add virtual in Archer instead of Hero"
+        why: "shout only knows Hero. If Hero's version isn't virtual, the Hero& call binds to it."
+      - t: "Remove const from both battleCry functions"
+        why: "shout gets a const Hero&, so a non-const battleCry can't even be called there."
+    answer: 0
+    hints:
+      - "shout only sees a Hero&. Which version can it pick?"
+      - The fix belongs in the base class.
+    short: "Without virtual in the base, a Hero& call runs Hero's version."
+    explain: "Archer's `battleCry` only hides Hero's. Inside `shout`, the call goes through a `const Hero&` and `Hero::battleCry` isn't virtual, so the compiler binds it to Hero's version at compile time. Making the base function `virtual` switches to run-time dispatch. No compiler error or warning points at this bug, which is why the next lesson's `override` matters."
+    sideBySide:
+      unsafe: |-
+        class Hero {
+        public:
+            virtual ~Hero() = default;
+            std::string battleCry() const { return "..."; }   // not virtual
+        };
+      hardened: |-
+        class Hero {
+        public:
+            virtual ~Hero() = default;
+            virtual std::string battleCry() const { return "..."; }
+        };
+  - id: w11.l2.c5
+    type: predict
+    tags: [ w11.dispatch, w7.vector, w7.range-for ]
+    prompt: A party of pointers to different heroes. What does this print?
+    code: |-
+      #include <iostream>
+      #include <vector>
+
+      class Hero {
+      public:
+          virtual ~Hero() = default;
+          virtual char icon() const { return 'H'; }
+      };
+
+      class Knight : public Hero {
+      public:
+          char icon() const { return 'K'; }
+      };
+
+      class Mage : public Hero {
+      public:
+          char icon() const { return 'M'; }
+      };
+
+      int main() {
+          Knight k;
+          Mage m;
+          Hero h;
+          std::vector<const Hero*> party{&k, &h, &m};
+          for (const Hero* p : party) {
+              std::cout << p->icon();
+          }
+          std::cout << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          KHM
+        why: "Correct: each pointer's call runs the version of the object it points at, in vector order."
+      - t: |
+          HHH
+        why: "icon() is virtual, so the Hero* type doesn't decide. Each object does."
+      - t: |
+          KMH
+        why: "The vector order is &k, &h, &m: Knight, Hero, Mage."
+      - t: |
+          HKM
+        why: "The loop follows the vector order, which starts with the Knight."
+    answer: 0
+    hints:
+      - Follow the vector order, not the declaration order.
+      - Each pointer asks its own object.
+    short: "One loop, three real types: K, H, M."
+    explain: "The vector holds three `const Hero*`, pointing at k, h and m (in that order). `icon()` is virtual, so each call runs the pointed-to object's version: 'K', 'H', 'M'. Output: \"KHM\" and a newline. One loop handles every hero type: that's polymorphism."
+recap:
+  - "virtual in the base enables run-time dispatch."
+  - Dispatch needs a reference or a pointer.
+  - "Non-virtual calls use the declared type."
+  - A missing virtual fails silently.
+vault:
+  - id: w11.virtual
+    title: Virtual functions
+    code: |-
+      class Hero {
+      public:
+          virtual ~Hero() = default;
+          virtual void attack() const { std::cout << "Hero swings\n"; }
+      };
+
+      class Mage : public Hero {
+      public:
+          void attack() const override { std::cout << "Mage casts\n"; }
+      };
+
+      void act(const Hero& h) { h.attack(); }   // Mage casts, for a Mage
+    note: "Calls through Hero& / Hero* run the real object's version. Objects by value don't."
+    defense: false
+reviewTags: [ w10.const-method, w8.pointer, w9.make-unique, w11.derived, w11.is-a ]

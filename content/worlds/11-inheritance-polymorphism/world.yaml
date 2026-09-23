@@ -1,0 +1,19 @@
+# World 11: Inheritance & Polymorphism. Lessons are lesson-NN.yaml (played in file order).
+
+id: w11
+num: 11
+title: Inheritance & Polymorphism
+icon: tree
+blurb: "Build families of classes that share a base, let each member answer in its own voice through virtual functions, and keep every object whole: no slicing, no half-destroyed heroes."
+story:
+  intro:
+    - The Golem froze solid, and every class guards its rules. Great work!
+    - "But look: bugs now pose as family members, wearing their parents' names."
+    - "Let's learn inheritance and polymorphism, so every object answers as what it truly is."
+  bossIntro:
+    - "Eek! The Slicing Phantom copies heroes by value and slices their souls off!"
+    - Pass by reference, mark every override, and give bases virtual destructors!
+  victory:
+    - "The Phantom's blade shattered on a const Hero&! Every Mage stays a Mage. {^_^}"
+    - "But the Codebase gates stand open. Anyone can throw anything at us..."
+    - Time to build real walls. The Citadel awaits in World 12!

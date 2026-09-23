@@ -1,0 +1,481 @@
+# World 11 · Lesson 5: Shield: Whole objects only (Shield lesson)
+
+id: w11.l5
+title: "Shield: Whole objects only"
+skill: defense
+shield: true
+concept:
+  short: "Give every polymorphic base a virtual destructor, mark every override, and never copy family members into base values."
+  analogy: "Slicing is photocopying a Mage onto a Hero-shaped form: whatever doesn't fit the form gets cut off."
+  body:
+    - "**Object slicing**: copying a derived object into a base *value* copies only the base part. `Hero h = mage;`, a by-value `Hero` parameter, and `std::vector<Hero>` all slice. The copy really is a plain Hero, so virtual calls run Hero's versions and the Mage's data is gone. No error, no crash: just wrong behavior."
+    - "Fix: pass `const Hero&` (or `Hero&`), and store families as `std::vector<std::unique_ptr<Hero>>`. References and pointers refer to the whole original object. (An abstract base helps too: it can't be copied by value at all.)"
+    - "**Virtual destructors**: deleting a Mage through a `Hero*` (or a `std::unique_ptr<Hero>`) needs `~Hero` to be virtual. If it isn't, that's **undefined behavior**: typically only `~Hero` runs and the Mage part is never cleaned up (leaked strings, unclosed files), but UB guarantees nothing, and it may even seem fine."
+    - "Rule: every base class with virtual functions gets `virtual ~Hero() = default;`. Then deletion runs `~Mage` first, then `~Hero`, every time. g++ `-Wall` warns about a plain `delete` through such a base pointer (`-Wdelete-non-virtual-dtor`), but not every case is caught."
+    - "**override everywhere**: without it, a signature slip (missing `const`, `double` vs `int`, a typo) makes a new function instead of an override, and base-reference calls silently use the base version. With it, the slip is a compile error. `-Wsuggest-override` flags derived functions that forgot it."
+    - "**Tools**: AddressSanitizer (`-fsanitize=address`) reports many bad deletions (as `new-delete-type-mismatch`) and the leaks they cause. Useful, but the habits above come first."
+  pitfall: "Common beginner mistake: \"I only put Mages in it, so it's fine\". The moment it's stored as a `Hero` value, it's a Hero: the Mage is gone, and no warning tells you."
+demo:
+  code: |-
+    #include <iostream>
+    #include <memory>
+
+    class Hero {
+    public:
+        virtual ~Hero() { std::cout << "Hero part cleaned\n"; }
+        virtual void cheer() const { std::cout << "Hero!\n"; }
+    };
+
+    class Mage : public Hero {
+    public:
+        ~Mage() override { std::cout << "Mage part cleaned\n"; }
+        void cheer() const override { std::cout << "Mage!\n"; }
+    };
+
+    void rally(const Hero& h) {
+        h.cheer();
+    }
+
+    int main() {
+        std::unique_ptr<Hero> hero = std::make_unique<Mage>();
+        rally(*hero);
+        hero.reset();
+        std::cout << "Done\n";
+        return 0;
+    }
+  steps:
+    - line: 20
+      mem:
+        cells:
+          - { name: mage, value: "Mage" }
+          - { name: hero, ptr: mage }
+      note: A Hero pointer owns a Mage on the heap.
+    - line: 21
+      push:
+        name: rally
+        vars:
+          h: "→ the whole Mage"
+      note: "By reference: nothing is copied, nothing is sliced."
+    - line: 15
+      crash: "By value (Hero h), only the Hero part would arrive!"
+      note: "What if rally took Hero h? A sliced copy."
+    - line: 15
+      shield: "const Hero&: no slicing!"
+      note: "Ours takes const Hero&, so the whole Mage arrives."
+    - line: 16
+      out: |
+        Mage!
+      note: "Virtual call on the whole object: Mage's cheer."
+    - line: 17
+      pop: true
+      note: The Mage is untouched.
+    - line: 22
+      crash: "Non-virtual ~Hero: the Mage part is never cleaned!"
+      note: "What if ~Hero weren't virtual? UB: a half-destroyed Mage."
+    - line: 5
+      shield: "virtual ~Hero()!"
+      note: "Ours is virtual, so deletion starts at the real type."
+    - line: 11
+      out: |
+        Mage part cleaned
+      note: "Derived part cleaned first..."
+    - line: 5
+      out: |
+        Hero part cleaned
+      mem:
+        cells:
+          - { name: hero, ptr: null }
+        drop: [ mage ]
+      note: "...then the base part. Fully cleaned, pointer reset."
+    - line: 23
+      out: |
+        Done
+      note: No slicing, no half-destroyed heroes.
+challenges:
+  - id: w11.l5.c1
+    type: predict
+    tags: [ w11.slicing, w6.byvalue ]
+    bug: object-slicing
+    unsafe: true
+    prompt: The same Mage is passed by value, then by reference. What does this print?
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      class Hero {
+      public:
+          virtual ~Hero() = default;
+          virtual std::string cry() const { return "Hero"; }
+      };
+
+      class Mage : public Hero {
+      public:
+          std::string cry() const override { return "Mage"; }
+      };
+
+      void byValue(Hero h) {
+          std::cout << h.cry() << ' ';
+      }
+
+      void byRef(const Hero& h) {
+          std::cout << h.cry() << '\n';
+      }
+
+      int main() {
+          Mage m;
+          byValue(m);
+          byRef(m);
+          return 0;
+      }
+    options:
+      - t: |
+          Hero Mage
+        why: "Correct: the by-value copy is a sliced, plain Hero; the reference sees the whole Mage."
+      - t: |
+          Mage Mage
+        why: "byValue's h is a brand-new Hero object. Only the Hero part was copied in."
+      - t: |
+          Hero Hero
+        why: "byRef gets a reference to the real Mage, so the virtual call runs Mage's cry."
+      - t: |
+          Mage Hero
+        why: "Swapped: the copy is the one that lost its Mage part."
+    answer: 0
+    hints:
+      - A by-value Hero parameter is a new Hero object.
+      - Which call sees the original Mage?
+    short: "By value slices to a plain Hero; by reference keeps the Mage."
+    explain: "`byValue(Hero h)` builds a new Hero from the Mage: only the Hero part is copied, and h really is a Hero, so `cry()` returns \"Hero\". `byRef(const Hero& h)` names the original Mage, so the virtual call returns \"Mage\". Output: \"Hero Mage\" and a newline. No warning points at the slicing."
+  - id: w11.l5.c2
+    type: harden
+    tags: [ w11.slicing, w8.constref ]
+    bug: object-slicing
+    prompt: "`inspire` must work for every hero type without slicing. Pick the parameter type."
+    code: |-
+      void inspire(___ h) {
+          std::cout << h.cry() << " is inspired!\n";
+      }
+    prelude: "class Hero { public: virtual ~Hero() = default; virtual std::string cry() const { return \"Hero\"; } };"
+    options:
+      - t: const Hero&
+        why: "Correct: refers to the whole original object, no copy, and virtual calls work."
+      - t: Hero
+        why: "By value: a Mage gets sliced into a plain Hero, and cry() says \"Hero\"."
+      - t: const Hero
+        why: "Still a by-value copy. const doesn't stop slicing."
+      - t: Mage
+        why: "No slicing for Mages, but now Knights and Archers can't be passed at all."
+    answer: 0
+    hints:
+      - Which option makes no copy?
+      - Refer to the object; don't copy it.
+    short: "`const Hero&` refers to the whole object: no copy, no slicing."
+    explain: "Any by-value base parameter (`Hero` or `const Hero`) creates a new Hero from just the base part of the argument. A reference refers to the original object, whatever its real type, so virtual functions dispatch correctly. `const` also promises inspire won't change the hero."
+    sideBySide:
+      unsafe: |-
+        void inspire(Hero h) {   // copies only the Hero part
+            std::cout << h.cry() << " is inspired!\n";
+        }
+      hardened: |-
+        void inspire(const Hero& h) {
+            std::cout << h.cry() << " is inspired!\n";
+        }
+      prelude: "class Hero { public: virtual ~Hero() = default; virtual std::string cry() const { return \"Hero\"; } };"
+  - id: w11.l5.c3
+    type: breakit
+    tags: [ w11.slicing, w7.vector, w2.string ]
+    bug: object-slicing
+    unsafe: true
+    prompt: "UNSAFE code. The player picks a recruit. Which input shows the wrong power?"
+    code: |-
+      #include <iostream>
+      #include <string>
+      #include <vector>
+
+      class Hero {
+      public:
+          virtual ~Hero() = default;
+          virtual int power() const { return 1; }
+      };
+
+      class Mage : public Hero {
+      public:
+          int power() const override { return 9; }
+      };
+
+      int main() {
+          std::string pick;
+          std::cin >> pick;
+          std::vector<Hero> party;
+          if (pick == "mage") {
+              party.push_back(Mage{});
+          } else {
+              party.push_back(Hero{});
+          }
+          std::cout << "Power: " << party[0].power() << '\n';
+          return 0;
+      }
+    options:
+      - t: mage
+        why: "Correct: the Mage is sliced into a Hero inside the vector, so it prints 1, not 9."
+      - t: hero
+        why: "A plain Hero is stored and prints Power: 1. That's the right answer for a Hero."
+      - t: MAGE
+        why: "Doesn't equal \"mage\", so a Hero is made and 1 is correct for it."
+      - t: (no input)
+        why: "Reading fails, pick stays empty, a Hero is made: Power: 1 is right."
+    answer: 0
+    hints:
+      - "What type does std::vector<Hero> actually store?"
+      - Which input should print 9?
+    short: "std::vector<Hero> stores Hero values: the Mage is sliced."
+    explain: "`std::vector<Hero>` stores Hero objects. `push_back(Mage{})` copies only the Hero part of the Mage in, so `party[0].power()` runs Hero's version: \"Power: 1\" for a Mage, silently. Store `std::unique_ptr<Hero>` so each element keeps its real type."
+    sideBySide:
+      unsafe: |-
+        std::vector<Hero> party;
+        party.push_back(Mage{});   // sliced to a Hero
+        std::cout << "Power: " << party[0].power() << '\n';   // 1
+      hardened: |-
+        std::vector<std::unique_ptr<Hero>> party;
+        party.push_back(std::make_unique<Mage>());
+        std::cout << "Power: " << party[0]->power() << '\n';   // 9
+      prelude: "class Hero { public: virtual ~Hero() = default; virtual int power() const { return 1; } }; class Mage : public Hero { public: int power() const override { return 9; } };"
+  - id: w11.l5.c4
+    type: review
+    tags: [ w11.virtual-dtor, w11.slicing, w9.delete ]
+    bug: missing-virtual-dtor
+    unsafe: true
+    prompt: "Code review! Tap every dangerous line, then submit."
+    code: |-
+      #include <iostream>
+      #include <string>
+
+      class Monster {
+      public:
+          ~Monster() { std::cout << "Monster gone\n"; }
+          virtual std::string roar() const { return "..."; }
+      };
+
+      class Dragon : public Monster {
+      public:
+          ~Dragon() { std::cout << "Dragon gone\n"; }
+          std::string roar() const override { return "ROAR"; }
+
+      private:
+          std::string hoard{"a huge pile of gold coins"};
+      };
+
+      void echo(Monster m) {
+          std::cout << m.roar() << '\n';
+      }
+
+      int main() {
+          Monster* boss = new Dragon{};
+          echo(*boss);
+          delete boss;
+          return 0;
+      }
+    dangerous: [ 5, 18, 25 ]
+    lineNotes:
+      "5": "Not virtual! Monster has virtual functions, so its destructor must be virtual too."
+      "11": "Fine, but it only runs if ~Monster is virtual."
+      "15": "The hoard string is what would never be cleaned up."
+      "18": "By value: the Dragon is sliced into a plain Monster. Prints \"...\"."
+      "23": "Raw new works, but std::make_unique would own it for you."
+      "24": "The call is fine once echo takes a const Monster&."
+      "25": "UB: deleting a Dragon through a Monster* with a non-virtual destructor."
+    hints:
+      - Which destructor runs when a Monster* is deleted?
+      - Which function copies its argument?
+    short: "Non-virtual base destructor plus a by-value parameter: UB and slicing."
+    explain: "Line 5: Monster has virtual functions but a non-virtual destructor, so `delete boss;` (line 25) on a Dragon is undefined behavior: typically only ~Monster runs and the Dragon's hoard string leaks, but anything may happen. g++ -Wall warns at line 25. Line 18: `echo(Monster m)` copies only the Monster part, so it prints \"...\" instead of \"ROAR\". Fix: `virtual ~Monster()`, `const Monster&`, and std::make_unique instead of new/delete."
+    sideBySide:
+      unsafe: |-
+        #include <iostream>
+        #include <string>
+
+        class Monster {
+        public:
+            ~Monster() { std::cout << "Monster gone\n"; }   // not virtual
+            virtual std::string roar() const { return "..."; }
+        };
+
+        class Dragon : public Monster {
+        public:
+            ~Dragon() { std::cout << "Dragon gone\n"; }
+            std::string roar() const override { return "ROAR"; }
+        };
+
+        void echo(Monster m) { std::cout << m.roar() << '\n'; }   // slices
+
+        int main() {
+            Monster* boss = new Dragon{};
+            echo(*boss);
+            delete boss;   // UB
+            return 0;
+        }
+      hardened: |-
+        #include <iostream>
+        #include <memory>
+        #include <string>
+
+        class Monster {
+        public:
+            virtual ~Monster() { std::cout << "Monster gone\n"; }
+            virtual std::string roar() const { return "..."; }
+        };
+
+        class Dragon : public Monster {
+        public:
+            ~Dragon() override { std::cout << "Dragon gone\n"; }
+            std::string roar() const override { return "ROAR"; }
+        };
+
+        void echo(const Monster& m) { std::cout << m.roar() << '\n'; }
+
+        int main() {
+            std::unique_ptr<Monster> boss = std::make_unique<Dragon>();
+            echo(*boss);
+            return 0;
+        }
+  - id: w11.l5.c5
+    type: edge
+    tags: [ w11.slicing ]
+    bug: object-slicing
+    prompt: "`mage` is a Mage. Pick ALL the lines that slice it."
+    code: |-
+      class Hero {
+      public:
+          virtual ~Hero() = default;
+          virtual int power() const { return 1; }
+      };
+
+      class Mage : public Hero {
+      public:
+          int power() const override { return 9; }
+      };
+    options:
+      - t: "Hero copy = mage;"
+        why: "Slices: copy is a new Hero built from the Hero part. copy.power() is 1."
+      - t: "const Hero& ref = mage;"
+        why: "Safe: ref names the whole Mage. ref.power() is 9."
+      - t: "std::vector<Hero> team{mage};"
+        why: "Slices: the vector stores Hero values, so the element is a plain Hero."
+      - t: "const Hero* ptr = &mage;"
+        why: "Safe: a pointer to the whole Mage. ptr->power() is 9."
+      - t: "auto twin = mage;"
+        why: "Safe: auto deduces Mage, so twin is a full Mage copy."
+    answers: [ 0, 2 ]
+    hints:
+      - Slicing needs a new object of type Hero.
+      - What type does auto deduce here?
+    short: "Any new Hero value made from a Mage slices it; references and pointers don't."
+    explain: "Slicing happens whenever a new *Hero object* is created from a Mage: a Hero variable, a by-value Hero parameter, or a container of Hero values. References and pointers refer to the original, so nothing is cut. `auto twin = mage;` makes a Mage (auto deduces the real type), so it's a full copy."
+    sideBySide:
+      unsafe: |-
+        Hero copy = mage;                // sliced: copy.power() == 1
+        std::vector<Hero> team{mage};    // sliced element
+      hardened: |-
+        const Hero& ref = mage;          // whole Mage: ref.power() == 9
+        std::vector<const Hero*> team{&mage};
+      prelude: "class Hero { public: virtual ~Hero() = default; virtual int power() const { return 1; } }; class Mage : public Hero { public: int power() const override { return 9; } }; Mage mage;"
+  - id: w11.l5.c6
+    type: safe
+    tags: [ w11.slicing, w11.virtual-dtor, w11.override ]
+    prompt: "Safe or unsafe? The Phantom's minions are slicing in. Go fast!"
+    seconds: 30
+    items:
+      - code: "const Hero& h = mage;"
+        prelude: "class Hero { public: virtual ~Hero() = default; virtual int power() const { return 1; } }; class Mage : public Hero { public: int power() const override { return 9; } }; Mage mage;"
+        safe: true
+        why: A reference names the whole Mage. No slicing.
+      - code: "Hero copy = mage;"
+        prelude: "class Hero { public: virtual ~Hero() = default; virtual int power() const { return 1; } }; class Mage : public Hero { public: int power() const override { return 9; } }; Mage mage;"
+        safe: false
+        why: "Sliced: copy is a plain Hero, and power() returns 1."
+      - code: "std::unique_ptr<Hero> p = std::make_unique<Mage>();"
+        prelude: "class Hero { public: virtual ~Hero() = default; virtual int power() const { return 1; } }; class Mage : public Hero { public: int power() const override { return 9; } };"
+        safe: true
+        why: "~Hero is virtual, so the Mage is fully destroyed later."
+      - code: |-
+          Base* b = new Kid{};   // Base: no virtual dtor
+          delete b;
+        prelude: "struct Base { virtual void act() {} }; struct Kid : Base { std::string loot{\"gold\"}; };"
+        safe: false
+        why: "Deleting a Kid through Base* without a virtual destructor is UB."
+      - code: "std::vector<Hero> party{mage};"
+        prelude: "class Hero { public: virtual ~Hero() = default; virtual int power() const { return 1; } }; class Mage : public Hero { public: int power() const override { return 9; } }; Mage mage;"
+        safe: false
+        why: The vector stores Hero values, so the Mage is sliced.
+      - code: |-
+          struct Pet : Hero {
+              int power() const override { return 3; }
+          };
+        prelude: "class Hero { public: virtual ~Hero() = default; virtual int power() const { return 1; } };"
+        safe: true
+        why: override proves it really replaces Hero's power().
+      - code: |-
+          struct Pet : Hero {
+              int power() { return 3; }
+          };
+        prelude: "class Hero { public: virtual ~Hero() = default; virtual int power() const { return 1; } };"
+        safe: false
+        why: "Missing const: a new function, not an override. Hero& calls still return 1."
+      - code: |-
+          void rally(const Hero& h) {
+              std::cout << h.power() << '\n';
+          }
+        prelude: "class Hero { public: virtual ~Hero() = default; virtual int power() const { return 1; } };"
+        safe: true
+        why: By reference, so every hero type keeps its own power().
+    hints:
+      - Is a new Hero value being made from a derived object?
+      - "Check destructors and const on overrides."
+    short: "References, virtual destructors and override keep every object whole."
+    explain: "Slicing happens when a new base value is made from a derived object (variables, by-value parameters, containers of values). Deleting through a base pointer needs a virtual destructor. And an override that doesn't match exactly (missing const) is silently a new function unless you write override."
+recap:
+  - "Polymorphic base? Give it virtual ~Base() = default."
+  - "Pass families by const Base&, never by value."
+  - "Store families as vector<unique_ptr<Base>>."
+  - Write override so slips become compile errors.
+vault:
+  - id: w11.virtual-dtor
+    title: Virtual destructor rule
+    code: |-
+      class Hero {
+      public:
+          virtual ~Hero() = default;   // ALWAYS, if Hero has virtual functions
+          virtual void cheer() const {}
+      };
+
+      class Mage : public Hero {
+      public:
+          void cheer() const override {}
+      };
+
+      std::unique_ptr<Hero> h = std::make_unique<Mage>();   // deleted fully
+    note: "Deleting a derived object through a base pointer without a virtual destructor is UB."
+    defense: true
+  - id: w11.no-slicing
+    title: No slicing
+    code: |-
+      void show(const Hero& h);                     // refer, don't copy
+      std::vector<std::unique_ptr<Hero>> party;     // owns whole objects
+
+      // Hero copy = mage;           slices!
+      // void show(Hero h);          slices!
+      // std::vector<Hero> party;    slices!
+    prelude: "class Hero { public: virtual ~Hero() = default; };"
+    note: "A base value made from a derived object keeps only the base part. Silently."
+    defense: true
+  - id: w11.override-always
+    title: override on every override
+    code: |-
+      class Rogue : public Hero {
+      public:
+          void attack() const override;   // compile error if it doesn't match
+      };
+    prelude: "class Hero { public: virtual ~Hero() = default; virtual void attack() const {} };"
+    note: "Without override, a missing const or wrong type silently makes a new function."
+    defense: true
+reviewTags: [ w8.constref, w9.make-unique, w11.virtual, w11.override, w11.abstract, w11.poly-container ]
