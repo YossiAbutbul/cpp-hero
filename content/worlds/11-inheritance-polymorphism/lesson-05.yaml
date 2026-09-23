@@ -5,8 +5,8 @@ title: "Shield: Whole objects only"
 skill: defense
 shield: true
 concept:
-  short: "Give every polymorphic base a virtual destructor, mark every override, and never copy family members into base values."
-  analogy: "Slicing is photocopying a Mage onto a Hero-shaped form: whatever doesn't fit the form gets cut off."
+  short: "Virtual base destructor, override everywhere, and never copy a Mage into a Hero value."
+  analogy: "Slicing: photocopy a Mage onto a Hero form; the rest gets cut off."
   body:
     - "**Object slicing**: copying a derived object into a base *value* copies only the base part. `Hero h = mage;`, a by-value `Hero` parameter, and `std::vector<Hero>` all slice. The copy really is a plain Hero, so virtual calls run Hero's versions and the Mage's data is gone. No error, no crash: just wrong behavior."
     - "Fix: pass `const Hero&` (or `Hero&`), and store families as `std::vector<std::unique_ptr<Hero>>`. References and pointers refer to the whole original object. (An abstract base helps too: it can't be copied by value at all.)"
@@ -163,20 +163,19 @@ challenges:
     options:
       - t: |
           Hero Mage
-        why: "Correct: the by-value copy is a sliced, plain Hero; the reference sees the whole Mage."
+        why: "The copy is a plain Hero; the reference sees the Mage."
       - t: |
           Mage Mage
-        why: "byValue's h is a brand-new Hero object. Only the Hero part was copied in."
+        why: "byValue's h is a new Hero: only the Hero part copied."
       - t: |
           Hero Hero
-        why: "byRef gets a reference to the real Mage, so the virtual call runs Mage's cry."
+        why: "byRef names the real Mage, so Mage's cry runs."
       - t: |
           Mage Hero
         why: "Swapped: the copy is the one that lost its Mage part."
     answer: 0
     hints:
       - A by-value Hero parameter is a new Hero object.
-      - Which call sees the original Mage?
     short: "By value slices to a plain Hero; by reference keeps the Mage."
     explain: "`byValue(Hero h)` builds a new Hero from the Mage: only the Hero part is copied, and h really is a Hero, so `cry()` returns \"Hero\". `byRef(const Hero& h)` names the original Mage, so the virtual call returns \"Mage\". Output: \"Hero Mage\" and a newline. No warning points at the slicing."
   - id: w11.l5.c2
@@ -191,17 +190,16 @@ challenges:
     prelude: "class Hero { public: virtual ~Hero() = default; virtual std::string cry() const { return \"Hero\"; } };"
     options:
       - t: const Hero&
-        why: "Correct: refers to the whole original object, no copy, and virtual calls work."
+        why: "No copy: the whole object arrives, and virtual calls work."
       - t: Hero
-        why: "By value: a Mage gets sliced into a plain Hero, and cry() says \"Hero\"."
+        why: "By value: a Mage is sliced into a plain Hero."
       - t: const Hero
         why: "Still a by-value copy. const doesn't stop slicing."
       - t: Mage
-        why: "No slicing for Mages, but now Knights and Archers can't be passed at all."
+        why: "Now Knights and Archers can't be passed at all."
     answer: 0
     hints:
       - Which option makes no copy?
-      - Refer to the object; don't copy it.
     short: "`const Hero&` refers to the whole object: no copy, no slicing."
     explain: "Any by-value base parameter (`Hero` or `const Hero`) creates a new Hero from just the base part of the argument. A reference refers to the original object, whatever its real type, so virtual functions dispatch correctly. `const` also promises inspire won't change the hero."
     sideBySide:
@@ -219,7 +217,7 @@ challenges:
     tags: [ w11.slicing, w7.vector, w2.string ]
     bug: object-slicing
     unsafe: true
-    prompt: "UNSAFE code. The player picks a recruit. Which input shows the wrong power?"
+    prompt: "UNSAFE code. Which input makes it print the wrong power?"
     code: |-
       #include <iostream>
       #include <string>
@@ -250,17 +248,16 @@ challenges:
       }
     options:
       - t: mage
-        why: "Correct: the Mage is sliced into a Hero inside the vector, so it prints 1, not 9."
+        why: "The Mage is sliced in the vector: prints 1, not 9."
       - t: hero
-        why: "A plain Hero is stored and prints Power: 1. That's the right answer for a Hero."
+        why: "A plain Hero prints 1. That's right for a Hero."
       - t: MAGE
-        why: "Doesn't equal \"mage\", so a Hero is made and 1 is correct for it."
+        why: "Not \"mage\", so a Hero is made; 1 is right."
       - t: (no input)
-        why: "Reading fails, pick stays empty, a Hero is made: Power: 1 is right."
+        why: "pick stays empty, a Hero is made; 1 is right."
     answer: 0
     hints:
-      - "What type does std::vector<Hero> actually store?"
-      - Which input should print 9?
+      - "Which input should print 9? What does std::vector<Hero> store?"
     short: "std::vector<Hero> stores Hero values: the Mage is sliced."
     explain: "`std::vector<Hero>` stores Hero objects. `push_back(Mage{})` copies only the Hero part of the Mage in, so `party[0].power()` runs Hero's version: \"Power: 1\" for a Mage, silently. Store `std::unique_ptr<Hero>` so each element keeps its real type."
     sideBySide:
@@ -310,17 +307,16 @@ challenges:
       }
     dangerous: [ 5, 18, 25 ]
     lineNotes:
-      "5": "Not virtual! Monster has virtual functions, so its destructor must be virtual too."
-      "11": "Fine, but it only runs if ~Monster is virtual."
-      "15": "The hoard string is what would never be cleaned up."
-      "18": "By value: the Dragon is sliced into a plain Monster. Prints \"...\"."
-      "23": "Raw new works, but std::make_unique would own it for you."
-      "24": "The call is fine once echo takes a const Monster&."
-      "25": "UB: deleting a Dragon through a Monster* with a non-virtual destructor."
+      "5": "Not virtual, but Monster has virtual functions!"
+      "11": "Only runs if ~Monster is virtual."
+      "15": "This string would never be cleaned up."
+      "18": "By value: the Dragon is sliced. Prints \"...\"."
+      "23": "Works, but std::make_unique would own it for you."
+      "24": "Fine once echo takes a const Monster&."
+      "25": "UB: deleting a Dragon via Monster* without a virtual destructor."
     hints:
-      - Which destructor runs when a Monster* is deleted?
-      - Which function copies its argument?
-    short: "Non-virtual base destructor plus a by-value parameter: UB and slicing."
+      - Which destructor runs on delete? Which function copies its argument?
+    short: "Non-virtual base destructor and a by-value parameter: UB and slicing."
     explain: "Line 5: Monster has virtual functions but a non-virtual destructor, so `delete boss;` (line 25) on a Dragon is undefined behavior: typically only ~Monster runs and the Dragon's hoard string leaks, but anything may happen. g++ -Wall warns at line 25. Line 18: `echo(Monster m)` copies only the Monster part, so it prints \"...\" instead of \"ROAR\". Fix: `virtual ~Monster()`, `const Monster&`, and std::make_unique instead of new/delete."
     sideBySide:
       unsafe: |-
@@ -389,20 +385,19 @@ challenges:
       };
     options:
       - t: "Hero copy = mage;"
-        why: "Slices: copy is a new Hero built from the Hero part. copy.power() is 1."
+        why: "Slices: copy is a new Hero. copy.power() is 1."
       - t: "const Hero& ref = mage;"
-        why: "Safe: ref names the whole Mage. ref.power() is 9."
+        why: "Safe: ref names the whole Mage."
       - t: "std::vector<Hero> team{mage};"
-        why: "Slices: the vector stores Hero values, so the element is a plain Hero."
+        why: "Slices: the vector stores plain Hero values."
       - t: "const Hero* ptr = &mage;"
-        why: "Safe: a pointer to the whole Mage. ptr->power() is 9."
+        why: "Safe: a pointer to the whole Mage."
       - t: "auto twin = mage;"
-        why: "Safe: auto deduces Mage, so twin is a full Mage copy."
+        why: "Safe: auto deduces Mage, so twin is a full Mage."
     answers: [ 0, 2 ]
     hints:
       - Slicing needs a new object of type Hero.
-      - What type does auto deduce here?
-    short: "Any new Hero value made from a Mage slices it; references and pointers don't."
+    short: "A new Hero value made from a Mage slices; references don't."
     explain: "Slicing happens whenever a new *Hero object* is created from a Mage: a Hero variable, a by-value Hero parameter, or a container of Hero values. References and pointers refer to the original, so nothing is cut. `auto twin = mage;` makes a Mage (auto deduces the real type), so it's a full copy."
     sideBySide:
       unsafe: |-
@@ -415,7 +410,7 @@ challenges:
   - id: w11.l5.c6
     type: safe
     tags: [ w11.slicing, w11.virtual-dtor, w11.override ]
-    prompt: "Safe or unsafe? The Phantom's minions are slicing in. Go fast!"
+    prompt: "Safe or unsafe? Mark each snippet. Go fast!"
     seconds: 30
     items:
       - code: "const Hero& h = mage;"
@@ -453,7 +448,7 @@ challenges:
           };
         prelude: "class Hero { public: virtual ~Hero() = default; virtual int power() const { return 1; } };"
         safe: false
-        why: "Missing const: a new function, not an override. Hero& calls still return 1."
+        why: "Missing const: a new function. Hero& calls still return 1."
       - code: |-
           void rally(const Hero& h) {
               std::cout << h.power() << '\n';
@@ -462,8 +457,7 @@ challenges:
         safe: true
         why: By reference, so every hero type keeps its own power().
     hints:
-      - Is a new Hero value being made from a derived object?
-      - "Check destructors and const on overrides."
+      - "Look for Hero copies, non-virtual destructors, missing const."
     short: "References, virtual destructors and override keep every object whole."
     explain: "Slicing happens when a new base value is made from a derived object (variables, by-value parameters, containers of values). Deleting through a base pointer needs a virtual destructor. And an override that doesn't match exactly (missing const) is silently a new function unless you write override."
 recap:

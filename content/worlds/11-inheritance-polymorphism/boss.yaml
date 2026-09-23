@@ -41,20 +41,19 @@ rounds:
     options:
       - t: |
           NsNS
-        why: "Correct: virtual move() follows the Ninja; stance() follows the declared type."
+        why: "move() follows the Ninja; stance() follows the declared type."
       - t: |
           NSNS
-        why: "stance() isn't virtual, so r.stance() uses Hero's version: 's'."
+        why: "stance() isn't virtual, so r.stance() gives Hero's 's'."
       - t: |
           hshS
-        why: "move() is virtual, so both r and p reach Ninja's version: 'N'."
+        why: "move() is virtual, so r and p reach Ninja's 'N'."
       - t: |
           NsNs
-        why: "n.stance() is called on the Ninja itself, so Ninja's 'S' runs."
+        why: "n.stance() is called on the Ninja itself: 'S'."
     answer: 0
     hints:
       - "Virtual: ask the object. Non-virtual: ask the declared type."
-      - What is the declared type of n itself?
     short: "Virtual follows the object; non-virtual follows the declared type."
     explain: "r and p are a Hero reference and pointer to a Ninja. `move()` is virtual: 'N' both times. `r.stance()` is non-virtual, and r's type is Hero: 's'. `n.stance()` is called on a Ninja: 'S'. Output: \"NsNS\" and a newline."
   - id: w11.boss.r2
@@ -63,16 +62,15 @@ rounds:
     prompt: The Phantom offers four "facts". Which one is TRUE?
     options:
       - t: "override turns a signature mismatch into a compile error."
-        why: "Correct: that's its whole job, and why every override should carry it."
+        why: "That's its whole job."
       - t: "A const Hero& parameter slices a Mage."
-        why: "References never slice: they refer to the whole original object."
+        why: "References never slice: they name the whole object."
       - t: "Deleting a Mage through Hero* is fine without a virtual destructor."
-        why: "It's undefined behavior. Typically the Mage part is never cleaned up."
+        why: "It's UB. Typically the Mage part is never cleaned up."
       - t: "An abstract class can be created if all its functions are virtual."
-        why: "Any pure virtual (= 0) function makes it abstract, virtual or not elsewhere."
+        why: "Any pure virtual (= 0) makes it abstract: never creatable."
     answer: 0
     hints:
-      - Three of these are the Phantom's favorite lies.
       - Which one is a compile-time check?
     short: "override makes the compiler verify the override."
     explain: "References and pointers don't slice; only new base *values* do. Deleting through a base pointer requires a virtual destructor, or it's UB. An abstract class (any `= 0`) can never be created directly. And `override` is a compile-time check that the function really overrides a base virtual."
@@ -106,10 +104,10 @@ rounds:
     options:
       - t: |
           HMmh
-        why: "Correct: base built first; the virtual destructor starts at Mage, then Hero."
+        why: "Base built first; the virtual destructor starts at Mage."
       - t: |
           HMh
-        why: "That's what a non-virtual ~Hero would typically do (UB). Here it's virtual."
+        why: "That's a non-virtual ~Hero (UB). Here it's virtual."
       - t: |
           HMhm
         why: "Destruction runs in reverse: the Mage part first."
@@ -118,14 +116,13 @@ rounds:
         why: "The Hero part is constructed before the Mage part."
     answer: 0
     hints:
-      - Is ~Hero virtual here?
-      - Destruction mirrors construction.
+      - Is ~Hero virtual here? Destruction mirrors construction.
     short: "Virtual ~Hero: full cleanup in reverse order, HMmh."
     explain: "make_unique<Mage>() builds the Hero part (H), then the Mage part (M). At the closing brace, the unique_ptr deletes through a Hero*. Because ~Hero is virtual, deletion starts at the real type: ~Mage (m), then ~Hero (h). Output: \"HMmh\" and a newline."
   - id: w11.boss.r4
     type: fill
     tags: [ w11.base-call, w11.override ]
-    prompt: "The Knight's title adds \"Sir \" to Hero's title. Fill in the call to the base version."
+    prompt: "Knight's title adds \"Sir \" to Hero's title. Fill in the call to Hero's version."
     code: |-
       class Hero {
       public:
@@ -141,14 +138,13 @@ rounds:
       - "Hero::title()"
     placeholder: base call
     hints:
-      - "Plain title() would call Knight's own version forever."
       - "Qualify it with the base class name and ::."
-    short: "`Hero::title()` calls the base version directly, no dispatch."
+    short: "`Hero::title()` calls the base version directly."
     explain: "`Hero::title()` names Hero's version explicitly, so it returns \"Hero\" without dispatch. A plain `title()` inside Knight's title would dispatch back to Knight's own version: infinite recursion."
   - id: w11.boss.r5
     type: speed
     tags: [ w11.virtual, w11.abstract, w11.slicing, w11.override ]
-    prompt: "Speed round! The Phantom swings fast. Answer before it lands."
+    prompt: "Speed round! Answer each question before time runs out."
     seconds: 45
     items:
       - q: "Which keyword turns on run-time dispatch?"
@@ -170,7 +166,6 @@ rounds:
         options: [ "std::vector<Hero>", "std::vector<std::unique_ptr<Hero>>", "std::vector<Hero&>", "std::array<Hero, 5>" ]
         answer: 1
     hints:
-      - Trust your Shield lesson.
       - References and pointers never slice.
     short: "virtual, = 0, by value slices, abstract, derived first, unique_ptr."
     explain: "`virtual` enables dispatch; `= 0` makes a function pure; a by-value `Hero` parameter slices; any pure virtual makes a class abstract; destruction runs derived-then-base; and `std::vector<std::unique_ptr<Hero>>` stores whole objects of any hero type."
@@ -207,17 +202,16 @@ rounds:
     bugLine: 13
     options:
       - t: "void duel(const Hero& a, const Hero& b) {"
-        why: "Correct: references keep the Titan whole, so might() dispatches to 50."
+        why: "References keep the Titan whole: might() gives 50."
       - t: "void duel(Titan a, Titan b) {"
-        why: "Now a plain Hero can't be passed at all. duel(t, h) stops compiling."
+        why: "Then duel(t, h) won't compile: h is a plain Hero."
       - t: "void duel(const Hero a, const Hero b) {"
         why: "Still by-value copies. const doesn't prevent slicing."
       - t: "Add virtual in front of might() in Titan"
-        why: "might() already dispatches. The copies are plain Heroes, so dispatch finds Hero's version."
+        why: "It already dispatches. The copies are just plain Heroes."
     answer: 0
     hints:
       - "What is a, really: a Titan or a Hero?"
-      - Refer to the fighters; don't copy them.
     short: "By-value Hero parameters slice the Titan; take const Hero&."
     explain: "`duel(Hero a, Hero b)` creates two new Hero objects from the arguments, copying only the Hero part of the Titan. They really are Heroes, so `might()` returns 1 for both. With `const Hero&`, a refers to the actual Titan and prints \"50 vs 1\"."
     sideBySide:
@@ -233,7 +227,7 @@ rounds:
   - id: w11.boss.r7
     type: predict
     tags: [ w11.ctor-order, w11.virtual ]
-    prompt: "The Phantom's trick: a virtual call inside a constructor. What does this print?"
+    prompt: "Each constructor calls the virtual kind(). What does this print?"
     code: |-
       #include <iostream>
 
@@ -258,20 +252,19 @@ rounds:
     options:
       - t: |
           HM
-        why: "Correct: while Hero's constructor runs, the object is still only a Hero."
+        why: "While Hero() runs, the object is still only a Hero."
       - t: |
           MM
-        why: "During Hero's constructor, the Mage part doesn't exist yet, so Mage's kind can't run."
+        why: "During Hero(), the Mage part doesn't exist yet."
       - t: |
           M
         why: "Both constructors run, and each prints a letter."
       - t: |
           HH
-        why: "Once Mage's constructor body runs, the object is a Mage, so kind() gives 'M'."
+        why: "In Mage's constructor body, the object is a Mage: 'M'."
     answer: 0
     hints:
       - Which parts of the object exist while Hero() runs?
-      - Construction goes base first.
     short: "Virtual calls in a base constructor use the base version: HM."
     explain: "While Hero's constructor runs, the Mage part hasn't been built yet, so the object behaves as a plain Hero and `kind()` gives 'H'. By the time Mage's constructor body runs, the object is a Mage: 'M'. Output: \"HM\" and a newline. Lesson: don't rely on virtual calls in constructors (or destructors)."
   - id: w11.boss.r8
@@ -287,17 +280,16 @@ rounds:
       };
     options:
       - t: "virtual ~Monster() = default;"
-        why: "Correct: deleting any monster through a Monster pointer now runs the real destructor first."
+        why: "Deleting via Monster* now runs the real destructor first."
       - t: "~Monster() = default;"
         why: "Not virtual: deleting a Dragon through Monster* is UB."
       - t: "~Monster() override = default;"
         why: "Doesn't compile: Monster has no base destructor to override."
       - t: "explicit ~Monster() = default;"
-        why: "Doesn't compile: explicit is for constructors and conversions, not destructors."
+        why: "Doesn't compile: explicit isn't for destructors."
     answer: 0
     hints:
       - Deletion happens through the base type.
-      - "The Shield lesson's first rule."
     short: "Polymorphic base: `virtual ~Monster() = default;`."
     explain: "A std::unique_ptr<Monster> deletes through a Monster*. Only a virtual destructor makes that deletion start at the real type (Dragon), then run ~Monster. Without it, it's undefined behavior, typically leaving the Dragon part uncleaned."
     sideBySide:
@@ -329,17 +321,16 @@ defense:
       prelude: "class Hero { public: virtual ~Hero() = default; virtual int power() const { return 1; } }; class Mage : public Hero { public: int power() const override { return 9; } };"
       options:
         - t: std::unique_ptr<Hero>
-          why: "Correct: each element owns a whole object; power() dispatches to 9."
+          why: "Each element owns a whole object; power() gives 9."
         - t: Hero
           why: "Hero values: every Mage is sliced, and power() returns 1."
         - t: Hero*
-          why: "Keeps the Mage whole, but raw owning pointers leak without manual delete."
+          why: "Whole, but raw owning pointers leak without manual delete."
         - t: std::unique_ptr<Mage>
-          why: "Whole, but now Knights and Archers can't join the party."
+          why: "Whole, but now Knights and Archers can't join."
       answer: 0
       hints:
-        - Store owners of whole objects, not base values.
-        - It must also accept every hero type.
+        - Store owners of whole objects, for every hero type.
       short: "`std::vector<std::unique_ptr<Hero>>`: whole, owned, any hero."
       explain: "A container of Hero values slices every derived element. `std::unique_ptr<Hero>` keeps each object whole, dispatches correctly, accepts every hero type, and deletes each one through the virtual destructor."
       sideBySide:
@@ -360,7 +351,7 @@ defense:
       tags: [ w11.virtual-dtor, w9.delete ]
       bug: missing-virtual-dtor
       unsafe: true
-      prompt: "The Dragon's hoard never gets cleaned up. Tap the buggy line, then pick the fix."
+      prompt: "The Dragon's hoard is never cleaned up. Tap the buggy line, then pick the fix."
       code: |-
         #include <memory>
         #include <string>
@@ -385,18 +376,17 @@ defense:
       bugLine: 5
       options:
         - t: "Add virtual ~Monster() = default; above threat()"
-          why: "Correct: deletion through Monster* now runs ~Dragon, which frees the hoard string."
+          why: "Now deletion runs ~Dragon, which frees the hoard."
         - t: "Use Monster* boss = new Dragon{}; and delete boss;"
-          why: "Same deletion through Monster*, by hand. Still UB, now with leak risk too."
+          why: "Same deletion through Monster*, by hand. Still UB."
         - t: Make threat() non-virtual
-          why: "Then Dragon's threat can't override it, and the destructor is still not virtual."
+          why: "Breaks the override; the destructor still isn't virtual."
         - t: "Add ~Dragon() override = default; to Dragon"
-          why: "Won't compile: Monster's implicit destructor isn't virtual, so there's nothing to override."
+          why: "Won't compile: no virtual base destructor to override."
       answer: 0
       hints:
         - Monster has virtual functions. What's missing?
-        - The implicit destructor is never virtual.
-      short: "Monster has virtual functions but no virtual destructor. Add one."
+      short: "Monster needs a virtual destructor. Add one."
       explain: "Monster's implicit destructor is public and non-virtual. When the unique_ptr deletes the Dragon through a Monster*, that's undefined behavior: typically ~Dragon never runs and hoard_ leaks. Declare `virtual ~Monster() = default;` in every polymorphic base."
       sideBySide:
         unsafe: |-
@@ -416,7 +406,7 @@ defense:
       id: w11.boss.d3
       type: harden
       tags: [ w11.override, w11.signature ]
-      prompt: "The Phantom forged Mage's power(). Pick the declaration that truly overrides, and proves it."
+      prompt: "Pick the declaration that truly overrides Hero's power(), and proves it."
       code: |-
         class Hero {
         public:
@@ -430,17 +420,16 @@ defense:
         };
       options:
         - t: int power() const override
-          why: "Correct: exact signature, and override makes the compiler prove it."
+          why: "Exact signature, and override makes the compiler prove it."
         - t: int power()
-          why: "Missing const: a new function that hides Hero's. Hero& calls still return 1."
+          why: "Missing const: a new function. Hero& calls return 1."
         - t: virtual int power()
-          why: "Still missing const: a brand-new virtual function, not an override."
+          why: "Still missing const: a new virtual function."
         - t: int power() override
-          why: "override catches the slip: this is a compile error until you add const."
+          why: "Missing const, so override makes this a compile error."
       answer: 0
       hints:
-        - Copy the base signature exactly.
-        - Then add the compiler-checked oath.
+        - Copy the base signature exactly, then add the oath.
       short: "`int power() const override`: exact match, compiler-checked."
       explain: "An override must match the base signature exactly, including `const`. Without `override`, a mismatch silently creates a new function. With it, the compiler rejects the mismatch, which is precisely the protection you want."
       sideBySide:
@@ -473,17 +462,16 @@ defense:
       prelude: "class Hero { public: virtual ~Hero() = default; virtual int power() const { return 1; } }; Hero knight; std::string name{\"Ghost\"}; auto findHero = [&knight](const std::string& n) -> const Hero* { return n == \"Knight\" ? &knight : nullptr; };"
       options:
         - t: found == nullptr
-          why: "Correct: stops before -> follows a null pointer."
+          why: "Stops before -> follows a null pointer."
         - t: found->power() == 0
-          why: "Follows found to check it: with nullptr, the check itself is UB."
+          why: "The check itself follows nullptr: UB."
         - t: name.empty()
-          why: "\"Ghost\" isn't empty. The search result is the danger, not the name."
+          why: "\"Ghost\" isn't empty. The search result is the danger."
         - t: found != nullptr
           why: "Inverted: rejects real heroes and follows the null one."
       answer: 0
       hints:
-        - A virtual call through nullptr is still a null dereference.
-        - Test the pointer itself.
+        - Test the pointer itself before calling through it.
       short: "Check found == nullptr before calling through it."
       explain: "A virtual call needs a real object to look up the right version. Calling `found->power()` on nullptr is undefined behavior, usually a crash. Check the pointer first."
       sideBySide:
