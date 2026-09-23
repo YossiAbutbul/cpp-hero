@@ -1,0 +1,488 @@
+# World 10 boss: The Invariant Golem
+
+id: w10.boss
+name: The Invariant Golem
+art: golem
+hp: 7
+intro: CLANK. I AM THE INVARIANT GOLEM. PUBLIC DATA IS MY FAVORITE SNACK.
+taunt:
+  - HP = -50? SOUNDS PERFECTLY VALID TO ME.
+  - YOUR CONSTRUCTOR CHECKS NOTHING. I CAN FEEL IT.
+  - A GETTER WITHOUT const? I WILL CHANGE YOUR OBJECT.
+  - ONE ARGUMENT, NO explicit. I CONVERT ANYTHING INTO ANYTHING.
+rounds:
+  - id: w10.boss.r1
+    type: predict
+    tags: [ w10.ctor, w10.dtor ]
+    prompt: The Golem stacks stone blocks. What does this print?
+    code: |-
+      #include <iostream>
+
+      struct Block {
+          char id;
+          Block(char c) : id{c} { std::cout << id; }
+          ~Block() { std::cout << id; }
+      };
+
+      int main() {
+          Block a{'A'};
+          {
+              Block b{'B'};
+              Block c{'C'};
+          }
+          std::cout << '-';
+          return 0;
+      }
+    options:
+      - t: ABCCB-A
+        why: "Correct: A, B, C built; the inner scope ends (C, then B die); '-'; then A dies."
+      - t: ABCBC-A
+        why: Objects die in reverse order, so C goes before B.
+      - t: ABC-CBA
+        why: b and c die when the inner braces close, before the '-'.
+      - t: ABC-
+        why: Destructors run automatically, including a's at the end of main.
+    answer: 0
+    hints:
+      - The inner { } ends before the '-' prints.
+      - Last built, first destroyed.
+    short: "Inner scope dies first, in reverse: C, B. Then '-', then A."
+    explain: "Constructors print A, B, C. The inner block closes: c then b are destroyed (C, B). Then '-' prints. main ends: a is destroyed (A). Output: ABCCB-A with no newline."
+  - id: w10.boss.r2
+    type: mcq
+    tags: [ w10.access, w10.class-vs-struct ]
+    prompt: "Is hp public or private here?"
+    code: |-
+      class Golem {
+          int hp{100};
+      public:
+          int power{5};
+      };
+    options:
+      - t: Private
+        why: "Correct: a class starts private, and hp comes before the public: label."
+      - t: Public
+        why: "That's the struct default. In a class, members are private until public:."
+      - t: Neither; it's a compile error
+        why: Members before any label are allowed. They get the default access.
+      - t: Public, because power is public
+        why: Labels only affect members AFTER them. hp comes first.
+    answer: 0
+    hints:
+      - What's the default access in a class?
+      - A label only affects what comes after it.
+    short: "In a class, members before any label are private."
+    explain: "`class` starts private, so hp (before `public:`) is private and power (after it) is public. In a `struct`, hp would have been public."
+  - id: w10.boss.r3
+    type: predict
+    tags: [ w10.copy, w6.byvalue, w8.byref ]
+    prompt: "The Golem copies your hero. What does this print?"
+    code: |-
+      #include <iostream>
+
+      struct Hero {
+          int hp{10};
+      };
+
+      void smash(Hero h) {
+          h.hp -= 7;
+      }
+
+      void punch(Hero& h) {
+          h.hp -= 2;
+      }
+
+      int main() {
+          Hero me{};
+          smash(me);
+          punch(me);
+          std::cout << me.hp << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          8
+        why: "Correct: smash hits a copy; only punch (by reference) touches me."
+      - t: |
+          1
+        why: smash takes Hero by value, so its -7 lands on a copy.
+      - t: |
+          3
+        why: punch takes a reference, so its -2 really happens.
+      - t: |
+          10
+        why: punch's parameter is Hero&, the real object.
+    answer: 0
+    hints:
+      - By value means a copy.
+      - Which function has a & in its parameter?
+    short: "smash hits a copy; punch's reference hits me: 10 - 2 = 8."
+    explain: "Structs are values. smash(Hero h) gets a copy, so its -7 disappears with the copy. punch(Hero& h) gets the real object: 10 - 2 = 8. Output: \"8\" and a newline."
+  - id: w10.boss.r4
+    type: bug
+    tags: [ w10.invariant, w10.method ]
+    bug: broken-invariant
+    unsafe: true
+    prompt: "The rule: stones_ is never negative. Tap the buggy line, then pick the fix."
+    code: |-
+      class Quarry {
+      public:
+          bool take(int n) {
+              stones_ -= n;
+              return true;
+          }
+          int stones() const { return stones_; }
+
+      private:
+          int stones_{20};
+      };
+    bugLine: 3
+    options:
+      - t: "if (n <= 0 || n > stones_) { return false; } stones_ -= n;"
+        why: "Correct: rejects silly amounts and overdrafts, then subtracts safely."
+      - t: "stones_ -= std::abs(n);"
+        why: take(50) still drives stones_ to -30.
+      - t: "if (stones_ < 0) { stones_ = 0; } stones_ -= n;"
+        why: Checks the old value, not the new one. take(50) still gives -30.
+      - t: "stones_ = stones_ - n;"
+        why: The same subtraction, written longer. No check at all.
+    answer: 0
+    hints:
+      - The data is private, but the method checks nothing.
+      - Check n against what's there before subtracting.
+    short: "Check before changing: reject n <= 0 or n > stones_."
+    explain: "Private data only protects the invariant if every public function checks. take(50) on 20 stones gives -30, and take(-5) creates stones from nothing. Validate first, return false on failure, then subtract."
+    sideBySide:
+      unsafe: |-
+        bool take(int n) {
+            stones_ -= n;   // no check
+            return true;
+        }
+      hardened: |-
+        class Quarry {
+        public:
+            bool take(int n) {
+                if (n <= 0 || n > stones_) {
+                    return false;
+                }
+                stones_ -= n;
+                return true;
+            }
+            int stones() const { return stones_; }
+
+        private:
+            int stones_{20};
+        };
+      prelude: "int stones_{20};"
+  - id: w10.boss.r5
+    type: speed
+    tags: [ w10.struct, w10.ctor, w10.dtor, w10.access, w10.const-method ]
+    prompt: The Golem is winding up a punch. Answer fast!
+    seconds: 45
+    items:
+      - q: What ends a struct definition?
+        options: [ "}", "};", ");" ]
+        answer: 1
+      - q: What is the destructor of class Torch called?
+        options: [ "Torch()", "~Torch()", "delete Torch()" ]
+        answer: 1
+      - q: Default access in a class?
+        options: [ "public", "private" ]
+        answer: 1
+      - q: "Which getter works on a const Hero&?"
+        options: [ "int hp() const", "const int hp()", "int hp()" ]
+        answer: 0
+      - q: In what order are members initialized?
+        options: [ "Initializer-list order", "Declaration order", "Alphabetical" ]
+        answer: 1
+      - q: "What does Torch t(); declare?"
+        options: [ "A Torch object", "A function" ]
+        answer: 1
+    hints:
+      - Trust what you practiced.
+      - Declaration order wins; class defaults to private.
+    short: "Structs end with };, classes start private, getters are const."
+    explain: "Structs end with `};`. Destructors are `~Name()`. Classes default to private. Only `int hp() const` works through a const reference. Members initialize in declaration order. `Torch t();` declares a function (most vexing parse)."
+  - id: w10.boss.r6
+    type: fill
+    tags: [ w10.explicit ]
+    prompt: "Stop the Golem from turning plain ints into Coins. Fill in the keyword."
+    code: |-
+      class Coins {
+      public:
+          ___ Coins(int n) : n_{n} {}
+          int count() const { return n_; }
+
+      private:
+          int n_;
+      };
+    accept:
+      - explicit
+    placeholder: keyword
+    hints:
+      - One-argument constructors convert silently without it.
+      - It starts with ex...
+    short: "explicit Coins(int n): no more silent int-to-Coins conversions."
+    explain: "With `explicit`, `Coins c = 5;` and passing a bare 5 where Coins is expected no longer compile. Callers must write `Coins{5}`, on purpose."
+  - id: w10.boss.r7
+    type: review
+    tags: [ w10.invariant, w10.access, w10.validate-ctor ]
+    bug: broken-invariant
+    unsafe: true
+    prompt: "Rules: 0 <= charge_ <= 100. Tap every line that can break them."
+    code: |-
+      class Battery {
+      public:
+          Battery(int start) : charge_{start} {}
+          void drain(int n) {
+              if (n > 0) {
+                  charge_ = std::max(charge_ - n, 0);
+              }
+          }
+          void setCharge(int c) { charge_ = c; }
+          int charge() const { return charge_; }
+
+      private:
+          int charge_;
+      };
+    dangerous: [ 2, 8 ]
+    lineNotes:
+      "2": "Unchecked constructor: Battery{500} is born broken. (And it isn't explicit.)"
+      "5": "Safe: n > 0 and the floor at 0 keep the rule."
+      "8": "The setter accepts anything: setCharge(-9) walks right in."
+      "9": "Safe: a const getter only reads."
+    hints:
+      - Look at every way a value gets INTO charge_.
+      - Constructors and setters are doors too.
+    short: The constructor and the setter both let bad values in.
+    explain: "Every door into charge_ must check. drain is guarded, but the constructor copies any start and setCharge copies any c. Clamp both: `charge_{std::clamp(start, 0, 100)}` and `charge_ = std::clamp(c, 0, 100);`."
+    sideBySide:
+      unsafe: |-
+        class Battery {
+        public:
+            Battery(int start) : charge_{start} {}
+            void setCharge(int c) { charge_ = c; }
+        private:
+            int charge_;
+        };
+      hardened: |-
+        class Battery {
+        public:
+            explicit Battery(int start) : charge_{std::clamp(start, 0, 100)} {}
+            void setCharge(int c) { charge_ = std::clamp(c, 0, 100); }
+            int charge() const { return charge_; }
+
+        private:
+            int charge_;
+        };
+  - id: w10.boss.r8
+    type: predict
+    tags: [ w10.invariant, w10.validate-ctor ]
+    prompt: The Golem feeds your Gauge hostile numbers. What does this print?
+    code: |-
+      #include <algorithm>
+      #include <iostream>
+
+      class Gauge {
+      public:
+          explicit Gauge(int v) : v_{std::clamp(v, 0, 10)} {}
+          void add(int d) { v_ = std::clamp(v_ + d, 0, 10); }
+          int value() const { return v_; }
+
+      private:
+          int v_;
+      };
+
+      int main() {
+          Gauge g{-5};
+          std::cout << g.value() << ' ';
+          g.add(7);
+          g.add(9);
+          std::cout << g.value() << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          0 10
+        why: "Correct: -5 clamps to 0; 0 + 7 = 7; 7 + 9 = 16 clamps to 10."
+      - t: |
+          -5 10
+        why: The constructor clamps, so -5 never gets in.
+      - t: |
+          0 16
+        why: add clamps too. 16 becomes 10.
+      - t: |
+          0 11
+        why: 7 + 9 is 16, which clamps all the way down to 10.
+    answer: 0
+    hints:
+      - std::clamp(v, 0, 10) squeezes v into 0..10.
+      - Both the constructor and add clamp.
+    short: "-5 clamps to 0; 16 clamps to 10."
+    explain: "Gauge{-5} stores clamp(-5, 0, 10) = 0, printed with a space. add(7) gives 7, add(9) gives clamp(16, 0, 10) = 10. Output: \"0 10\" and a newline. (d is small here; a huge d could overflow v_ + d, so real code would also limit d.)"
+defense:
+  - attack: "-40"
+    label: Negative max HP!
+    challenge:
+      id: w10.boss.d1
+      type: harden
+      tags: [ w10.validate-ctor, w10.invariant ]
+      bug: broken-invariant
+      prompt: "The Golem builds Shield{-40}. The rule: 1 <= durability_ <= 100. Pick the initializer."
+      code: |-
+        class Shield {
+        public:
+            explicit Shield(int d) : durability_{___} {}
+            int durability() const { return durability_; }
+
+        private:
+            int durability_;
+        };
+      options:
+        - t: std::clamp(d, 1, 100)
+          why: "Correct: -40 becomes 1, 9000 becomes 100. Every Shield is born valid."
+        - t: d
+          why: "Trusts the Golem: Shield{-40} is born with -40 durability."
+        - t: std::max(d, 100)
+          why: "Backwards: every shield gets at least 100, and 9000 stays 9000."
+        - t: "d < 0 ? 0 : d"
+          why: "0 breaks the rule (at least 1), and 9000 still gets in."
+      answer: 0
+      hints:
+        - The rule has a lower AND an upper edge.
+        - "std::clamp(value, low, high)"
+      short: "Validate in the constructor: std::clamp(d, 1, 100)."
+      explain: "The constructor is the only door into existence. `std::clamp(d, 1, 100)` enforces both edges of the rule, so no Shield can ever start broken."
+      sideBySide:
+        unsafe: |-
+          class Shield {
+          public:
+              explicit Shield(int d) : durability_{d} {}   // Shield{-40}
+          private:
+              int durability_;
+          };
+        hardened: |-
+          class Shield {
+          public:
+              explicit Shield(int d) : durability_{std::clamp(d, 1, 100)} {}
+              int durability() const { return durability_; }
+
+          private:
+              int durability_;
+          };
+  - attack: "999999"
+    label: Slot way out of range!
+    challenge:
+      id: w10.boss.d2
+      type: harden
+      tags: [ w10.invariant, w7.bounds ]
+      bug: out-of-bounds
+      prompt: "select(999999) would make items_[slot_] read out of bounds. Pick the check."
+      code: |-
+        class Belt {
+        public:
+            void select(int s) {
+                if (___) {
+                    slot_ = s;
+                }
+            }
+            int item() const { return items_[slot_]; }
+
+        private:
+            std::array<int, 3> items_{7, 8, 9};
+            int slot_{0};
+        };
+      options:
+        - t: s >= 0 && s < 3
+          why: "Correct: only 0, 1 and 2 are real slots, so slot_ always stays valid."
+        - t: s <= 3
+          why: 3 is one past the end, and negatives get in too.
+        - t: s > 0
+          why: 999999 is greater than 0. Slot 0 is also wrongly refused.
+        - t: s != 999999
+          why: Blocks one number. 1000000 walks right in.
+      answer: 0
+      hints:
+        - Valid indexes for 3 items are 0, 1, 2.
+        - Check both ends.
+      short: "Keep slot_ valid: accept only 0 <= s < 3."
+      explain: "item() trusts the invariant 0 <= slot_ < 3. If select let 999999 in, items_[slot_] would read far outside the array: UB. Check both ends before storing."
+      sideBySide:
+        unsafe: |-
+          class Belt {
+          public:
+              void select(int s) { slot_ = s; }   // 999999 gets in
+              int item() const { return items_[slot_]; }
+          private:
+              std::array<int, 3> items_{7, 8, 9};
+              int slot_{0};
+          };
+        hardened: |-
+          class Belt {
+          public:
+              void select(int s) {
+                  if (s >= 0 && s < 3) {
+                      slot_ = s;
+                  }
+              }
+              int item() const { return items_[slot_]; }
+
+          private:
+              std::array<int, 3> items_{7, 8, 9};
+              int slot_{0};
+          };
+  - attack: '""'
+    label: An empty name!
+    challenge:
+      id: w10.boss.d3
+      type: harden
+      tags: [ w10.validate-ctor, w10.invariant ]
+      bug: broken-invariant
+      prompt: "The Golem registers a Knight with an empty name. The rule: name_ is never empty. Pick the initializer."
+      code: |-
+        class Knight {
+        public:
+            explicit Knight(const std::string& name) : name_{___} {}
+            const std::string& name() const { return name_; }
+
+        private:
+            std::string name_;
+        };
+      options:
+        - t: "name.empty() ? \"Unknown\" : name"
+          why: "Correct: an empty name gets a safe placeholder, so the rule always holds."
+        - t: name
+          why: "Copies \"\" straight in. The rule is broken from birth."
+        - t: name + "?"
+          why: Every name gets a stray ? and "" becomes "?". Patching, not validating.
+        - t: "\"Unknown\""
+          why: Ignores every real name. Sir Ada becomes Unknown.
+      answer: 0
+      hints:
+        - Only replace the name when it's empty.
+        - std::string has an empty() method.
+      short: "Replace only a bad name: name.empty() ? \"Unknown\" : name."
+      explain: "Validate in the constructor: `name.empty() ? \"Unknown\" : name` keeps real names and replaces an empty one, so name_ is never empty for any Knight."
+      sideBySide:
+        unsafe: |-
+          class Knight {
+          public:
+              explicit Knight(const std::string& name) : name_{name} {}   // "" gets in
+          private:
+              std::string name_;
+          };
+        hardened: |-
+          class Knight {
+          public:
+              explicit Knight(const std::string& name)
+                  : name_{name.empty() ? "Unknown" : name} {}
+              const std::string& name() const { return name_; }
+
+          private:
+              std::string name_;
+          };
+victory: "CRACK... every... rule... holds... The Golem shatters into tidy private members."
+reward:
+  xp: 325
+  cosmetic: encap-crest
+  bug: broken-invariant

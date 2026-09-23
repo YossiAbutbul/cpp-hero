@@ -1,0 +1,452 @@
+# World 10 mini-project: Hero Card
+
+id: w10.p
+title: Hero Card
+intro: "Build a Hero class that can take hits and drink potions, and can never end up in an impossible state."
+steps:
+  - id: w10.p.s1
+    type: order
+    tags: [ w10.access, w10.class-vs-struct ]
+    prompt: "Start the skeleton: a class with a public getter and a private hp_."
+    lines:
+      - "class Hero {"
+      - "public:"
+      - "    int hp() const { return hp_; }"
+      - "private:"
+      - "    int hp_{10};"
+      - "};"
+    distractors:
+      - "private public:"
+    hints:
+      - Public doorway first, private data after.
+      - "Every class ends with };"
+    short: "public: getter first, private: data after, then };"
+    explain: "Put the public interface first (what callers use), then the private data. The getter is const because it only reads."
+  - id: w10.p.s2
+    type: fill
+    tags: [ w10.validate-ctor, w10.init-list ]
+    prompt: "Validate in the constructor: max HP must be at least 1. Fill in the blank."
+    code: |-
+      class Hero {
+      public:
+          Hero(const std::string& name, int maxHp)
+              : name_{name}, maxHp_{___}, hp_{maxHp_} {}
+
+      private:
+          std::string name_;
+          int maxHp_;
+          int hp_;
+      };
+    accept:
+      - std::max(maxHp, 1)
+      - std::max(1, maxHp)
+    placeholder: expression
+    hints:
+      - Pick the larger of maxHp and 1.
+      - "It's in <algorithm>: std::m..."
+    short: "maxHp_{std::max(maxHp, 1)}: no hero is born with max HP 0."
+    explain: "`std::max(maxHp, 1)` turns 0 and negatives into 1. Since maxHp_ is declared before hp_, `hp_{maxHp_}` then starts the hero at full, validated health."
+  - id: w10.p.s3
+    type: write
+    tags: [ w10.invariant, w10.method ]
+    prompt: "Inside takeDamage, write the one line that lowers hp_ by amount but never below 0."
+    code: |-
+      class Hero {
+      public:
+          void takeDamage(int amount) {
+              if (amount > 0) {
+                  // your line
+              }
+          }
+
+      private:
+          int hp_{10};
+      };
+    accept:
+      - hp_ = std::max(hp_ - amount, 0);
+      - hp_ = std::max(0, hp_ - amount);
+    acceptRe:
+      - ^hp_=std::max\((hp_-amount,0|0,hp_-amount)\);$
+    placeholder: hp_ = ...
+    hints:
+      - Subtract, then keep the larger of the result and 0.
+      - std::max(hp_ - amount, 0)
+    short: "hp_ = std::max(hp_ - amount, 0); keeps hp_ at 0 or more."
+    explain: "`hp_ = std::max(hp_ - amount, 0);` subtracts and then floors the result at 0, so the rule 0 <= hp_ always holds. (hp_ - amount can't overflow here: hp_ >= 0 and amount > 0.)"
+  - id: w10.p.s4
+    type: harden
+    tags: [ w10.const-method, w10.getter ]
+    prompt: "printCard takes a const Hero&. Pick what makes the getter callable there."
+    code: |-
+      class Hero {
+      public:
+          int hp() ___ { return hp_; }
+
+      private:
+          int hp_{10};
+      };
+
+      void printCard(const Hero& h) {
+          std::cout << h.hp() << '\n';
+      }
+    options:
+      - t: const
+        why: "Correct: a const method promises to only read, so it works on a const Hero&."
+      - t: static
+        why: A static function has no object at all, so it can't read hp_.
+      - t: explicit
+        why: explicit is for constructors, not getters.
+      - t: mutable
+        why: mutable goes on data members, never after a function's ().
+    answer: 0
+    hints:
+      - h is a const reference.
+      - Which keyword after () means read-only?
+    short: "Getters are const: int hp() const."
+    explain: "Through `const Hero&`, only const member functions can be called. `int hp() const` promises (and the compiler enforces) that the getter never changes the Hero."
+    sideBySide:
+      unsafe: |-
+        class Hero {
+        public:
+            int hp() { return hp_; }   // not const
+        private:
+            int hp_{10};
+        };
+
+        void printCard(const Hero& h) {
+            std::cout << h.hp() << '\n';   // error
+        }
+      hardened: |-
+        class Hero {
+        public:
+            int hp() const { return hp_; }
+
+        private:
+            int hp_{10};
+        };
+
+        void printCard(const Hero& h) {
+            std::cout << h.hp() << '\n';
+        }
+      expect: error
+  - id: w10.p.s5
+    type: predict
+    tags: [ w10.method, w10.invariant ]
+    prompt: "Test run: Ada has 30 max HP, takes 12 damage, then drinks a 50 potion. What prints?"
+    code: |-
+      #include <algorithm>
+      #include <iostream>
+      #include <string>
+
+      class Hero {
+      public:
+          Hero(const std::string& name, int maxHp)
+              : name_{name}, maxHp_{std::max(maxHp, 1)}, hp_{maxHp_} {}
+
+          void takeDamage(int amount) {
+              if (amount > 0) {
+                  hp_ = std::max(hp_ - amount, 0);
+              }
+          }
+          void heal(int amount) {
+              if (amount <= 0) {
+                  return;
+              }
+              if (amount >= maxHp_ - hp_) {
+                  hp_ = maxHp_;
+              } else {
+                  hp_ += amount;
+              }
+          }
+          int hp() const { return hp_; }
+
+      private:
+          std::string name_;
+          int maxHp_;
+          int hp_;
+      };
+
+      int main() {
+          Hero ada{"Ada", 30};
+          ada.takeDamage(12);
+          std::cout << ada.hp() << ' ';
+          ada.heal(50);
+          std::cout << ada.hp() << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          18 30
+        why: "Correct: 30 - 12 = 18, and the potion tops out at max HP 30."
+      - t: |
+          18 68
+        why: heal caps hp_ at maxHp_, so it can't pass 30.
+      - t: |
+          -12 30
+        why: Ada starts at full health (30), not 0.
+      - t: |
+          18 50
+        why: The potion adds to 18, and then the cap kicks in at 30.
+    answer: 0
+    hints:
+      - Ada starts at hp_ = maxHp_ = 30.
+      - heal never goes above maxHp_.
+    short: "30 - 12 = 18; healing 50 caps at 30."
+    explain: "Ada starts at 30. takeDamage(12) gives 18, printed with a space. heal(50): 50 >= 30 - 18, so hp_ becomes maxHp_ (30). Output: \"18 30\" and a newline."
+program: |-
+  #include <algorithm>
+  #include <iostream>
+  #include <string>
+
+  class Hero {
+  public:
+      Hero(const std::string& name, int maxHp)
+          : name_{name.empty() ? "Nameless" : name},
+            maxHp_{std::max(maxHp, 1)},
+            hp_{maxHp_} {}
+
+      void takeDamage(int amount) {
+          if (amount > 0) {
+              hp_ = std::max(hp_ - amount, 0);
+          }
+      }
+      void heal(int amount) {
+          if (amount <= 0) {
+              return;
+          }
+          if (amount >= maxHp_ - hp_) {
+              hp_ = maxHp_;
+          } else {
+              hp_ += amount;
+          }
+      }
+      const std::string& name() const { return name_; }
+      int hp() const { return hp_; }
+      int maxHp() const { return maxHp_; }
+      bool isAlive() const { return hp_ > 0; }
+
+  private:
+      std::string name_;   // rule: never empty
+      int maxHp_;          // rule: at least 1
+      int hp_;             // rule: 0 <= hp_ <= maxHp_
+  };
+
+  int main() {
+      std::string name;
+      int maxHp{};
+      std::cout << "Name and max HP: ";
+      if (!(std::cin >> name >> maxHp)) {
+          std::cout << "Bad input.\n";
+          return 1;
+      }
+      Hero hero{name, maxHp};
+
+      int damage{};
+      int potion{};
+      std::cout << "Damage and potion: ";
+      if (!(std::cin >> damage >> potion)) {
+          std::cout << "Bad input.\n";
+          return 1;
+      }
+      hero.takeDamage(damage);
+      hero.heal(potion);
+
+      std::cout << hero.name() << ": " << hero.hp() << '/' << hero.maxHp()
+                << (hero.isAlive() ? " (alive)" : " (down)") << '\n';
+      return 0;
+  }
+programStdin: |
+  Ada 30
+  12 5
+stress:
+  intro: Brace yourself! I'll poke your Hero with the nastiest numbers I know!
+  attacks:
+    - input: "-15"
+      label: Negative damage!
+      challenge:
+        id: w10.p.a1
+        type: harden
+        tags: [ w10.invariant, w10.validate ]
+        bug: broken-invariant
+        prompt: "takeDamage(-15) would HEAL past max HP: 30 - (-15) = 45. Pick the guard."
+        code: |-
+          class Hero {
+          public:
+              void takeDamage(int amount) {
+                  if (___) {
+                      hp_ = std::max(hp_ - amount, 0);
+                  }
+              }
+
+          private:
+              int hp_{30};
+          };
+        options:
+          - t: amount > 0
+            why: "Correct: only real damage gets through. 0 and negatives change nothing."
+          - t: amount != 0
+            why: -15 is not 0, so the sneaky heal still happens.
+          - t: amount < 0
+            why: "Inverted: blocks real damage and lets only the negative attack in."
+          - t: hp_ > 0
+            why: Checks the wrong thing. A healthy hero still gets healed to 45.
+        answer: 0
+        hints:
+          - Which amounts make sense as damage?
+          - Subtracting a negative adds.
+        short: "Only positive damage counts: if (amount > 0)."
+        explain: "Subtracting a negative number adds, so takeDamage(-15) would push hp_ to 45, above maxHp_ 30: invariant broken. Guard the input: only `amount > 0` is real damage."
+        sideBySide:
+          unsafe: |-
+            class Hero {
+            public:
+                void takeDamage(int amount) {
+                    hp_ = std::max(hp_ - amount, 0);   // -15 heals!
+                }
+            private:
+                int hp_{30};
+            };
+          hardened: |-
+            class Hero {
+            public:
+                void takeDamage(int amount) {
+                    if (amount > 0) {
+                        hp_ = std::max(hp_ - amount, 0);
+                    }
+                }
+
+            private:
+                int hp_{30};
+            };
+    - input: "2147483647"
+      label: A potion the size of an ocean!
+      challenge:
+        id: w10.p.a2
+        type: harden
+        tags: [ w10.invariant, w3.overflow ]
+        bug: overflow
+        prompt: "heal(2147483647): hp_ + amount would overflow, which is UB. Pick the check that can't overflow."
+        code: |-
+          class Hero {
+          public:
+              void heal(int amount) {
+                  if (amount <= 0) {
+                      return;
+                  }
+                  if (___) {
+                      hp_ = maxHp_;
+                  } else {
+                      hp_ += amount;
+                  }
+              }
+
+          private:
+              int maxHp_{30};
+              int hp_{18};
+          };
+        options:
+          - t: amount >= maxHp_ - hp_
+            why: "Correct: maxHp_ - hp_ is the room left. It can't overflow, since 0 <= hp_ <= maxHp_."
+          - t: hp_ + amount >= maxHp_
+            why: The addition overflows first (UB), before the comparison even runs.
+          - t: amount > std::numeric_limits<int>::max()
+            why: No int is bigger than the largest int, so this is always false.
+          - t: hp_ > maxHp_
+            why: The invariant says this is never true, so it never caps anything.
+        answer: 0
+        hints:
+          - Don't do the risky addition to test if it's risky.
+          - "Compare amount with the room left: maxHp_ - hp_."
+        short: "Compare with the room left: amount >= maxHp_ - hp_."
+        explain: "hp_ + 2147483647 overflows: signed overflow is UB (World 3), and it may silently wrap to a negative hp. Move the math to the safe side: maxHp_ - hp_ is the room left and can't overflow, because the invariant keeps hp_ between 0 and maxHp_."
+        sideBySide:
+          unsafe: |-
+            class Hero {
+            public:
+                void heal(int amount) {
+                    hp_ = std::min(hp_ + amount, maxHp_);   // overflow: UB
+                }
+            private:
+                int maxHp_{30};
+                int hp_{18};
+            };
+          hardened: |-
+            class Hero {
+            public:
+                void heal(int amount) {
+                    if (amount <= 0) {
+                        return;
+                    }
+                    if (amount >= maxHp_ - hp_) {
+                        hp_ = maxHp_;
+                    } else {
+                        hp_ += amount;
+                    }
+                }
+
+            private:
+                int maxHp_{30};
+                int hp_{18};
+            };
+    - input: "0"
+      label: A hero with 0 max HP!
+      challenge:
+        id: w10.p.a3
+        type: bug
+        tags: [ w10.validate-ctor, w10.invariant ]
+        bug: broken-invariant
+        unsafe: true
+        prompt: "Max HP 0 makes a hero born dead, and -5 makes one with hp -5. Tap the line, then pick the fix."
+        code: |-
+          class Hero {
+          public:
+              Hero(const std::string& name, int maxHp)
+                  : name_{name},
+                    maxHp_{maxHp},
+                    hp_{maxHp_} {}
+
+          private:
+              std::string name_;
+              int maxHp_;
+              int hp_;
+          };
+        bugLine: 4
+        options:
+          - t: "maxHp_{std::max(maxHp, 1)},"
+            why: "Correct: validated at the door. Every hero starts with at least 1 max HP."
+          - t: "maxHp_{maxHp + 1},"
+            why: "Fixes 0, but -5 still becomes -4. That's patching, not validating."
+          - t: "hp_{maxHp},"
+            why: "hp_ copies the same bad number. The problem is the unchecked maxHp."
+          - t: "maxHp_{std::min(maxHp, 1)},"
+            why: "Backwards: min caps EVERY hero at 1 max HP."
+        answer: 0
+        hints:
+          - The constructor copies maxHp without looking at it.
+          - At least 1 means the larger of maxHp and 1.
+        short: "Validate in the constructor: maxHp_{std::max(maxHp, 1)}."
+        explain: "The constructor is the only door into existence. Copying maxHp blindly lets 0 and negatives in, breaking 1 <= maxHp_ and 0 <= hp_. `std::max(maxHp, 1)` fixes every bad value at once. The final program also swaps an empty name for \"Nameless\"."
+        sideBySide:
+          unsafe: |-
+            class Hero {
+            public:
+                Hero(const std::string& name, int maxHp)
+                    : name_{name}, maxHp_{maxHp}, hp_{maxHp_} {}   // 0 or -5 get in
+            private:
+                std::string name_;
+                int maxHp_;
+                int hp_;
+            };
+          hardened: |-
+            class Hero {
+            public:
+                Hero(const std::string& name, int maxHp)
+                    : name_{name.empty() ? "Nameless" : name},
+                      maxHp_{std::max(maxHp, 1)},
+                      hp_{maxHp_} {}
+
+            private:
+                std::string name_;
+                int maxHp_;
+                int hp_;
+            };

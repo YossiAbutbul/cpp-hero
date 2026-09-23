@@ -1,0 +1,307 @@
+# World 10 · Lesson 2: Member functions
+
+id: w10.l2
+title: Member functions
+skill: structure
+shield: false
+concept:
+  short: Member functions live inside the struct and work on the members of the object you call them on.
+  analogy: "Methods are buttons on a gadget: `a.heal(5)` presses heal on THAT hero only."
+  body:
+    - "A **member function** (or method) is a function declared inside the struct: `void takeHit(int dmg) { hp -= dmg; }`. Inside it, `hp` means the hp of the object it was called on."
+    - "Call it with the dot: `a.takeHit(4)` changes a's hp, `b.takeHit(4)` changes b's. Same code, different object."
+    - "Methods can return values too: `bool isAlive() { return hp > 0; }`. Keeping the behavior right next to the data means one place to read, fix and test."
+    - "Behind the scenes, every member function gets a hidden pointer named `this` to the current object. `hp` is shorthand for `this->hp`. You rarely need to write `this` yourself."
+    - "Soon you'll mark read-only methods `const`, like `bool isAlive() const`. The Shield lesson explains why."
+  pitfall: "Common beginner mistake: forgetting the parentheses. `if (a.isAlive)` names the function without calling it, and it doesn't compile. Write `a.isAlive()`."
+demo:
+  code: |-
+    #include <iostream>
+
+    struct Hero {
+        int hp{10};
+
+        void takeHit(int dmg) {
+            hp -= dmg;
+        }
+        bool isAlive() {
+            return hp > 0;
+        }
+    };
+
+    int main() {
+        Hero a{};
+        Hero b{};
+        a.takeHit(4);
+        b.takeHit(12);
+        std::cout << a.hp << ' ' << a.isAlive() << '\n';
+        std::cout << b.hp << ' ' << b.isAlive() << '\n';
+        return 0;
+    }
+  steps:
+    - line: 14
+      mem:
+        cells:
+          - { name: a.hp, value: "10", group: a }
+      note: a is born with hp 10.
+    - line: 15
+      mem:
+        cells:
+          - { name: b.hp, value: "10", group: b }
+      note: b gets its own hp, also 10.
+    - line: 16
+      push: { name: a.takeHit, vars: { dmg: "4" } }
+      note: "Calling on a: inside, hp means a.hp."
+    - line: 6
+      mem:
+        cells:
+          - { name: a.hp, value: "6" }
+      note: "10 - 4 = 6. Only a changes."
+    - line: 7
+      pop: true
+      note: Back to main.
+    - line: 17
+      push: { name: b.takeHit, vars: { dmg: "12" } }
+      note: "Same method, different object: now hp means b.hp."
+    - line: 6
+      mem:
+        cells:
+          - { name: b.hp, value: "-2" }
+      note: "10 - 12 = -2. Hmm, negative hp?"
+    - line: 7
+      pop: true
+    - line: 18
+      out: |
+        6 1
+      note: "a.isAlive() is true: prints 1."
+    - line: 19
+      out: |
+        -2 0
+      note: "b is down, but hp -2 is odd. Fix coming soon!"
+    - line: 20
+      note: Methods keep behavior next to the data.
+challenges:
+  - id: w10.l2.c1
+    type: predict
+    tags: [ w10.method ]
+    prompt: Two counters, one blueprint. What does this print?
+    code: |-
+      #include <iostream>
+
+      struct Counter {
+          int n{};
+
+          void add(int k) {
+              n += k;
+          }
+          int get() {
+              return n;
+          }
+      };
+
+      int main() {
+          Counter c1{};
+          Counter c2{};
+          c1.add(3);
+          c2.add(5);
+          c1.add(c2.get());
+          std::cout << c1.get() << ' ' << c2.get() << '\n';
+          return 0;
+      }
+    options:
+      - t: |
+          8 5
+        why: "Correct: c1 gets 3, then c2's 5 is added: 8. c2 stays 5."
+      - t: |
+          8 8
+        why: c1.add changes only c1. c2 keeps its own n.
+      - t: |
+          3 5
+        why: The third call adds c2.get() (5) to c1.
+      - t: |
+          13 5
+        why: c1 starts at 0, not 5. It only gets 3 and then 5.
+    answer: 0
+    hints:
+      - Each object has its own n.
+      - "c1: 0 + 3 + 5. c2: 0 + 5."
+    short: Each object has its own n; c1 ends at 8, c2 at 5.
+    explain: "c1.add(3) makes c1.n 3; c2.add(5) makes c2.n 5; c1.add(c2.get()) adds 5 to c1: 8. Output: \"8 5\" and a newline."
+  - id: w10.l2.c2
+    type: mcq
+    tags: [ w10.method, w10.this ]
+    prompt: "Inside takeHit, which hp does `hp -= dmg;` change when you call `b.takeHit(3)`?"
+    code: |-
+      struct Hero {
+          int hp{10};
+          void takeHit(int dmg) {
+              hp -= dmg;
+          }
+      };
+    options:
+      - t: b's hp
+        why: "Correct: inside a method, hp means this->hp, and this points at b."
+      - t: Every Hero's hp
+        why: Each object has its own hp. Only the one you called on changes.
+      - t: A local copy of hp
+        why: No copy is made. The method works on the real object's member.
+      - t: The first Hero ever created
+        why: Objects don't share members. The dot decides which object.
+    answer: 0
+    hints:
+      - The object before the dot is the one being worked on.
+      - hp is shorthand for this->hp.
+    short: "In b.takeHit(3), hp means b's hp (this->hp)."
+    explain: "Every member function has a hidden `this` pointer to the object it was called on. In `b.takeHit(3)`, this points at b, so `hp -= dmg` is `this->hp -= dmg`, changing b.hp only."
+  - id: w10.l2.c3
+    type: order
+    tags: [ w10.method, w10.struct ]
+    prompt: "Build a Lamp struct with an on member and a toggle() method that flips it."
+    lines:
+      - "struct Lamp {"
+      - "    bool on{false};"
+      - "    void toggle() {"
+      - "        on = !on;"
+      - "    }"
+      - "};"
+    distractors:
+      - "    void Lamp.toggle() {"
+    hints:
+      - Members and methods both go between the braces.
+      - The method body flips on with !.
+    short: "Members and methods live inside struct Lamp { ... };"
+    explain: "The member (`bool on{false};`) and the method (`void toggle() { on = !on; }`) both go inside the struct's braces, and the struct ends with `};`. `void Lamp.toggle()` isn't valid C++: inside the struct you just write the method's name."
+  - id: w10.l2.c4
+    type: bug
+    tags: [ w10.method ]
+    expect: error
+    prompt: This won't compile. Tap the buggy line, then pick the fix.
+    code: |-
+      #include <iostream>
+
+      struct Slime {
+          int hp{3};
+          bool isAlive() {
+              return hp > 0;
+          }
+      };
+
+      int main() {
+          Slime s{};
+          if (s.isAlive) {
+              std::cout << "Still wobbling!\n";
+          }
+          return 0;
+      }
+    bugLine: 11
+    options:
+      - t: if (s.isAlive()) {
+        why: "Correct: the () actually calls the method and gets its bool."
+      - t: if (isAlive(s)) {
+        why: isAlive is a member function, not a free function. Call it on the object.
+      - t: if (s->isAlive) {
+        why: s is an object, not a pointer. And it still lacks the ().
+      - t: if (Slime.isAlive()) {
+        why: Slime is the type. Call methods on an object, like s.
+    answer: 0
+    hints:
+      - How do you call a function?
+      - s.isAlive only names the method.
+    short: "Call methods with parentheses: s.isAlive()."
+    explain: "`s.isAlive` without `()` names a member function without calling it, which is a compile error (\"invalid use of non-static member function\"). Add the parentheses: `s.isAlive()`."
+    sideBySide:
+      unsafe: |-
+        if (s.isAlive) {   // names it, doesn't call it
+            std::cout << "Still wobbling!\n";
+        }
+      hardened: |-
+        if (s.isAlive()) {
+            std::cout << "Still wobbling!\n";
+        }
+      expect: error
+      prelude: "struct Slime { int hp{3}; bool isAlive() { return hp > 0; } }; Slime s{};"
+  - id: w10.l2.c5
+    type: write
+    tags: [ w10.method ]
+    prompt: "Write one line that calls the heal method on `hero` with 5."
+    prelude: "struct Hero { int hp{10}; void heal(int amount) { hp += amount; } }; Hero hero{};"
+    accept:
+      - hero.heal(5);
+    placeholder: one line of C++
+    hints:
+      - Object, dot, method name, arguments.
+      - "Don't forget the ; at the end."
+    short: hero.heal(5); calls heal on hero.
+    explain: "`hero.heal(5);` calls heal with amount 5 on hero, so hero.hp goes from 10 to 15."
+  - id: w10.l2.c6
+    type: breakit
+    tags: [ w10.method, w10.invariant ]
+    bug: broken-invariant
+    unsafe: true
+    prompt: "The rule: gold is never negative. Which call breaks the wallet?"
+    code: |-
+      struct Wallet {
+          int gold{50};
+
+          void spend(int cost) {
+              gold -= cost;
+          }
+      };
+    options:
+      - t: spend(20)
+        why: 50 - 20 = 30. Still fine.
+      - t: spend(50)
+        why: 50 - 50 = 0. Empty, but not negative.
+      - t: spend(80)
+        why: "Correct: 50 - 80 = -30. spend never checks if you can afford it."
+      - t: spend(0)
+        why: Spending nothing leaves 50.
+    answer: 2
+    hints:
+      - Which cost is bigger than what's in the wallet?
+      - spend never checks cost against gold.
+    short: spend(80) drives gold to -30. The method must check first.
+    explain: "The wallet's rule (gold >= 0) is only true if every method keeps it. spend blindly subtracts, so spend(80) leaves -30 gold. (A negative cost would also be sneaky: spend(-100) prints money!) The fix: check the cost, and report failure."
+    sideBySide:
+      unsafe: |-
+        void spend(int cost) {
+            gold -= cost;   // no check
+        }
+      hardened: |-
+        struct Wallet {
+            int gold{50};
+
+            bool spend(int cost) {
+                if (cost < 0 || cost > gold) {
+                    return false;
+                }
+                gold -= cost;
+                return true;
+            }
+        };
+      prelude: "int gold{50};"
+recap:
+  - Methods are functions that live inside the struct.
+  - "a.takeHit(4) works on a's members only."
+  - "Call with parentheses: a.isAlive()."
+  - "Every method must keep the object's rules."
+vault:
+  - id: w10.method
+    title: Member functions
+    code: |-
+      struct Hero {
+          int hp{10};
+
+          void takeHit(int dmg) {
+              hp -= dmg;          // this->hp
+          }
+          bool isAlive() {
+              return hp > 0;
+          }
+      };
+
+      Hero a{};
+      a.takeHit(4);               // a.hp is now 6
+    note: "Inside a method, members mean the object before the dot (this)."
+    defense: false
+reviewTags: [ w6.params, w6.return, w8.byref, w10.struct ]

@@ -1,0 +1,440 @@
+# World 10 · Lesson 5: Shield: Guard the invariant (Shield lesson)
+
+id: w10.l5
+title: "Shield: Guard the invariant"
+skill: defense
+shield: true
+concept:
+  short: "Private data, checking constructors and careful methods keep a class's rules (its invariants) true at all times."
+  analogy: "An invariant is a bouncer's rule: no object gets in, or stays in, while breaking it."
+  body:
+    - "An **invariant** is a rule that's true for every object of a class whenever outside code can look at it: `0 <= hp_ <= maxHp_`, `slot_` is a valid index, `name_` is never empty."
+    - "**Validate in the constructor.** It's the only door into existence, so check or fix every argument there and no object is ever born broken. `std::clamp(v, lo, hi)` from `<algorithm>` squeezes a value into a range. (World 12 shows the other option: throwing an exception to refuse construction.)"
+    - "**Every public function keeps the invariant.** Check the inputs (`amount < 0`?), and make sure the result still obeys the rules. Because the data is private, these functions are the ONLY way to change it: one place to guard, instead of every caller."
+    - "A broken invariant isn't UB by itself, but code that trusts it can hit UB: if `slot_` is 9, `items_[slot_]` reads outside the array. UB doesn't guarantee a crash; it may return junk and seem fine."
+    - "**const member functions**: `int item() const` promises not to change the object, and the compiler enforces it. Only const functions can be called through a `const Inventory&`, so mark every read-only function const."
+    - "**explicit constructors**: a one-argument constructor is also a silent conversion. Without `explicit`, `Inventory inv = 9;` or passing a plain `9` to a function that takes an Inventory both compile. With `explicit`, you must write `Inventory{9}`, on purpose."
+  pitfall: "Common beginner mistake: making the data private, then adding `void setHp(int v) { hp_ = v; }`. The door is locked, but the key is taped to it. Every public function must check."
+demo:
+  code: |-
+    #include <algorithm>
+    #include <array>
+    #include <iostream>
+
+    class Inventory {
+    public:
+        explicit Inventory(int start) : slot_{std::clamp(start, 0, 3)} {}
+
+        void select(int s) {
+            if (s >= 0 && s < 4) {
+                slot_ = s;
+            }
+        }
+        int item() const {
+            return items_[slot_];
+        }
+
+    private:
+        std::array<int, 4> items_{10, 20, 30, 40};
+        int slot_;
+    };
+
+    int main() {
+        Inventory inv{9};
+        std::cout << inv.item() << '\n';
+        inv.select(-2);
+        std::cout << inv.item() << '\n';
+        inv.select(1);
+        std::cout << inv.item() << '\n';
+        return 0;
+    }
+  steps:
+    - line: 18
+      note: "The invariant: slot_ is always 0 to 3."
+    - line: 23
+      push: { name: Inventory(), vars: { start: "9" } }
+      note: Someone asks for slot 9. Only 0 to 3 exist!
+    - line: 6
+      crash: "slot_ = 9: items_[9] is out of bounds!"
+      note: "Unchecked, item() would read past the array: UB."
+    - line: 6
+      shield: Clamped to slot 3!
+      mem:
+        cells:
+          - { name: inv.slot_, value: "3" }
+      note: The constructor clamps, so every Inventory is born valid.
+    - line: 24
+      pop: true
+      out: |
+        40
+      note: "item() is const: it only reads."
+    - line: 25
+      push: { name: select, vars: { s: "-2" } }
+    - line: 9
+      shield: Bad slot ignored!
+      note: "-2 fails the check, so slot_ stays 3."
+    - line: 12
+      pop: true
+    - line: 26
+      out: |
+        40
+    - line: 27
+      push: { name: select, vars: { s: "1" } }
+    - line: 10
+      mem:
+        cells:
+          - { name: inv.slot_, value: "1" }
+      note: 1 is valid, so select accepts it.
+    - line: 12
+      pop: true
+    - line: 28
+      out: |
+        20
+      note: The invariant held through every call.
+challenges:
+  - id: w10.l5.c1
+    type: harden
+    tags: [ w10.validate-ctor, w10.invariant ]
+    bug: broken-invariant
+    prompt: "The rule: max_ is at least 1. Pick what goes in the blank."
+    code: |-
+      class Health {
+      public:
+          explicit Health(int maxHp) : max_{___}, hp_{max_} {}
+          int hp() const { return hp_; }
+          int max() const { return max_; }
+
+      private:
+          int max_;
+          int hp_;
+      };
+    options:
+      - t: std::max(maxHp, 1)
+        why: "Correct: 0 and negatives become 1, so no Health is ever born dead or impossible."
+      - t: maxHp
+        why: "Trusts the caller: Health{-40} is born with hp -40."
+      - t: -maxHp
+        why: "Flips the sign: Health{50} becomes -50, and Health{0} is still 0."
+      - t: std::abs(maxHp)
+        why: "0 still gets through, and -40 silently becomes 40. Guessing isn't validating."
+    answer: 0
+    hints:
+      - The constructor is the only way into existence.
+      - What function picks the larger of two values?
+    short: "Validate in the constructor: max_{std::max(maxHp, 1)}."
+    explain: "The constructor is the one place every Health passes through, so fix bad input there. `std::max(maxHp, 1)` makes 0 and negatives 1. And because max_ is declared before hp_, `hp_{max_}` safely uses the already-validated value."
+    sideBySide:
+      unsafe: |-
+        class Health {
+        public:
+            explicit Health(int maxHp) : max_{maxHp}, hp_{max_} {}   // Health{-40}: hp -40
+        private:
+            int max_;
+            int hp_;
+        };
+      hardened: |-
+        class Health {
+        public:
+            explicit Health(int maxHp) : max_{std::max(maxHp, 1)}, hp_{max_} {}
+            int hp() const { return hp_; }
+
+        private:
+            int max_;
+            int hp_;
+        };
+  - id: w10.l5.c2
+    type: bug
+    tags: [ w10.const-method ]
+    expect: error
+    prompt: "show() takes a const reference, and now this won't compile. Tap the line to fix, then pick the fix."
+    code: |-
+      #include <iostream>
+
+      class Badge {
+      public:
+          explicit Badge(int level) : level_{level} {}
+          int level() { return level_; }
+
+      private:
+          int level_;
+      };
+
+      void show(const Badge& b) {
+          std::cout << b.level() << '\n';
+      }
+
+      int main() {
+          Badge b{3};
+          show(b);
+          return 0;
+      }
+    bugLine: 5
+    options:
+      - t: "int level() const { return level_; }"
+        why: "Correct: const promises level() only reads, so it can be called through a const Badge&."
+      - t: "const int level() { return level_; }"
+        why: That makes the RETURN value const. The function itself still isn't const.
+      - t: "void show(Badge& b) {"
+        why: Compiles, but show could now change b. Fix the getter, not the caller.
+      - t: "int level() mutable { return level_; }"
+        why: mutable isn't allowed there. Only const after the ) marks a read-only method.
+    answer: 0
+    hints:
+      - b is const inside show().
+      - A read-only method needs a promise after its ().
+    short: "Mark read-only methods const, so they work on const objects."
+    explain: "Through a `const Badge&`, only const member functions can be called. level() only reads, so mark it: `int level() const`. The compiler then also stops level() from ever changing the object by accident."
+    sideBySide:
+      unsafe: |-
+        class Badge {
+        public:
+            explicit Badge(int level) : level_{level} {}
+            int level() { return level_; }   // not const
+        private:
+            int level_;
+        };
+
+        void show(const Badge& b) {
+            std::cout << b.level() << '\n';   // error
+        }
+      hardened: |-
+        class Badge {
+        public:
+            explicit Badge(int level) : level_{level} {}
+            int level() const { return level_; }
+
+        private:
+            int level_;
+        };
+
+        void show(const Badge& b) {
+            std::cout << b.level() << '\n';
+        }
+      expect: error
+  - id: w10.l5.c3
+    type: breakit
+    tags: [ w10.invariant, w3.divzero ]
+    unsafe: true
+    prompt: UNSAFE code. Which use of Average breaks it?
+    code: |-
+      class Average {
+      public:
+          void add(int score) {
+              total_ += score;
+              ++count_;
+          }
+          int value() const {
+              return total_ / count_;
+          }
+
+      private:
+          int total_{0};
+          int count_{0};
+      };
+    options:
+      - t: add(5), then value()
+        why: 5 / 1 = 5. Works fine.
+      - t: value() before any add
+        why: "Correct: count_ is 0, so total_ / count_ divides by zero: UB."
+      - t: add(0), then value()
+        why: A score of 0 is fine. count_ is 1, so 0 / 1 = 0.
+      - t: add(-3), then value()
+        why: -3 / 1 = -3. A negative score doesn't break the division.
+    answer: 1
+    hints:
+      - What is count_ right after construction?
+      - Which operator hates a zero on its right?
+    short: A fresh Average has count_ 0, so value() divides by zero.
+    explain: "A new Average has count_ 0, and value() divides by it: integer division by zero, UB. It may crash, or print junk and seem fine. Every public function must work for every valid state, including the empty one: handle count_ == 0 first."
+    sideBySide:
+      unsafe: |-
+        class Average {
+        public:
+            void add(int score) {
+                total_ += score;
+                ++count_;
+            }
+            int value() const {
+                return total_ / count_;   // count_ may be 0
+            }
+
+        private:
+            int total_{0};
+            int count_{0};
+        };
+      hardened: |-
+        class Average {
+        public:
+            void add(int score) {
+                total_ += score;
+                ++count_;
+            }
+            int value() const {
+                if (count_ == 0) {
+                    return 0;   // documented: empty average is 0
+                }
+                return total_ / count_;
+            }
+
+        private:
+            int total_{0};
+            int count_{0};
+        };
+  - id: w10.l5.c4
+    type: mcq
+    tags: [ w10.explicit ]
+    prompt: "Meters has no `explicit`. What does `runFor(5);` do?"
+    code: |-
+      class Meters {
+      public:
+          Meters(double m) : m_{m} {}
+          double value() const { return m_; }
+
+      private:
+          double m_;
+      };
+
+      void runFor(Meters distance);
+    options:
+      - t: Silently builds Meters{5} and passes it
+        why: "Correct: a one-argument constructor doubles as an implicit conversion. 5 what? Nobody said."
+      - t: Compile error
+        why: Only with explicit. Without it, the conversion happens quietly.
+      - t: Passes 5 seconds
+        why: C++ has no idea about units. It just calls Meters(double).
+      - t: Calls runFor with a Meters of 0
+        why: The 5 goes into the constructor, so m_ is 5.
+    answer: 0
+    hints:
+      - Can C++ turn a 5 into a Meters by itself?
+      - Which constructor takes exactly one argument?
+    short: "Without explicit, a one-argument constructor converts silently. Add explicit."
+    explain: "A non-explicit one-argument constructor is an implicit conversion, so `runFor(5)` quietly becomes `runFor(Meters{5})`. Was 5 meters, feet or seconds? Mark it `explicit Meters(double m)` and callers must write `runFor(Meters{5})`, on purpose."
+  - id: w10.l5.c5
+    type: safe
+    tags: [ w10.invariant, w10.const-method, w10.explicit, w10.validate-ctor ]
+    prompt: Safe or unsafe? Does this class guard its rules? Go!
+    seconds: 30
+    items:
+      - code: |-
+          class Health {
+          public:
+              explicit Health(int hp) : hp_{std::max(hp, 0)} {}
+          private:
+              int hp_;
+          };
+        safe: true
+        why: Private data, validated in an explicit constructor.
+      - code: |-
+          struct Wallet {
+              int gold{0};   // rule: never negative
+          };
+          Wallet w{};
+          w.gold -= 500;
+        safe: false
+        why: "Public data: any code can break the rule, and here it does."
+      - code: |-
+          class Rank {
+          public:
+              int level() const { return level_; }
+          private:
+              int level_{1};
+          };
+        safe: true
+        why: A const getter reads without letting anyone write.
+      - code: |-
+          class Slot {
+          public:
+              explicit Slot(int i) : i_{i} {}
+              int get() const { return data_[i_]; }
+          private:
+              std::array<int, 3> data_{};
+              int i_;
+          };
+        safe: false
+        why: "i_ is never checked: Slot{7}.get() reads out of bounds, UB."
+      - code: |-
+          class Meter {
+          public:
+              void setHp(int v) { hp_ = v; }   // rule: 0 to 100
+          private:
+              int hp_{100};
+          };
+        safe: false
+        why: The setter accepts anything, so private protects nothing.
+      - code: |-
+          class Meter {
+          public:
+              void setHp(int v) { hp_ = std::clamp(v, 0, 100); }
+          private:
+              int hp_{100};
+          };
+        safe: true
+        why: The setter clamps every value into 0 to 100.
+    hints:
+      - Is the data private?
+      - Does every way in check the value?
+    short: Safe classes hide data and check every way in.
+    explain: "A class guards its invariant only if the data is private AND every constructor and public function checks what comes in. One unchecked door is enough to break it."
+  - id: w10.l5.c6
+    type: write
+    tags: [ w10.const-method, w10.getter ]
+    prompt: "Write a const getter named gold that returns gold_ (one line, body included)."
+    code: |-
+      class Purse {
+      public:
+          // your getter goes here
+      private:
+          int gold_{0};
+      };
+    accept:
+      - int gold() const { return gold_; }
+    acceptRe:
+      - ^int gold\(\)const\{return gold_;\}$
+    placeholder: int gold() ...
+    hints:
+      - "Return type, name, (), then const."
+      - "Body: { return gold_; }"
+    short: "int gold() const { return gold_; } reads without changing anything."
+    explain: "`int gold() const { return gold_; }`: the `const` after the parentheses promises the getter won't change the Purse, so it also works on a `const Purse&`."
+recap:
+  - "Invariant: a rule every object always keeps."
+  - Private data, validated in the constructor.
+  - Every public function must keep the invariant.
+  - Mark read-only methods const.
+  - Make one-argument constructors explicit.
+vault:
+  - id: w10.invariant
+    title: Guard the invariant
+    code: |-
+      class Health {
+      public:
+          explicit Health(int maxHp)
+              : max_{std::max(maxHp, 1)}, hp_{max_} {}
+
+          void takeDamage(int amount) {
+              if (amount > 0) {
+                  hp_ = std::max(hp_ - amount, 0);
+              }
+          }
+          int hp() const { return hp_; }
+
+      private:
+          int max_;   // rule: max_ >= 1
+          int hp_;    // rule: 0 <= hp_ <= max_
+      };
+    note: "Private data, a checking constructor, and public functions that keep every rule true."
+    defense: true
+  - id: w10.explicit-const
+    title: explicit and const
+    code: |-
+      class Meters {
+      public:
+          explicit Meters(double m) : m_{m} {}   // no silent 5 -> Meters
+          double value() const { return m_; }    // read-only
+      private:
+          double m_;
+      };
+    note: "explicit stops surprise conversions; const lets getters work on const objects."
+    defense: true
+reviewTags: [ w8.nullcheck, w7.bounds, w10.access, w10.ctor, w10.encapsulation ]

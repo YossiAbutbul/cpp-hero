@@ -1,0 +1,294 @@
+# World 10 · Lesson 3: Constructors & destructors
+
+id: w10.l3
+title: Constructors & destructors
+skill: structure
+shield: false
+concept:
+  short: A constructor runs when an object is born; its destructor runs automatically when the object dies.
+  analogy: "A constructor is the hotel check-in desk; the destructor is check-out, and check-out always happens."
+  body:
+    - "A **constructor** has the struct's name and no return type: `Torch(const std::string& n) : name{n} {}`. It runs every time an object is created, so it's the place to set everything up."
+    - "The part after `:` is the **member initializer list**. It initializes members directly, before the body `{}` runs. Prefer it to assigning inside the body."
+    - "Members are initialized in the order they are **declared** in the struct, not the order you list them. If one member uses another, declare them in that order. `-Wall` warns when the two orders differ."
+    - "Once you write any constructor, the compiler stops giving you the free one with no arguments. `Torch t;` then fails, unless you add `Torch() = default;` (with default member values) or a constructor with no parameters."
+    - "A **destructor** is `~Torch()`: no parameters, no return type. It runs automatically when the object goes out of scope, and objects die in **reverse** order of creation. That's RAII from World 9: `std::unique_ptr` is exactly a class whose destructor frees memory."
+    - "Rule of Zero: if your members already clean up after themselves (`std::string`, `std::vector`, `std::unique_ptr`), don't write a destructor at all."
+  pitfall: "Common beginner mistake: `Torch t();` looks like \"make t with no arguments\" but declares a FUNCTION named t (the most vexing parse). Write `Torch t{};`."
+demo:
+  code: |-
+    #include <iostream>
+    #include <string>
+
+    struct Torch {
+        std::string name;
+
+        Torch(const std::string& n) : name{n} {
+            std::cout << "light " << name << '\n';
+        }
+        ~Torch() {
+            std::cout << "douse " << name << '\n';
+        }
+    };
+
+    int main() {
+        Torch a{"A"};
+        {
+            Torch b{"B"};
+            std::cout << "in the cave\n";
+        }
+        std::cout << "outside\n";
+        return 0;
+    }
+  steps:
+    - line: 15
+      push: { name: Torch(), vars: { n: "A" } }
+      note: Creating a runs the constructor.
+    - line: 7
+      mem:
+        cells:
+          - { name: a, value: "A" }
+      out: |
+        light A
+      note: name is already set by the initializer list.
+    - line: 8
+      pop: true
+    - line: 17
+      push: { name: Torch(), vars: { n: "B" } }
+      note: A second torch, inside an inner scope.
+    - line: 7
+      mem:
+        cells:
+          - { name: b, value: "B" }
+      out: |
+        light B
+    - line: 8
+      pop: true
+    - line: 18
+      out: |
+        in the cave
+    - line: 19
+      push: { name: ~Torch() }
+      note: "b's scope ends here: its destructor runs by itself."
+    - line: 10
+      out: |
+        douse B
+    - line: 11
+      pop: true
+      mem:
+        drop: [ b ]
+      note: b is gone. No call from us needed!
+    - line: 20
+      out: |
+        outside
+    - line: 22
+      push: { name: ~Torch() }
+      note: main ends, so a dies too. Last born, first gone.
+    - line: 10
+      out: |
+        douse A
+    - line: 11
+      pop: true
+      mem:
+        drop: [ a ]
+      note: Every torch was doused. Guaranteed.
+challenges:
+  - id: w10.l3.c1
+    type: predict
+    tags: [ w10.ctor, w10.dtor ]
+    prompt: Watch the lifetimes. What does this print exactly? (Mind the spaces.)
+    code: |-
+      #include <iostream>
+
+      struct Tag {
+          int id;
+          Tag(int i) : id{i} { std::cout << '+' << id << ' '; }
+          ~Tag() { std::cout << '-' << id << ' '; }
+      };
+
+      int main() {
+          Tag first{1};
+          Tag second{2};
+          std::cout << "| ";
+          return 0;
+      }
+    options:
+      - t: "+1 +2 | -2 -1 "
+        why: "Correct: created 1 then 2; destroyed in reverse, 2 then 1."
+      - t: "+1 +2 | -1 -2 "
+        why: Objects die in REVERSE order of creation, so second goes first.
+      - t: "+1 +2 | "
+        why: Destructors run automatically when main's objects go out of scope.
+      - t: "+1 -1 +2 -2 | "
+        why: first lives until the end of main, not just its own line.
+    answer: 0
+    hints:
+      - Destructors run when main's scope ends.
+      - Last in, first out.
+    short: "Construct 1, 2; destroy in reverse: 2, then 1."
+    explain: "first and second are constructed in order (+1 +2), then \"| \" prints. When main ends, locals are destroyed in reverse order: -2 then -1. Each print ends with a space and there is no newline."
+  - id: w10.l3.c2
+    type: fill
+    tags: [ w10.ctor, w10.init-list ]
+    prompt: Fill in the symbol that starts the member initializer list.
+    code: |-
+      struct Timer {
+          int seconds;
+          Timer(int s) ___ seconds{s} {}
+      };
+    accept:
+      - ":"
+    placeholder: symbol
+    hints:
+      - It sits between the ) and the first member.
+      - A single character.
+    short: "The initializer list starts with a colon: Timer(int s) : seconds{s} {}"
+    explain: "`Timer(int s) : seconds{s} {}` initializes seconds directly from s before the (empty) body runs. The list starts with `:` and members are separated by commas."
+  - id: w10.l3.c3
+    type: mcq
+    tags: [ w10.ctor, w10.vexing-parse ]
+    prompt: What does this line declare?
+    code: |-
+      struct Torch {
+          int fuel{10};
+      };
+
+      Torch t();
+    options:
+      - t: A function named t that returns a Torch
+        why: "Correct: the most vexing parse. Empty () reads as a function declaration."
+      - t: A Torch object with fuel 10
+        why: "That's Torch t{}; or Torch t;. With (), the compiler sees a function."
+      - t: A Torch with fuel 0
+        why: No object is created at all.
+      - t: A compile error
+        why: It compiles, which is the trap. Using t.fuel later is what fails.
+    answer: 0
+    hints:
+      - How would you declare a function that takes nothing and returns a Torch?
+      - "Same shape: Torch t();"
+    short: "Torch t(); declares a function. Use Torch t{}; for an object."
+    explain: "Any line that CAN be read as a function declaration IS one. `Torch t();` declares a function t with no parameters returning a Torch. Braces fix it: `Torch t{};` always creates an object."
+  - id: w10.l3.c4
+    type: bug
+    tags: [ w10.ctor, w10.default-ctor ]
+    expect: error
+    prompt: This won't compile. Tap the buggy line, then pick the fix.
+    code: |-
+      #include <iostream>
+
+      struct Shield {
+          int power{1};
+          Shield(int p) : power{p} {}
+      };
+
+      int main() {
+          Shield steel{5};
+          Shield wood;
+          std::cout << steel.power + wood.power << '\n';
+          return 0;
+      }
+    bugLine: 9
+    options:
+      - t: Shield wood{2};
+        why: "Correct: Shield's only constructor needs an int, so give it one."
+      - t: Shield wood();
+        why: The most vexing parse. That declares a function, so wood.power fails.
+      - t: Shield* wood;
+        why: An uninitialized pointer, not a Shield. wood.power doesn't work either.
+      - t: Shield wood{};
+        why: "{} still needs a constructor with no arguments, and there isn't one."
+    answer: 0
+    hints:
+      - Which constructors does Shield have?
+      - Writing Shield(int) removed the free no-argument one.
+    short: "Shield only has Shield(int), so pass an int: Shield wood{2};"
+    explain: "Writing any constructor removes the compiler's free default constructor, so `Shield wood;` has nothing to call. Pass an argument, or add `Shield() = default;` to the struct (power then uses its default of 1)."
+    sideBySide:
+      unsafe: |-
+        struct Shield {
+            int power{1};
+            Shield(int p) : power{p} {}
+        };
+        Shield wood;   // no Shield() exists
+      hardened: |-
+        struct Shield {
+            int power{1};
+            Shield() = default;
+            Shield(int p) : power{p} {}
+        };
+        Shield wood;   // power is 1
+      expect: error
+  - id: w10.l3.c5
+    type: mcq
+    tags: [ w10.init-list, w10.init-order ]
+    unsafe: true
+    expect: warn
+    prompt: "UNSAFE code. Box{3} should have area 9, but area is garbage. Why?"
+    code: |-
+      struct Box {
+          int area;
+          int side;
+          Box(int s) : side{s}, area{side * side} {}
+      };
+    options:
+      - t: area is declared first, so it's initialized first, using side before it's set
+        why: "Correct: members initialize in declaration order. side is still garbage (UB to read)."
+      - t: The initializer list runs right to left
+        why: The list's order doesn't matter at all. Declaration order does.
+      - t: side * side overflows for 3
+        why: 3 * 3 is 9. The problem is WHEN side gets its value.
+      - t: Members can't use other members in the initializer list
+        why: They can, as long as the other member is declared (and so initialized) earlier.
+    answer: 0
+    hints:
+      - Which member is declared first?
+      - "Members initialize in declaration order, whatever the list says."
+    short: Members initialize in declaration order, not initializer-list order.
+    explain: "area is declared before side, so `area{side * side}` runs first and reads side while it's still uninitialized. That's UB: it might print 9 by luck, or garbage. g++ -Wall warns (-Wreorder). Fix: declare side before area, or compute from the parameter: `area{s * s}`."
+  - id: w10.l3.c6
+    type: write
+    tags: [ w10.dtor ]
+    expect: skip
+    prompt: "Write the first line of Lamp's destructor, up to and including the {."
+    code: |-
+      struct Lamp {
+          Lamp() { std::cout << "on\n"; }
+          // ??? (your line)
+              std::cout << "off\n";
+          }
+      };
+    accept:
+      - ~Lamp() {
+    acceptRe:
+      - ^~Lamp\(\)\{$
+    placeholder: destructor line
+    hints:
+      - "Tilde, then the struct's name."
+      - No return type and no parameters.
+    short: "~Lamp() { starts the destructor: tilde, name, empty ()."
+    explain: "A destructor is `~` plus the struct's name, with no return type and no parameters: `~Lamp() { std::cout << \"off\\n\"; }`. It runs automatically when a Lamp dies."
+recap:
+  - Constructors run at birth; destructors run at death.
+  - "Initialize members in the list after :"
+  - Members initialize in declaration order.
+  - Objects die in reverse order of creation.
+vault:
+  - id: w10.ctor-dtor
+    title: Constructor & destructor
+    code: |-
+      struct Torch {
+          std::string name;
+
+          Torch(const std::string& n) : name{n} {
+              std::cout << "light " << name << '\n';
+          }
+          ~Torch() {
+              std::cout << "douse " << name << '\n';
+          }
+      };
+
+      Torch t{"A"};   // not Torch t(); (that's a function!)
+    note: "Destructors run automatically, in reverse order. Rule of Zero: skip them when members clean up themselves."
+    defense: false
+reviewTags: [ w6.scope, w9.raii, w10.method, w10.struct ]

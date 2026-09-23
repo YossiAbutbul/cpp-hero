@@ -1,0 +1,19 @@
+# World 10: Structs & Classes. Lessons are lesson-NN.yaml (played in file order).
+
+id: w10
+num: 10
+title: Structs & Classes
+icon: class
+blurb: "Bundle data into your own types, give it behavior, and build walls around it so no object can ever end up in an impossible state."
+story:
+  intro:
+    - The Heap Hoarder is gone and the heap is spotless! {^_^}
+    - "But look: all those loose ints lying around. Anyone can scribble on them!"
+    - "Let's give our data structure: structs, classes, and walls that guard the rules."
+  bossIntro:
+    - "The Invariant Golem! It smashes objects into impossible states: hp -50, age -3."
+    - Private members and checking constructors are the only armor it can't crack!
+  victory:
+    - The Golem froze solid. Every object keeps its rules now! {^_^}
+    - "But wait... our classes are having children. Whole families of types!"
+    - "World 11 awaits: inheritance and polymorphism. Onward, brace yourself!"
