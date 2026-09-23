@@ -14,18 +14,18 @@ challenges are YAML files in [`content/`](content/README.md), validated at build
 | Content | **All 16 worlds done** (84 lessons, 802 challenges, 16 projects, 16 bosses). `npm run validate` clean and **`check:cpp` clean for all 16 worlds** (g++ 14 via Docker) |
 | Tooling | `check:cpp`: per-run work dirs, `--filter` (world/lesson/challenge), `--list`, WSL or Docker `gcc:14`. Demo steps: `vars: null`, `push`/`pop` frames, `mem` cells + pointer arrows (`demoStates()`). Validate checks cross-world `reviewTags` |
 | React screens (Phase B2) | **Done on `main`**: ChallengeRunner + all 12 types, lesson player, practice/review/arena, CodeDemo frames + memory; map, onboarding + placement, project + Stress Test, boss battle; Curlo, Vault, Bestiary, Stats, Settings. lint (0 errors), `tsc -b`, tests, build pass |
-| Cloud save + deploy | **Code done on `main`** (security level A: strict Firestore rules + App Check, no server logic). Rules tests pass on the emulator (17), sign-in sync / second device / cloud reset checked on emulators, CSP checked. **Waiting on the user** to create Firebase + Vercel and set env vars: see [`docs/DEPLOY.md`](docs/DEPLOY.md) |
+| Cloud save + deploy | **Live at https://cpp-hero.vercel.app** (Vercel, auto-deploys from `main`). Firebase project `cpp-hero` (Spark, free): Google sign-in, Firestore `me-west1`, rules + indexes deployed. Sign-in and sync checked by the user on computer + phone, offline works. **App Check off on purpose** (reCAPTCHA Enterprise needs billing); set `VITE_FIREBASE_APPCHECK_SITE_KEY` in Vercel to turn it on later. Known limits: XP from two devices played offline at the same time merges by taking the higher value; the newer device's streak wins |
 | Polish (done) | Boss and lesson session shells merged into `src/features/session/`. World 6 demos use `push`/`pop` frames, World 8 demos use `mem` cells |
 
 ### How to continue
 
 When the user says **"continue according to plan"**, do these steps in order. Use parallel subagents where noted.
 
-1. **Deploy (user does this, Claude helps, one step at a time).** Done so far: Firebase project `cpp-hero` (Firestore in `me-west1`), web app registered, Google sign-in on, rules + indexes deployed, local sign-in + sync tested with the real project. **App Check skipped on purpose**: reCAPTCHA Enterprise needs a billing account and the user wants to stay on the free Spark plan (the rules already protect data; set `VITE_FIREBASE_APPCHECK_SITE_KEY` later to turn it on). Next: import the repo in Vercel, set the 6 `VITE_FIREBASE_*` env vars, deploy, add the Vercel domain to Firebase authorized domains, then Claude checks the live site (no CSP errors, sign-in, sync across two devices, offline). Known limits (documented, not bugs): XP from two devices played offline at the same time merges by taking the higher value; the newer device's streak wins.
-2. **Full playtest** of all 16 worlds end to end: a full boss fight, the boss hearts-refill path, and Import/Paste/Reset in Settings (never tested by hand). Fix what breaks.
-3. **Polish / follow-ups.** Can run as parallel subagents, each with its own folders:
+1. **Full playtest** of all 16 worlds end to end: a full boss fight, the boss hearts-refill path, and Import/Paste/Reset in Settings (never tested by hand). Fix what breaks.
+2. **Polish / follow-ups.** Can run as parallel subagents, each with its own folders:
    - World 6 and World 8 `NOTES.md` still describe the old demo format; update them.
    - Ideas from NOTES: a multi-stage boss schema (`content/worlds/16-final-boss/NOTES.md`), `obj` cards for inheritance/slicing (World 11 NOTES), moved-from "husk" boxes (World 15 NOTES).
+   - If sign-in fails on iPhone/Safari: proxy `/__/auth/*` to `cpp-hero.firebaseapp.com` in `vercel.json` and set `VITE_FIREBASE_AUTH_DOMAIN=cpp-hero.vercel.app` (see docs/DEPLOY.md).
    - Small visuals: arrows crossing stack/heap labels, wrapped order-tile indent, node labels at 360px, boss victory gap, fill hint "Close! Check spelling" shown too eagerly.
 
 ### Working notes (for Claude and humans)
