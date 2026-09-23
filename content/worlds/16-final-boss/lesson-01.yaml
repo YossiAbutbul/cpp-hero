@@ -6,7 +6,7 @@ skill: logic
 shield: false
 concept:
   short: "Gauntlet stage one: loops, decisions and functions, each one guarded against bad values."
-  analogy: "The gauntlet is a hallway of old enemies: every door is a world you already beat."
+  analogy: "A hallway of old enemies: every door is a world you beat."
   body:
     - "This world is a review with teeth. Each gauntlet lesson mixes several earlier worlds, because real bugs never stay in one chapter."
     - "**Loops** (World 5): count with `<` against the size, not `<=`. Index vectors with `std::size_t`, or skip the index entirely with a range-for. Every loop needs a way out."
@@ -111,7 +111,7 @@ challenges:
   - id: w16.l1.c1
     type: predict
     tags: [ w16.flow, w16.functions, w5.for, w4.ternary ]
-    prompt: A warm-up from three worlds at once. What does this print? (Watch the spaces.)
+    prompt: "What does this print? Spaces count. (↵ marks a new line.)"
     code: |-
       #include <iostream>
 
@@ -128,18 +128,17 @@ challenges:
       }
     options:
       - t: "0 2 6 \n"
-        why: "Correct: i is 3, 7, 11. bump gives 0, 2, 6, each followed by a space."
+        why: "bump(3), bump(7), bump(11), each followed by a space."
       - t: "-2 2 6 \n"
-        why: "The ternary guards it: 3 > 5 is false, so bump(3) is 0, not -2."
+        why: "3 > 5 is false, so bump(3) is 0, not -2."
       - t: "0 2 6 10 \n"
-        why: The next i would be 15, and 15 < 12 is false. Only three passes.
+        why: The next i would be 15, which fails i < 12.
       - t: "0 2 6\n"
-        why: A space is printed after EVERY number, including the last one.
+        why: A space follows EVERY number, even the last.
     answer: 0
     hints:
-      - "List the values of i first: start 3, step 4, stop before 12."
-      - The ternary returns 0 when hp is 5 or less.
-    short: "i is 3, 7, 11; bump gives 0, 2, 6, each with a space."
+      - "List i first: start 3, step 4, stop before 12."
+    short: "i is 3, 7, 11; bump gives 0, 2, 6."
     explain: "The loop runs for i = 3, 7 and 11 (15 fails i < 12). bump(3) hits the ternary's else branch: 0. bump(7) = 2 and bump(11) = 6. Each is followed by a space, then one newline: \"0 2 6 \" and a newline."
   - id: w16.l1.c2
     type: bug
@@ -163,18 +162,17 @@ challenges:
     bugLine: 6
     options:
       - t: for (std::size_t i = 0; i < hp.size(); ++i) {
-        why: "Correct: valid indexes are 0 to size - 1, so stop BEFORE size."
+        why: "Stops BEFORE size, so the last index read is 2."
       - t: for (std::size_t i = 0; i <= hp.size() - 1; ++i) {
-        why: Works here, but an empty vector makes size() - 1 wrap to a huge number.
+        why: "Works here, but on an empty vector size() - 1 wraps huge."
       - t: for (int i = 0; i <= hp.size(); ++i) {
-        why: Still reads hp[3], and now compares signed with unsigned too.
+        why: Still reads hp[3], and mixes signed with unsigned.
       - t: for (std::size_t i = 1; i <= hp.size(); ++i) {
-        why: Skips hp[0] and still reads hp[3], one past the end.
+        why: Skips hp[0] and still reads hp[3].
     answer: 0
     hints:
       - How many passes does <= size make?
-      - The last valid index is size - 1.
-    short: "i <= size() reads one past the end. Use <, or a range-for."
+    short: "i <= size() reads one past the end. Use < or range-for."
     explain: "With <=, the loop runs for i = 3 too, and hp[3] is one past the end: undefined behavior. It may add garbage, crash, or seem fine. Use `i < hp.size()`, or better, a range-for, which can't go out of bounds."
     sideBySide:
       unsafe: |-
@@ -190,7 +188,7 @@ challenges:
     type: harden
     tags: [ w16.functions, w4.default, w6.missing-return ]
     bug: missing-default
-    prompt: "Every case returns... or does it? `static_cast<Weapon>(7)` gets past the switch. Pick the line for the blank."
+    prompt: "`static_cast<Weapon>(7)` matches no case. Pick the line for the blank."
     code: |-
       enum class Weapon { Sword, Bow, Staff };
 
@@ -204,16 +202,15 @@ challenges:
       }
     options:
       - t: "return 0;  // unknown weapon: no damage"
-        why: "Correct: every path now returns. (Throwing an exception is another good choice.)"
+        why: "Every path now returns. (Throwing also works.)"
       - t: "// nothing: every enumerator has a case"
-        why: An out-of-list value falls off the end of a non-void function. That's UB.
+        why: 7 falls off the end of an int function. UB.
       - t: break;
-        why: "Compile error: break isn't allowed outside a loop or switch."
+        why: "Compile error: no loop or switch to break out of."
       - t: return damage(w);
-        why: Calls itself with the same value forever, until the stack overflows.
+        why: Calls itself forever, until the stack overflows.
     answer: 0
     hints:
-      - What happens when a value matches no case?
       - A non-void function must return on every path.
     short: "Return on every path, even after a switch that seems complete."
     explain: "An enum class variable can hold values that aren't in the list (a cast, bad data from a file). Then no case matches, execution leaves the switch and falls off the end of a function that promised an int: undefined behavior. g++ warns with -Wreturn-type. Add a final return (or throw)."
@@ -255,20 +252,19 @@ challenges:
       }
     options:
       - t: "0"
-        why: "Exposes it: 0 < 1 is true, but 0 > 99 is false, so && is false. Accepted!"
+        why: "0 < 1, but 0 > 99 is false, so && is false. Accepted!"
       - t: "150"
-        why: "Exposes it: 150 > 99, but 150 < 1 is false. No number is both."
+        why: "150 > 99, but 150 < 1 is false. Accepted!"
       - t: abc
-        why: Caught. The read fails, and || short-circuits straight to the error.
+        why: Caught. The read fails, so || goes straight to the error.
       - t: "50"
-        why: A valid level. It should be accepted, and it is.
+        why: A valid level, correctly accepted.
       - t: "-7"
-        why: "Exposes it: -7 < 1, but -7 > 99 is false, so it slips through."
+        why: "-7 < 1, but -7 > 99 is false. Accepted!"
     answers: [ 0, 1, 4 ]
     hints:
       - Can any number be below 1 AND above 99?
-      - "&& binds tighter than ||. Read the condition in that order."
-    short: "No number is below 1 AND above 99: the range check never fires."
+    short: "No number is below 1 AND above 99: the check never fires."
     explain: "`level < 1 && level > 99` is always false, so only a failed read is rejected. Every out-of-range number walks in. The range needs `||`: `level < 1 || level > 99`. g++ even warns about mixing && and || without parentheses."
     sideBySide:
       unsafe: |-
@@ -284,7 +280,7 @@ challenges:
   - id: w16.l1.c5
     type: order
     tags: [ w16.functions, w6.validate, w6.params ]
-    prompt: Build a heal function with a guard clause. It rejects bad amounts and caps hp at 100.
+    prompt: Order the lines of a heal function that rejects bad amounts and caps hp at 100.
     lines:
       - "int healCapped(int hp, int amount) {"
       - "    if (amount < 0 || amount > 100) {"
@@ -295,13 +291,12 @@ challenges:
     distractors:
       - "    return hp + amount;"
     hints:
-      - "Guard clause first: reject bad input at the top."
-      - The happy path comes last, capped with std::min.
-    short: "Guard first, then the happy path. Reject bad values before using them."
+      - "Guard clause first; the capped happy path last."
+    short: "Guard first, then the happy path."
     explain: "The guard clause handles the bad amounts first and leaves early, so the last line only ever sees a sane amount. std::min caps the result at 100. The distractor `return hp + amount;` forgets the cap."
 recap:
   - "Loop with <, or use range-for."
-  - Return a value on every path, even after a switch.
+  - Return on every path, even after a switch.
   - Guard clauses first, happy path last.
   - "&& binds tighter than ||: write parentheses."
 vault:

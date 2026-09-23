@@ -5,8 +5,8 @@ title: The override oath
 skill: structure
 shield: false
 concept:
-  short: "Write override on every derived virtual function; the compiler then proves it really replaces a base function."
-  analogy: "`override` is a signed oath, \"I replace Hero's attack\", and the compiler checks the signature before accepting it."
+  short: "Write override on each derived virtual function; the compiler checks it really replaces one."
+  analogy: "A signed oath, \"I replace Hero's attack\", checked by the compiler."
   body:
     - "`void attack() const override { ... }` says: this replaces a virtual function of the base. If the base has no virtual function with exactly that signature (same name, same parameter types, same `const`), it's a **compile error**."
     - "Without `override`, a small slip (`atack`, a missing `const`, `double` instead of `int`) quietly creates a brand-new function. Calls through a base reference keep running the base version, and nothing tells you."
@@ -74,18 +74,17 @@ challenges:
     prompt: "What does writing `override` on a derived function do?"
     options:
       - t: Makes the compiler reject it unless it really overrides a base virtual function
-        why: "Correct: it turns silent signature slips into compile errors."
+        why: "Silent signature slips become compile errors."
       - t: Makes the function virtual when the base function isn't
-        why: "override requires the base function to be virtual already. Otherwise: compile error."
+        why: "The base must already be virtual, or it's an error."
       - t: Calls the base version first, then the derived one
-        why: "Nothing is called automatically. Call Hero::name() yourself if you want the base version."
+        why: "Nothing runs automatically. Call Hero::name() yourself."
       - t: Makes the program faster by skipping dispatch
-        why: "It's a compile-time check only. The generated call is the same."
+        why: "It's only a compile-time check."
     answer: 0
     hints:
       - It's a promise the compiler checks.
-      - What happens if the signature doesn't match?
-    short: "override is a compiler-checked promise: \"this replaces a base virtual\"."
+    short: "override is a checked promise: \"this replaces a base virtual\"."
     explain: "`override` changes nothing at run time. It asks the compiler to verify that a base class has a virtual function with the same name, parameters and `const`. If not, it's an error, so a typo can never quietly create a new function."
   - id: w11.l3.c2
     type: bug
@@ -118,18 +117,17 @@ challenges:
     bugLine: 10
     options:
       - t: "void attack() const override { std::cout << \"Rogue stabs\\n\"; }"
-        why: "Correct: the signature now matches, and override makes the compiler guarantee it."
+        why: "Signatures now match, and override guarantees it."
       - t: "virtual void attack() { std::cout << \"Rogue stabs\\n\"; }"
-        why: "Still no const, so it's a new virtual function. Hero& calls still run Hero's."
+        why: "Still no const: a new function. Hero& calls run Hero's."
       - t: "Remove const from Hero::attack"
-        why: "act holds a const Hero&, so it can no longer call a non-const attack. Compile error."
+        why: "Then act's const Hero& can't call attack. Compile error."
       - t: "void attack() override { std::cout << \"Rogue stabs\\n\"; }"
-        why: "Good instinct, but it won't compile: nothing in Hero matches a non-const attack()."
+        why: "Won't compile: Hero has no non-const attack()."
     answer: 0
     hints:
-      - Compare the two signatures word by word.
-      - One small keyword is missing after ().
-    short: "Missing const made a new function; `const override` fixes and checks it."
+      - Compare the two signatures word by word, including after ().
+    short: "Missing const made a new function; `const override` fixes it."
     explain: "`void attack()` and `void attack() const` are different signatures, so Rogue's function doesn't override: it hides Hero's. Through a `const Hero&`, Hero's version runs. g++ -Wall may warn that Rogue's attack hides the virtual one, but it still compiles. Add `const` to match, and `override` so the compiler proves it."
     sideBySide:
       unsafe: |-
@@ -164,8 +162,7 @@ challenges:
       - final override
     placeholder: keyword
     hints:
-      - It goes after const.
-      - "It says: I replace a base virtual function."
+      - "The oath keyword: I replace a base virtual function."
     short: "`override` goes after the parameter list and const."
     explain: "`std::string title() const override` promises that Hero has a virtual `title() const`. If someone later renames or changes Hero's version, this line stops compiling instead of silently becoming a separate function."
   - id: w11.l3.c4
@@ -199,7 +196,7 @@ challenges:
     options:
       - t: |
           10 21
-        why: "Correct: the plain Hero hits for 10; the Berserker doubles Hero's 10 and adds 1."
+        why: "Hero hits 10; Berserker doubles Hero's 10 and adds 1."
       - t: |
           10 10
         why: "damage() is virtual, so hit(b) runs Berserker's version."
@@ -212,14 +209,13 @@ challenges:
     answer: 0
     hints:
       - "Hero::damage() always means Hero's version, no dispatch."
-      - "Multiply first, then add."
-    short: "Hero::damage() calls the base version directly: 10 * 2 + 1 = 21."
+    short: "Hero::damage() calls the base version: 10 * 2 + 1 = 21."
     explain: "`hit(h)` calls Hero's damage: 10. `hit(b)` dispatches to Berserker's damage, which calls `Hero::damage()` by name (no dispatch, always Hero's: 10), doubles it and adds 1: 21. Output: \"10 21\" and a newline."
   - id: w11.l3.c5
     type: review
     tags: [ w11.override, w11.signature ]
     unsafe: true
-    prompt: "Code review! None of Cleric's functions says override. Tap every one that fails to override."
+    prompt: "Code review! Tap every Cleric function that does NOT override Hero's version."
     code: |-
       class Hero {
       public:
@@ -242,13 +238,12 @@ challenges:
     lineNotes:
       "3": "The base promises heal(int)."
       "4": "The base promises armor() const."
-      "13": "double instead of int: a new function. hero.heal(5) through a Hero& runs Hero's."
-      "14": "Missing const: a new function. armor() through a Hero& still returns 0."
-      "15": "Matches Hero's rest() exactly, so it really overrides. Still, write override."
+      "13": "double, not int: a new function. Hero& calls run Hero's."
+      "14": "Missing const: a new function. Hero& calls return 0."
+      "15": "Exact match, so it overrides. Still, write override."
     hints:
-      - Compare each signature with the base, including const.
-      - "Parameter types must match exactly: int is not double."
-    short: "Mismatched signatures silently create new functions; override would catch both."
+      - "Compare each signature with the base: types and const."
+    short: "Mismatched signatures silently make new functions; override catches them."
     explain: "heal(double) doesn't match heal(int), and armor() without const doesn't match armor() const, so both are new functions that hide the base ones. Calls through a Hero& keep running Hero's heal and armor. Only rest() really overrides. Writing `override` on all three turns the two slips into compile errors you fix immediately."
     sideBySide:
       unsafe: |-
@@ -282,7 +277,6 @@ challenges:
       - "    virtual std::string title() {"
     hints:
       - "Class head, access label, then the function."
-      - "The oath goes after const."
     short: "Derive publicly, then override title() and reuse Hero::title()."
     explain: "`class Knight : public Hero {`, then `public:`, then the checked override `std::string title() const override`, whose body calls the base version by name. The distractor lacks `const` and `override`, so it would silently become a new function."
 recap:

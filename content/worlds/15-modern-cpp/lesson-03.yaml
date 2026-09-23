@@ -5,8 +5,8 @@ title: "enum class: named choices"
 skill: structure
 shield: false
 concept:
-  short: "enum class gives a fixed set of named values, scoped with Name:: and never silently turned into ints."
-  analogy: "An enum class is a vending machine with labeled buttons: you press Weather::Rainy, not a mystery number."
+  short: "enum class is a fixed set of named values that never silently become ints."
+  analogy: "Labeled buttons: you press Weather::Rainy, not a mystery number."
   body:
     - "An **enumeration** is a type with a fixed list of named values: `enum class Weather { Sunny, Rainy, Stormy };`. A variable of that type can only hold those names: `Weather today = Weather::Rainy;`."
     - "**Scoped**: the names live inside the enum, so you write `Weather::Rainy`. Two enums can both have a `None` without clashing."
@@ -82,18 +82,17 @@ challenges:
       }
     options:
       - t: "Compile error: no implicit conversion to int"
-        why: "Correct: enum class values never silently become ints. Use static_cast<int> if you mean it."
+        why: "Use static_cast<int> if you really mean it."
       - t: It prints 1
-        why: That's what a plain enum would do. enum class refuses the silent conversion.
+        why: A plain enum would. enum class refuses the silent conversion.
       - t: It prints Rainy
-        why: Enum names aren't strings, and this line doesn't even compile.
+        why: Enum names aren't strings, and this doesn't compile.
       - t: It compiles with a warning
-        why: It's a hard error, not a warning. The type system blocks it.
+        why: It's a hard error, not a warning.
     answer: 0
     hints:
       - Is an enum class allowed to act like an int?
-      - Conversions from enum class must be spelled out.
-    short: enum class never converts to int by itself; that's a compile error.
+    short: enum class never converts to int by itself.
     explain: "An enum class is strongly typed. `int n = Weather::Rainy;` is rejected. If you truly need the number, write `static_cast<int>(Weather::Rainy)`, which gives 1."
   - id: w15.l3.c2
     type: predict
@@ -112,20 +111,19 @@ challenges:
     options:
       - t: |
           1 6
-        why: "Correct: Low is 1, and High follows Mid (5), so it's 6."
+        why: "Low is 1; High follows Mid (5), so it's 6."
       - t: |
           0 2
         why: Counting from 0 only happens when no values are given.
       - t: |
           1 2
-        why: A name without a value is one more than the name before it, and that's Mid (5).
+        why: High is one more than the name before it, Mid (5).
       - t: |
           Low High
         why: static_cast<int> gives the numbers, not the names.
     answer: 0
     hints:
       - A name without a value takes the previous value plus one.
-      - What comes right before High?
     short: High has no value, so it's Mid + 1 = 6.
     explain: "Low = 1 and Mid = 5 are given. High isn't, so it's the previous value plus one: 6. The casts print \"1 6\" and a newline."
   - id: w15.l3.c3
@@ -138,14 +136,13 @@ challenges:
       - '^enum (class|struct) Dir(:[\w:]+)?\{Up,Down,?\};$'
     placeholder: enum class ...
     hints:
-      - "Two words start it: enum class."
-      - Don't forget the ; after the closing brace.
+      - "Start with enum class; end with ; after the brace."
     short: "enum class Dir { Up, Down }; declares a scoped enum."
     explain: "`enum class Dir { Up, Down };` creates the type Dir with values Dir::Up (0) and Dir::Down (1). Like a struct, the definition ends with a semicolon after the brace."
   - id: w15.l3.c4
     type: harden
     tags: [ w15.enum-class, w3.validate ]
-    prompt: The player picks a move by number (0 to 2). Pick the check that runs before the cast.
+    prompt: Moves are numbered 0 to 2. Pick the check that rejects every invalid choice.
     code: |-
       #include <iostream>
 
@@ -163,18 +160,17 @@ challenges:
       }
     options:
       - t: choice < 0 || choice > 2
-        why: "Correct: only 0, 1 and 2 are real moves. Anything else is rejected before the cast."
+        why: "Only 0, 1 and 2 pass; everything else is rejected."
       - t: choice > 2
-        why: "Misses negatives: -7 slips through and becomes a Move with no name."
+        why: "Misses negatives: -7 becomes a Move with no name."
       - t: choice == 3
         why: Blocks one number. 4, 99 and -1 still get through.
       - t: "false"
-        why: No check at all. static_cast happily makes a nameless Move from 42.
+        why: No check. static_cast makes a nameless Move from 42.
     answer: 0
     hints:
       - Which numbers match a real move?
-      - static_cast doesn't check anything for you.
-    short: "Check 0 to 2 before static_cast: the cast itself checks nothing."
+    short: "Check 0 to 2 first: static_cast itself checks nothing."
     explain: "static_cast<Move>(42) compiles and gives a Move that matches no name: every switch and comparison then misses it. Validate the range first, then cast."
     sideBySide:
       unsafe: |-
@@ -190,7 +186,7 @@ challenges:
   - id: w15.l3.c5
     type: mcq
     tags: [ w15.enum-class, w4.switch ]
-    prompt: You add Snowy to Weather. danger()'s switch has no default and no Snowy case. What does g++ -Wall do?
+    prompt: Snowy was added, but the switch has no Snowy case. What does g++ -Wall do?
     code: |-
       enum class Weather { Sunny, Rainy, Stormy, Snowy };
 
@@ -205,18 +201,17 @@ challenges:
     expect: warn
     options:
       - t: "Warns: enumeration value 'Snowy' not handled in switch"
-        why: "Correct: -Wall checks enum switches without a default and names the missing value."
+        why: "-Wall checks enum switches without a default."
       - t: Nothing; it compiles silently
         why: -Wall includes -Wswitch, which catches exactly this.
       - t: Compile error
-        why: It's a warning, not an error. It compiles, and Snowy returns -1.
+        why: It's only a warning. Snowy returns -1.
       - t: Snowy is quietly treated as Sunny
-        why: No case matches Snowy, so the switch is skipped and -1 is returned.
+        why: "No case matches, so the switch is skipped: -1."
     answer: 0
     hints:
       - "-Wall includes a switch check for enums."
-      - A default would hide the missing case.
-    short: "No default + enum switch: -Wall names every forgotten value."
+    short: "Enum switch without default: -Wall names every forgotten value."
     explain: "With no default, g++ -Wall (via -Wswitch) warns about each enum value the switch doesn't handle. That's why switches over enums often skip default: adding a new value makes the compiler point at every place that needs an update."
 recap:
   - "Scoped names: Weather::Rainy, no clashes."

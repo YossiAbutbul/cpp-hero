@@ -2,26 +2,25 @@
 
 id: w16.p
 title: The Bug Log
-intro: "Capstone! Log bug reports with a severity, count the dangerous ones, and look bugs up, using every world you've beaten."
+intro: "Capstone! Build a bug log using every world you've beaten."
 steps:
   - id: w16.p.s1
     type: fill
     tags: [ w16.modern ]
-    prompt: "Severity levels need their own scoped type, so a plain int can't sneak in. Fill in the keyword."
+    prompt: "Fill in the keyword that makes Severity a scoped, strongly typed enum."
     code: "enum ___ Severity { Low = 1, Medium, High };"
     accept:
       - class
       - struct
     placeholder: keyword
     hints:
-      - The modern, scoped kind of enum.
-      - "Two words: enum ..."
+      - "The modern, scoped kind: enum ..."
     short: "enum class keeps Severity scoped and strongly typed."
     explain: "`enum class Severity` makes you write `Severity::High`, and it won't silently convert to or from int. Any conversion has to be an explicit static_cast, which is exactly where we'll put a check."
   - id: w16.p.s2
     type: write
     tags: [ w16.optional, w16.functions ]
-    prompt: "toSeverity turns a typed number into a Severity, if it's valid. Write the line that goes where the comment is."
+    prompt: "Write the line for the comment: return \"no valid Severity\"."
     code: |-
       #include <optional>
 
@@ -38,14 +37,13 @@ steps:
       - return {};
     placeholder: return ...
     hints:
-      - Out of range means "no answer".
       - The empty optional is spelled std::nullopt.
-    short: "return std::nullopt; says \"no valid Severity\" in the type."
+    short: "An empty optional says \"no valid Severity\"."
     explain: "Returning std::nullopt (or `{}`) gives back an empty optional. The caller must check it before using the value, so a 9 can never become a fake Severity."
   - id: w16.p.s3
     type: order
     tags: [ w16.input, w3.validate, w3.cin ]
-    prompt: Read how many reports are coming, and refuse anything that isn't 0 to 100. Order the lines.
+    prompt: Read the report count, refusing anything but 0 to 100. Order the lines.
     lines:
       - "int count{};"
       - "std::cout << \"How many reports? \";"
@@ -57,13 +55,12 @@ steps:
       - "std::cin >> count;"
     hints:
       - "Declare, prompt, then read and check in one if."
-      - The error message and return go inside the if.
-    short: "Declare, prompt, then read AND range-check in one condition."
+    short: "Read AND range-check in one condition."
     explain: "Initialize count, prompt, then read and validate together: a failed read short-circuits the ||, and the range check stops negatives and absurd counts. The bare `std::cin >> count;` distractor reads without checking."
   - id: w16.p.s4
     type: fill
     tags: [ w16.lambdas, w16.stl, w16.classes ]
-    prompt: "countAt counts log entries with one severity. What does the lambda capture?"
+    prompt: "Fill in the lambda's capture list so it can use sev."
     code: |-
       #include <algorithm>
       #include <map>
@@ -88,14 +85,13 @@ steps:
       - "&sev"
     placeholder: capture
     hints:
-      - The lambda body uses one outside name.
       - "Capture it by value: just its name."
-    short: "[sev] gives the lambda its own copy of the severity to compare."
+    short: "[sev] gives the lambda its own copy to compare."
     explain: "The lambda compares each entry's severity with sev, so it must capture sev. By value (`[sev]`) is the safe default; `[&sev]` also works here because count_if finishes before countAt returns."
   - id: w16.p.s5
     type: predict
     tags: [ w16.stl, w7.find ]
-    prompt: "record() does `entries_[name] = sev;`. With plain ints, what does this test print?"
+    prompt: "What does this map test print?"
     code: |-
       std::map<std::string, int> entries;
       entries["hydra"] = 3;
@@ -105,10 +101,10 @@ steps:
     options:
       - t: |
           2 2
-        why: "Correct: the second hydra report overwrites the first. Two keys, hydra is 2."
+        why: "The second hydra overwrites the first: two keys, hydra 2."
       - t: |
           3 2
-        why: A map key is unique. Assigning to hydra again replaces its value.
+        why: A map key is unique. Assigning again replaces its value.
       - t: |
           2 3
         why: The later assignment wins. hydra now holds 2.
@@ -118,7 +114,6 @@ steps:
     answer: 0
     hints:
       - Can a map hold the same key twice?
-      - Which assignment to hydra happens last?
     short: "Same key twice: one entry, and the last value wins."
     explain: "operator[] finds hydra the second time and overwrites its value, so the map has two entries (hydra, imp) and hydra is 2. Here inserting is what we want; for questions, the log uses find()."
 program: |-
@@ -204,7 +199,7 @@ programStdin: |
   goblin 9
   ghost
 stress:
-  intro: "Final stress test! I'll throw everything the Dragon would. Patch every crack!"
+  intro: "Final stress test! Everything the Dragon would throw. Patch every crack!"
   attacks:
     - input: abc
       label: Text instead of a count!
@@ -213,7 +208,7 @@ stress:
         type: harden
         tags: [ w16.input, w3.cin, w3.validate ]
         bug: cin-fail
-        prompt: "The count is `abc`. Pick the condition that stops it (and silly counts) before the loop."
+        prompt: "The count is `abc`. Pick the condition that rejects it and any count outside 0 to 100."
         code: |-
           int count{};
           std::cout << "How many reports? ";
@@ -223,18 +218,17 @@ stress:
           }
         options:
           - t: "!(std::cin >> count) || count < 0 || count > 100"
-            why: "Correct: a failed read short-circuits to the error; otherwise the range is checked."
+            why: "Checks the read first, then the range."
           - t: count < 0 || count > 100
-            why: Never reads anything. count is always 0, so the log is always empty.
+            why: Never reads anything. count is always 0.
           - t: "!(std::cin >> count)"
             why: Stops abc, but -5 or 2000000000 get through.
           - t: "!(std::cin >> count) && count > 100"
-            why: "&& needs both: a failed read sets count to 0, and 0 > 100 is false."
+            why: "A failed read sets count to 0, and 0 > 100 is false."
         answer: 0
         hints:
           - Read first, then check the range.
-          - "|| stops at the first true part."
-        short: "Read, check the read, then check the range, in that order."
+        short: "Read, check the read, then check the range."
         explain: "`!(std::cin >> count)` reads and catches abc. Only if that succeeds does || go on to the range checks. Capping at 100 also keeps a hostile count from making the loop wait for millions of lines."
         sideBySide:
           unsafe: |-
@@ -266,17 +260,16 @@ stress:
           }
         options:
           - t: level < 1 || level > 3
-            why: "Correct: only 1, 2 and 3 name a real Severity. Everything else is refused."
+            why: "Only 1, 2 and 3 name a real Severity."
           - t: level > 3
-            why: Misses 0 and negatives. Level -2 becomes a nameless Severity.
+            why: Misses 0 and negatives.
           - t: level == 9
             why: Only blocks this exact attack. The Dragon just tries 10.
           - t: level < 1 && level > 3
-            why: "No number is both below 1 and above 3: this never refuses anything."
+            why: "No number is both: this never refuses anything."
         answer: 0
         hints:
-          - Which numbers name a real Severity?
-          - Block both ends of the range.
+          - Which numbers name a real Severity? Block both ends.
         short: "Refuse anything outside 1 to 3 before the cast."
         explain: "static_cast<Severity>(9) compiles and gives a value that matches no enumerator: every switch and comparison on it goes wrong. Check the range before the cast, and return an empty optional for anything else."
         sideBySide:
@@ -300,7 +293,7 @@ stress:
         tags: [ w16.stl, w7.find ]
         bug: unchecked-find
         unsafe: true
-        prompt: "UNSAFE: looking up `ghost` crashes the log, or worse. Tap the buggy line, then pick the fix."
+        prompt: "UNSAFE: looking up `ghost` is UB. A miss is normal. Tap the bug, then pick the fix."
         code: |-
           #include <map>
           #include <optional>
@@ -320,17 +313,16 @@ stress:
         bugLine: 9
         options:
           - t: Compare the iterator with end(); return std::nullopt when it matches
-            why: "Correct: a missing name becomes an empty optional. end() is never dereferenced."
+            why: "A miss becomes an empty optional; end() is never dereferenced."
           - t: return entries_[name];
-            why: "Doesn't compile: operator[] can insert, so a const map doesn't have it."
+            why: "Doesn't compile: a const map has no operator[]."
           - t: return entries_.at(name);
-            why: Safe (it throws), but a missing name is normal. optional fits better than an exception.
+            why: Throws on a normal miss. optional fits better.
           - t: "return entries_.find(name)->second; // TODO check"
             why: A comment changes nothing. end() is still dereferenced.
         answer: 0
         hints:
           - What does find() return for a missing key?
-          - Never use -> on end().
         short: "Check find() against end() before using ->second."
         explain: "For a missing key, find() returns end(), and end()->second is undefined behavior. It may crash, return garbage, or look fine. Compare with end() first and return std::nullopt for a miss."
         sideBySide:

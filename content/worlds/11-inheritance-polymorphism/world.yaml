@@ -4,7 +4,7 @@ id: w11
 num: 11
 title: Inheritance & Polymorphism
 icon: tree
-blurb: "Build families of classes that share a base, let each member answer in its own voice through virtual functions, and keep every object whole: no slicing, no half-destroyed heroes."
+blurb: "Families of classes that share a base, each answering in its own voice."
 story:
   intro:
     - The Golem froze solid, and every class guards its rules. Great work!

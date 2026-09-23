@@ -4,14 +4,14 @@ id: w15
 num: 15
 title: Modern C++
 icon: star
-blurb: "Lambdas, auto, structured bindings, enum class, std::optional and move: the modern toolkit, used without leaving hollow husks or dangling leeches behind."
+blurb: "Lambdas, auto, enum class, std::optional and move: the modern toolkit."
 story:
   intro:
     - The Iterator Wraith is gone and the STL shelves are safe. Brace-tastic!
     - "But look: something swipes values out of objects, leaving hollow husks behind!"
     - "Let's learn the modern toolkit: lambdas, auto, enum class, optional and move."
   bossIntro:
-    - That's the Move Gremlin! It steals an object's insides and leaves a hollow husk.
+    - The Move Gremlin! It steals an object's insides, leaving a hollow husk.
     - Never read what it moved from. Refill it first, and capture by value!
   victory:
     - The Gremlin moved itself right out of the Codebase! {^_^}

@@ -5,8 +5,8 @@ title: "Gauntlet V: STL and modern C++"
 skill: toolkit
 shield: false
 concept:
-  short: "Gauntlet stage five: check find() against end(), let algorithms loop, and never use moved or dangling things."
-  analogy: "The STL is a toolbox of sharp, tested tools: use the right one, and check the blade before you cut."
+  short: "Check find() against end(), let algorithms loop, never use moved or dangling things."
+  analogy: "A toolbox of sharp tools: check the blade before you cut."
   body:
     - "**Maps** (World 14): `m.find(key)` returns `m.end()` when the key is missing; compare before using `->second`. `m[key]` **inserts** a default value when the key is missing, so it's a write, not a question."
     - "**Algorithms** (World 14): `std::count_if`, `std::find`, `std::sort` replace hand-written loops (no off-by-one to get wrong). Their results still need checking: `std::find` returns `end()` when nothing matches."
@@ -56,7 +56,7 @@ demo:
     - line: 12
       vars:
         it: null
-      note: it's scope ended with the if.
+      note: The variable it ends with the if.
     - line: 13
       vars:
         hp: "{12, 0, 7, 0}"
@@ -95,7 +95,7 @@ challenges:
     type: predict
     tags: [ w16.stl, w7.find ]
     bug: map-bracket-insert
-    prompt: A careless bounty check. What does this print?
+    prompt: What does this print?
     code: |-
       #include <iostream>
       #include <map>
@@ -113,22 +113,21 @@ challenges:
       - t: |
           mage is broke
           2
-        why: "Correct: gold[\"mage\"] inserts mage with 0, so the map grows to 2."
+        why: "gold[\"mage\"] inserts mage with 0: size becomes 2."
       - t: |
           mage is broke
           1
-        why: "operator[] doesn't just look: a missing key gets inserted with value 0."
+        why: "operator[] inserts a missing key with value 0."
       - t: |
           1
-        why: "The inserted value is 0, so the if is true and the message prints."
+        why: "The inserted value is 0, so the message prints."
       - t: |
           2
-        why: The new entry is 0, so 0 == 0 is true and the message prints.
+        why: 0 == 0 is true, so the message prints.
     answer: 0
     hints:
       - What does operator[] do when the key is missing?
-      - A default int is 0.
-    short: "m[key] inserts missing keys. Use find() or contains() to just ask."
+    short: "m[key] inserts missing keys. Use find() or contains() to ask."
     explain: "gold[\"mage\"] can't find mage, so it inserts {\"mage\", 0} and returns a reference to that 0. The message prints, and the map now has 2 entries. To ask without changing the map, use find() (compare with end()) or C++20's contains()."
   - id: w16.l5.c2
     type: bug
@@ -152,18 +151,17 @@ challenges:
     bugLine: 4
     options:
       - t: "return [count]() mutable { return ++count; };"
-        why: "Correct: the lambda keeps its own copy; mutable lets it change that copy."
+        why: "Its own copy; mutable lets it change that copy."
       - t: "return [&]() { return ++count; };"
-        why: "[&] still captures count by reference. It dies when makeCounter returns."
+        why: "[&] still captures count by reference."
       - t: "return [count]() { return ++count; };"
-        why: "Compile error: a by-value capture is const unless the lambda is mutable."
+        why: "Compile error: a by-value capture is const without mutable."
       - t: "return [&count]() mutable { return ++count; };"
-        why: mutable doesn't change what's captured. It's still a reference to a dead local.
+        why: Still a reference to a dead local.
     answer: 0
     hints:
-      - When does count die?
-      - The lambda outlives makeCounter. What should it hold?
-    short: "A lambda that outlives its scope must capture by value, not by reference."
+      - The lambda outlives makeCounter. When does count die?
+    short: "A lambda that outlives its scope must capture by value."
     explain: "count is a local of makeCounter. The returned lambda holds a reference to it, but count dies at the }, so calling next() touches a dead variable: undefined behavior. Capture by value (`[count]`) and add `mutable` so the lambda can update its own copy."
     sideBySide:
       unsafe: |-
@@ -199,17 +197,16 @@ challenges:
       }
     options:
       - t: it != names.end()
-        why: "Correct: std::find returns end() when nothing matches. Only a real match gets used."
+        why: "std::find returns end() when nothing matches."
       - t: it != nullptr
-        why: "An iterator isn't a pointer you compare with nullptr. Compare with end(); this doesn't compile."
+        why: "Iterators don't compare with nullptr. Doesn't compile."
       - t: "*it == \"wraith\""
-        why: When nothing matches, it IS end(). Dereferencing end() is UB.
+        why: With no match, it IS end(). Dereferencing end() is UB.
       - t: "!names.empty()"
         why: The list isn't empty, but wraith still isn't in it.
     answer: 0
     hints:
       - What does std::find return when nothing matches?
-      - "Compare the iterator, don't dereference it."
     short: "Always compare find()'s result with end() before using it."
     explain: "Every STL search reports \"not found\" as the end iterator. end() points one past the last element; dereferencing it is undefined behavior. Compare first, then use."
     sideBySide:
@@ -229,18 +226,17 @@ challenges:
     prompt: "`auto b = std::move(a);` where a is a std::string. What may you safely do with a now?"
     options:
       - t: Assign it a new value, or let it be destroyed
-        why: "Correct: a is valid but unspecified. Give it a fresh value before relying on it."
+        why: "a is valid but unspecified. Refill it before relying on it."
       - t: Read it; it still holds the old text
-        why: "Not guaranteed. Often it's empty, but the standard only promises \"valid\"."
+        why: "Not guaranteed. b took the text."
       - t: Nothing at all; even destroying it is UB
-        why: Moved-from objects must still be destroyable and assignable.
+        why: Moved-from objects can still be destroyed and assigned.
       - t: Read it; it's guaranteed to be empty
-        why: Common in practice, but not guaranteed for std::string.
+        why: Common in practice, but not guaranteed.
     answer: 0
     hints:
-      - Moving hands the contents to b.
       - Valid, but you don't know what's inside.
-    short: "Moved-from means valid but unspecified: assign or destroy, don't read."
+    short: "Moved-from: valid but unspecified. Assign or destroy, don't read."
     explain: "std::move lets b take a's contents. a is left in a valid but unspecified state: you may assign to it or destroy it, but reading it expecting any particular value is a bug. (A moved-from std::unique_ptr is guaranteed null, so dereferencing it is UB.)"
   - id: w16.l5.c5
     type: order
@@ -255,7 +251,6 @@ challenges:
       - "std::cout << bounty[\"ghost\"] << '\\n';"
     hints:
       - Build the map before searching it.
-      - "if with an initializer: find, then compare with end()."
     short: "find in the if's initializer, compare with end(), then use it."
     explain: "The if-with-initializer keeps `it` scoped to the check. find never inserts, and the comparison with end() guards the use. The distractor `bounty[\"ghost\"]` would silently insert a ghost with 0 gold."
 recap:

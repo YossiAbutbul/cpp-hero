@@ -5,8 +5,8 @@ title: "Shield: Defense in depth"
 skill: defense
 shield: true
 concept:
-  short: "No single check is enough: validate input, check bounds and limits, and let the compiler and sanitizers hunt too."
-  analogy: "A castle has a moat, a wall and a gate: an attacker who beats one still faces the next."
+  short: "No single check is enough: validate input, check bounds, and let tools hunt too."
+  analogy: "Moat, wall and gate: beat one, and the next still stands."
   body:
     - "**Defense in depth** means layers. Each layer assumes the one before it might fail. This is the habit that beats the Undefined Dragon."
     - "**Layer 1, the boundary**: never trust input. Check every read (`if (!(std::cin >> x))`), and check the range of what you read. Strings can be empty, numbers negative or huge, pointers null."
@@ -108,28 +108,27 @@ challenges:
   - id: w16.l6.c1
     type: mcq
     tags: [ w16.tools, w8.sanitizers, w1.warnings ]
-    prompt: "Your code reads memory after it was deleted, but it prints the right answer. Which build flag makes the bug stop the program with a report?"
+    prompt: "A use-after-free prints the right answer anyway. Which flag makes it stop with a report?"
     options:
       - t: -fsanitize=address
-        why: "Correct: AddressSanitizer catches use-after-free and out-of-bounds at run time."
+        why: "AddressSanitizer catches use-after-free while the program runs."
       - t: -Wall -Wextra
-        why: Warnings are compile-time. They catch many mistakes, but not most use-after-free.
+        why: Warnings are compile-time; most use-after-free slips past.
       - t: -O2
-        why: Optimization can make UB behave even more strangely. It hunts nothing.
+        why: Optimization can make UB even stranger. It hunts nothing.
       - t: -std=c++20
-        why: Picks the language version. It adds no run-time checks.
+        why: Picks the language version. No run-time checks.
     answer: 0
     hints:
-      - The bug happens while the program runs.
-      - Which tool watches memory at run time?
-    short: "AddressSanitizer (-fsanitize=address) catches use-after-free while the program runs."
+      - Which tool watches memory while the program runs?
+    short: "AddressSanitizer catches memory bugs at run time."
     explain: "Compiler warnings work at compile time and catch many mistakes, but a use-after-free usually depends on run-time paths. `g++ -fsanitize=address,undefined -g` instruments the program so it stops with a report the moment it touches freed or out-of-bounds memory, or hits UB like signed overflow."
   - id: w16.l6.c2
     type: review
     tags: [ w16.ub, w7.invalidation, w7.bounds, w3.divzero ]
     bug: ub-hydra
     unsafe: true
-    prompt: "UNSAFE: the Dragon hid undefined behavior in here. Tap every line with UB."
+    prompt: "UNSAFE: tap every line with undefined behavior."
     code: |-
       #include <iostream>
       #include <vector>
@@ -149,16 +148,15 @@ challenges:
       }
     dangerous: [ 7, 11, 13 ]
     lineNotes:
-      5: "Taking the address is fine, while the vector doesn't change."
+      5: "Fine, while the vector doesn't change."
       6: "push_back may reallocate and move every element."
       7: "last may point into the freed old block: UB."
-      8: "Fine: size_t index, < size(). Every read is in bounds."
+      8: "Fine: < size(), so every read is in bounds."
       11: "hp[size()] is one past the end: UB."
       13: "Integer division by zero: UB."
     hints:
-      - "Three different worlds' bugs. Look at pointers, indexes and divisors."
-      - Did anything move after line 5 took an address?
-    short: "Dangling after push_back, one past the end, and division by zero."
+      - "Look at pointers, indexes and divisors."
+    short: "Dangling after push_back, one past the end, divide by zero."
     explain: "Line 7 reads through a pointer that push_back may have invalidated. Line 11 reads one past the end. Line 13 divides by zero. None is guaranteed to crash; the program might even print plausible numbers. -fsanitize=address,undefined would flag each one at run time."
     sideBySide:
       unsafe: |-
@@ -181,7 +179,7 @@ challenges:
     tags: [ w16.ub, w16.bounds, w7.empty ]
     bug: out-of-bounds
     unsafe: true
-    prompt: "UNSAFE: names is {\"Ana\", \"Bo\"} unless the test says otherwise. Which tests expose UB? Select all."
+    prompt: "UNSAFE: names is {\"Ana\", \"Bo\"} unless stated. Which calls cause UB? Select all."
     code: |-
       #include <string>
       #include <vector>
@@ -193,17 +191,16 @@ challenges:
       - t: i = 1
         why: "Fine: names[1] is \"Bo\", and its [0] is 'B'."
       - t: i = 2
-        why: "Exposes it: names[2] is one past the end."
+        why: "names[2] is one past the end."
       - t: i = -1
-        why: "Exposes it: -1 becomes a huge index. Far out of bounds."
+        why: "-1 becomes a huge index. Far out of bounds."
       - t: "names is {}, i = 0"
-        why: "Exposes it: an empty vector has no element 0."
+        why: "An empty vector has no element 0."
       - t: "names is {\"\"}, i = 0"
-        why: "Surprisingly fine: an empty std::string's [0] is its '\\0' terminator."
+        why: "Surprisingly fine: an empty string's [0] is '\\0'."
     answers: [ 1, 2, 3 ]
     hints:
       - "Test the edges: too big, negative, empty."
-      - Which of the two [ ] can go out of bounds?
     short: "Test too big, negative and empty: the classic edge trio."
     explain: "The vector index is never checked. i = 2 and i = -1 (converted to an enormous size_t) are out of bounds, and an empty vector has no element 0 at all. The empty string is a trick: `s[s.size()]` is allowed for std::string and gives '\\0'. Still, return std::optional<char> for empty names."
     sideBySide:
@@ -227,7 +224,7 @@ challenges:
   - id: w16.l6.c4
     type: harden
     tags: [ w16.layers, w6.assert, w3.validate ]
-    prompt: The assert documents an assumption. Pick the real validation that makes it true.
+    prompt: Pick the input check that guarantees the assert below always holds.
     code: |-
       #include <cassert>
       #include <iostream>
@@ -244,18 +241,17 @@ challenges:
       }
     options:
       - t: "!(std::cin >> count) || count < 1 || count > 10"
-        why: "Correct: reads, checks the read, then the range. The assert can never fire."
+        why: "Reads, checks the read, then the range."
       - t: "false"
-        why: Leaves only the assert, which vanishes in release builds (NDEBUG). Bad input walks in.
+        why: Only the assert is left, and it vanishes in release builds.
       - t: count < 1 || count > 10
-        why: Nothing is ever read! count is always 0, so it always fails.
+        why: Nothing is ever read! count is always 0.
       - t: "!(std::cin >> count)"
-        why: Catches text, but 0 or 500 reach the assert, which crashes debug builds only.
+        why: Catches text, but 0 or 500 still reach the assert.
     answer: 0
     hints:
-      - assert disappears when NDEBUG is defined.
       - Read, check the read, then check the range.
-    short: "Validate input with if; assert only documents what must already be true."
+    short: "Validate input with if; assert only documents assumptions."
     explain: "assert is for programmer mistakes and is compiled out in release builds, so it can't guard input. Validate with a real if: read, check the read, check the range. Then the assert states an assumption that's guaranteed."
     sideBySide:
       unsafe: |-
@@ -271,7 +267,7 @@ challenges:
   - id: w16.l6.c5
     type: safe
     tags: [ w16.ub, w16.ownership, w16.stl, w8.nullcheck ]
-    prompt: Safe or unsafe? The Dragon's hatchlings swarm. Every world at once. Go!
+    prompt: Safe or unsafe? Mark each snippet. Go fast!
     seconds: 40
     items:
       - code: auto p = std::make_unique<int>(5);
@@ -282,12 +278,12 @@ challenges:
           delete p;
           delete p;
         safe: false
-        why: "Double delete: the second delete frees memory that's already gone. UB."
+        why: "Double delete: frees memory that's already gone. UB."
       - code: |-
           std::optional<int> hp;
           std::cout << *hp;
         safe: false
-        why: "hp is empty. Dereferencing an empty optional is UB; check it first."
+        why: "hp is empty. * on an empty optional is UB."
       - code: |-
           if (const auto it = m.find("imp"); it != m.end()) {
               std::cout << it->second;
@@ -323,12 +319,11 @@ challenges:
         why: The divisor is checked before dividing.
     hints:
       - Look for unchecked pointers, optionals and divisors.
-      - Did a container change after an address was taken?
     short: "Safe code checks, owns, and re-takes addresses. Unsafe code hopes."
     explain: "Every unsafe item skips a layer: a double delete (ownership), an unchecked optional or pointer (checks), and an address kept across push_back (invalidation). Each safe item has its check or its owner in place."
 recap:
   - Layers beat any single check.
-  - "Validate at the boundary; check before every risky operation."
+  - "Validate input; check before every risky step."
   - "Build with -Wall -Wextra -Werror; test with sanitizers."
   - assert documents; it never validates input.
 vault:

@@ -5,8 +5,8 @@ title: "Gauntlet III: Objects and polymorphism"
 skill: structure
 shield: false
 concept:
-  short: "Gauntlet stage three: classes guard their invariants, and polymorphic bases need virtual destructors, override, and no slicing."
-  analogy: "A class is a vault with one guarded door: nobody puts a broken value inside."
+  short: "Classes guard their invariants; polymorphic bases need virtual destructors, override, no slicing."
+  analogy: "A vault with one guarded door: no broken value gets in."
   body:
     - "**Classes** (World 10): keep data `private`, validate in the constructor (throw if the object can't be valid), mark read-only methods `const`, and make one-argument constructors `explicit` so a stray `int` can't silently become an object."
     - "**Inheritance** (World 11): if you delete a derived object through a base pointer (which `std::unique_ptr<Base>` does), the base destructor **must** be `virtual`. Otherwise it's undefined behavior, and usually the derived part never gets cleaned up."
@@ -120,20 +120,19 @@ challenges:
     options:
       - t: |
           Bug Beetle
-        why: "Correct: the copy is sliced down to a plain Bug; the reference still sees the Beetle."
+        why: "The copy is sliced to a Bug; the reference sees the Beetle."
       - t: |
           Beetle Beetle
-        why: "byValue copies only the Bug part. The copy IS a Bug, so virtual can't help."
+        why: "The by-value copy IS a Bug, so virtual can't help."
       - t: |
           Bug Bug
-        why: A reference refers to the real object, so virtual dispatch finds Beetle.
+        why: The reference names the real Beetle.
       - t: |
           Beetle Bug
-        why: It's the other way around. The by-value copy loses the Beetle part.
+        why: Swapped. The by-value copy loses the Beetle part.
     answer: 0
     hints:
-      - What gets copied when a Beetle is passed as a Bug by value?
-      - A reference is another name for the real object.
+      - What's copied when a Beetle is passed as a Bug?
     short: "By value slices to a Bug; by reference keeps the Beetle."
     explain: "Passing a Beetle to a `Bug` parameter by value copies only the Bug base part: slicing. The copy is a real Bug, so name() says \"Bug\". The const reference refers to the original Beetle, and virtual dispatch finds Beetle::name()."
   - id: w16.l3.c2
@@ -163,17 +162,16 @@ challenges:
     bugLine: 5
     options:
       - t: "virtual ~Bug() { std::cout << \"Bug gone\\n\"; }"
-        why: "Correct: deleting through a Bug pointer now runs ~Hydra first, then ~Bug."
+        why: "Now deletion runs ~Hydra first, then ~Bug."
       - t: "virtual ~Hydra() { std::cout << \"Hydra gone\\n\"; }"
-        why: The delete goes through Bug. It's the BASE destructor that must be virtual.
+        why: The delete goes through Bug. The BASE must be virtual.
       - t: "~Bug() = default;"
-        why: Still not virtual. Deleting a Hydra through Bug* stays UB.
+        why: Still not virtual. Still UB.
       - t: "~Bug() noexcept { std::cout << \"Bug gone\\n\"; }"
-        why: Destructors are already noexcept. That doesn't make them virtual.
+        why: noexcept doesn't make it virtual.
     answer: 0
     hints:
       - The unique_ptr deletes through a Bug pointer.
-      - Which destructor has to be looked up at run time?
     short: "Deleting through a base pointer needs a virtual base destructor."
     explain: "unique_ptr<Bug> calls delete on a Bug*. Without a virtual destructor, that's undefined behavior when the object is really a Hydra: typically only ~Bug runs and the Hydra part is never cleaned up. Make the base destructor virtual (or `virtual ~Bug() = default;`)."
     sideBySide:
@@ -210,8 +208,7 @@ challenges:
     placeholder: keyword
     hints:
       - One word, after const.
-      - It turns a signature typo into a compile error.
-    short: "override makes the compiler check that a base function is really overridden."
+    short: "override makes the compiler check the base function exists."
     explain: "`override` asks the compiler to verify that a matching virtual function exists in the base. Misspell the name or forget `const`, and you get a compile error instead of a silent new function that never gets called."
   - id: w16.l3.c4
     type: harden
@@ -234,18 +231,17 @@ challenges:
       };
     options:
       - t: durability < 0 || durability > 100
-        why: "Correct: rejects both ends, so no invalid Shield can ever exist."
+        why: "Rejects both ends, so no invalid Shield can exist."
       - t: durability < 0 && durability > 100
-        why: "No number is both below 0 and above 100: this never throws."
+        why: "No number is both: this never throws."
       - t: durability > 100
         why: Misses negatives. Shield{-40} would be built.
       - t: durability_ == 0
         why: 0 is valid, and -40 or 500 still get in.
     answer: 0
     hints:
-      - Two ends of the range, either one is bad.
-      - "Any bad value: either one or the other."
-    short: "Validate in the constructor: an object is valid from birth, or never exists."
+      - Two ends of the range; either one is bad.
+    short: "Validate in the constructor: valid from birth, or never exists."
     explain: "The constructor is the gate. If it throws, the object never exists, so every Shield that does exist obeys the invariant. Private data means nobody can break it later without going through a member function."
     sideBySide:
       unsafe: |-
@@ -268,20 +264,19 @@ challenges:
   - id: w16.l3.c5
     type: mcq
     tags: [ w16.virtual ]
-    prompt: "The base has `virtual void hit(int dmg);`. A derived class writes `void hit(long dmg) override;`. What happens?"
+    prompt: "Base: `virtual void hit(int dmg);`. Derived: `void hit(long dmg) override;`. What happens?"
     options:
       - t: Compile error
-        why: "Correct: hit(long) overrides nothing, and override makes the compiler say so."
+        why: "hit(long) overrides nothing, and override says so."
       - t: It overrides hit(int) anyway
-        why: "Overriding needs the exact same parameter types. long is not int."
+        why: "Parameter types must match exactly. long is not int."
       - t: It compiles, but calls through the base never reach it
-        why: That's what happens WITHOUT override. With it, the mismatch is caught.
+        why: That's what happens WITHOUT override.
       - t: The program crashes at run time
-        why: Nothing gets to run. The compiler rejects it first.
+        why: Nothing runs. The compiler rejects it first.
     answer: 0
     hints:
       - Do int and long match exactly?
-      - What is override's whole job?
     short: "override turns a mismatched signature into a compile error."
     explain: "An override must match the base signature exactly (parameter types, const). hit(long) doesn't, so it would be a brand-new function that base calls never reach. With `override`, the compiler reports the mistake immediately."
 recap:

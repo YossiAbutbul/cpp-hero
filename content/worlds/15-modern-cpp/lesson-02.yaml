@@ -5,8 +5,8 @@ title: auto & structured bindings
 skill: toolkit
 shield: false
 concept:
-  short: "auto copies unless you add &; structured bindings unpack a pair or struct into named parts."
-  analogy: "auto is a photocopier: you get a copy unless you ask for the original with &."
+  short: "auto copies unless you add &; structured bindings unpack a pair into names."
+  analogy: "auto is a photocopier: you get a copy unless you add &."
   body:
     - "`auto` asks the compiler to deduce the type from the initializer. It deduces a **plain value type**: `const` and `&` on the initializer are dropped. So `auto x = someRef;` makes a **copy**."
     - "In range-for loops this matters a lot: `for (auto h : hp)` works on copies (changes are lost), `for (auto& h : hp)` works on the real elements, and `for (const auto& h : hp)` reads without copying and without changing."
@@ -78,7 +78,7 @@ challenges:
   - id: w15.l2.c1
     type: bug
     tags: [ w15.auto, w7.ref-loop ]
-    prompt: A trap should hit every hero for 10, but nobody loses hp. Tap the buggy line, then pick the fix.
+    prompt: Each hero should lose 10 hp, but nobody does. Tap the buggy line, then pick the fix.
     code: |-
       #include <iostream>
       #include <vector>
@@ -98,18 +98,17 @@ challenges:
     bugLine: 9
     options:
       - t: "for (auto& hero : party) {"
-        why: "Correct: hero is now another name for each real element, so the damage sticks."
+        why: "hero names each real element, so the damage sticks."
       - t: "for (const auto& hero : party) {"
-        why: No copy, but const forbids the change. Compile error on hero.hp -= 10.
+        why: No copy, but const forbids the change. Compile error.
       - t: "for (auto hero : party) { party[0].hp -= 10;"
-        why: That hits only the first hero, twice. The loop variable is the real problem.
+        why: That hits only the first hero, twice.
       - t: "for (Hero hero : party) {"
         why: Spelling the type doesn't help. It's still a copy.
     answer: 0
     hints:
       - What does plain auto deduce in a range-for?
-      - The loop changes copies that vanish each round.
-    short: "Plain auto copies each element; use auto& to change the real ones."
+    short: "Plain auto copies each element; auto& changes the real ones."
     explain: "`auto hero` deduces `Hero`: a fresh copy every iteration. The damage lands on the copy and is thrown away. `auto& hero` binds to each element, so party[0].hp becomes 20."
     sideBySide:
       unsafe: |-
@@ -142,20 +141,19 @@ challenges:
     options:
       - t: |
           11 99
-        why: "Correct: hp is part of a copy; rhp is hero.second itself, so 10 + 1 = 11."
+        why: "hp is in a copy; rhp is hero.second itself: 11."
       - t: |
           100 99
         why: "auto [name, hp] unpacks a copy. hp = 99 never touches hero."
       - t: |
           11 11
-        why: hp belongs to the copy and was set to 99. It doesn't follow hero.
+        why: hp belongs to the copy and was set to 99.
       - t: |
           10 99
-        why: "auto& binds to hero's real parts, so rhp += 1 changes hero.second."
+        why: "auto& binds to hero's real parts, so rhp += 1 counts."
     answer: 0
     hints:
-      - Which binding has an &?
-      - Only the & version can change hero.
+      - Which binding has an &? Only that one can change hero.
     short: "auto [..] unpacks a copy; auto& [..] binds to the original."
     explain: "`auto [name, hp] = hero;` copies hero, then names the copy's parts: hp = 99 changes only the copy. `auto& [rname, rhp]` names hero's own parts: rhp += 1 makes hero.second 11. Output: \"11 99\" and a newline."
   - id: w15.l2.c3
@@ -168,23 +166,22 @@ challenges:
       auto x = view;
     options:
       - t: int, a separate copy
-        why: "Correct: auto drops both const and & from the initializer, so x is a plain int copy."
+        why: "auto drops both const and &, so x is a plain int."
       - t: const int&
-        why: "Plain auto never deduces a reference. You'd have to write const auto& x."
+        why: "Plain auto never deduces a reference. Write const auto& x."
       - t: const int
-        why: auto drops top-level const too. x can be changed freely.
+        why: auto drops top-level const too.
       - t: int&, another name for hp
         why: That needs auto& x. Plain auto always copies.
     answer: 0
     hints:
       - Does plain auto ever deduce a reference?
-      - auto also strips const from the value it copies.
     short: auto drops const and &, so x is a plain int copy.
     explain: "Plain `auto` deduces a value type: the reference and top-level const are dropped, so `x` is an `int` holding a copy (50). Changing x doesn't touch hp. Write `auto&` or `const auto&` when you want a reference."
   - id: w15.l2.c4
     type: fill
     tags: [ w15.bindings, w15.auto, w14.map-iterate ]
-    prompt: Print every name and coin count in the bank. Fill in the structured binding.
+    prompt: Fill in the structured binding so the loop body's name and coins work.
     code: |-
       #include <iostream>
       #include <map>
@@ -202,8 +199,7 @@ challenges:
     placeholder: "[..., ...]"
     hints:
       - Square brackets unpack an element into names.
-      - The body uses name and coins.
-    short: "for (const auto& [name, coins] : bank) names each key and value."
+    short: "[name, coins] names each key and value."
     explain: "Each map element is a pair of key and value. `const auto& [name, coins]` binds `name` to the key and `coins` to the value, without copying and without allowing changes."
   - id: w15.l2.c5
     type: speed
@@ -242,12 +238,11 @@ challenges:
         options: [ "std::vector<int>", "const std::vector<int>&", "std::vector<int>&" ]
         answer: 1
     hints:
-      - Plain auto copies and drops const.
-      - "& and const only appear if you write them."
-    short: Plain auto gives a value type; & and const only when you write them.
+      - "Plain auto copies and drops const; & only if written."
+    short: Plain auto gives a value type; & and const only if written.
     explain: "7 is int, 7.5 is double, a copy of a const int is plain int, auto& on a string is std::string&, auto e{3} is int (since C++17), and const auto& on a vector is const std::vector<int>&."
 recap:
-  - auto copies; & and const only if you write them.
+  - auto copies; & and const only if written.
   - "Read: const auto&. Modify: auto&."
   - "auto [a, b] = pair; unpacks into names."
   - "Map loop: for (const auto& [k, v] : m)."

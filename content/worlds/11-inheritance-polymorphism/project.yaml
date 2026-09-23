@@ -2,12 +2,12 @@
 
 id: w11.p
 title: Guild Roster
-intro: "Build a guild of knights, archers and healers that share one abstract base, recruit them by name, and report every member through a single const reference, with no slicing and no half-destroyed heroes."
+intro: "Build a guild of knights, archers and healers on one abstract base."
 steps:
   - id: w11.p.s1
     type: fill
     tags: [ w11.virtual-dtor, w11.abstract ]
-    prompt: "Every guild member will be owned through a std::unique_ptr<Member>. Fill in what the destructor needs."
+    prompt: "Members are owned by std::unique_ptr<Member>. Fill in the keyword the destructor needs."
     code: |-
       #include <string>
 
@@ -22,7 +22,6 @@ steps:
     placeholder: keyword
     hints:
       - Members will be deleted through a Member pointer.
-      - The Shield lesson's first rule.
     short: "Polymorphic base: `virtual ~Member() = default;`."
     explain: "Members are created as Knights, Archers and Healers but deleted through `std::unique_ptr<Member>`. Only a virtual destructor makes that deletion run the real type's destructor first. Without it: undefined behavior."
   - id: w11.p.s2
@@ -41,9 +40,8 @@ steps:
       - "int attack() const final override { return 8; }"
     placeholder: int attack() ...
     hints:
-      - Copy the base signature exactly, including const.
-      - Then add the oath, and a body.
-    short: "`int attack() const override { return 8; }`: exact signature plus override."
+      - Copy the base signature exactly, then add override and a body.
+    short: "Exact base signature, plus override, plus a body."
     explain: "The signature must match `virtual int attack() const = 0;` exactly (name, no parameters, const). `override` makes the compiler check that. The body returns the Knight's attack: `int attack() const override { return 8; }`."
   - id: w11.p.s3
     type: order
@@ -58,7 +56,6 @@ steps:
       - "void report(Member m) {"
     hints:
       - The parameter must refer to the member, not copy it.
-      - Member is abstract, so a by-value copy won't even compile.
     short: "`const Member&` sees the whole member; by value would slice."
     explain: "`const Member&` refers to the real Knight, Archer or Healer, so `name()` and `attack()` dispatch to its versions. The by-value distractor would slice, and since Member is abstract, it doesn't even compile: an abstract base protects you from slicing."
   - id: w11.p.s4
@@ -104,10 +101,10 @@ steps:
     options:
       - t: |
           2 members, power 10
-        why: "Correct: Healer 2 + Knight 8 = 10, each through its own override."
+        why: "Healer 2 + Knight 8, each through its own override."
       - t: |
           2 members, power 16
-        why: "Each member adds its own attack once: 2 + 8, not 8 + 8."
+        why: "Each adds its own attack once: not 8 + 8."
       - t: |
           2 members, power 0
         why: "attack() dispatches to the real types, which return 2 and 8."
@@ -117,13 +114,12 @@ steps:
     answer: 0
     hints:
       - Each unique_ptr points at its own real type.
-      - Add the two attacks.
     short: "Dispatch through unique_ptr<Member>: 2 + 8 = 10."
     explain: "Each element owns a whole Healer or Knight, and `m->attack()` runs the real type's override: 2 + 8 = 10. Output: \"2 members, power 10\" and a newline. When roster goes out of scope, each object is deleted through the virtual destructor."
   - id: w11.p.s5
     type: fill
     tags: [ w11.slicing, w8.deref ]
-    prompt: "`m` is a std::unique_ptr<Member>. Pass the member itself to report(const Member&)."
+    prompt: "`m` is a std::unique_ptr<Member>. Fill the blank to pass the Member it owns."
     code: |-
       for (const auto& m : roster) {
           report(___);
@@ -133,9 +129,8 @@ steps:
       - "*m"
     placeholder: expression
     hints:
-      - report wants a Member, and m is a pointer-like owner.
       - Dereference it, just like a raw pointer.
-    short: "`*m` gives the Member the unique_ptr owns; the reference binds to it."
+    short: "`*m` gives the owned Member; the reference binds to it."
     explain: "Dereferencing a unique_ptr with `*m` gives the owned object, and `const Member&` binds to it directly: no copy, no slicing, and the unique_ptr keeps ownership. (`m` is never null here, because the recruit step only stores real members.)"
 program: |-
   #include <iostream>
@@ -231,16 +226,15 @@ stress:
         prelude: "class Member { public: virtual ~Member() = default; virtual int attack() const = 0; }; class Knight : public Member { public: int attack() const override { return 8; } }; auto recruit = [](const std::string& k) -> std::unique_ptr<Member> { if (k == \"knight\") { return std::make_unique<Knight>(); } return nullptr; }; std::string kind{\"wizard\"};"
         options:
           - t: m == nullptr
-            why: "Correct: an unknown class gives an empty unique_ptr; stop before m-> follows it."
+            why: "Stops before m-> follows the empty pointer."
           - t: m->attack() == 0
-            why: "This follows m to check it. For an empty pointer, the check itself is UB."
+            why: "The check itself follows the empty pointer: UB."
           - t: kind.empty()
-            why: "\"wizard\" isn't empty. The name is fine; the recruit result is the danger."
+            why: "\"wizard\" isn't empty. The recruit result is the danger."
           - t: m != nullptr
             why: "Inverted: rejects every real recruit and follows the empty one."
         answer: 0
         hints:
-          - What does recruit return for an unknown class?
           - A unique_ptr can be compared with nullptr, like a raw pointer.
         short: "An empty unique_ptr is null too: check before using ->."
         explain: "A factory that returns a pointer is saying \"this might be nothing\". `m->attack()` on an empty unique_ptr dereferences null: undefined behavior, usually a crash. Check `m == nullptr` (or `if (!m)`) first and handle the unknown class."
@@ -276,17 +270,16 @@ stress:
         prelude: "class Member { public: virtual ~Member() = default; virtual int attack() const = 0; }; class Knight : public Member { public: int attack() const override { return 8; } };"
         options:
           - t: count < slots.size()
-            why: "Correct: stops at 5, before slots[count] could reach slots[5]."
+            why: "Stops at 5, before slots[count] could reach slots[5]."
           - t: count <= slots.size()
-            why: "Off by one: lets count reach 5, and slots[5] is past the end. UB."
+            why: "Off by one: writes slots[5], past the end. UB."
           - t: "true"
-            why: "Only stops when input runs out. The 6th knight writes out of bounds."
+            why: "Only stops at end of input. The 6th knight overflows."
           - t: count != 7
             why: "Tailored to this attack, and still lets count reach 5 and 6."
         answer: 0
         hints:
           - "Valid indexes are 0 to 4."
-          - Check the count BEFORE reading and writing.
         short: "Check count < slots.size() before writing slots[count]."
         explain: "Indexes of a 5-element array run from 0 to 4. The condition is checked before each write, so `count < slots.size()` stops the loop when the hall is full. `<=` lets one extra write through to slots[5]: undefined behavior that may corrupt other memory without crashing. (The real program uses a vector with the same size check.)"
         sideBySide:
@@ -315,7 +308,7 @@ stress:
         tags: [ w11.virtual-dtor, w9.make-unique ]
         bug: missing-virtual-dtor
         unsafe: true
-        prompt: "Someone \"simplified\" Member. Tap the line that makes deleting a Healer UB, then pick the fix."
+        prompt: "Tap the line that makes deleting a Healer UB, then pick the fix."
         code: |-
           #include <memory>
           #include <string>
@@ -341,17 +334,16 @@ stress:
         bugLine: 5
         options:
           - t: "virtual ~Member() = default;"
-            why: "Correct: now deleting through Member* runs ~Healer first, freeing prayer_."
+            why: "Now deletion runs ~Healer first, freeing prayer_."
           - t: Delete the ~Member() line entirely
             why: "The implicit destructor isn't virtual either. Same UB."
           - t: "~Healer() override = default; in Healer"
-            why: "Won't compile: there's no virtual base destructor to override. The fix belongs in Member."
+            why: "Won't compile: no virtual base destructor to override."
           - t: "Use Member* m = new Healer{}; instead"
-            why: "Same deletion through Member*, now also by hand. Still UB, plus leak risk."
+            why: "Same deletion through Member*, by hand. Still UB."
         answer: 0
         hints:
           - The unique_ptr<Member> deletes through a Member pointer.
-          - Which function must be virtual for that to be safe?
         short: "unique_ptr<Member> deletes via Member*: ~Member must be virtual."
         explain: "When m goes out of scope, the unique_ptr deletes the Healer through a `Member*`. With a non-virtual `~Member`, that's undefined behavior: typically ~Healer never runs and prayer_'s memory leaks, but anything can happen. `virtual ~Member() = default;` makes the deletion start at the real type."
         sideBySide:
