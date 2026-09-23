@@ -61,7 +61,7 @@
 - id: shield-brace
   slot: shield
   name: Double-Brace Shield
-  source: Beat World 12
+  source: Defeat the Chaos Hydra (World 12)
 - id: phantom-veil
   slot: hat
   name: Phantom Veil
@@ -82,3 +82,15 @@
   slot: hat
   name: Pointer Goggles
   source: Defeat the Dangling Wraith (World 8)
+- id: raii-hardhat
+  slot: hat
+  name: RAII Hard Hat
+  source: Defeat the Heap Hoarder (World 9)
+- id: encap-crest
+  slot: hat
+  name: Encapsulation Crest
+  source: Defeat the Invariant Golem (World 10)
+- id: override-halo
+  slot: hat
+  name: Override Halo
+  source: Defeat the Slicing Phantom (World 11)
