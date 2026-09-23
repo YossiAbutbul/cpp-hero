@@ -383,7 +383,7 @@ describe('full playthrough', { timeout: 120_000 }, () => {
 
         game.resetCombo();
         const firstTry: Record<string, boolean> = {};
-        const queue = [...lesson.challenges, ...game.interleaveFor(lesson)];
+        const queue = [...lesson.challenges];
         const retried: Challenge[] = [];
         for (const ch of queue) {
           const r = play(game, s, ch, 'lesson', miss(ch), watch);

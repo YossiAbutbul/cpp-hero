@@ -31,7 +31,6 @@ import styles from './lesson.module.css';
 
 interface QItem {
   ch: Challenge;
-  review: boolean;
   retry?: boolean;
 }
 
@@ -62,19 +61,15 @@ function Missing({ text }: { text: string }) {
   );
 }
 
-function buildQueue(lesson: Lesson, inter: Challenge[]): QItem[] {
-  const q: QItem[] = lesson.challenges.map((ch) => ({ ch, review: false }));
-  inter.forEach((ch, k) => {
-    const pos = k === 0 ? Math.ceil(q.length / 2) : q.length - 1;
-    q.splice(Math.max(1, pos), 0, { ch, review: true });
-  });
-  return q;
+// Only the lesson's own questions: review lives in Practice, so nothing off-topic shows up here.
+function buildQueue(lesson: Lesson): QItem[] {
+  return lesson.challenges.map((ch) => ({ ch }));
 }
 
 function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; index: number }) {
   const { game, store } = useGame();
   useHeartsGate();
-  const [queue, setQueue] = useState<QItem[]>(() => buildQueue(lesson, game.interleaveFor(lesson)));
+  const [queue, setQueue] = useState<QItem[]>(() => buildQueue(lesson));
   const [page, setPage] = useState<Page>('intro');
   const [qi, setQi] = useState(0);
   const [firstTry, setFirstTry] = useState<Record<string, boolean>>({});
@@ -118,7 +113,7 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
     if (!item.retry) setFirstTry((f) => ({ ...f, [item.ch.id]: r.firstTry }));
     if (!r.correct && !item.retry && !retriedIds.includes(item.ch.id)) {
       setRetriedIds((x) => [...x, item.ch.id]);
-      setQueue((q) => [...q, { ch: item.ch, review: item.review, retry: true }]);
+      setQueue((q) => [...q, { ch: item.ch, retry: true }]);
     }
   };
 
@@ -197,7 +192,7 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
           key={pageKey}
           challenge={item.ch}
           mode="lesson"
-          eyebrow={`${item.review ? 'Review · ' : ''}${TYPE_LABELS[item.ch.type]}${item.retry ? ' · Try again' : ''}`}
+          eyebrow={`${TYPE_LABELS[item.ch.type]}${item.retry ? ' · Try again' : ''}`}
           onResult={onResult(item)}
           onContinue={() => void next()}
         />

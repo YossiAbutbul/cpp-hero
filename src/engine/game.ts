@@ -479,34 +479,6 @@ export function createGame(opts: GameOptions) {
     return out.map((id) => index.challenge[id]!.ch);
   }
 
-  /** 1–2 older lesson challenges to interleave into `lesson`, chosen by its reviewTags (due first, then seen). */
-  function interleaveFor(lesson: Lesson): Challenge[] {
-    const tags = lesson.reviewTags;
-    if (!tags.length) return [];
-    const srs = S().srs;
-    const t = now();
-    // Review only what the learner has already played: a question from a lesson not done
-    // yet would show up again in its own lesson later (a repeat, and a spoiler).
-    const pool = Object.keys(index.challenge).filter((id) => {
-      const m = index.challenge[id]!;
-      if (m.lesson === lesson || isTimed(m.ch) || m.kind !== 'lesson') return false;
-      if (!m.lesson || !lessonDone(m.lesson)) return false;
-      return m.ch.tags.some((x) => tags.includes(x));
-    });
-    if (!pool.length) return [];
-    // Due first, then the one reviewed longest ago (earliest due), so the same
-    // question doesn't come back lesson after lesson.
-    const key = (id: string) => {
-      const e = srs[id];
-      if (!e) return 0;
-      const due = Date.parse(e.due);
-      return due <= t ? 0 : due;
-    };
-    const sorted = shuffle(pool, rng).sort((a, b) => key(a) - key(b));
-    const k = lesson.challenges.length >= 5 ? 1 : 2;
-    return sorted.slice(0, k).map((id) => index.challenge[id]!.ch);
-  }
-
   /* ================= completion ================= */
   function completeLesson(lesson: Lesson, accuracy: number): { first: boolean; newCards: Lesson['vault'] } {
     const s = S();
@@ -717,7 +689,6 @@ export function createGame(opts: GameOptions) {
     srsDue: srsDueIds,
     seenChallengeIds,
     reviewSet,
-    interleaveFor,
     /** Base XP for stress-test attacks in projects (use as AnswerContext.base). */
     STRESS_XP,
   };
