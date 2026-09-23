@@ -1,11 +1,14 @@
 /**
- * Immersive session chrome for boss battles, projects and the placement
- * quiz (legacy Session shell): Quit, progress bar, combo chip and (heart
- * modes) hearts over a scroll area. Escape asks to quit.
+ * Immersive session chrome (legacy Session shell), shared by lessons,
+ * practice, boss battles, projects and the placement quiz: Quit, progress
+ * bar, combo chip and (heart modes) hearts over a scroll area. Escape asks
+ * to quit.
  *
  *   <SessionFrame label="Boss battle" progress={done / total} hearts onQuit={quit} scrollKey={pageKey}>
  *     <SlidePage pageKey={pageKey}>…</SlidePage>
  *   </SessionFrame>
+ *
+ * variant 'lesson' (lessons, practice) is the wider reading layout.
  */
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { useGame } from '@/app/gameContext';
@@ -15,11 +18,13 @@ import { ComboMeter, Hearts } from '@/ui/GameBits';
 import { overlayCount } from '@/ui/overlay/overlay';
 import styles from './session.module.css';
 
+export type SessionVariant = 'boss' | 'lesson';
+
 export interface SessionFrameProps {
   label: string;
   /** 0..1 */
   progress: number;
-  /** show the hearts (boss) */
+  /** show the hearts (lesson / boss) */
   hearts?: boolean;
   /** show the combo chip (default true) */
   combo?: boolean;
@@ -28,6 +33,8 @@ export interface SessionFrameProps {
   scrollKey?: unknown;
   /** extra layer over the whole session (e.g. the boss entrance) */
   overlay?: ReactNode;
+  /** layout flavour (default 'boss') */
+  variant?: SessionVariant;
   className?: string;
   children: ReactNode;
 }
@@ -40,6 +47,7 @@ export function SessionFrame({
   onQuit,
   scrollKey,
   overlay,
+  variant = 'boss',
   className,
   children,
 }: SessionFrameProps) {
@@ -63,10 +71,14 @@ export function SessionFrame({
     scroller.current?.scrollTo({ top: 0 });
   }, [scrollKey]);
 
+  const lesson = variant === 'lesson';
   const p = Math.max(0, Math.min(1, progress));
   const h = store.state.hearts;
   return (
-    <section className={[styles.session, className].filter(Boolean).join(' ')} aria-label={label}>
+    <section
+      className={[styles.session, lesson && styles.wide, className].filter(Boolean).join(' ')}
+      aria-label={label}
+    >
       <header className={styles.top}>
         <IconButton icon="x" label="Quit" size="small" onClick={() => quitRef.current()} />
         <div
@@ -86,7 +98,11 @@ export function SessionFrame({
           </span>
         )}
       </header>
-      <div ref={scroller} className={styles.scroll} data-screen-focus tabIndex={-1}>
+      <div
+        ref={scroller}
+        className={styles.scroll}
+        {...(lesson ? {} : { 'data-screen-focus': true, tabIndex: -1 })}
+      >
         <div className={styles.stage}>{children}</div>
       </div>
       {overlay}
@@ -94,15 +110,26 @@ export function SessionFrame({
   );
 }
 
-/** One session page; a new pageKey slides the new card in (legacy Session.page). */
-export function SlidePage({ pageKey, children }: { pageKey: string | number; children: ReactNode }) {
+/**
+ * One session page (legacy card slide): a new pageKey slides the new card in
+ * from the right with a small overshoot. Interruptible (WAAPI), a crossfade
+ * under reduced motion. The first page appears still unless `enterOnMount`.
+ */
+export function SlidePage({
+  pageKey,
+  enterOnMount = false,
+  children,
+}: {
+  pageKey: string | number;
+  enterOnMount?: boolean;
+  children: ReactNode;
+}) {
   const el = useRef<HTMLDivElement>(null);
-  const first = useRef(true);
+  const mounted = useRef(false);
   useLayoutEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
+    const first = !mounted.current;
+    mounted.current = true;
+    if (first && !enterOnMount) return;
     const rm = reduced();
     void anim(
       el.current,
@@ -115,6 +142,8 @@ export function SlidePage({ pageKey, children }: { pageKey: string | number; chi
           ],
       { duration: rm ? 140 : 380, easing: 'cubic-bezier(.22,.9,.3,1.05)', rm: 'keep' },
     );
+    // runs per page; enterOnMount only matters for the first one
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageKey]);
   return (
     <div ref={el} key={pageKey} className={styles.page}>

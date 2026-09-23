@@ -11,10 +11,9 @@ import { goBack } from '@/app/navigation';
 import { CHALLENGE_TYPES, type Challenge, type ChallengeType } from '@/content/schema';
 import { shuffle } from '@/engine/util';
 import { ChallengeRunner, TYPE_LABELS } from '@/features/challenges';
-import { Results, sessionTiles } from '@/features/lesson/Results';
-import { SessionFrame } from '@/features/lesson/SessionFrame';
-import { SlidePage } from '@/features/lesson/SlidePage';
-import { useQuit } from '@/features/lesson/useQuit';
+import { Results, sessionTiles } from '@/features/session/Results';
+import { SessionFrame, SlidePage } from '@/features/session/SessionFrame';
+import { useQuit } from '@/features/session/useQuit';
 import { Button } from '@/ui/Button';
 import { Icon } from '@/ui/Icon';
 import { Card, Screen } from '@/ui/Layout';
@@ -81,6 +80,7 @@ function Run({ mode, type }: { mode: 'review' | 'arena'; type: ChallengeType | n
       progress={done ? 1 : i / list.length}
       onQuit={() => (done ? goBack('/practice', { dir: 'close' }) : void askQuit())}
       scrollKey={done ? 'done' : i}
+      variant="lesson"
     >
       {done ? (
         <SlidePage pageKey="done">
@@ -95,6 +95,7 @@ function Run({ mode, type }: { mode: 'review' | 'arena'; type: ChallengeType | n
                 </div>
               ) : undefined
             }
+            variant="lesson"
             onContinue={() => goBack('/practice', { dir: 'close' })}
           />
         </SlidePage>

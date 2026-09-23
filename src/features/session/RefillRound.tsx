@@ -1,11 +1,15 @@
 /**
  * Out of hearts mid-session (legacy Session.refill): no dead end. A dialog
  * offers a quick review round (+1 heart when at least one is right) or
- * quitting to the map.
+ * quitting to the map. The round: 3 review questions, mode 'refill', no
+ * hearts at stake.
  *
  *   const refill = useRefillPrompt();   // ./useRefillPrompt
- *   if (store.state.hearts.n <= 0) { if ((await refill()) === 'quit') leave(); else setStep({ k: 'refill' }); }
- *   <RefillRound fallback={boss.rounds} onDone={resume} />
+ *   if (store.state.hearts.n <= 0) { if ((await refill()) === 'quit') leave(); else setRefill(true); }
+ *   <RefillRound pool={lesson.challenges} onDone={resume} />
+ *
+ * `paged` slides each question in as its own SlidePage (lesson); otherwise
+ * the caller's page wraps the whole round (boss).
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useGame } from '@/app/gameContext';
@@ -13,14 +17,24 @@ import type { Challenge } from '@/content/schema';
 import { ChallengeRunner, isTimedType } from '@/features/challenges';
 import { useDialog } from '@/ui/overlay/dialogContext';
 import { toast } from '@/ui/toast';
+import { SlidePage } from './SessionFrame';
 import { shuffled } from './util';
 
-export function RefillRound({ fallback, onDone }: { fallback: readonly Challenge[]; onDone: () => void }) {
+export function RefillRound({
+  pool,
+  paged = false,
+  onDone,
+}: {
+  /** fills the round up to 3 when the review set is short */
+  pool: readonly Challenge[];
+  paged?: boolean;
+  onDone: () => void;
+}) {
   const { game } = useGame();
   const dialog = useDialog();
   const initial = useMemo(() => {
-    const set = game.reviewSet(3, true);
-    for (const c of shuffled(fallback)) if (set.length < 3 && !set.includes(c) && !isTimedType(c)) set.push(c);
+    const set = game.reviewSet(3, true).slice(0, 3);
+    for (const c of shuffled(pool)) if (set.length < 3 && !set.includes(c) && !isTimedType(c)) set.push(c);
     return set;
     // once per round
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -42,6 +56,7 @@ export function RefillRound({ fallback, onDone }: { fallback: readonly Challenge
       mood: 'thinking',
       body: <p>Get at least one right to earn the heart. Let’s try another round!</p>,
       buttons: [{ label: 'Try again', value: true }],
+      dismissValue: true,
     });
     setSet((s) => shuffled(s));
     setI(0);
@@ -58,9 +73,10 @@ export function RefillRound({ fallback, onDone }: { fallback: readonly Challenge
   }, []);
   if (!set.length) return null;
   const ch = set[i]!;
-  return (
+  const key = `${round}:${i}:${ch.id}`;
+  const runner = (
     <ChallengeRunner
-      key={`${round}:${i}:${ch.id}`}
+      key={key}
       challenge={ch}
       mode="refill"
       noHearts
@@ -72,5 +88,12 @@ export function RefillRound({ fallback, onDone }: { fallback: readonly Challenge
         else setI(i + 1);
       }}
     />
+  );
+  return paged ? (
+    <SlidePage pageKey={`refill:${key}`} enterOnMount>
+      {runner}
+    </SlidePage>
+  ) : (
+    runner
   );
 }
