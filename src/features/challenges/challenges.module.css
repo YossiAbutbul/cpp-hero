@@ -554,6 +554,10 @@
 .tcode {
   flex: 1;
   min-width: 0;
+  /* hanging indent: first line starts at the code indent (--ind columns),
+     wrapped parts 2 columns further in */
+  padding-left: calc((var(--ind, 0) + 2) * 1ch);
+  text-indent: -2ch;
 }
 .tmark :global(.ic) {
   width: 22px;

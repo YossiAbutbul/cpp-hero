@@ -3,7 +3,14 @@
  * tap (swap two lines / move between bank and program) and keyboard
  * (Enter/Space = tap, ArrowUp/Down = move the focused line).
  */
-import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as RPointerEvent,
+} from 'react';
 import type { ChallengeOf } from '@/content/schema';
 import { tokLine } from '@/features/code';
 import { Icon } from '@/ui/Icon';
@@ -33,8 +40,20 @@ function shuffleItems(c: ChallengeOf<'order'>, hasBank: boolean): Item[] {
   return all;
 }
 
+/** Width of a line's leading indentation in columns (tab = 4). */
+function indentCols(text: string): number {
+  const lead = /^[ \t]*/.exec(text)?.[0] ?? '';
+  return [...lead].reduce((n, ch) => n + (ch === '\t' ? 4 : 1), 0);
+}
+
+/**
+ * The line without its leading spaces: the indent becomes padding on the
+ * tile's code box (--ind columns), so a line that wraps keeps a hanging
+ * indent (continuation 2 columns further in) instead of snapping back to
+ * the tile's left edge.
+ */
 function LineCode({ text }: { text: string }) {
-  const toks = tokLine(text);
+  const toks = tokLine(text.replace(/^[ \t]+/, ''));
   return (
     <>
       {toks.map((tk, k) =>
@@ -46,7 +65,7 @@ function LineCode({ text }: { text: string }) {
           </span>
         ),
       )}
-      {!text && ' '}
+      {!text.trim() && ' '}
     </>
   );
 }
@@ -244,7 +263,8 @@ export function Order({ ch, phase, reveal, submit }: RendererProps) {
     };
     if (g && el && !reduced()) {
       const r = el.getBoundingClientRect();
-      g.style.transition = 'left .18s cubic-bezier(.34,1.56,.64,1), top .18s cubic-bezier(.34,1.56,.64,1), transform .18s';
+      g.style.transition =
+        'left .18s cubic-bezier(.34,1.56,.64,1), top .18s cubic-bezier(.34,1.56,.64,1), transform .18s';
       g.style.left = `${r.left}px`;
       g.style.top = `${r.top}px`;
       g.style.transform = 'none';
@@ -360,7 +380,7 @@ export function Order({ ch, phase, reveal, submit }: RendererProps) {
         <span className={styles.grip} aria-hidden="true">
           <Icon name="grip" />
         </span>
-        <span className={styles.tcode}>
+        <span className={styles.tcode} style={{ '--ind': indentCols(it.t) } as CSSProperties}>
           <LineCode text={it.t} />
         </span>
         <span className={styles.tmark}>{ok != null && <Icon name={ok ? 'ok' : 'no'} />}</span>
@@ -373,7 +393,9 @@ export function Order({ ch, phase, reveal, submit }: RendererProps) {
       <div className={styles.zoneLabel}>Your program</div>
       <ol
         ref={progEl}
-        className={[styles.zone, styles.prog, hasBank && !prog.length ? styles.empty : ''].filter(Boolean).join(' ')}
+        className={[styles.zone, styles.prog, hasBank && !prog.length ? styles.empty : '']
+          .filter(Boolean)
+          .join(' ')}
         aria-label="Your program (ordered)"
       >
         {prog.map((id, i) => tile(id, i))}
