@@ -149,6 +149,21 @@ export function migrate(input: unknown, now: Date = new Date()): SaveV1 {
   // (No migrations yet: v1 is the first format.)
   fillDefaults(s, defaultSave(now) as unknown as Record<string, unknown>);
   const save = s as unknown as SaveV1;
+  // Id-keyed maps: drop entries of the wrong kind (hand-edited / broken saves) so the
+  // game never reads e.g. lessons.x.done on null.
+  const keepObjects = (m: Record<string, unknown>) => {
+    for (const k of Object.keys(m)) if (!isObj(m[k])) delete m[k];
+  };
+  keepObjects(save.lessons);
+  keepObjects(save.projects);
+  keepObjects(save.bosses);
+  keepObjects(save.srs);
+  keepObjects(save.counters.byTag);
+  for (const k of Object.keys(save.achievements))
+    if (typeof save.achievements[k] !== 'string') delete save.achievements[k];
+  for (const key of ['worldsUnlocked', 'vault', 'bestiary'] as const)
+    save[key] = save[key].filter((x): x is string => typeof x === 'string');
+  save.cosmetics.owned = save.cosmetics.owned.filter((x): x is string => typeof x === 'string');
   // Sanity clamps (same as legacy).
   save.hearts.max = clamp(+save.hearts.max || DEFAULT_MAX_HEARTS, 1, 10);
   save.hearts.n = clamp(+save.hearts.n || 0, 0, save.hearts.max);
@@ -178,8 +193,12 @@ export function validateImport(o: unknown): asserts o is Record<string, unknown>
     throw new SaveError('worldsUnlocked is malformed.');
 }
 
+export const MAX_IMPORT_CHARS = 3_000_000;
+
 /** Parse + validate + migrate an exported JSON string. Throws SaveError. */
 export function parseImport(json: string, now: Date = new Date()): SaveV1 {
+  // A full save (even with thousands of review cards) is well under this; bigger input would only fill up storage.
+  if (json.length > MAX_IMPORT_CHARS) throw new SaveError('That file is too big to be a Cpp Hero save.');
   let o: unknown;
   try {
     o = JSON.parse(json);

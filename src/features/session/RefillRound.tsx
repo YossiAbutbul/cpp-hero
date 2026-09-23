@@ -11,7 +11,7 @@
  * `paged` slides each question in as its own SlidePage (lesson); otherwise
  * the caller's page wraps the whole round (boss).
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGame } from '@/app/gameContext';
 import type { Challenge } from '@/content/schema';
 import { ChallengeRunner, isTimedType } from '@/features/challenges';
@@ -64,9 +64,11 @@ export function RefillRound({
     setRound((r) => r + 1);
   };
 
-  // nothing to review yet: just give the heart back
+  // nothing to review yet: just give the heart back (once, even if the effect runs twice)
+  const gaveBack = useRef(false);
   useEffect(() => {
-    if (initial.length) return;
+    if (initial.length || gaveBack.current) return;
+    gaveBack.current = true;
     game.hearts.gain(1);
     onDone();
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -24,6 +24,7 @@ import { plural } from '@/ui/format';
 import { RefillRound } from '@/features/session/RefillRound';
 import { Results, sessionTiles } from '@/features/session/Results';
 import { SessionFrame, SlidePage } from '@/features/session/SessionFrame';
+import { useHeartsGate } from '@/features/session/useHeartsGate';
 import { useQuit } from '@/features/session/useQuit';
 import { useRefillPrompt } from '@/features/session/useRefillPrompt';
 import styles from './lesson.module.css';
@@ -72,6 +73,7 @@ function buildQueue(lesson: Lesson, inter: Challenge[]): QItem[] {
 
 function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; index: number }) {
   const { game, store } = useGame();
+  useHeartsGate();
   const [queue, setQueue] = useState<QItem[]>(() => buildQueue(lesson, game.interleaveFor(lesson)));
   const [page, setPage] = useState<Page>('intro');
   const [qi, setQi] = useState(0);
@@ -121,6 +123,7 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
   };
 
   const next = async () => {
+    game.hearts.regen(); // a heart owed by the timer counts before "out of hearts"
     if (store.state.hearts.n <= 0) {
       const v = await askRefill();
       if (v === 'quit') {
@@ -175,7 +178,14 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
         <div className={styles.eyebrow}>Watch it run</div>
         <h2 className={styles.h2}>{lesson.title}</h2>
         <CodeDemo demo={lesson.demo} unsafe={lesson.shield && lesson.demo.steps.some((s) => s.crash)} />
-        <Button variant="teal" size="big" block iconEnd="next" className={styles.pageNext} onClick={() => setPage('ch')}>
+        <Button
+          variant="teal"
+          size="big"
+          block
+          iconEnd="next"
+          className={styles.pageNext}
+          onClick={() => setPage('ch')}
+        >
           Let’s practice!
         </Button>
       </SlidePage>
@@ -364,7 +374,15 @@ function Recap({ lesson, onNext }: { lesson: Lesson; onNext: () => void }) {
           ))}
         </div>
       )}
-      <Button variant="sun" size="big" block iconEnd="next" className={styles.pageNext} onClick={onNext} autoFocus>
+      <Button
+        variant="sun"
+        size="big"
+        block
+        iconEnd="next"
+        className={styles.pageNext}
+        onClick={onNext}
+        autoFocus
+      >
         Finish lesson
       </Button>
     </div>

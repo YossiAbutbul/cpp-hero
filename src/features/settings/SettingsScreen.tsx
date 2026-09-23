@@ -7,6 +7,7 @@
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { useGame } from '@/app/gameContext';
 import { useCloud } from '@/cloud/cloudContext';
+import { mergeSaves } from '@/cloud/merge';
 import { SOUND_ENABLED } from '@/engine/config';
 import type { SaveV1, TextSize } from '@/engine/save';
 import { Curlo } from '@/features/curlo/Curlo';
@@ -245,8 +246,19 @@ function Backup() {
       danger: true,
     });
     if (!yes) return;
-    store.replace(data);
+    // Signed in: merge with the device save too, so play the cloud hasn't received yet
+    // (offline, or in the last few seconds) isn't lost. The cloud sync merges the rest.
+    store.replace(signedIn ? mergeSaves(store.state, data) : data);
     toast('Progress imported!', { icon: 'upload' });
+  };
+
+  const safeImport = async (json: string) => {
+    try {
+      await tryImport(json);
+    } catch (e) {
+      console.warn('[settings] import failed', e);
+      await dialog.open({ title: 'Couldn’t import', mood: 'worried', body: <p>That save didn’t work.</p> });
+    }
   };
 
   const onFile = async () => {
@@ -259,7 +271,7 @@ function Backup() {
       toast('Couldn’t read that file.', { icon: 'warn' });
       return;
     }
-    await tryImport(text);
+    await safeImport(text);
   };
 
   const paste = async () => {
@@ -273,7 +285,7 @@ function Backup() {
         { label: 'Cancel', value: null, variant: 'ghost' },
       ],
     });
-    if (v === 'go' && value.trim()) await tryImport(value);
+    if (v === 'go' && value.trim()) await safeImport(value);
   };
 
   const reset = async () => {
@@ -284,6 +296,9 @@ function Backup() {
           This erases your XP, lessons, streak, collection and settings{' '}
           {signedIn ? 'on this device and in your cloud save (all your devices)' : 'on this device'}.{' '}
           <b>It can’t be undone.</b>
+          {!signedIn &&
+            cloud.enabled &&
+            ' A cloud save, if you have one, is kept and comes back when you sign in.'}
         </p>
       ),
       yes: 'Reset everything',

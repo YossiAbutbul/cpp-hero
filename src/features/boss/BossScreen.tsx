@@ -19,6 +19,7 @@ import { StoryBubbles } from '@/features/map/StoryBubbles';
 import { RefillRound } from '@/features/session/RefillRound';
 import { Gain, Results, sessionTiles } from '@/features/session/Results';
 import { SessionFrame, SlidePage } from '@/features/session/SessionFrame';
+import { useHeartsGate } from '@/features/session/useHeartsGate';
 import { useRefillPrompt } from '@/features/session/useRefillPrompt';
 import { useSession, type SessionStats } from '@/features/session/useSession';
 import { pick, shuffled } from '@/features/session/util';
@@ -46,7 +47,12 @@ type Step =
   | { k: 'victory' }
   | { k: 'results'; first: boolean; unlocked: World | null; stats: SessionStats };
 
-const HIT_LINES = ['Ow! Lucky shot!', 'Grr… that stung!', 'Hmph. You’re better than I thought.', 'Not so fast!'];
+const HIT_LINES = [
+  'Ow! Lucky shot!',
+  'Grr… that stung!',
+  'Hmph. You’re better than I thought.',
+  'Not so fast!',
+];
 
 export function BossScreen() {
   const { world = '' } = useParams();
@@ -65,17 +71,27 @@ export function BossScreen() {
 
 function Battle({ w }: { w: World }) {
   const { game, store } = useGame();
+  useHeartsGate();
   const b = w.boss;
   const maxHp = Math.max(1, b.hp || b.rounds.length || 1);
   const defense = b.defense;
   const total = maxHp + defense.length + 1;
-  const session = useSession({ noun: 'battle', quitText: 'Retreat? The boss will be back at full health next time.' });
+  const session = useSession({
+    noun: 'battle',
+    quitText: 'Retreat? The boss will be back at full health next time.',
+  });
   const refillPrompt = useRefillPrompt();
 
   // dev only: #/boss/w1?phase=defense|victory jumps ahead (for playtesting)
-  const [jump] = useState(() => (import.meta.env.DEV ? new URLSearchParams(location.hash.split('?')[1]).get('phase') : null));
+  const [jump] = useState(() =>
+    import.meta.env.DEV ? new URLSearchParams(location.hash.split('?')[1]).get('phase') : null,
+  );
   const [step, setStep] = useState<Step>(() =>
-    jump === 'defense' && defense.length ? { k: 'defIntro' } : jump === 'victory' ? { k: 'victory' } : { k: 'intro' },
+    jump === 'defense' && defense.length
+      ? { k: 'defIntro' }
+      : jump === 'victory'
+        ? { k: 'victory' }
+        : { k: 'intro' },
   );
   const [dim, setDim] = useState(() => !reduced() && !jump);
   const [hp, setHp] = useState(jump ? 0 : maxHp);
@@ -92,7 +108,10 @@ function Battle({ w }: { w: World }) {
   const defIndex = useRef(0);
 
   const taunt = useCallback((text: string) => setSay((s) => ({ text, n: s.n + 1 })), []);
-  const bossTaunt = useCallback(() => taunt(pick(b.taunt.length ? b.taunt : ['Ha! Missed me!'])), [b.taunt, taunt]);
+  const bossTaunt = useCallback(
+    () => taunt(pick(b.taunt.length ? b.taunt : ['Ha! Missed me!'])),
+    [b.taunt, taunt],
+  );
 
   useEffect(() => {
     if (!say.n) return;
@@ -127,12 +146,13 @@ function Battle({ w }: { w: World }) {
   /** After a settled challenge: out of hearts → refill (or quit), else go on. */
   const afterAnswer = useCallback(
     async (then: () => void, after: 'round' | 'defense') => {
+      game.hearts.regen(); // a heart owed by the timer counts before "out of hearts"
       if (store.state.hearts.n > 0) return then();
       const v = await refillPrompt();
       if (v === 'quit') session.leave();
       else setStep({ k: 'refill', n: ++seq.current, after });
     },
-    [refillPrompt, session, store],
+    [refillPrompt, session, store, game],
   );
 
   /* ---- hits and taunts ---- */
@@ -210,8 +230,7 @@ function Battle({ w }: { w: World }) {
               hpRef.current = Math.max(0, hpRef.current - 1);
               setDone((d) => d + 1);
               window.setTimeout(hit, 200);
-            }
-            else {
+            } else {
               queue.current.missed.push(ch);
               window.setTimeout(boast, 200);
             }
@@ -226,7 +245,11 @@ function Battle({ w }: { w: World }) {
       page = (
         <RefillRound
           pool={b.rounds}
-          onDone={() => (step.after === 'round' ? nextRound() : setStep({ k: 'defense', i: defIndex.current, n: ++seq.current }))}
+          onDone={() =>
+            step.after === 'round'
+              ? nextRound()
+              : setStep({ k: 'defense', i: defIndex.current, n: ++seq.current })
+          }
         />
       );
       break;
@@ -370,7 +393,11 @@ function Dim({ name, onDone }: { name: string; onDone: () => void }) {
   const end = useCallback(() => {
     if (ended.current) return;
     ended.current = true;
-    void anim(root.current, [{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: 'forwards', rm: 'keep' }).then(onDone);
+    void anim(root.current, [{ opacity: 1 }, { opacity: 0 }], {
+      duration: 200,
+      fill: 'forwards',
+      rm: 'keep',
+    }).then(onDone);
     window.setTimeout(onDone, 400);
   }, [onDone]);
   useEffect(() => {
@@ -397,7 +424,17 @@ function Dim({ name, onDone }: { name: string; onDone: () => void }) {
   );
 }
 
-function Intro({ w, maxHp, start, onFight }: { w: World; maxHp: number; start: boolean; onFight: () => void }) {
+function Intro({
+  w,
+  maxHp,
+  start,
+  onFight,
+}: {
+  w: World;
+  maxHp: number;
+  start: boolean;
+  onFight: () => void;
+}) {
   const b = w.boss;
   const big = useRef<HTMLSpanElement>(null);
   const banner = useRef<HTMLDivElement>(null);
@@ -441,7 +478,13 @@ function Intro({ w, maxHp, start, onFight }: { w: World; maxHp: number; start: b
         <Icon name="heart" /> Misses cost a heart. Land {plural(maxHp, 'hit')}
         {b.defense.length ? ', then survive the Defense Phase!' : '!'}
       </p>
-      <StoryBubbles lines={w.story.bossIntro} moods={['bracing', 'thinking', 'bracing']} curloSize={84} doneLabel="Fight!" onDone={onFight} />
+      <StoryBubbles
+        lines={w.story.bossIntro}
+        moods={['bracing', 'thinking', 'bracing']}
+        curloSize={84}
+        doneLabel="Fight!"
+        onDone={onFight}
+      />
     </div>
   );
 }
@@ -536,7 +579,13 @@ function Victory({ w, onClaim }: { w: World; onClaim: () => void }) {
       ) : (
         <p className="muted">Rematch won! Rewards were claimed the first time.</p>
       )}
-      <StoryBubbles lines={lines} moods={['celebrate', 'happy', 'celebrate']} curloSize={84} doneLabel={first ? 'Claim rewards' : 'Continue'} onDone={onClaim} />
+      <StoryBubbles
+        lines={lines}
+        moods={['celebrate', 'happy', 'celebrate']}
+        curloSize={84}
+        doneLabel={first ? 'Claim rewards' : 'Continue'}
+        onDone={onClaim}
+      />
     </div>
   );
 }
