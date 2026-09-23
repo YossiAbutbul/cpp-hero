@@ -24,11 +24,11 @@
 - id: wizard-hat
   slot: hat
   name: Template Wizard Hat
-  source: Beat World 13
+  source: Defeat the Template Sentinel (World 13)
 - id: crown
   slot: hat
   name: Crown of Braces
-  source: Beat the Final Boss
+  source: Defeat the Undefined Dragon (Final Boss)
 - id: berry
   slot: color
   name: Berry Pop
@@ -94,3 +94,11 @@
   slot: hat
   name: Override Halo
   source: Defeat the Slicing Phantom (World 11)
+- id: iterator-monocle
+  slot: hat
+  name: Iterator Monocle
+  source: Defeat the Iterator Wraith (World 14)
+- id: lambda-antennae
+  slot: hat
+  name: Lambda Antennae
+  source: Defeat the Move Gremlin (World 15)
