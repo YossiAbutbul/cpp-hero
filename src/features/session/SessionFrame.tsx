@@ -1,10 +1,10 @@
 /**
  * Immersive session chrome (legacy Session shell), shared by lessons,
  * practice, boss battles, projects and the placement quiz: Quit, progress
- * bar, combo chip and (heart modes) hearts over a scroll area. Escape asks
+ * bar, combo chip and (boss fights) hearts over a scroll area. Escape asks
  * to quit.
  *
- *   <SessionFrame label="Boss battle" progress={done / total} hearts onQuit={quit} scrollKey={pageKey}>
+ *   <SessionFrame label="Boss battle" progress={done / total} hearts={{ n, max }} onQuit={quit} scrollKey={pageKey}>
  *     <SlidePage pageKey={pageKey}>…</SlidePage>
  *   </SessionFrame>
  *
@@ -24,8 +24,8 @@ export interface SessionFrameProps {
   label: string;
   /** 0..1 */
   progress: number;
-  /** show the hearts (lesson / boss) */
-  hearts?: boolean;
+  /** show these hearts (boss fights keep their own count) */
+  hearts?: { n: number; max: number };
   /** show the combo chip (default true) */
   combo?: boolean;
   onQuit: () => void;
@@ -51,7 +51,7 @@ export function SessionFrame({
   className,
   children,
 }: SessionFrameProps) {
-  const { game, store } = useGame();
+  const { game } = useGame();
   const scroller = useRef<HTMLDivElement>(null);
   const quitRef = useRef(onQuit);
   useLayoutEffect(() => {
@@ -73,7 +73,6 @@ export function SessionFrame({
 
   const lesson = variant === 'lesson';
   const p = Math.max(0, Math.min(1, progress));
-  const h = store.state.hearts;
   return (
     <section
       className={[styles.session, lesson && styles.wide, className].filter(Boolean).join(' ')}
@@ -93,8 +92,8 @@ export function SessionFrame({
         </div>
         {combo && <ComboMeter combo={game.combo} multiplier={game.multiplier()} />}
         {hearts && (
-          <span className={styles.hearts} role="img" aria-label={`${h.n} of ${h.max} hearts`}>
-            <Hearts n={h.n} max={h.max} size={16} />
+          <span className={styles.hearts} role="img" aria-label={`${hearts.n} of ${hearts.max} hearts`}>
+            <Hearts n={hearts.n} max={hearts.max} size={16} />
           </span>
         )}
       </header>

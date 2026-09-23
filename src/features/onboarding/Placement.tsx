@@ -2,7 +2,7 @@
  * Placement quiz (legacy onboarding.placement): 3 questions per world from
  * its lessons; 2 of 3 right tests out of that world. It stops at the first
  * world that isn't passed, then game.placementUnlock opens every passed
- * world plus the next one. No hearts, no hints, no retries (mode placement).
+ * world plus the next one. No hints, no retries (mode placement).
  */
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { useGame } from '@/app/gameContext';

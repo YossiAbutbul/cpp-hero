@@ -2,25 +2,25 @@
  * Boss battle (#/boss/:world, immersive), port of legacy engine/boss.js:
  * dramatic entrance (dim + name card slam, tap to skip), the boss intro,
  * rounds (one HP segment per correct answer; misses make the boss taunt and
- * cost a heart; missed rounds come back until the HP is gone; timed rounds
- * are handled by the runner), the Defense Phase (hostile inputs hurled at
- * Curlo; block each by answering right), then victory, rewards through
- * game.beatBoss, and the results card. Running out of hearts offers a
- * refill round, never a dead end.
+ * cost one of this fight's hearts; missed rounds come back until the HP is
+ * gone; timed rounds are handled by the runner), the Defense Phase (hostile
+ * inputs hurled at Curlo; block each by answering right), then victory,
+ * rewards through game.beatBoss, and the results card. Hearts are per fight
+ * (not saved): at 0 you're knocked out and can try again (intro skipped) or
+ * go back to the map.
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 import { useGame } from '@/app/gameContext';
+import { FIGHT_HEARTS, fightAnswer } from '@/engine/hearts';
 import { goBack } from '@/app/navigation';
 import type { Challenge, World } from '@/content/schema';
 import { ChallengeRunner, TYPE_LABELS, type ChallengeResult } from '@/features/challenges';
 import { CurloSays, SpeechBubble } from '@/features/curlo/SpeechBubble';
+import { curloLine } from '@/features/curlo/voice';
 import { StoryBubbles } from '@/features/map/StoryBubbles';
-import { RefillRound } from '@/features/session/RefillRound';
 import { Gain, Results, sessionTiles } from '@/features/session/Results';
 import { SessionFrame, SlidePage } from '@/features/session/SessionFrame';
-import { useHeartsGate } from '@/features/session/useHeartsGate';
-import { useRefillPrompt } from '@/features/session/useRefillPrompt';
 import { useSession, type SessionStats } from '@/features/session/useSession';
 import { pick, shuffled } from '@/features/session/util';
 import ss from '@/features/session/session.module.css';
@@ -32,6 +32,7 @@ import { plural } from '@/ui/format';
 import { Icon } from '@/ui/Icon';
 import { Screen } from '@/ui/Layout';
 import { Md } from '@/ui/Md';
+import { useDialog } from '@/ui/overlay/dialogContext';
 import { toast } from '@/ui/toast';
 import { Arena, type ArenaHandle } from './session/Arena';
 import { shownInput } from './session/util';
@@ -41,7 +42,6 @@ import styles from './boss.module.css';
 type Step =
   | { k: 'intro' }
   | { k: 'round'; ch: Challenge; n: number; round: number }
-  | { k: 'refill'; n: number; after: 'round' | 'defense' }
   | { k: 'defIntro' }
   | { k: 'defense'; i: number; n: number }
   | { k: 'victory' }
@@ -66,12 +66,18 @@ export function BossScreen() {
       </Screen>
     );
   }
-  return <Battle key={w.id} w={w} />;
+  return <Fights key={w.id} w={w} />;
 }
 
-function Battle({ w }: { w: World }) {
-  const { game, store } = useGame();
-  useHeartsGate();
+/** A knock-out remounts the fight fresh (new key), skipping the intro. */
+function Fights({ w }: { w: World }) {
+  const [tries, setTries] = useState(0);
+  return <Battle key={tries} w={w} rematch={tries > 0} onRetry={() => setTries((t) => t + 1)} />;
+}
+
+function Battle({ w, rematch, onRetry }: { w: World; rematch: boolean; onRetry: () => void }) {
+  const { game } = useGame();
+  const dialog = useDialog();
   const b = w.boss;
   const maxHp = Math.max(1, b.hp || b.rounds.length || 1);
   const defense = b.defense;
@@ -80,32 +86,38 @@ function Battle({ w }: { w: World }) {
     noun: 'battle',
     quitText: 'Retreat? The boss will be back at full health next time.',
   });
-  const refillPrompt = useRefillPrompt();
 
   // dev only: #/boss/w1?phase=defense|victory jumps ahead (for playtesting)
   const [jump] = useState(() =>
     import.meta.env.DEV ? new URLSearchParams(location.hash.split('?')[1]).get('phase') : null,
   );
+  // a rematch after a knock-out skips the intro and starts at round 1
+  const skip = rematch && b.rounds.length > 0;
   const [step, setStep] = useState<Step>(() =>
-    jump === 'defense' && defense.length
+    skip
+      ? { k: 'round', ch: b.rounds[0]!, n: 0, round: 1 }
+      : jump === 'defense' && defense.length
       ? { k: 'defIntro' }
       : jump === 'victory'
         ? { k: 'victory' }
         : { k: 'intro' },
   );
-  const [dim, setDim] = useState(() => !reduced() && !jump);
+  const [dim, setDim] = useState(() => !reduced() && !jump && !rematch);
+  const [hearts, setHearts] = useState(FIGHT_HEARTS);
+  const heartsRef = useRef(FIGHT_HEARTS);
   const [hp, setHp] = useState(jump ? 0 : maxHp);
   const hpRef = useRef(jump ? 0 : maxHp);
   const [done, setDone] = useState(0);
-  const [say, setSay] = useState({ text: '', n: 0 });
+  const [say, setSay] = useState(() =>
+    skip ? { text: pick(b.taunt.length ? b.taunt : ['Back for more?']), n: 1 } : { text: '', n: 0 },
+  );
   const seq = useRef(0);
-  const queue = useRef({ list: b.rounds.slice(), i: 0, missed: [] as Challenge[] });
+  const queue = useRef({ list: b.rounds.slice(), i: skip ? 1 : 0, missed: [] as Challenge[] });
   const artEl = useRef<HTMLSpanElement>(null);
   const hpEl = useRef<HTMLDivElement>(null);
   const sayEl = useRef<HTMLDivElement>(null);
   const headEl = useRef<HTMLDivElement>(null);
   const arena = useRef<ArenaHandle>(null);
-  const defIndex = useRef(0);
 
   const taunt = useCallback((text: string) => setSay((s) => ({ text, n: s.n + 1 })), []);
   const bossTaunt = useCallback(
@@ -143,16 +155,36 @@ function Battle({ w }: { w: World }) {
     setStep({ k: 'round', ch, n: ++seq.current, round: maxHp - hpRef.current + 1 });
   }, [b.rounds, defense.length, maxHp]);
 
-  /** After a settled challenge: out of hearts → refill (or quit), else go on. */
+  /** A settled answer: a miss costs one of this fight's hearts. */
+  const countHeart = useCallback((r: ChallengeResult) => {
+    const f = fightAnswer(heartsRef.current, { correct: r.correct, retry: r.retried });
+    heartsRef.current = f.hearts;
+    if (f.lost) setHearts(f.hearts);
+  }, []);
+
+  /** After Continue: out of hearts → knocked out (try again or map), else go on. */
   const afterAnswer = useCallback(
-    async (then: () => void, after: 'round' | 'defense') => {
-      game.hearts.regen(); // a heart owed by the timer counts before "out of hearts"
-      if (store.state.hearts.n > 0) return then();
-      const v = await refillPrompt();
-      if (v === 'quit') session.leave();
-      else setStep({ k: 'refill', n: ++seq.current, after });
+    async (then: () => void) => {
+      if (heartsRef.current > 0) return then();
+      const v = await dialog.open<'retry' | 'map'>({
+        title: 'Knocked out!',
+        mood: 'worried',
+        dismissValue: 'retry',
+        body: (
+          <>
+            <p>{curloLine('knockedOut')}</p>
+            <p className="muted small">You get {FIGHT_HEARTS} fresh hearts.</p>
+          </>
+        ),
+        buttons: [
+          { label: 'Try again', value: 'retry', variant: 'coral', icon: 'swords' },
+          { label: 'Back to map', value: 'map', variant: 'ghost' },
+        ],
+      });
+      if (v === 'map') session.leave();
+      else onRetry();
     },
-    [refillPrompt, session, store, game],
+    [dialog, session, onRetry],
   );
 
   /* ---- hits and taunts ---- */
@@ -192,7 +224,7 @@ function Battle({ w }: { w: World }) {
   }, [bossTaunt]);
 
   /* ---- pages ---- */
-  const showHead = step.k === 'round' || (step.k === 'refill' && step.after === 'round');
+  const showHead = step.k === 'round';
   const wasHead = useRef(false);
   useLayoutEffect(() => {
     if (showHead && !wasHead.current) void slideUp(headEl.current);
@@ -226,6 +258,7 @@ function Battle({ w }: { w: World }) {
           eyebrow={`Round ${step.round} · ${TYPE_LABELS[ch.type]}`}
           onResult={(r: ChallengeResult) => {
             session.record(r);
+            countHeart(r);
             if (r.correct) {
               hpRef.current = Math.max(0, hpRef.current - 1);
               setDone((d) => d + 1);
@@ -235,24 +268,11 @@ function Battle({ w }: { w: World }) {
               window.setTimeout(boast, 200);
             }
           }}
-          onContinue={() => void afterAnswer(nextRound, 'round')}
+          onContinue={() => void afterAnswer(nextRound)}
         />
       );
       break;
     }
-    case 'refill':
-      key = `f${step.n}`;
-      page = (
-        <RefillRound
-          pool={b.rounds}
-          onDone={() =>
-            step.after === 'round'
-              ? nextRound()
-              : setStep({ k: 'defense', i: defIndex.current, n: ++seq.current })
-          }
-        />
-      );
-      break;
     case 'defIntro':
       page = <DefenseIntro onGo={() => setStep({ k: 'defense', i: 0, n: ++seq.current })} />;
       break;
@@ -283,6 +303,7 @@ function Battle({ w }: { w: World }) {
             eyebrow={`Block attack ${step.i + 1} of ${defense.length} · ${TYPE_LABELS[d.challenge.type]}`}
             onResult={(r) => {
               session.record(r);
+              countHeart(r);
               if (r.correct) window.setTimeout(() => void arena.current?.block(), 250);
               else
                 window.setTimeout(() => {
@@ -294,12 +315,11 @@ function Battle({ w }: { w: World }) {
               const i = step.i;
               if (r.correct) {
                 setDone((x) => x + 1);
-                defIndex.current = i + 1;
               } else toast('It got through! Block it this time.', { icon: 'shield' });
               void afterAnswer(() => {
                 const ni = r.correct ? i + 1 : i;
                 setStep(ni >= defense.length ? { k: 'victory' } : { k: 'defense', i: ni, n: ++seq.current });
-              }, 'defense');
+              });
             }}
           />
         </>
@@ -342,7 +362,7 @@ function Battle({ w }: { w: World }) {
     <SessionFrame
       label={`Boss battle: ${b.name}`}
       progress={done / total}
-      hearts
+      hearts={{ n: hearts, max: FIGHT_HEARTS }}
       onQuit={() => void session.askQuit()}
       scrollKey={key}
       overlay={dim ? <Dim name={b.name} onDone={() => setDim(false)} /> : null}
@@ -475,7 +495,7 @@ function Intro({
         <b>{b.name}:</b> <Md text={b.intro} />
       </SpeechBubble>
       <p className={`muted small ${styles.note}`}>
-        <Icon name="heart" /> Misses cost a heart. Land {plural(maxHp, 'hit')}
+        <Icon name="heart" /> {FIGHT_HEARTS} hearts, a miss costs one. Land {plural(maxHp, 'hit')}
         {b.defense.length ? ', then survive the Defense Phase!' : '!'}
       </p>
       <StoryBubbles

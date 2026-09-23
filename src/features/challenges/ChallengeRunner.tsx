@@ -4,7 +4,7 @@
  *   <ChallengeRunner key={`${i}:${ch.id}`} challenge={ch} mode="lesson" onContinue={next} />
  *
  * Key it per queue position so a new challenge starts fresh. The runner calls
- * game.answer (hearts, XP, combo, SRS, quests) and game.useHint itself, shows
+ * game.answer (XP, combo, SRS, quests; boss hearts) and game.useHint itself, shows
  * the 3 hint tiers, the feedback panel, the retry flow ("Not quite" → Try
  * again / Show answer) and the explanation (Tell me more + side-by-side for
  * defensive types). Renderers (./renderers) only own their inputs.
@@ -38,7 +38,7 @@ export interface ChallengeResult {
   retried: boolean;
 }
 
-export type RunnerMode = 'lesson' | 'project' | 'stress' | 'boss' | 'practice' | 'review' | 'placement' | 'refill';
+export type RunnerMode = 'lesson' | 'project' | 'stress' | 'boss' | 'practice' | 'review' | 'placement';
 
 export interface ChallengeRunnerProps {
   challenge: Challenge;
@@ -55,8 +55,6 @@ export interface ChallengeRunnerProps {
   continueLabel?: string;
   /** hide the hint button (default: hidden in placement) */
   noHints?: boolean;
-  /** answering never costs a heart (e.g. refill rounds) */
-  noHearts?: boolean;
   /** override base XP for a correct first try */
   baseXp?: number;
   /** hide Curlo's head (e.g. boss rounds show the boss instead) */
@@ -89,7 +87,6 @@ export function ChallengeRunner(props: ChallengeRunnerProps) {
   const actx = {
     mode: engineMode(mode),
     base: props.baseXp ?? (mode === 'stress' ? game.STRESS_XP : undefined),
-    noHearts: props.noHearts,
   };
 
   const [phase, setPhase] = useState<Phase>('answer');
@@ -166,9 +163,9 @@ export function ChallengeRunner(props: ChallengeRunnerProps) {
     if (phaseRef.current !== 'answer') return;
     fxFeedback(o.correct, resolveAnchor(o.anchor));
     if (!o.correct && canSoft && !o.noRetry) {
-      const r = game.answer(ch, { correct: false, assisted, hints }, actx);
+      game.answer(ch, { correct: false, assisted, hints }, actx);
       setRetried(true);
-      setSoft({ out: o, xpText: r.heartLost ? '−1 heart' : undefined });
+      setSoft({ out: o });
       go('soft');
       setLine('Not quite. Give it another go!');
       curlo.react('worried', 1400);
@@ -198,7 +195,7 @@ export function ChallengeRunner(props: ChallengeRunnerProps) {
       setSoft(null);
       setAttempt((a) => a + 1);
       go('answer');
-      setLine('Try again! No heart lost this time.');
+      setLine('Try again! You’ve got this.');
       curlo.react('thinking');
       bounce(bodyEl.current);
     };

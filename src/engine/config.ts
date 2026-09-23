@@ -15,8 +15,7 @@ export const SOUND_ENABLED = false;
 export const SAVE_KEY = 'cpphero.save';
 export const SAVE_VERSION = 1;
 
-/** +1 heart per 30 minutes (or per completed practice review). */
-export const HEART_REFILL_MS = 30 * 60 * 1000;
+/** Hearts per boss fight (engine/hearts.ts). Also the old save's hearts.max default. */
 export const DEFAULT_MAX_HEARTS = 5;
 
 /** Leitner boxes 1..5 → review again after this many days. */
@@ -32,15 +31,12 @@ export const BASE_XP = {
   project: 8,
   practice: 15,
   review: 8,
-  refill: 5,
   placement: 0,
 } as const;
 export type SessionMode = keyof typeof BASE_XP;
 
-/** Modes where a wrong FIRST try costs a heart. */
-export const HEART_MODES: readonly SessionMode[] = ['lesson', 'boss'];
 /** Modes that offer a second try after a miss (never boss / placement). */
-export const RETRY_MODES: readonly SessionMode[] = ['lesson', 'project', 'practice', 'review', 'refill'];
+export const RETRY_MODES: readonly SessionMode[] = ['lesson', 'project', 'practice', 'review'];
 /** Consolation XP for getting it right on the second try. */
 export const RETRY_XP = 2;
 /** Stress-test attacks in a project: base XP (× combo multiplier). */

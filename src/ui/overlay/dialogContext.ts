@@ -60,9 +60,9 @@ export const DialogContext = createContext<DialogApi | null>(null);
  * shell provides it).
  *   const dialog = useDialog();
  *   if (await dialog.confirm({ title: 'Reset progress?', danger: true })) reset();
- *   const pick = await dialog.open({ title: 'Out of hearts', mood: 'worried',
- *     buttons: [{ label: 'Earn a heart', value: 'practice', variant: 'teal' }, { label: 'Wait', value: 'wait', variant: 'ghost' }] });
- *   dialog.sheet({ title: 'Hearts', body: (close) => <HeartsInfo onDone={close} /> });
+ *   const pick = await dialog.open({ title: 'Knocked out!', mood: 'worried',
+ *     buttons: [{ label: 'Try again', value: 'retry', variant: 'coral' }, { label: 'Back to map', value: 'map', variant: 'ghost' }] });
+ *   dialog.sheet({ title: 'Daily streak', body: (close) => <StreakInfo onDone={close} /> });
  */
 export function useDialog(): DialogApi {
   const v = useContext(DialogContext);

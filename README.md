@@ -16,12 +16,13 @@ challenges are YAML files in [`content/`](content/README.md), validated at build
 | React screens (Phase B2) | **Done on `main`**: ChallengeRunner + all 12 types, lesson player, practice/review/arena, CodeDemo frames + memory; map, onboarding + placement, project + Stress Test, boss battle; Curlo, Vault, Bestiary, Stats, Settings. lint (0 errors), `tsc -b`, tests, build pass |
 | Cloud save + deploy | **Live at https://cpp-hero.vercel.app** (Vercel, auto-deploys from `main`). Firebase project `cpp-hero` (Spark, free): Google sign-in, Firestore `me-west1`, rules + indexes deployed. Sign-in and sync checked by the user on computer + phone, offline works. **App Check off on purpose** (reCAPTCHA Enterprise needs billing); set `VITE_FIREBASE_APPCHECK_SITE_KEY` in Vercel to turn it on later. Known limits: XP from two devices played offline at the same time merges by taking the higher value; the newer device's streak wins |
 | Polish (done) | Boss and lesson session shells merged into `src/features/session/`. World 6 demos use `push`/`pop` frames, World 8 demos use `mem` cells |
+| Hearts | **Boss fights only.** Each fight starts with 5 hearts (not saved); a wrong first try costs one; at 0 a "Knocked out!" dialog offers Try again (fresh fight, intro skipped) or Back to map. No hearts, timers or lockouts in lessons, projects, practice or placement. `save.hearts` stays in the save format for old saves and cloud sync only |
 
 ### How to continue
 
 When the user says **"continue according to plan"**, do these steps in order. Use parallel subagents where noted.
 
-1. **Full playtest** of all 16 worlds end to end: a full boss fight, the boss hearts-refill path, and Import/Paste/Reset in Settings (never tested by hand). Fix what breaks.
+1. **Full playtest** of all 16 worlds end to end: a full boss fight, a boss knock-out (lose all 5 hearts, then Try again), and Import/Paste/Reset in Settings (never tested by hand). Fix what breaks.
 2. **Polish / follow-ups.** Can run as parallel subagents, each with its own folders:
    - World 6 and World 8 `NOTES.md` still describe the old demo format; update them.
    - Ideas from NOTES: a multi-stage boss schema (`content/worlds/16-final-boss/NOTES.md`), `obj` cards for inheritance/slicing (World 11 NOTES), moved-from "husk" boxes (World 15 NOTES).
@@ -67,7 +68,7 @@ npm run dev          # http://localhost:5173 — editing content/*.yaml hot-relo
 ## Layout
 
 - `content/` — worlds, lessons, projects, bosses, bestiary, achievements, cosmetics, quests (YAML). See [content/README.md](content/README.md).
-- `src/engine/` — pure game logic (save format, XP/levels, hearts, streak, quests, achievements, SRS, answer matching). No React.
+- `src/engine/` — pure game logic (save format, XP/levels, boss hearts, streak, quests, achievements, SRS, answer matching). No React.
 - `src/content/` — zod schema (the content format and its TypeScript types) and the loader.
 - `src/app/`, `src/features/`, `src/ui/`, `src/styles/` — the React app (Phase B ports the screens).
 - `scripts/` — validate, check:cpp, the one-off legacy converter, the Vite content plugin.

@@ -70,9 +70,6 @@
 .wide .prog {
   min-width: 40px;
 }
-.wide .hearts {
-  color: var(--coral-d);
-}
 .wide .scroll {
   padding-bottom: 40px;
 }

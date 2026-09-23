@@ -5,7 +5,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadContentFromDisk } from '../../scripts/lib/content-fs';
 import type { Challenge, Content, World } from '../content/schema';
-import { HEART_REFILL_MS, STRESS_XP } from './config';
+import { STRESS_XP } from './config';
 import { createGame, type Game } from './game';
 import { defaultSave, type SaveV1 } from './save';
 import { seeded } from './util';
@@ -79,7 +79,7 @@ describe('gating', () => {
 });
 
 describe('answer scoring', () => {
-  it('XP × combo multiplier; a wrong first try costs a heart and resets the combo', () => {
+  it('XP × combo multiplier; a wrong first try resets the combo and never touches save.hearts', () => {
     const { game, s } = setup();
     const chs = content.worlds[0]!.lessons[0]!.challenges;
     const xp: number[] = [];
@@ -87,8 +87,8 @@ describe('answer scoring', () => {
       xp.push(game.answer(chs[i % chs.length]!, { correct: true }, { mode: 'lesson' }).xp);
     expect(xp).toEqual([10, 10, 15, 15]); // combo 3+ → 1.5×
     const miss = game.answer(chs[0]!, { correct: false }, { mode: 'lesson' });
-    expect(miss).toMatchObject({ xp: 0, heartLost: true, combo: 0 });
-    expect(s().hearts.n).toBe(4);
+    expect(miss).toMatchObject({ xp: 0, heartLost: false, combo: 0 });
+    expect(s().hearts.n).toBe(5);
     // the retry: +2 XP, no heart, combo untouched
     expect(game.answer(chs[0]!, { correct: true, retry: true }, { mode: 'lesson' })).toMatchObject({
       xp: 2,
@@ -96,14 +96,16 @@ describe('answer scoring', () => {
       combo: 0,
     });
     expect(game.answer(chs[0]!, { correct: false, retry: true }, { mode: 'lesson' }).heartLost).toBe(false);
-    expect(s().hearts.n).toBe(4);
   });
 
-  it('assisted answers earn nothing but keep hearts; practice never costs hearts', () => {
+  it('assisted answers earn nothing; only a boss miss reports a lost heart', () => {
     const { game, s } = setup();
     const ch = content.worlds[0]!.lessons[0]!.challenges[0]!;
     expect(game.answer(ch, { correct: true, assisted: true }, { mode: 'lesson' }).xp).toBe(0);
     expect(game.answer(ch, { correct: false }, { mode: 'practice' }).heartLost).toBe(false);
+    expect(game.answer(ch, { correct: false }, { mode: 'project' }).heartLost).toBe(false);
+    expect(game.answer(ch, { correct: false }, { mode: 'boss' }).heartLost).toBe(true);
+    // the fight counts its own hearts; the save is left alone
     expect(s().hearts.n).toBe(5);
   });
 
@@ -136,17 +138,6 @@ describe('answer scoring', () => {
     game.answer(withBug[ids[1]!]!.ch, { correct: true }, { mode: 'lesson' });
     expect(s().bestiary).toContain('missing-semicolon');
     expect(game.drainCelebrations().some((c) => c.type === 'bug')).toBe(true);
-  });
-
-  it('refills hearts over time', () => {
-    const { game, s, clock } = setup();
-    const ch = content.worlds[0]!.lessons[0]!.challenges[0]!;
-    game.answer(ch, { correct: false }, { mode: 'lesson' });
-    game.answer(ch, { correct: false }, { mode: 'boss' });
-    expect(s().hearts.n).toBe(3);
-    clock.t += HEART_REFILL_MS + 1000;
-    expect(game.hearts.regen()).toBe(1);
-    expect(s().hearts.n).toBe(4);
   });
 });
 

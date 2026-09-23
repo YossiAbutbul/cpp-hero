@@ -11,7 +11,7 @@ Three agents build feature screens in parallel on top of the B1 foundation. Read
 - Short text by default; details behind "Tell me more" (Expander).
 - No visible scrollbars; code never scrolls horizontally (CodeBlock wraps).
 - Inputs size to content (AutoGrowInput).
-- Wrong answer (except boss rounds, timed speed/safe rounds, placement): "Not quite" + feedback on the picked option WITHOUT revealing the answer, buttons [Try again] [Show answer]; heart lost only on the first wrong; correct retry = small XP (engine handles via `retry`), still goes to review; second miss or Show answer = full reveal (correct answer, short, Tell me more with explain + all whys + SideBySide for defensive types).
+- Wrong answer (except boss rounds, timed speed/safe rounds, placement): "Not quite" + feedback on the picked option WITHOUT revealing the answer, buttons [Try again] [Show answer]; no hearts outside boss fights; correct retry = small XP (engine handles via `retry`), still goes to review; second miss or Show answer = full reveal (correct answer, short, Tell me more with explain + all whys + SideBySide for defensive types).
 - Never color alone for right/wrong (icon + text).
 - Sound is disabled (SOUND_ENABLED=false); don't add audio calls that bypass the flag.
 - Premium springy motion, <400ms, interruptible, reduced-motion aware, timeouts so nothing stays invisible.
@@ -40,7 +40,7 @@ export interface ChallengeRunnerProps {
 }
 export function ChallengeRunner(props: ChallengeRunnerProps): JSX.Element;
 ```
-The runner calls `game.answer(...)` itself with the right mode (hearts, XP, combo, SRS, quests) and renders hints (3 tiers via game.useHint), feedback sheet, retry flow, explanations, side-by-side. B2a should land a first working version of the runner EARLY (commit + push within the first ~30 minutes, even if some types are basic) so B2b can build boss/project on it; B2b starts with the map and onboarding and uses a temporary stub if the runner isn't there yet.
+The runner calls `game.answer(...)` itself with the right mode (XP, combo, SRS, quests; boss hearts) and renders hints (3 tiers via game.useHint), feedback sheet, retry flow, explanations, side-by-side. B2a should land a first working version of the runner EARLY (commit + push within the first ~30 minutes, even if some types are basic) so B2b can build boss/project on it; B2b starts with the map and onboarding and uses a temporary stub if the runner isn't there yet.
 
 ## Done means
 `npm run lint`, `tsc -b`, `npm test`, `npm run build` pass; you played your screens in the Browser pane (launch config "vite", port 5173) at 360px and desktop with no console errors; you committed only your files (plain messages, no Co-Authored-By/AI attribution; retry on git index.lock; `git pull --rebase` before push) and pushed to origin main. Reply concisely: what's done, shared-file changes, known gaps.

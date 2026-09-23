@@ -4,7 +4,7 @@
  *
  *   const store = createStore(); store.load();
  *   const game = createGame({ content, store });
- *   game.boot();                               // hearts regen, streak, quests, achievements
+ *   game.boot();                               // streak, quests, achievements
  *   const r = game.answer(ch, { correct, assisted, hints, retry }, { mode: 'lesson' });
  *   game.finishLesson(lesson, firstTryResults);
  *   game.drainCelebrations();                  // level-ups, achievements, bugs... for the UI
@@ -42,7 +42,7 @@ import {
 import { buildIndex, type ContentIndex } from './contentIndex';
 import { allCosmetics, cosmeticTest } from './cosmetics';
 import { Emitter } from './events';
-import { costsHeart, gainHeart, loseHeart, nextHeartIn, regenHearts } from './hearts';
+import { costsHeart } from './hearts';
 import { applyXp, comboMultiplier, levelInfo } from './progress';
 import { DEFAULT_QUESTS, ensureDaily, questEvent, questXp } from './quests';
 import type { SaveV1 } from './save';
@@ -68,7 +68,6 @@ export type CurloForm = 1 | 2 | 3;
 export interface GameEvents {
   xp: { delta: number; xp: number; why: string };
   levelup: { level: number };
-  hearts: { n: number; gained?: number; lost?: number };
   streak: { days: number };
   quests: undefined;
   achievement: Achievement;
@@ -104,12 +103,11 @@ export interface AnswerContext {
   mode: SessionMode;
   /** override base XP (e.g. stress attacks use STRESS_XP) */
   base?: number;
-  /** this answer never costs a heart (e.g. refill rounds) */
-  noHearts?: boolean;
 }
 
 export interface AnswerOutcome {
   xp: number;
+  /** a boss fight heart was lost (the fight keeps its own count) */
   heartLost: boolean;
   combo: number;
   multiplier: number;
@@ -228,31 +226,6 @@ export function createGame(opts: GameOptions) {
     events.emit('quests', undefined);
     save();
   }
-
-  /* ================= hearts ================= */
-  const hearts = {
-    regen(): number {
-      const k = regenHearts(S().hearts, now());
-      if (k > 0) {
-        events.emit('hearts', { n: S().hearts.n, gained: k });
-        save();
-      }
-      return k;
-    },
-    nextIn: () => nextHeartIn(S().hearts, now()),
-    lose(): number {
-      const n = loseHeart(S().hearts, now());
-      events.emit('hearts', { n, lost: 1 });
-      save();
-      return n;
-    },
-    gain(k = 1): number {
-      const g = gainHeart(S().hearts, k, now());
-      if (g) events.emit('hearts', { n: S().hearts.n, gained: g });
-      save();
-      return g;
-    },
-  };
 
   /* ================= streak ================= */
   function checkStreakOnBoot(): void {
@@ -415,21 +388,14 @@ export function createGame(opts: GameOptions) {
    *  - retry (second try): +2 XP when right; no hearts, no combo change
    *  - first try right (not assisted): base XP × combo multiplier
    *    (base by mode, ×1.5 for timed rounds that report a score)
-   *  - first try wrong in lesson/boss: −1 heart
-   * 'refill' rounds are recorded as reviews.
+   *  - first try wrong in a boss fight: heartLost (the fight counts hearts)
    */
   function answer(ch: Challenge, res: AnswerResult, ctx: AnswerContext): AnswerOutcome {
     if (res.retry) {
       const xp = res.correct ? addXP(RETRY_XP, 'retry') : 0;
       return { xp, heartLost: false, combo, multiplier: comboMultiplier(combo) };
     }
-    recordAnswer(
-      ch,
-      res.correct,
-      ctx.mode === 'refill' ? 'review' : ctx.mode,
-      !!res.assisted,
-      res.hints ?? 0,
-    );
+    recordAnswer(ch, res.correct, ctx.mode, !!res.assisted, res.hints ?? 0);
     let xp = 0;
     let heartLost = false;
     if (res.correct && !res.assisted) {
@@ -437,8 +403,7 @@ export function createGame(opts: GameOptions) {
       if (res.score != null) base = Math.round(base * 1.5);
       const gain = Math.round(base * comboMultiplier(combo));
       if (gain > 0) xp = addXP(gain, 'correct');
-    } else if (costsHeart({ mode: ctx.mode, correct: res.correct, retry: false, noHearts: ctx.noHearts })) {
-      hearts.lose();
+    } else if (costsHeart({ mode: ctx.mode, correct: res.correct, retry: false })) {
       heartLost = true;
     }
     return { xp, heartLost, combo, multiplier: comboMultiplier(combo) };
@@ -602,12 +567,10 @@ export function createGame(opts: GameOptions) {
     return ws[Math.min(last + 1, ws.length - 1)];
   }
 
-  /** A practice/review round finished: +1 heart, practice quest, active day. */
-  function finishPractice(): number {
-    const g = hearts.gain(1);
+  /** A practice/review round finished: practice quest, active day. */
+  function finishPractice(): void {
     quest('practice.done', 1);
     markActiveToday();
-    return g;
   }
 
   /**
@@ -629,14 +592,12 @@ export function createGame(opts: GameOptions) {
     if (before < goal && d.minutes >= goal) {
       events.emit('toast', { msg: `Daily goal reached: ${goal} minutes! Great work!`, icon: 'target' });
     }
-    hearts.regen();
     save();
   }
 
   /** Run once after loading the save (legacy main.js boot order). */
   function boot(): void {
     if (ensureDaily(S(), questDefs(), today())) save();
-    hearts.regen();
     checkStreakOnBoot();
     checkAchievements();
     // Cosmetics granted silently on boot don't need a celebration.
@@ -685,9 +646,8 @@ export function createGame(opts: GameOptions) {
     lessonsDone,
     nodes,
     currentNode,
-    // xp, hearts, streak, quests
+    // xp, streak, quests
     addXP,
-    hearts,
     markActive: markActiveToday,
     questDefs,
     questDef: (id: string) => questDefs().find((q) => q.id === id),
