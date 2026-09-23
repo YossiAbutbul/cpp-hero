@@ -17,6 +17,9 @@ export const SKILL_COLORS: Record<Skill, string> = {
   defense: 'var(--coral-d)',
 };
 
+/** Where "earn a heart" / "review" goes (the practice screen reads ?review=1). */
+export const REVIEW_PATH = '/practice?review=1';
+
 export function nodePath(n: MapNode): string {
   if (n.kind === 'lesson') return `/lesson/${n.id}`;
   return n.kind === 'project' ? `/project/${n.world.id}` : `/boss/${n.world.id}`;

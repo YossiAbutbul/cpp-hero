@@ -14,41 +14,8 @@ import { BossArt } from '@/ui/art/Art';
 import { burstAt } from '@/ui/fx/effects';
 import { anim, reduced } from '@/ui/fx/motion';
 import { nodeKind, nodeTitle } from './nodeMeta';
+import { BOTTOM, curve, GAP, litIndex, mapMemory, nodeState, OFFS, TOP, type NodeState } from './pathLayout';
 import styles from './Map.module.css';
-
-const TOP = 84;
-const GAP = 118;
-const BOTTOM = 86;
-const OFFS = [0, -0.72, -0.12, 0.68, 0.82, 0.08, -0.55, -0.8, 0.2];
-
-/** Per app session: how far each world's trail was drawn, and whether the map was shown yet. */
-export const mapMemory = { shown: false, lit: new Map<string, number>() };
-
-export type NodeState = 'done' | 'cur' | 'open' | 'lock';
-
-export function nodeState(n: MapNode, cur: MapNode | null): NodeState {
-  return n.done ? 'done' : cur?.id === n.id ? 'cur' : n.open ? 'open' : 'lock';
-}
-
-/** Index of the last node the trail reaches (done or current), -1 = none. */
-export function litIndex(nodes: readonly MapNode[], cur: MapNode | null): number {
-  let lit = -1;
-  nodes.forEach((n, i) => {
-    if (n.done || cur?.id === n.id) lit = i;
-  });
-  return lit;
-}
-
-function curve(pts: { x: number; y: number }[]): string {
-  return pts
-    .map((p, i) => {
-      if (!i) return `M${p.x} ${p.y}`;
-      const q = pts[i - 1]!;
-      const dy = (p.y - q.y) / 2;
-      return `C${q.x} ${q.y + dy} ${p.x} ${p.y - dy} ${p.x} ${p.y}`;
-    })
-    .join(' ');
-}
 
 export interface WorldPathProps {
   worldId: string;

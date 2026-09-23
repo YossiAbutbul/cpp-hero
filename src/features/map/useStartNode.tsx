@@ -10,11 +10,8 @@ import type { MapNode } from '@/engine/game';
 import { curloLine } from '@/features/curlo/voice';
 import { HeartClock } from '@/ui/HeartsChip';
 import { useDialog } from '@/ui/overlay/dialogContext';
-import { nodePath } from './nodeMeta';
+import { nodePath, REVIEW_PATH } from './nodeMeta';
 import { StoryBubbles } from './StoryBubbles';
-
-/** Where "earn a heart" / "review" goes (the practice screen reads ?review=1). */
-export const REVIEW_PATH = '/practice?review=1';
 
 export function useStartNode() {
   const { game, store } = useGame();
