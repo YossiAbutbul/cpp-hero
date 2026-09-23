@@ -4,7 +4,7 @@
  * everything else is additive (evolution gear, hats, color variants, shield
  * skins), exactly as in the approved vanilla app. Do not redesign.
  */
-import { hash } from '@/engine/util';
+import { hash } from '../../engine/util';
 
 export type CurloMood = 'happy' | 'celebrate' | 'worried' | 'thinking' | 'bracing';
 export const CURLO_MOODS: readonly CurloMood[] = ['happy', 'celebrate', 'worried', 'thinking', 'bracing'];
@@ -109,8 +109,56 @@ export function hatSvg(id: string): string {
   const tints = ['#3D8BFF', '#0FA898', '#FF5A70', '#7A4FD0', '#FFC62E'];
   const c = tints[hash(k) % tints.length];
   let g = '<g class="g-hat" transform="translate(80 36)">';
-  // Boss rewards from Worlds 4-8 (matched first so the keyword rules below can't catch them).
-  if (/phantom|veil/.test(k)) {
+  // Boss rewards from Worlds 4-15 (matched first so the keyword rules below can't catch them).
+  if (/raii|hardhat|hard-hat/.test(k)) {
+    // Heap Hoarder (W9): a sunny hard hat with a ridge and a brace badge (owns its resources)
+    g +=
+      '<rect x="-35" y="1" width="70" height="8" rx="4" fill="#FFC62E" stroke="#C98C00" stroke-width="3"/>' +
+      '<path d="M-26 3 Q-27 -25 0 -27 Q27 -25 26 3 Z" fill="#FFC62E" stroke="#C98C00" stroke-width="3" stroke-linejoin="round"/>' +
+      '<path d="M-6 -26 Q-7 -10 -6 2 L6 2 Q7 -10 6 -26 Q0 -27.5 -6 -26Z" fill="#FFD95E" stroke="#C98C00" stroke-width="2.5" stroke-linejoin="round"/>' +
+      '<path d="M-17 -18 Q-12 -22 -7 -22" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".85"/>' +
+      '<g transform="translate(-16 -7)"><circle r="6.5" fill="#fff" stroke="#C98C00" stroke-width="2"/>' +
+      '<path d="M-1.5 -3.5 Q-3.5 -3.5 -3.3 -1.5 Q-3.3 0 -4.4 0 Q-3.3 0 -3.3 1.5 Q-3.5 3.5 -1.5 3.5 M1.5 -3.5 Q3.5 -3.5 3.3 -1.5 Q3.3 0 4.4 0 Q3.3 0 3.3 1.5 Q3.5 3.5 1.5 3.5" fill="none" stroke="#F2641B" stroke-width="1.6" stroke-linecap="round"/></g>';
+  } else if (/encap/.test(k)) {
+    // Invariant Golem (W10): a royal-blue circlet with a golden padlock gem (private members)
+    g +=
+      '<path d="M-34 9 Q0 -4 34 9 L34 17 Q0 4 -34 17 Z" fill="#3D8BFF" stroke="#1F5FC4" stroke-width="3" stroke-linejoin="round"/>' +
+      '<path d="M-26 8 L-22 -4 L-17 6 M26 8 L22 -4 L17 6" fill="#3D8BFF" stroke="#1F5FC4" stroke-width="2.5" stroke-linejoin="round"/>' +
+      '<path d="M-6 -6 L-6 -11 Q-6 -17 0 -17 Q6 -17 6 -11 L6 -6" fill="none" stroke="#C98C00" stroke-width="3.2" stroke-linecap="round"/>' +
+      '<rect x="-10" y="-7" width="20" height="16" rx="4" fill="#FFC62E" stroke="#C98C00" stroke-width="2.5"/>' +
+      '<circle cx="0" cy="-1" r="2.4" fill="#2A2140"/><path d="M0 0 L0 4.5" stroke="#2A2140" stroke-width="2.4" stroke-linecap="round"/>' +
+      '<circle cx="-22" cy="-5" r="2.6" fill="#FF5A70"/><circle cx="22" cy="-5" r="2.6" fill="#FF5A70"/>';
+  } else if (/override/.test(k)) {
+    // Slicing Phantom (W11): a tilted double halo; the upper ring overrides the lower one
+    g +=
+      '<g transform="rotate(-8)">' +
+      '<ellipse cx="0" cy="-12" rx="24" ry="6.5" fill="none" stroke="#C98C00" stroke-width="5" opacity=".55"/>' +
+      '<ellipse cx="0" cy="-24" rx="21" ry="5.5" fill="none" stroke="#FFC62E" stroke-width="5"/>' +
+      '<ellipse cx="0" cy="-24" rx="21" ry="5.5" fill="none" stroke="#fff" stroke-width="1.4" stroke-dasharray="6 9" opacity=".9"/>' +
+      '<path d="M26 -20 L26 -34 M20.5 -28.5 L26 -34 L31.5 -28.5" fill="none" stroke="#7A4FD0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '</g>' +
+      '<path d="M-28 -34 L-26.5 -30.5 L-23 -29 L-26.5 -27.5 L-28 -24 L-29.5 -27.5 L-33 -29 L-29.5 -30.5Z" fill="#FFC62E"/>';
+  } else if (/monocle|iterator/.test(k)) {
+    // Iterator Wraith (W14): a golden monocle over the right eye, ++ etched on the rim, chain to the side
+    g +=
+      '<path d="M29 50 Q36 70 30 90 Q27 100 33 108" fill="none" stroke="#C98C00" stroke-width="2.2" stroke-dasharray="3.5 2.5" stroke-linecap="round"/>' +
+      '<circle cx="16" cy="44" r="15" fill="#C4F1EA" fill-opacity=".28" stroke="#FFC62E" stroke-width="4.5"/>' +
+      '<circle cx="16" cy="44" r="15" fill="none" stroke="#C98C00" stroke-width="1.5" opacity=".7"/>' +
+      '<path d="M7 36 Q11 32 16 31.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".9"/>' +
+      '<path d="M22 24 L22 30 M19 27 L25 27 M28 27 L28 33 M25 30 L31 30" stroke="#7A4FD0" stroke-width="2" stroke-linecap="round"/>' +
+      '<circle cx="29" cy="50" r="2.6" fill="#FFC62E" stroke="#C98C00" stroke-width="1.5"/>';
+  } else if (/lambda/.test(k)) {
+    // Move Gremlin (W15): two springy antennae with lambda-tipped bobbles
+    const tip = (x: number, y: number) =>
+      `<circle cx="${x}" cy="${y}" r="7.5" fill="#7A4FD0" stroke="#2A2140" stroke-width="2.5"/>` +
+      `<path d="M${x - 3} ${y - 4.5} L${x + 3} ${y + 4.5} M${x} ${y} L${x - 3} ${y + 4.5}" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`;
+    g +=
+      '<path d="M-10 2 Q-14 -8 -10 -14 Q-6 -20 -12 -24 Q-17 -28 -18 -32" fill="none" stroke="#2A2140" stroke-width="3.5" stroke-linecap="round"/>' +
+      '<path d="M10 2 Q14 -8 10 -14 Q6 -20 12 -24 Q17 -28 18 -32" fill="none" stroke="#2A2140" stroke-width="3.5" stroke-linecap="round"/>' +
+      '<ellipse cx="0" cy="3" rx="16" ry="4" fill="#0FA898" stroke="#077A6F" stroke-width="2.5"/>' +
+      tip(-19, -36) +
+      tip(19, -36);
+  } else if (/phantom|veil/.test(k)) {
     // Branch Phantom: a floaty lilac veil with a wavy hem and a trailing tail
     g +=
       '<path d="M22 4 Q40 10 44 30 Q48 44 40 52 Q42 36 30 22 Z" fill="#E6DCFF" stroke="#7A4FD0" stroke-width="2.5" stroke-linejoin="round" opacity=".95"/>' +
@@ -250,7 +298,10 @@ export function curloInner(form: CurloFormN, hat: string | null | undefined): st
 }
 
 /** Body motion per mood (from the design). `hold` poses stay until the next reaction. */
-export const MOVES: Record<CurloMood, { kf: Keyframe[]; ms: number; hold?: boolean; easing?: string }> = {
+/** WAAPI keyframe (local type: this file is also compiled by the DOM-less test config). */
+export type MoveFrame = { transform: string; offset?: number };
+
+export const MOVES: Record<CurloMood, { kf: MoveFrame[]; ms: number; hold?: boolean; easing?: string }> = {
   celebrate: {
     kf: [
       { transform: 'none' },
