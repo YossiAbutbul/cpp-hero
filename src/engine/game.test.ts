@@ -189,3 +189,27 @@ describe('time tracking', () => {
     expect(toasts.some((m) => m.startsWith('Daily goal reached'))).toBe(true);
   });
 });
+
+describe('review questions in lessons', () => {
+  it('only come from lessons already done, never from ones still ahead', () => {
+    const { game } = setup();
+    const doneIds = new Set<string>();
+    for (const w of content.worlds) {
+      for (const lesson of w.lessons) {
+        for (const ch of game.interleaveFor(lesson)) {
+          const from = content.worlds
+            .flatMap((x) => x.lessons)
+            .find((l) => l.challenges.some((c) => c.id === ch.id));
+          expect(from && doneIds.has(from.id), `${lesson.id} reviews ${ch.id} before its lesson`).toBe(true);
+        }
+        const firstTry: Record<string, boolean> = {};
+        for (const ch of lesson.challenges) {
+          game.answer(ch, right(ch), { mode: 'lesson' });
+          firstTry[ch.id] = true;
+        }
+        game.finishLesson(lesson, firstTry);
+        doneIds.add(lesson.id);
+      }
+    }
+  });
+});
