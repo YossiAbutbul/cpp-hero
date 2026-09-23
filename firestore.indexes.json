@@ -1,0 +1,11 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "users",
+      "fieldPath": "save",
+      "ttl": false,
+      "indexes": []
+    }
+  ]
+}

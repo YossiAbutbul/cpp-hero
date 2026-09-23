@@ -5,20 +5,25 @@
   "description": "Learn C++ from zero. Defend your code. A game-like PWA that teaches modern C++ with a focus on safe, defensive programming.",
   "scripts": {
     "dev": "vite",
+    "dev:emulators": "vite --mode emulator",
     "prebuild": "npm run validate",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-cpp-hero \"vitest run --config vitest.rules.config.ts\"",
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc -b",
     "validate": "tsx scripts/validate-content.ts",
     "check:cpp": "tsx scripts/check-cpp.ts",
     "convert:legacy": "tsx scripts/convert-legacy-content.ts",
-    "legacy:build": "node legacy/build.js"
+    "legacy:build": "node legacy/build.js",
+    "emulators": "firebase emulators:start --only auth,firestore --project demo-cpp-hero",
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes"
   },
   "dependencies": {
+    "firebase": "^12.19.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.30.6",
@@ -27,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@types/node": "^22.20.4",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
@@ -35,6 +41,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
+    "firebase-tools": "^15.30.2",
     "globals": "^17.12.0",
     "prettier": "^3.9.8",
     "tsx": "^4.23.15",

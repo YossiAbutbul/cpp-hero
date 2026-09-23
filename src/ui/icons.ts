@@ -77,6 +77,8 @@ export const ICONS = {
   wand: '<path d="M4 20L16 8" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M17 2l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" fill="#FFC62E"/>',
   swords:
     '<path d="M4 4l10 10M20 4L10 14M6 18l-2 2M18 18l2 2M7 15l2 2M17 15l-2 2" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',
+  cloud:
+    '<path d="M7 19h10.5a4.2 4.2 0 0 0 .7-8.35A6 6 0 0 0 6.6 9.3 4.9 4.9 0 0 0 7 19z" fill="currentColor"/>',
   /* header buttons (legacy index.template.html) */
   stats:
     '<rect x="3.5" y="12" width="4" height="8" rx="1.2" fill="#0FA898"/><rect x="10" y="6" width="4" height="14" rx="1.2" fill="#F2641B"/><rect x="16.5" y="9" width="4" height="11" rx="1.2" fill="#FFC62E"/><path d="M2.5 21h19" stroke="#2A2140" stroke-width="2" stroke-linecap="round"/>',

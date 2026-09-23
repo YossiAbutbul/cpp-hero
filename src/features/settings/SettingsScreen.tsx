@@ -6,6 +6,7 @@
  */
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { useGame } from '@/app/gameContext';
+import { useCloud } from '@/cloud/cloudContext';
 import { SOUND_ENABLED } from '@/engine/config';
 import type { SaveV1, TextSize } from '@/engine/save';
 import { Curlo } from '@/features/curlo/Curlo';
@@ -17,6 +18,7 @@ import { Tabs } from '@/ui/Tabs';
 import { plural } from '@/ui/format';
 import { useDialog } from '@/ui/overlay/dialogContext';
 import { toast } from '@/ui/toast';
+import { CloudCard } from './CloudCard';
 import { copyText } from './clipboard';
 import { DevTools } from './DevTools';
 import styles from './settings.module.css';
@@ -95,6 +97,8 @@ export function SettingsScreen() {
           />
         </Row>
       </Card>
+
+      <CloudCard />
 
       <Backup />
 
@@ -179,6 +183,8 @@ function SwitchRow({
 
 function Backup() {
   const { store } = useGame();
+  const cloud = useCloud();
+  const signedIn = !!cloud.status.user;
   const dialog = useDialog();
   const file = useRef<HTMLInputElement>(null);
 
@@ -271,7 +277,8 @@ function Backup() {
       title: 'Reset all progress?',
       body: (
         <p>
-          This erases your XP, lessons, streak, collection and settings on this device.{' '}
+          This erases your XP, lessons, streak, collection and settings{' '}
+          {signedIn ? 'on this device and in your cloud save (all your devices)' : 'on this device'}.{' '}
           <b>It can’t be undone.</b>
         </p>
       ),
@@ -288,8 +295,11 @@ function Backup() {
       danger: true,
     });
     if (!yes2) return;
-    store.reset();
-    toast('Progress reset. Fresh start!');
+    const r = await cloud.resetProgress();
+    if (r === 'offline')
+      toast('You’re offline. Connect to reset your cloud save too.', { icon: 'warn', ms: 4000 });
+    else if (r === 'error') toast('Reset didn’t work. Try again.', { icon: 'warn' });
+    else toast('Progress reset. Fresh start!');
   };
 
   return (

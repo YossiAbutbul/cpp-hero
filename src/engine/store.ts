@@ -49,6 +49,8 @@ export interface Store {
   parseImport(json: string): SaveV1;
   /** Subscribe to state replacement / saves. */
   subscribe(fn: () => void): () => void;
+  /** Called after every write attempt (saveNow, replace, reset), e.g. to sync the save elsewhere. */
+  onSave(fn: () => void): () => void;
 }
 
 export const NOTICE =
@@ -69,6 +71,7 @@ export function createStore(opts: StoreOptions = {}): Store {
   const storage = opts.storage === undefined ? defaultStorage() : opts.storage;
   const debounceMs = opts.debounceMs ?? 250;
   const listeners = new Set<() => void>();
+  const saveListeners = new Set<() => void>();
   let state: SaveV1 = defaultSave(now());
   let persistent = !!storage;
   let noticeShown = false;
@@ -143,18 +146,18 @@ export function createStore(opts: StoreOptions = {}): Store {
         timer = null;
       }
       state.updatedAt = now().toISOString();
-      if (!persistent || !storage) {
-        notice();
-        return false;
+      let ok = false;
+      if (persistent && storage) {
+        try {
+          storage.setItem(key, JSON.stringify(state));
+          ok = true;
+        } catch {
+          persistent = false;
+        }
       }
-      try {
-        storage.setItem(key, JSON.stringify(state));
-        return true;
-      } catch {
-        persistent = false;
-        notice();
-        return false;
-      }
+      if (!ok) notice();
+      saveListeners.forEach((fn) => fn());
+      return ok;
     },
 
     replace(next) {
@@ -188,6 +191,11 @@ export function createStore(opts: StoreOptions = {}): Store {
     subscribe(fn) {
       listeners.add(fn);
       return () => listeners.delete(fn);
+    },
+
+    onSave(fn) {
+      saveListeners.add(fn);
+      return () => saveListeners.delete(fn);
     },
   };
   return store;
