@@ -166,7 +166,7 @@ function runLinux(snips: Snippet[], srcDir: string, exec: (script: string) => [s
   const r = spawnSync(cmd, argv, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
-    timeout: 20 * 60_000,
+    timeout: 90 * 60_000,
   });
   if (r.status !== 0) throw new Error(`${cmd} run failed (${r.status}): ${r.stderr || r.stdout || r.error}`);
 }

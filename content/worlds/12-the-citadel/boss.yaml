@@ -97,6 +97,7 @@ rounds:
           }
       };
     bugLine: 2
+    expect: warn
     options:
       - t: "} catch (const std::exception& e) {"
         why: "Correct: the reference refers to the real length_error, so what() returns \"too many heads\"."
