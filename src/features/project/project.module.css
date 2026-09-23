@@ -1,0 +1,78 @@
+/* Mini-project + Stress Test (legacy .proj-*, .growing, .stress-*). */
+
+.eyebrow {
+  font-weight: 900;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tang-d);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.eyebrow svg {
+  width: 18px;
+  height: 18px;
+}
+.h2 {
+  margin: 2px 0 10px;
+}
+.steps {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  display: grid;
+  gap: 8px;
+}
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 10px 12px;
+  box-shadow: var(--sh);
+  font-weight: 800;
+}
+.steps li svg {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+.steps li.done {
+  background: var(--teal-l);
+}
+.steps li.stress {
+  background: var(--coral-l);
+  color: var(--coral-d);
+}
+.growing {
+  background: #fff;
+  border-radius: 18px;
+  padding: 8px 12px;
+  box-shadow: var(--sh);
+  margin-bottom: 12px;
+}
+.growHead {
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+.growHead svg {
+  width: 20px;
+  height: 20px;
+}
+.pct {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+.done h2 {
+  margin: 2px 0 4px;
+}
+.lead {
+  color: var(--ink2);
+  margin: 0 0 10px;
+}

@@ -353,7 +353,9 @@ function Battle({ w }: { w: World }) {
 /** Runs a callback once when the defense page mounts. */
 function DefenseAttack({ onMount }: { onMount: () => void }) {
   const f = useRef(onMount);
-  useEffect(() => f.current(), []);
+  useEffect(() => {
+    f.current();
+  }, []);
   return null;
 }
 
