@@ -1,6 +1,7 @@
 /** Unit tests for the small pure rule modules: progress, hearts, boss stages, streak, SRS, quests, achievements, cosmetics. */
 import { describe, expect, it } from 'vitest';
-import { loadContentFromDisk } from '../../scripts/lib/content-fs';
+import { readFileSync } from 'node:fs';
+import { parse } from 'yaml';
 import { BossSchema, type Boss, type Challenge, type Quest } from '../content/schema';
 import { testAchievement } from './achievements';
 import {
@@ -167,7 +168,9 @@ describe('boss stages', () => {
   });
 
   it('the schema checks stage ids, order and hp (World 16 is valid)', () => {
-    const w16 = loadContentFromDisk().content!.worlds.find((w) => w.id === 'w16')!.boss;
+    const w16 = BossSchema.parse(
+      parse(readFileSync(new URL('../../content/worlds/16-final-boss/boss.yaml', import.meta.url), 'utf8')),
+    );
     expect(w16.stages?.map((s) => s.hp)).toEqual([3, 3, 4]);
     expect(BossSchema.safeParse(w16).success).toBe(true);
     const bad = (stages: Boss['stages']) => {
