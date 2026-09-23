@@ -130,6 +130,7 @@ stress:
         id: w3.p.a1
         type: harden
         tags: [ w3.divzero, w3.validate ]
+        bug: div-by-zero
         prompt: "Party size 0 means gold / 0: undefined behavior! Pick the guard."
         code: |-
           std::cout << "Party size: ";

@@ -197,6 +197,7 @@ stress:
         id: w2.p.a2
         type: harden
         tags: [ w2.narrowing, w2.convert ]
+        bug: narrowing
         short: static_cast makes dropping the .5 a visible decision.
         prompt: The config file says max HP is 119.5, but maxHp must be a whole number, rounded down on purpose. Pick the safest initializer.
         code: |-

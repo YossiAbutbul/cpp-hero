@@ -216,6 +216,7 @@ challenges:
   - id: w2.l5.c5
     type: breakit
     tags: [ w2.narrowing, w2.convert ]
+    bug: narrowing
     unsafe: true
     short: "0.9 silently truncates to 0: the shield vanishes."
     prompt: The shield strength comes from a double. Which value breaks this code the worst?

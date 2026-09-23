@@ -85,6 +85,7 @@ challenges:
   - id: w3.l5.c1
     type: breakit
     tags: [ w3.divzero, w3.cin ]
+    bug: div-by-zero
     unsafe: true
     prompt: UNSAFE code. The player types two numbers. Pick the input that breaks it.
     code: |-
