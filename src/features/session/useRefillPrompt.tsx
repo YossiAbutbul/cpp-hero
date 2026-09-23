@@ -9,7 +9,11 @@ export function useRefillPrompt() {
   const { game, store } = useGame();
   const dialog = useDialog();
   return useCallback(async (): Promise<'refill' | 'quit'> => {
-    const read = () => ({ n: store.state.hearts.n, max: store.state.hearts.max, nextIn: game.hearts.nextIn() });
+    const read = () => ({
+      n: store.state.hearts.n,
+      max: store.state.hearts.max,
+      nextIn: game.hearts.nextIn(),
+    });
     const v = await dialog.open<'refill' | 'quit'>({
       title: 'Out of hearts!',
       mood: 'worried',
@@ -18,7 +22,9 @@ export function useRefillPrompt() {
         <>
           <p>{curloLine('noHearts')}</p>
           <HeartClock read={read} onTick={() => game.hearts.regen()} />
-          <p className="muted small">Or answer 3 quick review questions to earn one now. No hearts lost there.</p>
+          <p className="muted small">
+            Or answer 3 quick review questions to earn one now. No hearts lost there.
+          </p>
         </>
       ),
       buttons: [

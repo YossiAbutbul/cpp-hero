@@ -44,10 +44,10 @@ export function ProjectScreen() {
   const { world = '' } = useParams();
   const { game } = useGame();
   const w = game.index.world[world];
-  if (!w) {
+  if (!w || !game.projectUnlocked(w)) {
     return (
       <Screen label="Mini-project" immersive>
-        <p>That project doesn’t exist (yet).</p>
+        <p>{w ? 'This project is still locked.' : 'That project doesn’t exist (yet).'}</p>
         <Button onClick={() => goBack('/', { dir: 'close' })}>Back to the map</Button>
       </Screen>
     );

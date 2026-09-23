@@ -10,4 +10,4 @@ export function shuffled<T>(arr: readonly T[], rng: () => number = Math.random):
   return a;
 }
 
-export const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)]!;
+export const pick = <T>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)]!;

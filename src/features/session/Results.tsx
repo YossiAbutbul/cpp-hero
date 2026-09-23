@@ -31,7 +31,13 @@ export interface Tile {
 }
 
 /** The standard four tiles: XP, accuracy, best combo, time. */
-export function sessionTiles(s: { xp: number; right: number; total: number; bestCombo: number; seconds: number }): Tile[] {
+export function sessionTiles(s: {
+  xp: number;
+  right: number;
+  total: number;
+  bestCombo: number;
+  seconds: number;
+}): Tile[] {
   return [
     { label: 'XP earned', value: Math.max(0, s.xp), tone: 'sun', icon: 'bolt', format: (n) => `+${n}` },
     {
@@ -97,7 +103,10 @@ export function Results({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-    <div className={[styles.results, boss && styles.compact].filter(Boolean).join(' ')} onPointerDown={() => clearConfetti()}>
+    <div
+      className={[styles.results, boss && styles.compact].filter(Boolean).join(' ')}
+      onPointerDown={() => clearConfetti()}
+    >
       <div ref={curloEl} className={styles.resCurlo}>
         <Curlo {...curlo.props} />
       </div>

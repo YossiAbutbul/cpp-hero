@@ -58,10 +58,10 @@ export function BossScreen() {
   const { world = '' } = useParams();
   const { game } = useGame();
   const w = game.index.world[world];
-  if (!w) {
+  if (!w || !game.bossUnlocked(w)) {
     return (
       <Screen label="Boss battle" immersive>
-        <p>That boss doesn’t exist (yet).</p>
+        <p>{w ? 'This boss is still locked.' : 'That boss doesn’t exist (yet).'}</p>
         <Button onClick={() => goBack('/', { dir: 'close' })}>Back to the map</Button>
       </Screen>
     );
