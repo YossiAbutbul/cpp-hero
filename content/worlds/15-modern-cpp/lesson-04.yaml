@@ -5,8 +5,8 @@ title: "std::optional: maybe a value"
 skill: toolkit
 shield: false
 concept:
-  short: "std::optional<T> holds a T or nothing. Check it before unwrapping; value_or gives a safe fallback."
-  analogy: "An optional is a gift box: check whether something's inside before you reach in."
+  short: "std::optional<T> holds a T or nothing. Check before unwrapping, or use value_or."
+  analogy: "A gift box: check whether something's inside before reaching in."
   body:
     - "Some answers might not exist: a name not in the list, a file not found. Old code used **magic values** like `-1` or `nullptr` to mean \"nothing\", and callers forgot to check. `std::optional<T>` (from `<optional>`) makes \"maybe\" part of the type."
     - "Return a value normally (`return 7;`) or return **nothing** with `return std::nullopt;` (or `return {};`)."
@@ -95,7 +95,7 @@ challenges:
     options:
       - t: |
           01 13
-        why: "Correct: a is empty (0), b has 4 (1); the fallback 9 plus 4 is 13."
+        why: "a is empty (0), b has 4 (1); then 9 + 4."
       - t: |
           01 4
         why: a is empty, so value_or(9) returns 9, not 0.
@@ -108,8 +108,7 @@ challenges:
     answer: 0
     hints:
       - A default-constructed optional is empty.
-      - value_or returns its argument when empty.
-    short: "a is empty, b holds 4: prints 01, then 9 + 4 = 13."
+    short: "a is empty, b holds 4: 01, then 9 + 4."
     explain: "`std::optional<int> a;` starts empty, so has_value() prints 0; b holds 4, so it prints 1. a.value_or(9) is 9, plus *b (4) is 13. Output: \"01 13\" and a newline."
   - id: w15.l4.c2
     type: breakit
@@ -135,16 +134,15 @@ challenges:
       }
     options:
       - t: Zed
-        why: "Correct: no match, so the optional is empty, and * on an empty optional is UB."
+        why: "No match: empty optional, and * on it is UB."
       - t: Ana
         why: Found, holds 7. Unwrapping is safe.
       - t: Bo
-        why: Bo holds 0, and 0 is a real value. The optional isn't empty.
+        why: 0 is a real value. The optional isn't empty.
     answer: 0
     hints:
       - Which name returns std::nullopt?
-      - Holding 0 isn't the same as holding nothing.
-    short: Unknown names give an empty optional; unwrapping it with * is UB.
+    short: Unknown names give an empty optional; * on it is UB.
     explain: "`*` doesn't check. On an empty optional it's undefined behavior: it may print leftover garbage, crash, or seem fine. Check with if, or use value_or when a fallback makes sense."
     sideBySide:
       unsafe: std::cout << *findGold(who) << '\n';
@@ -158,7 +156,7 @@ challenges:
   - id: w15.l4.c3
     type: fill
     tags: [ w15.optional ]
-    prompt: The item wasn't found. Fill in the return so the caller gets an empty optional.
+    prompt: Fill in the return so an unknown item gives an empty optional.
     code: |-
       #include <optional>
       #include <string>
@@ -180,8 +178,7 @@ challenges:
       - std::optional<int>()
     placeholder: empty optional
     hints:
-      - There's a special value that means "no value".
-      - It lives in std and starts with null.
+      - A special std value meaning "no value", starting with null.
     short: return std::nullopt; means "no value here".
     explain: "`return std::nullopt;` (or `return {};`) gives the caller an empty optional. Unlike -1, it can't be mistaken for a real price."
   - id: w15.l4.c4
@@ -190,23 +187,22 @@ challenges:
     prompt: gold is an empty std::optional<int>. What does gold.value() do?
     options:
       - t: Throws std::bad_optional_access
-        why: "Correct: value() checks, and throws if the optional is empty."
+        why: "value() checks, and throws if empty."
       - t: Returns 0
         why: "That's value_or(0). value() has no fallback."
       - t: Undefined behavior, like *gold
-        why: "* doesn't check; value() does, and throws a clear exception instead."
+        why: "* doesn't check; value() does."
       - t: Compile error
-        why: The compiler can't know it will be empty at run time. It compiles.
+        why: Emptiness is only known at run time. It compiles.
     answer: 0
     hints:
-      - Of *, value() and value_or(), one throws.
       - value() is the checked way to unwrap.
-    short: "value() checks and throws std::bad_optional_access when empty."
+    short: "value() is the checked unwrap: it throws when empty."
     explain: "Three ways to unwrap: `*gold` doesn't check (UB if empty), `gold.value()` checks and throws std::bad_optional_access, `gold.value_or(x)` returns x when empty. Pick value_or when a fallback makes sense, and an if check otherwise."
   - id: w15.l4.c5
     type: write
     tags: [ w15.optional ]
-    prompt: "found is a std::optional<int>. Write one line: int gold holds its value, or 0 if empty."
+    prompt: "Write one line: int gold gets found's value, or 0 if found is empty."
     prelude: std::optional<int> found{};
     accept:
       - int gold = found.value_or(0);
@@ -215,14 +211,13 @@ challenges:
       - '^(int|auto) gold ?(=found\.value_or\(0\)|\{found\.value_or\(0\)\});$'
     placeholder: int gold = ...
     hints:
-      - One member function takes a fallback.
-      - found.value_or(...)
+      - "One member function takes a fallback: found.value_or(...)"
     short: int gold = found.value_or(0); never fails.
     explain: "`found.value_or(0)` returns the stored value, or 0 when the optional is empty. No check needed, no UB, no exception."
 recap:
   - "std::optional<T>: a T, or nothing."
   - "Return std::nullopt for \"not found\"."
-  - Check with if before *; * on empty is UB.
+  - Check before *; * on empty is UB.
   - value_or(fallback) never fails.
 vault:
   - id: w15.optional
