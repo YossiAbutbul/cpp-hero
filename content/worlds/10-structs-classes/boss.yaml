@@ -483,6 +483,6 @@ defense:
           };
 victory: "CRACK... every... rule... holds... The Golem shatters into tidy private members."
 reward:
-  xp: 325
+  xp: 300
   cosmetic: encap-crest
   bug: broken-invariant

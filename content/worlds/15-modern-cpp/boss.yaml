@@ -475,6 +475,6 @@ defense:
         prelude: "enum class Rank { Easy, Hard, Epic }; int code{};"
 victory: "Nooo! My husks... refilled! My leeches... copied! I'm moving out!"
 reward:
-  xp: 300
+  xp: 425
   cosmetic: lambda-antennae
   bug: use-after-move

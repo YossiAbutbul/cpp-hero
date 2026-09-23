@@ -474,6 +474,6 @@ defense:
         prelude: std::set<int> ids{1, 2, 3, 4};
 victory: "Hsss... end()... at last... The Wraith dissolves into a neat, sorted mist."
 reward:
-  xp: 350
+  xp: 400
   cosmetic: iterator-monocle
   bug: unchecked-find

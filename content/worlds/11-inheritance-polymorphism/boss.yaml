@@ -500,6 +500,6 @@ defense:
         prelude: "class Hero { public: virtual ~Hero() = default; virtual int power() const { return 1; } }; Hero knight; std::string name{\"Ghost\"}; auto findHero = [&knight](const std::string& n) -> const Hero* { return n == \"Knight\" ? &knight : nullptr; };"
 victory: "My blade... shattered on a const reference... I am... whole again?"
 reward:
-  xp: 250
+  xp: 325
   cosmetic: override-halo
   bug: object-slicing

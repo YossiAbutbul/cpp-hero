@@ -454,6 +454,6 @@ defense:
           }
 victory: GRR. YOU CONSTRAINED ME. THE BLUEPRINTS ARE YOURS. THE STL AWAITS.
 reward:
-  xp: 300
+  xp: 375
   cosmetic: wizard-hat
   bug: unconstrained-template

@@ -7,24 +7,24 @@ challenges are YAML files in [`content/`](content/README.md), validated at build
 
 ## Project status (2026-09-23)
 
-| Area                           | State                                                                                                                                                                                                                  |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Design                         | Chosen: **Pop Path** (`designs/5-springboard.html`) with the **original Curlo** mascot, unchanged                                                                                                                      |
-| Legacy vanilla app             | Complete and playable for Worlds 1–3 (`legacy/`, published at https://claude.ai/artifact/TjyqcuJjayUHvTnoTU6jbv). Behavioral + visual reference for the React port                                                     |
-| Content                        | **Worlds 1–8 done** in YAML (41 lessons, 404 challenges, 8 projects, 8 bosses), all compile-checked with g++. Worlds 9–16 not started                                                                                  |
-| React foundation               | Done on `main`: scaffold, PWA, YAML pipeline + `validate` + `check:cpp`, engine logic in TS (90 tests), UI primitives, Curlo, CodeBlock/CodeDemo, app shell, router + transitions, screen **stubs**                    |
-| React screens                  | **In progress, not on `main`.** Partial work saved on branch **`wip/phase-b2`** (challenge renderers, map pieces, stats pieces, cosmetic art, check:cpp + schema fixes). The map on `main` is still a placeholder list |
-| Firebase login + Vercel deploy | Planned for later, not started                                                                                                                                                                                         |
+| Area | State |
+| --- | --- |
+| Design | Chosen: **Pop Path** (`designs/5-springboard.html`) with the **original Curlo** mascot, unchanged |
+| Legacy vanilla app | Behavioral + visual reference (`legacy/`, published at https://claude.ai/artifact/TjyqcuJjayUHvTnoTU6jbv) |
+| Content | **All 16 worlds written** in YAML (84 lessons, 802 challenges, 16 projects, 16 bosses), `npm run validate` clean. Worlds 1–8 were compile-checked earlier; **Worlds 9–16 have NOT been through `check:cpp` yet** (no C++ compiler on the machine they were written on) |
+| Tooling | `check:cpp` has per-run work dirs, `--filter` (world/lesson/challenge), `--list`, Docker `gcc:14` fallback (untested). Demo steps support `vars: null`, `push`/`pop` frames, `mem` cells + pointer arrows (`demoStates()` helper). Validate checks cross-world `reviewTags` exist |
+| React screens (Phase B2) | **Done on `main`**: ChallengeRunner + all 12 types, lesson player, practice/review/arena, CodeDemo frames + memory; world map, onboarding + placement, project + Stress Test, boss battle; Curlo, Vault, Bestiary, Stats, Settings. lint (0 errors), `tsc -b`, tests, build pass |
+| Firebase login + Vercel deploy | Planned for later, not started |
 
 ### How to continue
 
-1. **Finish the React screens (Phase B2).** Follow [`docs/UI-BRIEF.md`](docs/UI-BRIEF.md): three parallel parts with fixed file ownership and a `ChallengeRunner` contract:
-   - **B2a Lessons:** `ChallengeRunner` + all 12 challenge types, lesson player, practice/review, CodeDemo support for the new demo step kinds.
-   - **B2b World:** real map, onboarding + placement, project + Stress Test, boss battle.
-   - **B2c Collection:** Curlo screen (stats, evolution, wardrobe + art for new cosmetics), Vault, Bestiary, Stats, Settings.
-   - Start from the partial work: `git merge wip/phase-b2` (or cherry-pick per folder). It was stopped mid-edit, so expect some files to be incomplete; run `npm run lint && npx tsc -b && npm test` and fix or drop what doesn't build.
-2. **Tooling fixes** (partly on `wip/phase-b2`): per-run work dir for `check:cpp`, `--filter` only requiring the filtered world to validate, more default headers in the fragment wrapper, top-level function snippets; schema extensions for demo steps (`vars: null` removes a box, `push`/`pop` stack frames, `mem` cells + pointer arrows, see `content/worlds/08-references-pointers/NOTES.md`); fix cross-world `reviewTags` and story continuity. Writer notes: `content/worlds/*/NOTES.md`.
-3. **Stage 3 content:** Worlds 9–12 (Memory, Structs & Classes, Inheritance & Polymorphism, The Citadel), then **Stage 4:** Worlds 13–16 + final boss. Brief: [`docs/CONTENT-BRIEF.md`](docs/CONTENT-BRIEF.md); one agent per world, each only touches its own folder. Boss reward cosmetics must exist in `content/shared/cosmetics.yaml` first (add them before launching writers).
+1. **Compile-check Worlds 9–16.** Get a compiler (`docker pull gcc:14`, or WSL Ubuntu + g++), then `npm run check:cpp` (or `-- --filter w9` etc.) and fix what fails. Snippets flagged as likely trouble are listed in `content/worlds/*/NOTES.md` (e.g. `w12.l3.c5` relies on g++ `-Wterminate`).
+2. **Full playtest** of all 16 worlds end to end (a full boss fight and the boss hearts-refill path were not played start to finish).
+3. **Polish / follow-ups** from agent reports and NOTES.md:
+   - Merge the duplicated session shells (`src/features/boss/session/` vs `src/features/lesson/`).
+   - Move World 6 demos to `push`/`pop` and World 8 demos to `mem` (now that CodeDemo renders them).
+   - Ideas: multi-stage boss schema (`content/worlds/16-final-boss/NOTES.md`), `obj` cards for inheritance/slicing (World 11 NOTES), moved-from "husk" boxes (World 15 NOTES).
+   - Small visuals: arrows crossing stack/heap labels, wrapped order-tile indent, node labels at 360px, boss victory gap; fill hint "Close! Check spelling" shown too eagerly.
 4. **Later:** Firebase Auth (+ Firestore save sync, per-user security rules) and deploy to Vercel (static site; `npm run build` output).
 
 User preferences that apply everywhere: short on-screen text with "Tell me more" for details; no visible scrollbars; code wraps instead of scrolling; inputs size to content; wrong answers get Try again / Show answer; sound off for now (`SOUND_ENABLED` in `src/engine/config.ts`); premium springy transitions; simple names.
