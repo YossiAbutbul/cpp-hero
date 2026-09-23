@@ -14,39 +14,24 @@ challenges are YAML files in [`content/`](content/README.md), validated at build
 | Content | **All 16 worlds done** (84 lessons, 802 challenges, 16 projects, 16 bosses). `npm run validate` clean and **`check:cpp` clean for all 16 worlds** (g++ 14 via Docker) |
 | Tooling | `check:cpp`: per-run work dirs, `--filter` (world/lesson/challenge), `--list`, WSL or Docker `gcc:14`. Demo steps: `vars: null`, `push`/`pop` frames, `mem` cells + pointer arrows (`demoStates()`). Validate checks cross-world `reviewTags` |
 | React screens (Phase B2) | **Done on `main`**: ChallengeRunner + all 12 types, lesson player, practice/review/arena, CodeDemo frames + memory; map, onboarding + placement, project + Stress Test, boss battle; Curlo, Vault, Bestiary, Stats, Settings. lint (0 errors), `tsc -b`, tests, build pass |
-| Cloud save + deploy | **In progress on branch `wip/cloud`** (not on `main`). Security level chosen by the user: **A** = strict Firestore rules + App Check (no server-side game logic). See step 1 below |
+| Cloud save + deploy | **Code done on `main`** (security level A: strict Firestore rules + App Check, no server logic). Rules tests pass on the emulator (17), sign-in sync / second device / cloud reset checked on emulators, CSP checked. **Waiting on the user** to create Firebase + Vercel and set env vars: see [`docs/DEPLOY.md`](docs/DEPLOY.md) |
+| Polish (done) | Boss and lesson session shells merged into `src/features/session/`. World 6 demos use `push`/`pop` frames, World 8 demos use `mem` cells |
 
 ### How to continue
 
 When the user says **"continue according to plan"**, do these steps in order. Use parallel subagents where noted.
 
-1. **Finish cloud save + Vercel deploy (branch `wip/cloud`).**
-   - **What's on the branch:** `git merge origin/wip/cloud` into `main`. It holds work stopped mid-way: `src/cloud/*` (lazy Firebase, Google sign-in, local/cloud merge + tests, reconcile, session), `CloudCard` in Settings, the `store.ts` hook, `firestore.rules`, `tests/rules/` (rules tests via `@firebase/rules-unit-testing`), `firebase.json`, `.firebaserc` (placeholder id), `vercel.json` (headers/CSP/rewrites/caching), `.env.example`, `.env.emulator` (demo values only), and the vite/tsconfig/package changes. At the time of the WIP commit, `tsc -b` was clean and 120 tests passed.
-   - **Requirements (all must hold):**
-     - The app works fully offline and without login. With no `VITE_FIREBASE_*` env, cloud UI is hidden and Firebase is never loaded.
-     - Merging local and cloud progress never loses or regresses progress.
-     - Rules: only the owner can read/write `users/{uid}`, default deny, shape/type/size validation, monotonic progress (no decreasing XP/completions), `updatedAt == request.time`.
-     - App Check is wired via env.
-     - The CSP in `vercel.json` must not break the app.
-   - **Remaining:**
-     - Review the WIP code.
-     - Run `npm run lint`, `npx tsc -b`, `npm test` and `npm run build`.
-     - Run the rules tests on the emulator (needs Java + firebase-tools; see package.json scripts).
-     - Verify `npm run build && npm run preview` with the vercel.json headers (no CSP errors).
-     - Play the app in the Browser pane twice: once without env (unchanged behavior) and once with emulators (`npm run emulators` + `npm run dev:emulators`), where fake Google sign-in syncs progress.
-     - Write `docs/DEPLOY.md` with the user's manual steps: create the Firebase project, enable the Google provider, add authorized domains, create Firestore, `npx firebase deploy --only firestore:rules`, register and enforce App Check, import the Vercel project from GitHub, set env vars, verify.
-     - Update this README, commit to `main`, push, and delete the `wip/cloud` branch.
-   - **Hand-off:** end with a TLDR for the user: what's done, and exactly what they must do and how. They must create the accounts and enter the keys themselves; never do that for them.
+1. **Deploy (user does this, Claude helps).** The user follows `docs/DEPLOY.md`: Firebase project, Google sign-in, Firestore, `npm run deploy:rules`, App Check, Vercel import + env vars. Then Claude checks the live site: no CSP errors in the console, sign-in works, progress syncs between two devices, offline still works. Fix what breaks. Known limits (documented, not bugs): XP from two devices played offline at the same time merges by taking the higher value; the newer device's streak wins.
 2. **Full playtest** of all 16 worlds end to end: a full boss fight, the boss hearts-refill path, and Import/Paste/Reset in Settings (never tested by hand). Fix what breaks.
 3. **Polish / follow-ups.** Can run as parallel subagents, each with its own folders:
-   - Merge the duplicated session shells (`src/features/boss/session/` vs `src/features/lesson/`).
-   - Move World 6 demos to `push`/`pop` and World 8 demos to `mem`.
+   - World 6 and World 8 `NOTES.md` still describe the old demo format; update them.
    - Ideas from NOTES: a multi-stage boss schema (`content/worlds/16-final-boss/NOTES.md`), `obj` cards for inheritance/slicing (World 11 NOTES), moved-from "husk" boxes (World 15 NOTES).
    - Small visuals: arrows crossing stack/heap labels, wrapped order-tile indent, node labels at 360px, boss victory gap, fill hint "Close! Check spelling" shown too eagerly.
 
 ### Working notes (for Claude and humans)
 
 - **Setup on a new machine:** Node 20.19+, `npm ci`. If node_modules gets corrupted (OneDrive sync), `rm -rf node_modules && npm ci`.
+- **Firebase emulators:** need Java 21+ (`winget install Microsoft.OpenJDK.21`). Set `JAVA_HOME` to it if an older Java is on PATH. `npm run test:rules` runs the rules tests. The Browser pane turns the sign-in popup into a same-tab page, so the emulator widget fails there ("No matching frame"); sign in from the console with `signInWithCredential(auth, GoogleAuthProvider.credential('{"sub":"t1","email":"t1@example.com"}'))` instead.
 - **C++ checks:** need WSL Ubuntu with g++ or Docker with `gcc:14` (`docker pull gcc:14`). A full run takes about 25 min on Docker. Prefer per-world runs, e.g. `npm run check:cpp -- --filter w9`.
 - **Parallel agents** share one working tree:
   - Each agent owns fixed folders and commits only its own paths (`git commit -m "..." -- <paths>`).

@@ -52,6 +52,10 @@ demo:
     - line: 11
       push: { name: heal, vars: { hp: "3", amount: "5" } }
       note: "push frame again: heal(hp=3, amount=5)."
+    - line: 3
+      vars:
+        hp: "8"
+      note: The copy becomes 8 again.
     - line: 4
       pop: { returns: "8" }
       note: "pop frame: return 8."
