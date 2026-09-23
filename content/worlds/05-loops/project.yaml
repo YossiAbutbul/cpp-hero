@@ -2,7 +2,7 @@
 
 id: w5.p
 title: Training Grounds
-intro: "Run training rounds: read how many, record each round's damage, then report the total and average."
+intro: "Read the number of rounds, record each round's damage, report total and average."
 steps:
   - id: w5.p.s1
     type: write
@@ -23,7 +23,7 @@ steps:
   - id: w5.p.s2
     type: fill
     tags: [ w5.for, w5.offbyone ]
-    prompt: "Loop once per round, labeling them Round 1, Round 2, ... Fill in the condition."
+    prompt: "Fill in the condition so this prints Round 1 up to Round `rounds`, one per line."
     code: |-
       for (int r = 1; ___; ++r) {
           std::cout << "Round " << r << '\n';
@@ -72,7 +72,7 @@ steps:
   - id: w5.p.s5
     type: predict
     tags: [ w5.accum, w3.arith, w2.convert ]
-    prompt: "Test run: 4 rounds that add up to 90 damage. What do the report lines say?"
+    prompt: "total is 90 and rounds is 4. What does this print? (↵ marks a new line.)"
     code: |-
       std::cout << "Total: " << total << '\n';
       std::cout << "Average: " << static_cast<double>(total) / rounds << '\n';
@@ -81,11 +81,11 @@ steps:
       - t: |
           Total: 90
           Average: 22.5
-        why: "Correct: total is cast to double first, so 90 / 4 is real division: 22.5."
+        why: "The cast makes it real division: 90 / 4 = 22.5."
       - t: |
           Total: 90
           Average: 22
-        why: The cast makes it double division, so the .5 survives.
+        why: That is int division. The cast keeps the .5.
       - t: |
           Total: 90
           Average: 22.50
@@ -97,7 +97,7 @@ steps:
     hints:
       - Is this int division or double division?
       - "90 / 4 with a fraction is 22.5."
-    short: "Cast before dividing: 90 / 4 = 22.5."
+    short: "Cast to double before dividing to keep the fraction."
     explain: "static_cast<double>(total) makes the division real division (World 3), so 90 / 4 is 22.5, printed without extra zeros."
 program: |-
   #include <iostream>
@@ -165,13 +165,13 @@ stress:
         prelude: int total{0}; int rounds{0};
         options:
           - t: rounds > 0
-            why: "Correct: only divide when at least one round happened."
+            why: Divides only when at least one round happened.
           - t: total > 0
-            why: "Wrong variable: a real average of 0 is hidden, and the divisor is rounds."
+            why: The divisor is rounds, not total.
           - t: rounds >= 0
             why: Still lets 0 through, which is exactly the attack.
           - t: rounds != 0
-            why: "Stops the division by zero, but -3 rounds still prints a nonsense average."
+            why: "Stops / 0, but -3 rounds still prints nonsense."
         answer: 0
         hints:
           - Which variable is the divisor?
@@ -192,7 +192,7 @@ stress:
         id: w5.p.a2
         type: harden
         tags: [ w5.retry, w5.dowhile, w3.validate ]
-        prompt: "-3 rounds: the loop quietly runs zero times and the report is nonsense. Make the rounds prompt retry until it's 1 to 10."
+        prompt: "-3 rounds makes a nonsense report. Pick the condition that asks again until rounds is 1 to 10."
         code: |-
           int rounds{0};
           do {
@@ -201,7 +201,7 @@ stress:
           } while (___);
         options:
           - t: rounds < 1 || rounds > 10
-            why: "Correct: repeats for 0, negatives and anything over 10."
+            why: Repeats for 0, negatives and anything over 10.
           - t: rounds < 0
             why: "Misses 0, the first attack, and allows 5000 rounds."
           - t: rounds == -3
@@ -231,7 +231,7 @@ stress:
         tags: [ w5.retry, w5.infinite, w3.cin ]
         bug: infinite-loop
         unsafe: true
-        prompt: "In round 2 Curlo types `abc`. damage becomes 0, cin jams, and the prompt prints forever! Tap the line to protect, then pick the fix."
+        prompt: "Typing `abc` here makes the prompt print forever. Tap the line to protect, then pick the fix."
         code: |-
           int damage{0};
           do {
@@ -243,9 +243,9 @@ stress:
         bugLine: 3
         options:
           - t: "if (!(std::cin >> damage)) { if (std::cin.eof()) { return 1; } std::cin.clear(); std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\\n'); damage = 0; }"
-            why: "Correct: detects the bad read, stops at end of input, unjams cin and drops the junk line."
+            why: "Catches the bad read, unjams cin, drops the junk."
           - t: "std::cin >> damage; std::cin.clear();"
-            why: "Unjams cin, but abc is still waiting, so the next read fails again. Still infinite."
+            why: "Unjams cin, but abc is still waiting to fail again."
           - t: "std::cin >> damage; std::cin.ignore();"
             why: A jammed stream ignores nothing. clear() must come first.
           - t: "if (!(std::cin >> damage)) { damage = 50; }"
@@ -254,7 +254,7 @@ stress:
         hints:
           - After a failed read, every later read fails instantly.
           - "Check the read, then clear() and ignore() the junk."
-        short: "Check the read in the loop: clear(), ignore(), and stop at end of input."
+        short: "Check the read: clear(), ignore(), and stop at end of input."
         explain: "A failed read sets damage to 0 (invalid, so loop again) and jams cin, so the next read fails without waiting: an infinite loop. Checking the read, then clear() and ignore(), lets the player retry. The eof() check stops the loop if input runs out."
         sideBySide:
           unsafe: |-

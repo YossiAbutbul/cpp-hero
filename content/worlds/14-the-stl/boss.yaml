@@ -36,13 +36,13 @@ rounds:
     options:
       - t: |
           3 a b c
-        why: "Correct: reading m[\"a\"] inserted a with 0, so the if ran and added c."
+        why: "m[\"a\"] inserted a with 0, so the if added c."
       - t: |
           2 b c
         why: m["a"] doesn't just look; it inserts "a" with 0.
       - t: |
           1 b
-        why: The missing "a" reads as 0 (after being inserted), so the if runs.
+        why: The missing "a" reads as 0, so the if runs.
       - t: |
           3 b a c
         why: A map keeps keys sorted, so "a" comes first.
@@ -70,10 +70,10 @@ rounds:
     options:
       - t: |
           3 3
-        why: "Correct: {1, 3, 4, 5}, 4 is a duplicate, erasing 1 leaves {3, 4, 5}."
+        why: "The set ends as {3, 4, 5}: size 3, smallest 3."
       - t: |
           4 3
-        why: The second 4 was a duplicate, so the set has 3 values after erasing 1.
+        why: The second 4 was a duplicate, so only 3 values remain.
       - t: |
           3 1
         why: 1 was erased, so the smallest value left is 3.
@@ -84,15 +84,15 @@ rounds:
     hints:
       - Drop duplicates first, then apply insert and erase.
       - begin() is the smallest remaining value.
-    short: "{3, 4, 5} remains: size 3, smallest 3."
+    short: Duplicates are dropped before insert and erase even run.
     explain: "The set starts as {1, 3, 4, 5}. insert(4) changes nothing, erase(1) leaves {3, 4, 5}. It isn't empty, so *s.begin() is safe: 3. Output: \"3 3\"."
   - id: w14.boss.r3
     type: mcq
     tags: [ w14.begin-end, w14.iterator ]
-    prompt: For a vector with 5 elements, what is `v.end() - v.begin()`?
+    prompt: "`v` holds 5 elements. What is the distance from `v.begin()` to `v.end()`?"
     options:
       - t: "5"
-        why: "Correct: end() is one past the last, so the distance is exactly size()."
+        why: end() is one past the last, so the distance is size().
       - t: "4"
         why: That's the index of the last element. end() is one step further.
       - t: "6"
@@ -103,13 +103,13 @@ rounds:
     hints:
       - The last element is at begin() + 4.
       - end() is one step after the last element.
-    short: end() - begin() equals size(), because the range is half-open.
-    explain: "The range [begin, end) holds all 5 elements, so the distance is 5. That's why an empty container has begin() == end()."
+    short: The distance from begin() to end() equals size().
+    explain: "In code: v.end() - v.begin() is 5. The range [begin, end) holds all 5 elements, so the distance is 5. That's why an empty container has begin() == end()."
   - id: w14.boss.r4
     type: harden
     tags: [ w14.bracket-insert, w14.contains ]
     bug: map-bracket-insert
-    prompt: The Wraith wants you to "just check" the stock with []. Pick the check that adds nothing.
+    prompt: Pick the check that tests for the key without changing the map.
     code: |-
       std::map<std::string, int> stock{{"potion", 3}};
       std::string name{"elixir"};
@@ -120,11 +120,11 @@ rounds:
       }
     options:
       - t: stock.contains(name)
-        why: "Correct: asks without inserting, and at() then reads a key that surely exists."
+        why: Asks without inserting, so at() only reads existing keys.
       - t: stock[name] > 0
         why: "Asking with [] inserts \"elixir\" with 0: a phantom entry."
       - t: stock.count(name) > 1
-        why: A map's count is only ever 0 or 1. This is never true.
+        why: A map's count is only 0 or 1, so never true.
       - t: stock.find(name)->second > 0
         why: For elixir, find returns end(); reading ->second is UB.
     answer: 0
@@ -148,7 +148,7 @@ rounds:
   - id: w14.boss.r5
     type: speed
     tags: [ w14.sort, w14.algo-find, w14.set, w14.bracket-insert, w14.begin-end, w14.accumulate ]
-    prompt: SPEED ROUND! The Wraith flickers between iterators. Answer fast!
+    prompt: SPEED ROUND! Answer each question fast!
     seconds: 45
     items:
       - q: Which header gives std::sort?
@@ -211,7 +211,7 @@ rounds:
     tags: [ w14.algo-find, w14.find-end ]
     bug: unchecked-find
     unsafe: true
-    prompt: "The Wraith asks you to kick \"Imp\" from the party, though nobody's called Imp. Tap the buggy line, then pick the fix."
+    prompt: "Kicking \"Imp\", who isn't in the party, is UB. Tap the buggy line, then pick the fix."
     code: |-
       std::vector<std::string> party{"Curlo", "Brace"};
       std::string name{"Imp"};
@@ -220,13 +220,13 @@ rounds:
     bugLine: 3
     options:
       - t: "if (it != party.end()) { party.erase(it); }"
-        why: "Correct: only erase what std::find really found."
+        why: Only erases what std::find really found.
       - t: party.erase(it - 1);
         why: For a missing name that erases the LAST member. Wrong hero kicked!
       - t: party.erase(party.begin());
         why: Removes Curlo, who has nothing to do with Imp.
       - t: party.pop_back();
-        why: Removes Brace for no reason. The real bug, the unchecked find, is still there.
+        why: Removes Brace for no reason; find stays unchecked.
     answer: 0
     hints:
       - What does std::find return for a missing name?
@@ -263,16 +263,16 @@ rounds:
     options:
       - t: |
           1 2
-        why: "Correct: the FIRST 3 is at index 1, and there are two 3s."
+        why: The FIRST 3 is at index 1, and there are two 3s.
       - t: |
           3 2
-        why: it - v.begin() is a position (distance), not the value 3.
+        why: Subtracting begin() gives a position, not the value 3.
       - t: |
           2 2
         why: Indexes start at 0, so the first 3 is at index 1.
       - t: |
           1 1
-        why: count counts every 3 in the range, not only the one find stopped at.
+        why: count counts every 3, not only the one find stopped at.
     answer: 0
     hints:
       - find stops at the first match.
@@ -310,7 +310,7 @@ rounds:
       - Which iterators were created before the vector grew?
       - What does begin() equal for an empty map?
     short: Iterators die when a vector grows; an empty map's begin() is end().
-    explain: "push_back (line 9) may move the elements, so first and big dangle and line 10 reads through them: UB. Line 12 dereferences begin() of an empty map, which equals end(): UB. Re-fetch iterators after changes, and check for emptiness."
+    explain: "push_back (line 10) may move the elements, so first and big dangle and line 11 reads through them: UB. Line 13 dereferences begin() of an empty map, which equals end(): UB. Re-fetch iterators after changes, and check for emptiness."
     sideBySide:
       unsafe: |-
         auto first = v.begin();
@@ -337,7 +337,7 @@ defense:
       type: harden
       tags: [ w14.find-end, w14.map ]
       bug: unchecked-find
-      prompt: The Wraith orders a "Sword" (only "sword" exists). Pick the guard.
+      prompt: The Wraith orders a "Sword" (only "sword" exists). Pick the check that makes it safe.
       code: |-
         std::map<std::string, int> shop{{"sword", 30}};
         std::string item{"Sword"};
@@ -348,13 +348,13 @@ defense:
         }
       options:
         - t: it != shop.end()
-          why: "Correct: \"Sword\" isn't found, so it's end() and the else branch runs."
+          why: "\"Sword\" isn't found, so it's end() and else runs."
         - t: it->second > 0
           why: For "Sword", it is end(); reading ->second is UB.
         - t: shop[item] > 0
           why: Inserts a "Sword" entry with price 0. Phantom stock!
         - t: shop.size() > 0
-          why: The shop isn't empty, but that says nothing about "Sword". Still reads end().
+          why: Says nothing about "Sword", so it still reads end().
       answer: 0
       hints:
         - What does find return for an unknown key?
@@ -403,7 +403,7 @@ defense:
         - t: 3 5 1 4
           why: Three scores; the smallest is 1. Fine.
         - t: "0"
-          why: "Correct: no scores, so min_element returns end(), and * reads it: UB."
+          why: "No scores, so min_element returns end(), and * reads it: UB."
         - t: 2 -1 -1
           why: Negative scores are still numbers. Prints -1.
         - t: "-4"
@@ -443,7 +443,7 @@ defense:
         }
       options:
         - t: it = ids.erase(it)
-          why: "Correct: erase returns the next valid iterator, so the loop never touches a dead one."
+          why: erase hands back the next valid iterator.
         - t: ids.erase(it)
           why: it is dead after the erase, and the loop keeps using it.
         - t: ids.erase(*it)

@@ -5,8 +5,8 @@ title: Loop the whole collection
 skill: logic
 shield: false
 concept:
-  short: "Range-for visits every element: by value copies, const& reads without copying, & changes the real thing."
-  analogy: "By value you get a photocopy, const& a look through glass, & the real thing in your hands."
+  short: "Range-for visits every element: by copy, by const&, or by &."
+  analogy: "Value is a photocopy, const& is looking through glass, & is the original."
   body:
     - "`for (int x : v) { ... }` runs once per element, in order, with x set to each one. No index, no bounds to get wrong: World 5's off-by-one can't happen here."
     - "**By value** (`int x`): x is a copy. Changing x doesn't change the vector. Fine for small types like int, double or char."
@@ -42,16 +42,16 @@ demo:
       vars:
         v: "[1, 2, 3]"
         x: "1"
-      note: "By value: x is a COPY of the first element."
+      note: "By value: x is a COPY."
     - line: 6
       vars:
         v: "[1, 2, 3]"
         x: "10"
-      note: Only the copy changes. v is untouched.
+      note: Only the copy changes.
     - line: 8
       vars:
         v: "[1, 2, 3]"
-      note: "int& x: now x IS each element in turn."
+      note: "int& x: x IS each element in turn."
     - line: 9
       vars:
         v: "[10, 2, 3]"
@@ -59,7 +59,7 @@ demo:
     - line: 9
       vars:
         v: "[10, 20, 30]"
-      note: Loop finished. Every element changed in place.
+      note: Every element changed in place.
     - line: 12
       out: "10 "
       note: "const int&: read-only, no copy."
@@ -69,14 +69,14 @@ demo:
       out: "30 "
     - line: 14
       out: "\n"
-      note: One newline to finish the line.
+      note: One newline to finish.
     - line: 15
-      note: "Copy, change, read: three ways to walk a vector."
+      note: "Copy, change, read."
 challenges:
   - id: w7.l3.c1
     type: predict
     tags: [ w7.range-for, w5.for ]
-    prompt: "Trying to reset every hp to 0. What does this print? (g++ warns here. Why?)"
+    prompt: "This tries to reset every hp to 0. What does it print?"
     expect: warn
     code: |-
       #include <iostream>
@@ -93,25 +93,25 @@ challenges:
     options:
       - t: |
           15
-        why: "Correct: h is a copy. Setting the copy to 0 never touches hp."
+        why: Only the copies became 0.
       - t: |
           0
-        why: "That would need int& h. By value, each h is a throwaway copy."
+        why: "That needs int& h."
       - t: |
           5
-        why: All three 5s are untouched, so the sum is 15.
+        why: "All three 5s remain: 15."
       - t: Compile error
-        why: "It compiles, just with a warning: variable 'h' set but not used."
+        why: It compiles, with a warning.
     answer: 0
     hints:
-      - "int h, not int& h: what is h?"
-      - Does changing a photocopy change the original?
-    short: "By value, h is a copy: hp stays [5, 5, 5], sum 15."
+      - "int h, not int& h."
+      - Does editing a copy change the original?
+    short: "h is a copy, so hp stays [5, 5, 5]."
     explain: "`for (int h : hp)` copies each element into h. `h = 0;` changes only the copy, so hp is still [5, 5, 5] and the sum is 15. g++ warns \"variable 'h' set but not used\": a big hint. Use `for (int& h : hp)` to change the real elements."
   - id: w7.l3.c2
     type: mcq
     tags: [ w7.ref-loop ]
-    prompt: Which loop header lets you double every score IN the vector?
+    prompt: Which loop header makes `s *= 2` double the scores stored IN the vector?
     code: |-
       for (___) {
           s *= 2;
@@ -119,23 +119,23 @@ challenges:
     expect: skip
     options:
       - t: "int& s : scores"
-        why: "Correct: s refers to each real element, so s *= 2 changes the vector."
+        why: s IS each element, so it sticks.
       - t: "int s : scores"
-        why: s is a copy; the doubled value is thrown away each pass.
+        why: s is a copy; the change is lost.
       - t: "const int& s : scores"
-        why: const means read-only, so s *= 2 is a compile error.
+        why: const can't be changed. Won't compile.
       - t: "s : scores"
-        why: The loop variable needs a type (or auto). This doesn't compile.
+        why: Needs a type. Won't compile.
     answer: 0
     hints:
-      - You want to change the elements, not copies.
-      - Which one is a non-const reference?
-    short: "int& s changes the real elements; int s changes copies."
+      - Change elements, not copies.
+      - Look for a non-const &.
+    short: "int& changes the real elements."
     explain: "Only a non-const reference (`int& s` or `auto& s`) lets the loop body change the elements. `int s` doubles a copy, and `const int& s` refuses to compile when you assign."
   - id: w7.l3.c3
     type: fill
     tags: [ w7.range-for, w6.constref ]
-    prompt: Print every name without copying any strings, and without being able to change them.
+    prompt: Fill in the loop variable's type so names are read-only and never copied.
     code: |-
       #include <iostream>
       #include <string>
@@ -155,9 +155,9 @@ challenges:
       - auto const&
     placeholder: loop variable type
     hints:
-      - "No copy means a reference. Read-only means..."
-      - Same as a World 6 read-only parameter.
-    short: "const std::string& reads each name with no copy."
+      - "No copy: &. Read-only: ..."
+      - Like a World 6 read-only parameter.
+    short: "const& reads without copying."
     explain: "`const std::string&` (or `const auto&`) refers to each string without copying it, and const makes sure the loop can't change it by accident. Plain `std::string name` works too, but copies every string."
   - id: w7.l3.c4
     type: order
@@ -173,9 +173,9 @@ challenges:
     distractors:
       - "for (int c = coins) {"
     hints:
-      - The 5 must be in the vector before the loop runs.
-      - "Range-for uses a colon: for (int c : coins)."
-    short: Declare, push_back 5, then loop and print each coin.
+      - Add the 5 before the loop runs.
+      - "Range-for uses a colon."
+    short: Push the 5 before looping.
     explain: "The vector must exist before push_back, and the 5 must be added before the loop so it gets printed. Range-for uses `:`, not `=`."
   - id: w7.l3.c5
     type: review
@@ -208,10 +208,10 @@ challenges:
       "11": "Fine: reads each element, changes nothing."
       "14": "loot[loot.size()] is one past the end: UB."
     hints:
-      - Is anything added to the vector WHILE it's being looped over?
-      - What is the last valid index of a vector?
-    short: "Never grow a vector mid range-for; [size()] is past the end."
-    explain: "push_back can move all elements to a bigger block of memory, leaving the loop's hidden iterator and `item` pointing at freed memory: undefined behavior (it may seem fine with 2 elements and break with 20). Collect new items in a separate vector and add them after the loop. And the last valid index is size() - 1, so loot[loot.size()] reads past the end."
+      - Anything added WHILE looping?
+      - Is index size() valid?
+    short: "Don't grow a vector mid-loop; [size()] is past the end."
+    explain: "push_back can move all elements to a bigger block of memory, leaving the loop's hidden iterator and `item` pointing at freed memory: undefined behavior (it may seem fine with 2 elements and break with 20). Collect new items in a separate vector and add them after the loop. And the last valid index is size() minus 1, so loot[loot.size()] reads past the end."
     sideBySide:
       unsafe: |-
         #include <string>
@@ -259,27 +259,27 @@ challenges:
     options:
       - t: |
           149
-        why: "Correct: int& squares each element in place: [1, 4, 9], printed with no spaces."
+        why: Squares stick, no spaces.
       - t: |
           123
-        why: "int& x is a reference, so the squares stick in v."
+        why: "int& x makes the squares stick."
       - t: |
           1 4 9
-        why: Nothing prints a space between the numbers.
+        why: No space is printed.
       - t: |
           14
-        why: Range-for visits EVERY element, including the last one.
+        why: Range-for visits EVERY element.
     answer: 0
     hints:
-      - The first loop uses int&. Does the change stick?
-      - Are there any spaces in the output?
-    short: "int& x changes v to [1, 4, 9]; it prints 149."
+      - The first loop uses int&.
+      - Are any spaces printed?
+    short: "int& squares v in place."
     explain: "The first loop takes each element by reference and squares it, so v becomes [1, 4, 9]. The second loop reads copies and prints them back to back: \"149\" and a newline."
 recap:
-  - Range-for visits every element, no index needed.
-  - "int x: copy. Changes don't stick."
-  - "const auto&: read big things without copying."
-  - "int& x: change the elements in place."
+  - Range-for visits every element.
+  - "int x: a copy. Changes don't stick."
+  - "const auto&: read without copying."
+  - "int& x: change elements in place."
 vault:
   - id: w7.range-for
     title: Range-for, three ways

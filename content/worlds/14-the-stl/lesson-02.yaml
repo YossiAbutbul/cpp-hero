@@ -6,7 +6,7 @@ skill: toolkit
 shield: false
 concept:
   short: std::set keeps unique values, always sorted; inserting a value that's already there does nothing.
-  analogy: "A set is a guest list at the door: each name gets in once, and the list stays alphabetical."
+  analogy: "A set is a guest list: each name once, always alphabetical."
   body:
     - "A `std::set<T>` (from `<set>`) holds **unique** values in **sorted** order. It's like a map with keys but no values."
     - "`s.insert(x)` adds x if it's new. If x is already there, nothing changes. `insert` even tells you which happened: `s.insert(x).second` is `true` for a new value, `false` for a duplicate."
@@ -72,7 +72,7 @@ challenges:
   - id: w14.l2.c1
     type: predict
     tags: [ w14.set ]
-    prompt: What does this print? (Watch the spaces.)
+    prompt: What does this print? Spaces count.
     code: |-
       #include <iostream>
       #include <set>
@@ -87,7 +87,7 @@ challenges:
       }
     options:
       - t: "1 3 5 \n3\n"
-        why: "Correct: duplicates vanish, the rest is sorted, and size() is 3."
+        why: Three unique values, sorted, each followed by a space.
       - t: "5 1 3 \n3\n"
         why: A set doesn't keep the order you gave; it sorts.
       - t: "1 1 3 5 5 \n5\n"
@@ -119,7 +119,7 @@ challenges:
     options:
       - t: |
           10
-        why: "Correct: the first insert is new (true, 1), the second is a duplicate (false, 0)."
+        why: New first (1), duplicate second (0).
       - t: |
           11
         why: The second "gold" is a duplicate, so its insert reports false.
@@ -138,16 +138,16 @@ challenges:
   - id: w14.l2.c3
     type: mcq
     tags: [ w14.set, w14.map ]
-    prompt: You track which bug kinds you've defeated. No repeats, and "have I beaten it?" must be fast. Best container?
+    prompt: 'Pick the best container for defeated bug names: no repeats, fast "is it there?"'
     options:
       - t: std::set<std::string>
-        why: "Correct: unique values and fast lookups are exactly what a set is for."
+        why: A set is built for unique values and fast lookups.
       - t: std::vector<std::string>
-        why: Allows duplicates, and checking membership means scanning the whole vector.
+        why: Allows duplicates, and checking means scanning the whole vector.
       - t: std::map<std::string, std::string>
-        why: A map works, but you'd store a value you never need. A set is the simple fit.
+        why: Works, but stores a value per name you never need.
       - t: std::array<std::string, 10>
-        why: A fixed size of 10, duplicates allowed, and lookups are a full scan.
+        why: Fixed size, duplicates allowed, and lookups scan everything.
     answer: 0
     hints:
       - You only need to remember names, not a value per name.
@@ -175,7 +175,7 @@ challenges:
   - id: w14.l2.c5
     type: bug
     tags: [ w14.set, w14.set-insert ]
-    prompt: "This should report repeated ticket numbers, but it never reports anything. Tap the buggy line, then pick the fix."
+    prompt: "This never reports repeated tickets. Tap the buggy line, then pick the fix."
     code: |-
       std::set<int> tickets;
       for (int t : scanned) {
@@ -188,13 +188,13 @@ challenges:
     bugLine: 2
     options:
       - t: if (tickets.contains(t)) {
-        why: "Correct: before inserting, the ticket is already there only if it was seen earlier."
+        why: Checked before inserting, so it's true only for repeats.
       - t: if (tickets.count(t) > 2) {
-        why: A set's count is only ever 0 or 1. This is never true either.
+        why: Set counts are only 0 or 1, so this is never true.
       - t: if (tickets.count(t) == 1) { tickets.clear();
-        why: Clearing the set throws away every ticket seen so far. Nonsense.
+        why: Clearing the set throws away every ticket seen so far.
       - t: if (tickets.size() > 1) {
-        why: That's true as soon as two DIFFERENT tickets arrive. It doesn't check t at all.
+        why: True for any two different tickets; it never checks t.
     answer: 0
     hints:
       - What values can count() return for a set?
@@ -231,7 +231,7 @@ recap:
   - A set stores unique values, always sorted.
   - insert(x).second tells you if x was new.
   - contains(x) or count(x) checks membership.
-  - "No [] and no in-place edits: erase, then insert."
+  - "No [] or in-place edits: erase, insert."
 vault:
   - id: w14.set-basics
     title: std::set basics

@@ -5,11 +5,12 @@ title: "Shield: Every byte comes home"
 skill: defense
 shield: true
 concept:
-  short: "Give every resource one owner that cleans up automatically: RAII and smart pointers stop leaks, double deletes and use-after-free."
-  analogy: "RAII is a hotel key card: checking in grabs the room, and checking out frees it, even if you leave by the fire exit."
+  short: "RAII: every resource has one owner that cleans up itself."
+  analogy: "A hotel key card: any exit frees the room."
   body:
+    - "RAII and smart pointers stop the three heap bugs: leaks, double deletes and use-after-free."
     - "The three heap bugs: a **leak** (memory never deleted, so a long-running game slowly eats all memory), a **double delete** (the same memory freed twice), and **use-after-free** (reading or writing memory after it was deleted). The last two are undefined behavior: they can crash, corrupt other data, or seem fine for months and then fail on another machine. UB doesn't guarantee a crash."
-    - "**RAII** (Resource Acquisition Is Initialization): tie every resource to an object whose lifetime ends at a `}`. The object grabs the resource when it's created and releases it when it's destroyed, on **every** path: normal end, early `return`, `break`, or an exception. `std::vector`, `std::string`, `std::unique_ptr`, `std::shared_ptr` and file streams are all RAII."
+    - "**RAII** (Resource Acquisition Is Initialization): tie every resource to an object whose lifetime ends at a `}`. The object grabs the resource when it's created and releases it when it's destroyed, on **every** path: normal end, early `return`, `break`, or an exception. Like a hotel key card: checking in grabs the room, and checking out frees it, even if you leave by the fire exit. `std::vector`, `std::string`, `std::unique_ptr`, `std::shared_ptr` and file streams are all RAII."
     - "**Prefer, in order**: a plain local, then a container (`std::vector`, `std::string`), then `std::unique_ptr`, then `std::shared_ptr` when ownership is truly shared. A raw `new`/`delete` pair in everyday code is a warning sign. Raw pointers and references are still fine as **non-owning** views of something another owner keeps alive."
     - "**Rule of Zero**: when everything you hold manages itself, you write no delete, no cleanup code, no special copy code: zero. You'll apply it to your own types in World 10: members like `std::vector` and `std::unique_ptr` make the compiler-generated behavior correct for free."
     - "Setting a pointer to `nullptr` after `delete` protects that one pointer (deleting nullptr is a no-op), but any **other** copy of the address still dangles. One clear owner is the real fix."
@@ -39,7 +40,7 @@ demo:
         cells:
           - { name: raw int, value: "40", addr: heap }
           - { name: raw, ptr: raw int, addr: stack }
-      note: raw owns 40 on the heap. Must remember delete!
+      note: raw owns a heap 40. Needs delete!
     - line: 5
       vars:
         safe: "→ 40"
@@ -47,7 +48,7 @@ demo:
         cells:
           - { name: safe int, value: "40", addr: heap }
           - { name: safe, ptr: safe int, addr: stack }
-      note: safe owns another 40 and frees itself.
+      note: safe owns a 40 and frees itself.
     - line: 6
       vars:
         dmg: "50"
@@ -63,7 +64,7 @@ demo:
       mem:
         drop: [ raw ]
       crash: "Leak! return skipped delete raw; that 40 is orphaned forever."
-      note: The early return jumps right past line 11.
+      note: The early return skips line 11.
     - line: 9
       vars:
         safe: null
@@ -71,14 +72,14 @@ demo:
       mem:
         drop: [ safe, safe int ]
       shield: "RAII: unique_ptr freed its int on the way out!"
-      note: safe cleans up on every path, even this one.
+      note: safe cleans up on any path.
 challenges:
   - id: w9.l5.c1
     type: review
     tags: [ w9.uaf, w9.double-delete, w8.dangling ]
     bug: use-after-free
     unsafe: true
-    prompt: Code review! Two pointers, one heap int. Tap every dangerous line, then submit.
+    prompt: Two pointers share one heap int. Tap every dangerous line, then submit.
     code: |-
       #include <iostream>
 
@@ -99,9 +100,9 @@ challenges:
       "7": "Use-after-free: reads memory that was already handed back. UB."
       "8": "Double delete: the same address freed twice. UB, can corrupt the heap."
     hints:
-      - After line 6, what does alias point at?
+      - After delete, where does alias point?
       - Two pointers, one int. How many deletes?
-    short: Two copies of one address mean use-after-free and double delete.
+    short: "Two copies of one address: use-after-free, double delete."
     explain: "gold and alias hold the same address. After `delete gold;`, the int is gone, so `*alias` is a use-after-free and `delete alias;` frees it a second time. Both are UB: they might print 100, print junk, crash now, or corrupt the heap and crash later. Setting gold to nullptr wouldn't help alias. Fix: one owner (unique_ptr) and plain non-owning views that aren't used after it lets go."
     sideBySide:
       unsafe: |-
@@ -141,18 +142,18 @@ challenges:
       }
     options:
       - t: "60"
-        why: "Correct: passes validation, allocates, then the n > 50 exit skips delete[]."
+        why: The n > 50 exit skips delete[].
       - t: "10"
-        why: Takes the normal path, which reaches delete[].
+        why: The normal path reaches delete[].
       - t: abc
-        why: Rejected before anything is allocated.
+        why: Rejected before any new[].
       - t: "0"
-        why: Rejected by n <= 0 before new[] runs.
+        why: Rejected by n <= 0.
     answer: 0
     hints:
-      - The leak needs memory allocated, then an exit before delete[].
-      - Which exit comes after the new[]?
-    short: 60 allocates, then an early return skips the delete[].
+      - "A leak: new[], then exit before delete[]."
+      - Which exit comes after new[]?
+    short: 60 allocates, then returns early before delete[].
     explain: "Inputs 51 to 100 pass validation, allocate the array, then hit `return 1;` before `delete[] hp;`. That memory leaks. Here the OS reclaims it at exit, but the same pattern inside a game loop leaks every frame. The RAII fix: `std::vector<int> hp(n);` frees itself on every path."
     sideBySide:
       unsafe: |-
@@ -174,7 +175,7 @@ challenges:
     type: harden
     tags: [ w9.double-delete, w9.delete, w8.nullptr ]
     bug: double-delete
-    prompt: "Old cleanup code may run `delete p;` again later. What goes in the blank to make that harmless?"
+    prompt: "The last line deletes p again. Fill the blank so that second delete is harmless."
     code: |-
       int* p = new int{5};
       std::cout << *p << '\n';
@@ -183,18 +184,18 @@ challenges:
       delete p;
     options:
       - t: p = nullptr
-        why: "Correct: deleting nullptr does nothing, so the second delete is harmless."
+        why: Deleting nullptr does nothing.
       - t: "*p = 0"
-        why: Writes to freed memory. That's use-after-free, and the double delete remains.
+        why: Writes to freed memory.
       - t: delete p
-        why: Now it's freed three times. Every extra delete is UB.
+        why: Freed three times. UB.
       - t: p++
-        why: The second delete then gets an address new never returned. UB.
+        why: Deletes an address new never gave. UB.
     answer: 0
     hints:
-      - Which pointer value is safe to delete?
+      - Which value is safe to delete?
       - "delete nullptr is a no-op."
-    short: Resetting to nullptr makes a repeated delete a harmless no-op.
+    short: After nullptr, a repeated delete does nothing.
     explain: "`delete nullptr;` is defined to do nothing, so `p = nullptr;` right after the delete defuses a second one. It only protects p itself: other copies of the address still dangle. The real fix is one owner: `auto p = std::make_unique<int>(5);` and no delete at all."
     sideBySide:
       unsafe: |-
@@ -211,7 +212,7 @@ challenges:
     tags: [ w9.uaf, w4.guard ]
     bug: use-after-free
     unsafe: true
-    prompt: "UNSAFE code. Pick ALL inputs that cause a use-after-free."
+    prompt: "UNSAFE code. Pick ALL inputs that read the int after it was deleted."
     code: |-
       #include <iostream>
 
@@ -234,18 +235,18 @@ challenges:
       }
     options:
       - t: "0"
-        why: Deletes, but 0 skips the print. No use after free.
+        why: Deletes, but 0 skips the print.
       - t: "1"
-        why: "Exposes it: 1 <= 1 deletes, then 1 != 0 reads the freed int."
+        why: Deletes, then prints the freed int.
       - t: "-2"
-        why: "Exposes it: negatives delete too, then the print reads freed memory."
+        why: Deletes, then prints freed memory.
       - t: "5"
-        why: Prints first, deletes afterwards. That order is fine.
+        why: Prints first, deletes after. That's fine.
     answers: [ 1, 2 ]
     hints:
-      - Trace which ifs run for each input, in order.
-      - Danger needs a delete first and a read after.
-    short: 1 and negatives delete first, then read freed memory.
+      - Trace the ifs for each input.
+      - Delete first, then read.
+    short: 1 and negatives read the int after deleting it.
     explain: "For any choice <= 1 except 0, the int is deleted and then read: use-after-free, UB (it may even print 3). Inputs 0 and 5 happen to be fine, which is how these bugs hide. Tangled delete logic is the real problem: give the int one owner and check it before use."
     sideBySide:
       unsafe: |-
@@ -268,26 +269,26 @@ challenges:
   - id: w9.l5.c5
     type: mcq
     tags: [ w9.rule-of-zero, w9.raii, w7.vector ]
-    prompt: "Rule of Zero: the player picks how many potions to hold. Which is the best owner?"
+    prompt: "The player picks n potions at run time. Which is simplest, with zero cleanup code?"
     options:
       - t: std::vector<int> potions(n);
-        why: "Correct: a container owns and frees its memory. Zero cleanup code for you to write."
+        why: Frees itself and knows its size.
       - t: int* potions = new int[n]{}; plus delete[] later
-        why: Works only if every path reaches delete[]. That's the bug this world fights.
+        why: Every path must reach delete[]. Easy to miss.
       - t: std::unique_ptr<int[]> potions
-        why: Safe, but a vector also knows its size, can grow and checks .at().
+        why: Safe, but can't report its size.
       - t: std::shared_ptr<int[]> potions
-        why: Nothing is shared here. Extra cost for nothing.
+        why: Nothing is shared here.
     answer: 0
     hints:
-      - Which option needs zero cleanup code AND knows its size?
+      - No cleanup AND knows its size?
       - You've used it since World 7.
-    short: Prefer a container; it manages memory, so you write zero cleanup code.
-    explain: "Rule of Zero: use members and locals that clean up after themselves, so you write no delete and no cleanup code at all. For a run-time-sized list, std::vector is the clear winner. Reach for unique_ptr for single objects, shared_ptr only for real sharing, and raw new almost never."
+    short: "Prefer a container: zero cleanup code."
+    explain: "Rule of Zero: use members and locals that clean up after themselves, so you write no delete and no cleanup code at all. For a run-time-sized list, std::vector is the clear winner: it frees itself, knows its size, can grow and checks `.at()`. Reach for unique_ptr for single objects, shared_ptr only for real sharing, and raw new almost never."
   - id: w9.l5.c6
     type: safe
     tags: [ w9.leak, w9.double-delete, w9.uaf, w9.raii ]
-    prompt: Safe or unsafe? The Hoarder's minions are grabbing bytes. Go fast!
+    prompt: Safe or unsafe? Go fast!
     seconds: 30
     items:
       - code: auto p = std::make_unique<int>(5);
@@ -304,48 +305,48 @@ challenges:
           delete p;
           std::cout << *p;
         safe: false
-        why: Use-after-free. It may even print 5, which is the scary part.
+        why: Use-after-free, even if it prints 5.
       - code: std::vector<int> v(n);
         prelude: int n{3};
         safe: true
-        why: A container owns its heap memory and frees it.
+        why: A container frees its own heap memory.
       - code: |-
           int* a = new int[3]{};
           delete a;
         safe: false
-        why: new[] must be freed with delete[]. Mismatch is UB.
+        why: new[] needs delete[]. Mismatch is UB.
       - code: |-
           int* p = nullptr;
           delete p;
         safe: true
-        why: Deleting nullptr is defined to do nothing.
+        why: Deleting nullptr does nothing.
       - code: |-
           for (int i = 0; i < 3; ++i) {
               int* p = new int{i};
           }
         safe: false
-        why: Each loop allocates and never deletes. Three leaks.
+        why: Never deleted. Three leaks.
       - code: |-
           auto a = std::make_shared<int>(1);
           auto b = a;
         safe: true
-        why: Two owners share one count; freed exactly once.
+        why: Two owners, one count, freed once.
       - code: |-
           auto p = std::make_unique<int>(5);
           int* view = p.get();
           delete view;
         safe: false
-        why: view doesn't own it. p deletes it again later.
+        why: view doesn't own it. p deletes it again.
     hints:
-      - Count the deletes, and who owns what.
-      - Is anything used after it was freed?
-    short: "One owner, freed once, never used after: that's safe memory."
+      - Count deletes and owners.
+      - Used after freed?
+    short: "One owner, freed once, never used after."
     explain: "Safe code gives every heap object exactly one owner (or one shared count) that frees it automatically. Unsafe code leaks (no delete), double deletes (two), mismatches new[] with delete, or uses memory after freeing it."
 recap:
-  - Leaks, double deletes, use-after-free are the heap bugs.
-  - RAII frees resources on every exit path.
-  - "Prefer locals, then containers, then smart pointers."
-  - "Rule of Zero: write no cleanup code at all."
+  - Leaks, double deletes, use-after-free.
+  - RAII frees on every exit path.
+  - "Locals, then containers, then smart pointers."
+  - "Rule of Zero: no cleanup code."
 vault:
   - id: w9.raii
     title: "RAII: one owner, zero deletes"

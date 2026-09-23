@@ -6,7 +6,7 @@ skill: structure
 shield: false
 concept:
   short: std::cout << prints items in order, adding nothing extra. \n ends a line.
-  analogy: "std::cout is a conveyor belt to the screen: each `<<` adds one item, in order."
+  analogy: "std::cout is a conveyor belt to the screen; each `<<` adds one item."
   body:
     - "`<<` is the **insertion operator**. Chain as many as you like: `std::cout << \"HP: \" << 3 << '\\n';`"
     - cout adds no spaces or new lines. Put spaces inside the quotes; end lines with `'\n'` or a `\n` in the string.
@@ -32,7 +32,7 @@ demo:
       note: "Three items: text, the number 3, a newline."
     - line: 4
       out: "Shield:\twood\n"
-      note: "\\t is a tab: it jumps to the next tab stop."
+      note: "\\t prints a tab: a jump to the next column."
     - line: 5
       out: |
         Curlo says "hi!"
@@ -43,7 +43,7 @@ challenges:
   - id: w1.l3.c1
     type: predict
     tags: [ w1.cout ]
-    prompt: What exactly does this program print?
+    prompt: What does this print? Spaces count. (↵ marks a new line.)
     code: |-
       #include <iostream>
 
@@ -67,7 +67,7 @@ challenges:
       - t: |
           Level1
           XP: 20
-        why: "Correct! No space after Level, one after XP: (inside the quotes)."
+        why: "No space after Level, one after XP: (inside the quotes)."
     answer: 3
     hints:
       - Spaces only appear if they're inside the quotes.
@@ -77,7 +77,7 @@ challenges:
   - id: w1.l3.c2
     type: predict
     tags: [ w1.cout ]
-    prompt: What exactly does this program print?
+    prompt: What does this print? Spaces count. (↵ marks a new line.)
     code: |-
       #include <iostream>
 
@@ -91,7 +91,7 @@ challenges:
       - t: |
           A
           BC
-        why: Correct! B has no newline, so C lands right next to it.
+        why: B has no newline, so C lands right next to it.
       - t: |
           A
           B
@@ -113,7 +113,7 @@ challenges:
   - id: w1.l3.c3
     type: fill
     tags: [ w1.cout ]
-    prompt: Fill in the missing operator so both items go onto the output belt.
+    prompt: Fill in the missing operator so both items get printed.
     code: |-
       #include <iostream>
 
@@ -154,7 +154,7 @@ challenges:
       - t: "'\\n' only works on Windows"
         why: "'\\n' works everywhere; the system handles line endings."
       - t: Both end the line, but std::endl also flushes the output, which is slower
-        why: Correct! Default to '\n'; use std::endl only when you need a flush.
+        why: Default to '\n'; use std::endl only when you need a flush.
       - t: std::endl adds a blank line; '\n' doesn't
         why: Both end the current line exactly once.
     answer: 2

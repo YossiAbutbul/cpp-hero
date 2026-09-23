@@ -5,8 +5,8 @@ title: Do-while and the retry loop
 skill: logic
 shield: false
 concept:
-  short: "do { body } while (condition); runs the body first, then checks. Perfect for asking until the answer is valid."
-  analogy: "A do-while is a shopkeeper: you always get asked once, and asked again only if your answer made no sense."
+  short: "do { body } while (condition); runs first, checks after. Great for asking again."
+  analogy: "A shopkeeper always asks once, and again only if your answer was nonsense."
   body:
     - "`do { ... } while (condition);` runs the body, **then** checks the condition. So the body always runs **at least once**. Note the semicolon after `while (...)`."
     - "That makes it the natural shape for input: ask, read, and repeat while the answer is invalid. The condition describes a **bad** answer: `while (n < 1 || n > 3);`."
@@ -115,13 +115,13 @@ challenges:
       } while (n < 3);
     options:
       - t: Once
-        why: "Correct: the body runs first (n becomes 6), then 6 < 3 is false."
+        why: "n becomes 6, then 6 < 3 is false."
       - t: Zero times
-        why: That's what a while loop would do. do-while always runs at least once.
+        why: That is a while loop. do-while runs at least once.
       - t: Three times
         why: The condition is false after the first lap, so it stops.
       - t: Forever
-        why: n grows away from 3, and the check is already false after one lap.
+        why: After one lap n is 6, and 6 < 3 is false.
     answer: 0
     hints:
       - When does a do-while check its condition?
@@ -131,7 +131,7 @@ challenges:
   - id: w5.l3.c2
     type: predict
     tags: [ w5.while, w3.cin ]
-    prompt: "A sentinel loop. The input is `4 7 0 9`. What does this print?"
+    prompt: "The user types `4 7 0 9`. What does this print?"
     code: |-
       #include <iostream>
 
@@ -149,7 +149,7 @@ challenges:
     options:
       - t: |
           11
-        why: "Correct: 4 + 7, then the 0 ends the loop. The 9 is never read."
+        why: "4 + 7, then the 0 stops it. 9 is never read."
       - t: |
           20
         why: The loop stops at the 0 sentinel, so 9 is never added.
@@ -168,7 +168,7 @@ challenges:
   - id: w5.l3.c3
     type: harden
     tags: [ w5.retry, w5.dowhile, w3.logic ]
-    prompt: The loop should keep asking while the age is invalid (valid is 0 to 120). Pick the condition.
+    prompt: Pick the condition that keeps asking while the age is invalid. Valid ages are 0 to 120.
     code: |-
       #include <iostream>
       #include <limits>
@@ -191,13 +191,13 @@ challenges:
       }
     options:
       - t: age < 0 || age > 120
-        why: "Correct: describes a BAD age, so the loop repeats exactly while the answer is invalid."
+        why: It describes a BAD age, so bad answers get asked again.
       - t: age >= 0 && age <= 120
-        why: "Inverted: repeats while the age is GOOD and accepts the first bad one."
+        why: Backwards. It repeats on good ages and accepts bad ones.
       - t: age < 0 && age > 120
-        why: No number is both below 0 and above 120, so the loop never repeats.
+        why: No age is both below 0 and above 120. Never repeats.
       - t: age != 0
-        why: Loops until someone types exactly 0, and accepts 0 even though 500 was rejected.
+        why: Only 0 ends it. 50 is valid but gets rejected.
     answer: 0
     hints:
       - The loop repeats while the condition is true.
@@ -243,7 +243,7 @@ challenges:
     tags: [ w5.retry, w5.infinite, w3.validate ]
     bug: infinite-loop
     unsafe: true
-    prompt: "UNSAFE retry loop. Which input makes it spin forever?"
+    prompt: "UNSAFE: which typed input makes this loop run forever?"
     code: |-
       int n{};
       do {
@@ -254,11 +254,11 @@ challenges:
       - t: "5"
         why: Valid, so the loop ends right away.
       - t: "12"
-        why: Out of range, so it asks again, and the next answer gets read. That's fine.
+        why: Out of range, so it asks again. That works fine.
       - t: "0"
         why: Asks again and reads the next answer. Annoying, not broken.
       - t: abc
-        why: "Correct: n becomes 0, cin jams, and every later read fails instantly: endless prompts."
+        why: "n becomes 0, and every later read fails without waiting."
     answer: 3
     hints:
       - Which input puts cin into the fail state?
@@ -286,9 +286,9 @@ challenges:
       prelude: int n{};
 recap:
   - do-while always runs at least once.
-  - "End a do-while with while (...); and a semicolon."
+  - "do-while ends with while (...);"
   - "Retry condition = the answer is bad."
-  - "Failed read? clear(), ignore(), and stop at end of input."
+  - "Failed read? clear(), ignore(), check eof()."
 vault:
   - id: w5.dowhile
     title: The do-while loop

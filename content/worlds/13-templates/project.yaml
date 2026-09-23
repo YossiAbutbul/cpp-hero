@@ -2,7 +2,7 @@
 
 id: w13.p
 title: The Blueprint Forge
-intro: "Forge two reusable tools for the Codebase armory: a stat clamp for any integer type, and a fixed-size Stash for any item."
+intro: "Forge two tools: a stat clamp for integers and a fixed-size Stash."
 steps:
   - id: w13.p.s1
     type: order
@@ -47,16 +47,16 @@ steps:
     options:
       - t: |
           100 0 42
-        why: "Correct: 150 is capped at 100, -5 is raised to 0, and 42 is already in range."
+        why: 150 is capped at 100, -5 is raised to 0, 42 stays.
       - t: |
           150 -5 42
-        why: clampStat changes values outside 0..100. Only 42 passes through untouched.
+        why: clampStat changes values outside 0..100. Only 42 is untouched.
       - t: |
           100 -5 42
-        why: -5 is below lo, so the first if returns lo, which is 0.
+        why: -5 is below lo, so the first if returns 0.
       - t: |
           0 100 42
-        why: Too high returns hi (100) and too low returns lo (0), not the other way round.
+        why: Swapped. Too high gives hi (100); too low gives lo (0).
     answer: 0
     hints:
       - Which values are outside 0 to 100?
@@ -107,18 +107,18 @@ steps:
       };
     options:
       - t: i >= count_
-        why: "Correct: only slots 0 to count_ - 1 hold items, and count_ is never above N."
+        why: Only slots below count_ hold items, and count_ never exceeds N.
       - t: i >= N
-        why: Stops out-of-bounds reads, but get(1) on a stash holding 1 item returns an empty slot.
+        why: Stays in bounds, but still returns empty slots.
       - t: i > count_
-        why: "Off by one: i == count_ is the first EMPTY slot, and it gets through."
+        why: "Off by one: i == count_ is the first EMPTY slot."
       - t: i < 0
         why: std::size_t can never be negative, so this is always false.
     answer: 0
     hints:
       - Which slots actually hold something?
-      - Items fill slots 0, 1, 2, ... up to count_ - 1.
-    short: i >= count_ blocks empty slots and, since count_ <= N, out-of-bounds ones.
+      - Items fill slots from 0 upward. Where do they stop?
+    short: i >= count_ blocks empty slots and out-of-bounds ones.
     explain: "The filled slots are 0 to count_ - 1. Checking i >= count_ rejects empty slots and, because count_ never exceeds N, every out-of-bounds index too. Throwing std::out_of_range tells the caller exactly what went wrong."
     sideBySide:
       unsafe: |-
@@ -241,7 +241,7 @@ stress:
         id: w13.p.a1
         type: harden
         tags: [ w13.concepts, w6.validate ]
-        prompt: "lo is 100 and hi is 0. The concept is happy (all ints), but the range is nonsense. Pick the guard."
+        prompt: "Someone passes lo 100 and hi 0. Pick the guard that rejects this nonsense range."
         code: |-
           #include <concepts>
 
@@ -256,7 +256,7 @@ stress:
           }
         options:
           - t: lo > hi
-            why: "Correct: an empty range is a caller mistake. Refuse it loudly instead of returning junk."
+            why: An empty range is a caller mistake. Refuse it loudly.
           - t: value < lo
             why: That's a normal case (clamp up to lo), not an error.
           - t: lo == hi
@@ -267,7 +267,7 @@ stress:
         hints:
           - The type is fine. What about the relationship between lo and hi?
           - Which range can no value ever be inside?
-        short: Concepts check types; lo > hi is a value problem. Check it at runtime.
+        short: Concepts check types; lo > hi needs a runtime check.
         explain: "std::integral guarantees all three are integers, not that they make sense together. With lo = 100 and hi = 0, clampStat(50, 100, 0) returns 100, a silent lie. Checking lo > hi turns the mistake into a clear exception."
         sideBySide:
           prelude: "#include <concepts>"
@@ -297,7 +297,7 @@ stress:
         type: harden
         tags: [ w13.concepts, w13.constrain ]
         bug: unconstrained-template
-        prompt: Which template line keeps strings out? (Strings compare alphabetically, so "9" counts as bigger than "10".)
+        prompt: Pick what fills the blank so `clampStat` rejects strings.
         code: |-
           #include <concepts>
 
@@ -309,9 +309,9 @@ stress:
           }
         options:
           - t: std::integral
-            why: "Correct: only integer types get in. A string is rejected right at the call."
+            why: Only integer types get in. A string fails at the call.
           - t: typename
-            why: Lets std::string in. "9" > "10" alphabetically, so it returns "10". Nonsense.
+            why: Lets strings in, where "9" > "10" alphabetically. Nonsense.
           - t: class
             why: Same as typename. Any type gets in.
           - t: std::copyable
@@ -345,7 +345,7 @@ stress:
         id: w13.p.a3
         type: harden
         tags: [ w13.staticassert, w13.nontype ]
-        prompt: "`Stash<int, 0>` is a typo that compiles into a stash that can never hold anything. Pick the line that rejects it."
+        prompt: "`Stash<int, 0>` compiles into a useless stash. Pick the line that rejects it."
         code: |-
           template <typename T, std::size_t N>
           class Stash {
@@ -359,9 +359,9 @@ stress:
           };
         options:
           - t: static_assert(N > 0, "a Stash needs at least one slot")
-            why: "Correct: N is known at compile time, so the build fails with your message."
+            why: N is known at compile time, so the build fails.
           - t: static_assert(N >= 0, "a Stash needs at least one slot")
-            why: std::size_t is never negative, so this is always true. It blocks nothing.
+            why: std::size_t is never negative, so this blocks nothing.
           - t: assert(N > 0)
             why: assert is a runtime statement; it can't sit in a class body.
           - t: if (N == 0) return

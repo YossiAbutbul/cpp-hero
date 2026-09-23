@@ -5,8 +5,8 @@ title: Copy or the real thing?
 skill: memory
 shield: false
 concept:
-  short: "By value, a function gets a copy. By reference, it gets the caller's variable. const& reads without copying."
-  analogy: "Passing by value hands over a photocopy of your map; passing by reference hands over the map itself."
+  short: "By value: a copy. By reference: the caller's real variable. const& reads without copying."
+  analogy: "By value hands over a photocopy of your map; by reference, the map."
   body:
     - "**By value** `void heal(int hp)`: the parameter is a fresh copy. Changes inside the function vanish when it returns. Safe, simple, and perfect for small types like `int` and `double`."
     - "**By reference** `void heal(int& hp)`: the parameter is another name for the caller's variable. Changes stick. Use it when the function's job is to modify its argument, like `swap`."
@@ -46,7 +46,7 @@ demo:
       mem:
         cells:
           - { name: hp (copy), value: "10", addr: "0x40" }
-      note: hp is a brand-new box holding a copy.
+      note: hp is a new box holding a copy.
     - line: 3
       mem:
         cells:
@@ -57,7 +57,7 @@ demo:
         drop: [ hp (copy) ]
       out: |
         10
-      note: The copy died at the closing brace. Knight still 10.
+      note: The copy died at }. Knight still 10.
     - line: 14
       note: Now call healRef.
     - line: 6
@@ -78,7 +78,7 @@ challenges:
   - id: w8.l2.c1
     type: predict
     tags: [ w8.byvalue, w6.params ]
-    prompt: Someone wrote a swap. What does this print?
+    prompt: What does this print?
     code: |-
       #include <iostream>
 
@@ -98,26 +98,25 @@ challenges:
     options:
       - t: |
           30 12
-        why: "Correct: a and b are copies. The copies are swapped, then thrown away."
+        why: Only the copies a and b were swapped.
       - t: |
           12 30
-        why: "That's what a swap SHOULD do, but by-value parameters only swap copies."
+        why: A real swap would, but these are copies.
       - t: |
           30 30
-        why: Inside the function, only copies change. Knight and mage are never touched.
+        why: knight and mage are never touched.
       - t: |
           12 12
-        why: Nothing outside the function changes at all.
+        why: Nothing outside the function changes.
     answer: 0
     hints:
-      - Are a and b the caller's variables, or copies?
-      - No & in the parameter list means copies.
-    short: By-value parameters are copies; swapping them changes nothing outside.
+      - Are a and b copies?
+    short: By-value parameters are copies. Swapping them changes nothing outside.
     explain: "`int a, int b` receive copies of 30 and 12. The function swaps its copies and returns; they disappear. knight and mage are unchanged: \"30 12\" and a newline. Fix: `int& a, int& b`."
   - id: w8.l2.c2
     type: fill
     tags: [ w8.byref, w6.params ]
-    prompt: Fix the swap. Fill in the blank so `a` is the caller's variable, not a copy (`b` is already done).
+    prompt: Fill in the blank so `a` is the caller's variable, not a copy, like `b`.
     code: |-
       #include <iostream>
 
@@ -139,7 +138,6 @@ challenges:
     placeholder: symbol
     hints:
       - Look at how b is declared.
-      - One symbol turns a copy into a reference.
     short: "`int& a` makes a another name for knight."
     explain: "With `int& a, int& b`, a names knight and b names mage. Swapping through the references swaps the real variables: 12 30."
   - id: w8.l2.c3
@@ -154,34 +152,32 @@ challenges:
     distractors:
       - b = a;
     hints:
-      - Save one value somewhere before you overwrite it.
-      - temp holds a's old value until b needs it.
+      - Save one value before overwriting it.
     short: Save a in temp, copy b into a, then temp into b.
     explain: "`int temp = a;` saves 30. `a = b;` puts 12 in a. `b = temp;` puts the saved 30 in b. Using `b = a;` at the end would copy the NEW a (12): both would be 12."
   - id: w8.l2.c4
     type: mcq
     tags: [ w8.constref, w6.constref ]
-    prompt: "`printBanner` only reads a long std::string. Which parameter is best?"
+    prompt: "`printBanner` only reads a long std::string. Which parameter avoids a copy AND blocks changes?"
     options:
       - t: const std::string& text
-        why: "Correct: no copy, and the compiler stops the function from changing the caller's string."
+        why: No copy, and changes won't compile.
       - t: std::string text
-        why: Works, but copies the whole string on every call. Wasteful for read-only use.
+        why: Copies the whole string on every call.
       - t: std::string& text
-        why: "No copy, but allows accidental changes, and printBanner(\"Hi\") won't compile."
+        why: "No copy, but changes are allowed."
       - t: const std::string text
-        why: Still a full copy; const only stops the function changing its own copy.
+        why: Still a full copy. const only guards the copy.
     answer: 0
     hints:
-      - You want no copy AND no accidental changes.
       - Combine const with &.
-    short: "Read-only big things: pass by const reference."
+    short: "Big and read-only: pass by const reference."
     explain: "`const std::string&` avoids the copy and promises not to modify. It also accepts temporaries like `\"Hi\"`, which a plain `std::string&` can't. For small types like int, plain by value is just as good."
   - id: w8.l2.c5
     type: bug
     tags: [ w8.byref, w6.params ]
     unsafe: true
-    prompt: The chest should gain 25 gold, but the program prints 100. Tap the buggy line, then pick the fix.
+    prompt: It should print 125 but prints 100. Tap the buggy line, then pick the fix.
     code: |-
       #include <iostream>
 
@@ -198,17 +194,16 @@ challenges:
     bugLine: 2
     options:
       - t: void addGold(int& purse, int amount) {
-        why: "Correct: purse becomes another name for chest, so the change sticks."
+        why: purse now names chest, so the change sticks.
       - t: void addGold(int& purse, int& amount) {
-        why: "amount only needs reading, and int& rejects the literal 25: compile error."
+        why: "int& amount can't take the literal 25: compile error."
       - t: void addGold(const int& purse, int amount) {
-        why: const forbids changing purse, so purse += amount won't compile.
+        why: const forbids purse += amount. Won't compile.
       - t: "    return purse += amount;"
-        why: The function returns void, and nobody uses a return value anyway.
+        why: A void function can't return a value.
     answer: 0
     hints:
-      - Which parameter must change the caller's variable?
-      - A copy can't change the original.
+      - Which parameter must change chest?
     short: To change the caller's variable, take it by reference.
     explain: "purse is a copy of chest, so adding to it does nothing outside. Make it `int& purse`. amount stays by value: it's small and only read (and `int&` couldn't accept the literal 25)."
     sideBySide:
@@ -279,13 +274,12 @@ challenges:
           - two const references
         answer: 1
     hints:
-      - "Change it: &. Only read something big: const &."
-      - Small and read-only? A plain copy is fine.
+      - "Change it: &. Read something big: const &."
     short: "Change it: &. Read big things: const &. Small reads: by value."
     explain: "Modify the caller's variable: `T&`. Read-only and big (string, vector): `const T&`. Small read-only values (int, double, char): by value. A plain `int&` can't bind to a literal like 5, but `const int&` can."
 recap:
   - By value works on a copy.
-  - "By reference (&) changes the caller's variable."
+  - "& changes the caller's variable."
   - "Read big things by const &."
 vault:
   - id: w8.passing

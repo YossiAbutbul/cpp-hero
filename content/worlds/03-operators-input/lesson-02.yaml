@@ -5,8 +5,8 @@ title: "Shortcuts: += and ++"
 skill: logic
 shield: false
 concept:
-  short: x += 5 is shorthand for x = x + 5. x++ hands back the old value, ++x the new.
-  analogy: "Compound assignment is a shortcut button: press `hp -= 3` instead of spelling out `hp = hp - 3`."
+  short: x += 5 adds 5 to x. x++ gives the old value, ++x the new.
+  analogy: "A shortcut button: `hp -= 3` saves typing hp twice."
   body:
     - "`x += 5` means `x = x + 5`. The same works for `-=`, `*=`, `/=`, and `%=`. The right side is computed first: `x *= 2 + 1` means `x = x * (2 + 1)`."
     - "`++x` and `x++` both add 1 to x (and `--` subtracts 1). The difference is the **value of the expression**:"
@@ -35,7 +35,7 @@ demo:
     - line: 4
       vars:
         hp: "7"
-      note: "hp -= 3 is hp = hp - 3: now 7."
+      note: "hp -= 3 takes 3 away: now 7."
     - line: 5
       vars:
         hp: "14"
@@ -44,7 +44,7 @@ demo:
       vars:
         hp: "15"
         a: "14"
-      note: "Postfix: a gets the OLD value 14, then hp becomes 15."
+      note: "Postfix: a gets the OLD 14, then hp becomes 15."
     - line: 7
       vars:
         hp: "16"
@@ -61,7 +61,7 @@ challenges:
   - id: w3.l2.c1
     type: predict
     tags: [ w3.incdec ]
-    prompt: What does this print? (Look closely at what's between the values.)
+    prompt: What does this print? Spaces count.
     code: |-
       #include <iostream>
 
@@ -75,21 +75,21 @@ challenges:
     options:
       - t: |
           757
-        why: "Correct: y gets the old 5; x ends at 7, z is 7. No separators."
+        why: x ends at 7, and nothing is printed between values.
       - t: |
           7 5 7
-        why: "The values are right, but no spaces are printed: there's no ' ' in the output chain."
+        why: "The values match, but no ' ' is printed."
       - t: |
           767
-        why: Postfix x++ hands back the OLD value, so y is 5, not 6.
+        why: x++ hands back the OLD value, so y is 5.
       - t: |
           656
-        why: Both ++ really change x, so x ends at 7. And z comes from ++x, which uses the new value.
+        why: Both ++ change x, so x ends at 7, not 6.
     answer: 0
     hints:
       - x++ gives the old value, then increments.
       - ++x increments, then gives the new value. And check for spaces!
-    short: y gets x's old 5; z gets the new 7; no spaces printed.
+    short: y gets the old 5, z the new 7. No spaces.
     explain: 'x = 5. y = x++ gives y = 5, x = 6. z = ++x makes x = 7, z = 7. Printing x, y, z with nothing between: "757" and a newline.'
   - id: w3.l2.c2
     type: mcq
@@ -97,9 +97,9 @@ challenges:
     prompt: What does `x *= 2 + 1;` do when x is 3?
     options:
       - t: x becomes 9
-        why: "Correct: the right side goes first: x = 3 * (2 + 1)."
+        why: "*= multiplies x by the whole right side, 2 + 1."
       - t: x becomes 7
-        why: That's x * 2 + 1. But *= groups the whole right side first.
+        why: That's x * 2 + 1. *= uses the whole right side.
       - t: x becomes 6
         why: That ignores the + 1 entirely.
       - t: It doesn't compile
@@ -108,7 +108,7 @@ challenges:
     hints:
       - x op= expr means x = x op (expr).
       - Put parentheses around everything to the right of *=.
-    short: x *= 2 + 1 means x = x * (2 + 1) = 9.
+    short: "The whole right side is computed first: 3 * 3 = 9."
     explain: x *= 2 + 1 is x = x * (2 + 1). With x = 3, that's 9.
   - id: w3.l2.c3
     type: fill
@@ -146,9 +146,9 @@ challenges:
       "4": "UB: the left `i` reads i while `++i` modifies it, and the two sides of + are unsequenced."
       "5": Fine by itself (though after UB, nothing in the program can be trusted).
     hints:
-      - Look for a variable that's changed AND used again in the same expression.
+      - Find a variable changed AND used again in one expression.
       - Two lines have i appearing twice with a ++ in the mix.
-    short: Changing i twice, or changing and reading it, in one expression is UB.
+    short: Changing i and touching it again in one expression is UB.
     explain: "Lines 3 and 5 modify i and also touch it again in the same expression, unsequenced: undefined behavior. UB doesn't promise a crash: it might print something that looks fine today and different numbers on another compiler. Split it into separate statements."
     sideBySide:
       unsafe: |-
@@ -242,12 +242,12 @@ challenges:
       - "    int lives;"
     hints:
       - You must create lives before you can change it.
-      - "One line declares lives with no value: that's a trap from World 2!"
+      - "One line gives lives no value: a World 2 trap!"
     short: Declare with a value, decrement, then print. Never leave lives uninitialized.
     explain: "Include, open main, declare and initialize lives to 3, decrement to 2, print, return, close. `int lives;` leaves it uninitialized: reading it would be UB."
 recap:
-  - x += 5 means x = x + 5.
-  - x++ gives the old value; ++x gives the new.
+  - x += 5 adds 5 to x.
+  - x++ gives old value; ++x gives new.
   - Change a variable only once per expression.
 vault:
   - id: w3.compound

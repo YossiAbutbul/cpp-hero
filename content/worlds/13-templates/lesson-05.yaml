@@ -6,7 +6,7 @@ skill: defense
 shield: true
 concept:
   short: Constrain templates with static_assert or a concept like std::integral, so wrong types become clear compile errors.
-  analogy: A concept is a bouncer at the template's door; the wrong type doesn't get in, and it's told why.
+  analogy: A concept is a bouncer at the door; wrong types are turned away.
   body:
     - "An unconstrained `template <typename T>` lets **any** type in. If the type doesn't fit, you get a wall of errors from deep inside the template. Worse, some wrong types compile and do nonsense: `twice(std::string{\"ab\"})` happily returns `\"abab\"`."
     - "**static_assert** checks a condition at compile time and stops the build with your message if it's false: `static_assert(std::is_arithmetic_v<T>, \"needs a number type\");`. Type traits from `<type_traits>`, like `std::is_integral_v<T>` and `std::is_floating_point_v<T>`, answer questions about T."
@@ -55,7 +55,7 @@ demo:
       note: int and long are integral, so both get in.
     - line: 18
       crash: "Unconstrained: error buried deep inside!"
-      note: Without the concept, 2.5 % 2 fails deep in the body.
+      note: Without the concept, 2.5 % 2 fails deep inside.
     - line: 18
       shield: "Rejected at the door: double isn't integral!"
       note: With the concept, the error points right at your call.
@@ -74,7 +74,7 @@ challenges:
       - t: half(true)
         why: Surprise! bool counts as integral too.
       - t: half(2.5)
-        why: "Correct: double is floating point, not integral, so the concept rejects it."
+        why: double is floating point, not integral, so it's rejected.
     answer: 3
     hints:
       - Only one of these is a floating-point type.
@@ -98,7 +98,7 @@ challenges:
       - t: "1.5"
         why: double doubles fine. 3.0.
       - t: std::string{"7"}
-        why: "Correct: + glues strings, so twice returns \"77\" instead of 14. Compiles, silently wrong."
+        why: "+ glues strings, so it returns \"77\", not 14. Silently wrong."
       - t: "-4"
         why: Negative ints double fine. -8.
     answer: 2
@@ -135,11 +135,11 @@ challenges:
       }
     options:
       - t: static_assert(std::is_floating_point_v<T>, "average needs double or float")
-        why: "Correct: ints (which would truncate) are rejected at compile time, with your message."
+        why: Truncating ints are rejected at compile time, with your message.
       - t: static_assert(std::is_arithmetic_v<T>, "average needs a number")
         why: int is arithmetic too, so average(3, 4) still compiles and returns 3.
       - t: assert(a >= 0)
-        why: Runs at runtime and checks a value, not the type. ints still truncate.
+        why: A runtime value check, not a type check. ints still truncate.
       - t: static_assert(sizeof(T) > 0, "T must be complete")
         why: True for every complete type. It blocks nothing.
     answer: 0
@@ -167,7 +167,7 @@ challenges:
     tags: [ w13.constrain, w13.concepts, w3.divzero ]
     bug: unconstrained-template
     unsafe: true
-    prompt: UNSAFE code review. Tap every line that lets something dangerous or nonsensical through.
+    prompt: UNSAFE. Tap the unconstrained `template` line and the line that can hit UB.
     code: |-
       #include <concepts>
 
@@ -190,7 +190,7 @@ challenges:
       - One template has no constraint at all.
       - A concept checks the type. Who checks the value?
     short: Constrain every template, and still check values like whole == 0.
-    explain: "Line 2 lets any type into twice, so strings compile and concatenate. Line 6 is constrained to integers, but a concept only checks the type: percent(5, 0) divides by zero (UB), and a huge part can overflow. Add a constraint to twice and a runtime check to percent."
+    explain: "The plain `template <typename T>` lets any type into twice, so strings compile and concatenate. percent is constrained to integers, but a concept only checks the type: percent(5, 0) divides by zero (UB), and a huge part can overflow. Add a constraint to twice and a runtime check to percent."
     sideBySide:
       prelude: "#include <concepts>"
       unsafe: |-
@@ -215,7 +215,7 @@ challenges:
   - id: w13.l5.c5
     type: safe
     tags: [ w13.constrain, w13.concepts, w13.staticassert ]
-    prompt: Safe or unsafe? The Sentinel's unchecked blueprints are coming. Go fast!
+    prompt: Mark each blueprint safe or unsafe. Go fast!
     seconds: 30
     items:
       - code: |-

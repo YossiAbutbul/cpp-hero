@@ -5,7 +5,7 @@ title: Comments
 skill: structure
 shield: false
 concept:
-  short: Comments are notes for humans. // lasts to the end of the line; /* */ can span lines.
+  short: Comments are notes for humans. // runs to line end; /* */ can span lines.
   analogy: Comments are sticky notes that the compiler peels off before building.
   body:
     - "`//` comments out the rest of the line. `/* ... */` can span many lines but does **not** nest: the first `*/` ends it."
@@ -45,7 +45,7 @@ challenges:
   - id: w1.l4.c1
     type: predict
     tags: [ w1.comments, w1.cout ]
-    prompt: What exactly does this program print?
+    prompt: What does this program print?
     code: |-
       #include <iostream>
 
@@ -70,7 +70,7 @@ challenges:
       - t: |
           two
           five
-        why: Correct! Only the two statements outside comments run.
+        why: Only the two statements outside comments run.
       - t: |
           two
           four
@@ -90,7 +90,7 @@ challenges:
       - t: // print the text
         why: It repeats what the code already says. Just noise.
       - t: // Report goes to a log reader that only understands plain text, so no tabs
-        why: Correct! It explains WHY, which the code alone can't tell you.
+        why: It explains WHY, which the code alone can't tell you.
       - t: // cout
         why: One word, no information. The code already shows cout.
       - t: // TODO
@@ -104,7 +104,7 @@ challenges:
   - id: w1.l4.c3
     type: predict
     tags: [ w1.comments, w1.cout ]
-    prompt: Tricky one! What exactly does this program print?
+    prompt: What does this print? (↵ marks a new line.)
     code: |-
       #include <iostream>
 
@@ -117,7 +117,7 @@ challenges:
         why: Inside a string, // is just two slashes, not a comment.
       - t: |
           http://codebase.dev
-        why: Correct! Comment markers inside strings are ordinary text.
+        why: Comment markers inside strings are ordinary text.
       - t: |
           http:/codebase.dev
         why: Both slashes are printed; nothing is swallowed.
@@ -132,7 +132,7 @@ challenges:
   - id: w1.l4.c4
     type: bug
     tags: [ w1.comments, w1.compile ]
-    prompt: "Intentionally broken: this doesn't compile. Tap the buggy line, then pick the fix."
+    prompt: This doesn't compile. Tap the buggy line, then pick the fix.
     code: |-
       #include <iostream>
 
@@ -152,7 +152,7 @@ challenges:
       - t: /* turn off the alarm /* for now */ please /*
         why: That opens a comment that never closes and swallows the file.
       - t: /* turn off the alarm (for now) please */
-        why: "Correct! One /* and one */: the whole note is inside."
+        why: "One /* and one */: the whole note is inside."
     answer: 3
     hints:
       - Block comments end at the FIRST */ they meet.
@@ -184,7 +184,7 @@ challenges:
     short: // comments out the rest of the line.
     explain: // comments out the rest of the line. /* would also start a comment, but it would need a matching */.
 recap:
-  - // to end of line; /* */ spans lines.
+  - // for one line, /* */ for many.
   - Block comments don't nest.
   - Comment the why, not the what.
   - // inside a string is just text.

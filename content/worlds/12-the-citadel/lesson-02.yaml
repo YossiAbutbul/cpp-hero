@@ -5,8 +5,8 @@ title: Throw and catch
 skill: structure
 shield: false
 concept:
-  short: "throw stops a function and flies up the call stack until a matching catch handles it; skipped code never runs."
-  analogy: "A throw is a signal flare: every frame drops what it's doing until a guard who knows that flare catches it."
+  short: "throw stops the function and unwinds the stack until a matching catch handles it."
+  analogy: "A throw is a signal flare: everyone drops everything until a guard answers."
   body:
     - "Some errors can't be handled where they happen. `drink(hp, -2)` knows the dose is bad, but not what the game should do about it. **`throw`** reports the problem to whoever called: `throw std::invalid_argument(\"dose must be positive\");` (from `<stdexcept>`)."
     - "Put code that might fail in a **`try`** block, and handle failures in a **`catch`** block right after it: `try { ... } catch (const std::invalid_argument& e) { ... }`. `e.what()` gives the message."
@@ -159,16 +159,16 @@ challenges:
     options:
       - t: |
           ABADE
-        why: "Correct: key 7 prints AB, key 3 prints A then throws. C is skipped, D catches, E follows."
+        why: "AB, then A and a throw. C is skipped; D, then E."
       - t: |
           ABACDE
-        why: After the throw, the rest of the try block is skipped. C never prints.
+        why: After the throw, the rest of the try block is skipped.
       - t: |
           ABABDE
         why: The throw stops openDoor(3) before its B.
       - t: |
           ABA
-        why: The exception is caught, so the program keeps going to D and E.
+        why: The exception is caught, so D and E still print.
     answer: 0
     hints:
       - Which call throws, and when?
@@ -202,13 +202,13 @@ challenges:
     prompt: An exception is thrown and NO catch anywhere matches it. What happens?
     options:
       - t: std::terminate ends the program abruptly
-        why: "Correct: an uncaught exception calls std::terminate, which usually aborts the program on the spot."
+        why: Nothing catches it, so std::terminate aborts the program.
       - t: The throw is ignored and the next line runs
-        why: Throws are never ignored. Unwinding continues until something catches, or the program is terminated.
+        why: Throws are never ignored. Something catches, or the program dies.
       - t: main returns 0 normally
-        why: No normal return happens. The program is killed abruptly, usually with an abort message.
+        why: No normal return happens. The program is killed abruptly.
       - t: It's a compile error
-        why: The compiler can't know whether some caller will catch it, so it compiles fine.
+        why: The compiler can't know if a caller catches it. It compiles.
     answer: 0
     hints:
       - Unwinding runs out of frames to search.
@@ -235,7 +235,7 @@ challenges:
     tags: [ w12.catch, w12.untrusted ]
     bug: uncaught-exception
     unsafe: true
-    prompt: "UNSAFE: typing `abc` kills this program with an uncaught exception. Tap the line, then pick the fix."
+    prompt: "UNSAFE: typing `abc` crashes this program. Tap the line that throws, then pick the fix."
     code: |-
       #include <iostream>
       #include <string>
@@ -250,11 +250,11 @@ challenges:
     bugLine: 6
     options:
       - t: "Wrap it in try, and catch std::invalid_argument and std::out_of_range"
-        why: "Correct: stoi throws those two. Catch them, report the problem, and exit or retry."
+        why: "Those are exactly the two types stoi throws."
       - t: Check text.empty() before calling stoi
         why: 'Stops empty input only. "abc" and "99999999999" still throw.'
-      - t: Mark main as noexcept
-        why: That guarantees terminate on any escaping exception. It's the opposite of handling it.
+      - t: Print text before calling stoi
+        why: Printing changes nothing. stoi still throws on "abc".
       - t: Change int to long
         why: '"abc" still isn''t a number, so std::stoi still throws.'
     answer: 0

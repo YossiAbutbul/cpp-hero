@@ -5,8 +5,8 @@ title: Contracts and invariants
 skill: logic
 shield: false
 concept:
-  short: "Preconditions, postconditions and invariants are promises. Check untrusted ones with if; assert your own logic; static_assert at compile time."
-  analogy: "A contract has two signatures: the caller promises good arguments, the function promises a good result."
+  short: "Contracts are promises. Check untrusted ones with if; assert your own logic."
+  analogy: "Caller promises good arguments; the function promises a good result."
   body:
     - "A **precondition** is what must be true before a call (the caller's promise): `amount >= 0`. A **postcondition** is what the function guarantees afterward (its promise): `hp` stays between 0 and max. An **invariant** is what's always true about an object between public calls: `0 <= hp_ <= max_`."
     - "Classes protect invariants (World 10): the constructor **establishes** it (or throws if it can't), every public member function **preserves** it, and `private` data means nobody outside can break it."
@@ -106,16 +106,16 @@ challenges:
   - id: w12.l5.c1
     type: mcq
     tags: [ w12.assert ]
-    prompt: Which check belongs in an assert?
+    prompt: Which of these checks belongs in an assert?
     options:
       - t: After your own clamp math, hp_ is between 0 and max_
-        why: "Correct: an internal promise only a bug in YOUR code could break. Perfect for assert."
+        why: Only a bug in YOUR code could break this.
       - t: The player typed a valid age
-        why: User input can be wrong in any build. assert vanishes with NDEBUG; use if.
+        why: Input can be wrong in any build, but assert vanishes. Use if.
       - t: The save file opened successfully
-        why: Files go missing in real life. That's an error to handle, not a bug to assert.
+        why: Files go missing in real life. Handle it; it's not a bug.
       - t: std::cin >> x succeeded
-        why: Worse than useless under NDEBUG, the whole read is deleted along with the assert.
+        why: Input can fail. With NDEBUG, the read inside assert is deleted too.
     answer: 0
     hints:
       - Which of these can go wrong even if your code is perfect?
@@ -139,7 +139,7 @@ challenges:
     type: bug
     tags: [ w12.assert, w12.contract ]
     unsafe: true
-    prompt: "UNSAFE: withdraw is public, but its guard vanishes in release builds. Tap the line, then pick the fix."
+    prompt: "UNSAFE: withdraw's guard vanishes in release builds. Tap that line, then pick the fix."
     code: |-
       class Wallet {
       public:
@@ -155,11 +155,11 @@ challenges:
     bugLine: 3
     options:
       - t: "if (amount <= 0 || amount > gold_) { throw std::invalid_argument(\"bad withdrawal\"); }"
-        why: "Correct: a real check that stays on in every build, and callers can catch it."
+        why: A real check, on in every build, and callers can catch it.
       - t: Keep the assert and hope nobody builds with -DNDEBUG
         why: Release builds typically define NDEBUG. Hope is not a defense.
       - t: static_assert(amount > 0);
-        why: amount is only known at run time, so static_assert can't use it. Compile error.
+        why: amount is only known at run time. Compile error.
       - t: Delete the check; callers should know better
         why: Then withdraw(-500) adds 500 gold, and 1000 overdraws. The invariant breaks.
     answer: 0
@@ -228,7 +228,7 @@ challenges:
     options:
       - t: |
           7 10
-        why: "Correct: -3 is refused, then 7 + 5 would pass 10, so it clamps to max."
+        why: "-3 is refused; 7 + 5 passes 10, so it clamps."
       - t: |
           4 10
         why: add refuses negative amounts, so -3 changes nothing.
@@ -241,7 +241,7 @@ challenges:
     answer: 0
     hints:
       - What does add do with a negative n?
-      - "Room left is max_ - value_. Is 5 bigger than the room?"
+      - Room left is 10 minus 7. Is 5 bigger than that?
     short: Negative adds are refused; overflowing adds clamp to max. Invariant kept.
     explain: 'add(7) gives 7. add(-3) returns early. Output "7 ". add(5): room is 10 - 7 = 3, and 5 > 3, so value_ becomes max_ = 10. Output: "7 10" and a newline. Every public call keeps 0 <= value_ <= max_.'
   - id: w12.l5.c5
@@ -269,7 +269,7 @@ recap:
   - "Invariant: always true between public calls."
   - Check untrusted preconditions with if, in every build.
   - assert your own logic; NDEBUG deletes it.
-  - static_assert fails the build, costs nothing at run time.
+  - static_assert fails the build instead.
 vault:
   - id: w12.contracts
     title: Contracts in code

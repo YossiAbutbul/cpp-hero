@@ -5,11 +5,11 @@ title: new and delete
 skill: memory
 shield: false
 concept:
-  short: "Every new needs exactly one delete, and every new[] needs exactly one delete[], on every path."
-  analogy: "new is borrowing a library book and delete is returning it: once, through the right slot, never twice."
+  short: "Each new needs one delete; each new[] needs one delete[]. Every path."
+  analogy: "new borrows a book; delete returns it, once."
   body:
     - "`new T{value}` creates one T on the heap and returns a `T*`. `delete p;` destroys it and hands the memory back. The pointer itself keeps the old address: it now **dangles**, so set it to `nullptr` if it stays in scope."
-    - "For a run-time-sized array: `int* scores = new int[n]{};` (the `{}` zero-fills it) and later `delete[] scores;`. The brackets must match: `new` pairs with `delete`, `new[]` pairs with `delete[]`. Mixing them compiles but is **undefined behavior**."
+    - "For a run-time-sized array: `int* scores = new int[n]{};` (the `{}` zero-fills it) and later `delete[] scores;`. The brackets must match: `new` pairs with `delete`, `new[]` pairs with `delete[]`. Mixing them compiles but is **undefined behavior**. Like a library book: return it once, through the right slot, never twice."
     - "`delete nullptr;` is allowed and does nothing. Deleting the same address twice (**double delete**) is UB, and so is deleting something that didn't come from `new`."
     - "If the heap is out of room, `new` throws `std::bad_alloc`; it doesn't return nullptr. A negative array size throws `std::bad_array_new_length`. Either way, validate sizes before allocating."
     - "The hard part is **every path**: an early `return`, a `break` or an exception can skip your `delete`, and that memory leaks. Doing this by hand is error-prone, which is why the next lessons hand the job to smart pointers and containers."
@@ -45,12 +45,12 @@ demo:
           - { name: "heap[1]", value: "0", group: scores }
           - { name: "heap[2]", value: "0", group: scores }
           - { name: scores, ptr: "heap[0]", addr: stack }
-      note: "new int[n]{} makes 3 zeroed ints on the heap."
+      note: "new int[n]{} makes 3 zeroed heap ints."
     - line: 5
       mem:
         cells:
           - { name: "heap[0]", value: "40" }
-      note: Index through the pointer like an array.
+      note: Index it like an array.
     - line: 6
       mem:
         cells:
@@ -60,7 +60,7 @@ demo:
       vars:
         i: "0"
       out: "40 "
-      note: Printing each heap slot in turn.
+      note: Print each slot.
     - line: 8
       vars:
         i: "1"
@@ -73,13 +73,13 @@ demo:
       vars:
         i: null
       out: "\n"
-      note: Loop done; i went out of scope.
+      note: Loop done; i is out of scope.
     - line: 11
       vars:
         scores: "→ (freed)"
       mem:
         drop: [ "heap[0]", "heap[1]", "heap[2]" ]
-      note: "delete[] frees the whole array: brackets match brackets."
+      note: "delete[] frees the whole array."
     - line: 12
       vars:
         scores: "nullptr"
@@ -91,27 +91,27 @@ challenges:
   - id: w9.l2.c1
     type: mcq
     tags: [ w9.array-new, w9.delete ]
-    prompt: "`int* loot = new int[5]{};` What frees it correctly?"
+    prompt: "`int* loot = new int[5]{};` Which line frees it correctly?"
     options:
       - t: delete[] loot;
-        why: "Correct: memory from new[] must be freed with delete[]."
+        why: Memory from new[] goes back through delete[].
       - t: delete loot;
-        why: "Mismatch: plain delete on new[] memory is undefined behavior."
+        why: Plain delete on new[] memory is UB.
       - t: "delete loot[0];"
-        why: loot[0] is an int, not a pointer. It doesn't compile.
+        why: loot[0] is an int. Won't compile.
       - t: Nothing; it's freed at the closing brace
-        why: Only the pointer loot vanishes at }. The heap array leaks.
+        why: Only the pointer vanishes. The array leaks.
     answer: 0
     hints:
       - Brackets in, brackets out.
-      - Heap memory is never freed by scope alone.
+      - Scope never frees heap memory.
     short: "new[] pairs with delete[]; new pairs with delete."
     explain: "Array new (`new int[5]`) must be released with array delete (`delete[] loot;`). Using plain `delete` is UB even if it seems to work. And nothing happens automatically: when the pointer goes out of scope, the array leaks."
   - id: w9.l2.c2
     type: bug
     tags: [ w9.array-new, w9.delete ]
     unsafe: true
-    prompt: UNSAFE code. It prints fine, but the cleanup is wrong. Tap the buggy line, then pick the fix.
+    prompt: UNSAFE code. It frees memory wrongly. Tap the buggy line, then pick the fix.
     code: |-
       #include <iostream>
 
@@ -126,18 +126,18 @@ challenges:
     bugLine: 7
     options:
       - t: delete[] arrows;
-        why: "Correct: the memory came from new[], so it goes back through delete[]."
+        why: It came from new[], so it needs delete[].
       - t: delete arrows[0];
-        why: arrows[0] is an int, not a pointer. It won't compile.
+        why: arrows[0] is an int. Won't compile.
       - t: "Remove the line: the array frees itself"
-        why: Heap memory never frees itself. That's a leak.
+        why: Heap memory never frees itself. That leaks.
       - t: delete arrows; delete arrows;
-        why: Deleting twice is a double delete, and plain delete is still the wrong form.
+        why: Double delete, still the wrong form.
     answer: 0
     hints:
-      - How was the memory created on line 4?
-      - The delete must match the new.
-    short: Memory from new[] must go back through delete[].
+      - How was it created?
+      - Match the new.
+    short: Memory from new[] goes back through delete[].
     explain: "`new int[n]` is array new, so it needs `delete[] arrows;`. Plain `delete` on it is undefined behavior: it may seem fine, corrupt the heap, or crash later. g++ often warns about this mismatch. Better still: `std::vector<int> arrows(n);` has no delete to get wrong."
     sideBySide:
       unsafe: |-
@@ -151,7 +151,7 @@ challenges:
   - id: w9.l2.c3
     type: predict
     tags: [ w9.array-new, w2.init ]
-    prompt: What does this print? (Look closely at the braces.)
+    prompt: What does this print? Look closely at the braces.
     code: |-
       #include <iostream>
 
@@ -164,20 +164,20 @@ challenges:
     options:
       - t: |
           500
-        why: "Correct: {5} sets the first slot; the rest are zero-initialized."
+        why: "{5} sets the first slot; the rest become zero."
       - t: |
           555
-        why: "One value in braces fills only the first element, not all of them."
+        why: One value fills only the first slot.
       - t: |
           5
-        why: All three slots are printed, one after another.
+        why: All three slots are printed.
       - t: 5 then two garbage values
-        why: With braces, the missing elements are zeroed, not left as garbage.
+        why: With braces, missing slots are zeroed.
     answer: 0
     hints:
-      - "Brace init with fewer values than slots: what fills the rest?"
-      - No spaces are printed between the numbers.
-    short: "{5} sets gems[0]; the remaining slots are zero-initialized."
+      - "Fewer values than slots: what fills the rest?"
+      - No spaces between numbers.
+    short: "{5} sets gems[0]; the rest become zero."
     explain: "`new int[3]{5}` initializes the first element to 5 and zero-initializes the rest, just like `int a[3]{5};`. The three values print with no separator: 500. Without any braces (`new int[3]`), the ints would be uninitialized garbage."
   - id: w9.l2.c4
     type: write
@@ -189,14 +189,14 @@ challenges:
     placeholder: one line of C++
     hints:
       - It came from array new.
-      - Brackets go right after the keyword.
+      - Brackets follow the keyword.
     short: "delete[] loot; frees memory from new[]."
     explain: "Array memory goes back with `delete[] loot;`. Then, if loot stays in scope, set it to nullptr so nobody follows the stale address."
   - id: w9.l2.c5
     type: harden
     tags: [ w9.leak, w9.delete, w6.return ]
     bug: memory-leak
-    prompt: "The early return skips the delete[] at the end. What goes in the blank?"
+    prompt: "The early return skips the final delete[]. Fill the blank so this path frees buf."
     code: |-
       int* buf = new int[n]{};
       if (n > 10) {
@@ -209,18 +209,18 @@ challenges:
     prelude: int n{12};
     options:
       - t: delete[] buf
-        why: "Correct: this path now frees the array before leaving."
+        why: This path now frees the array before leaving.
       - t: buf = nullptr
-        why: That throws away the only address. The array leaks for good.
+        why: That loses the only address. The array leaks.
       - t: delete buf
-        why: Frees on this path, but the wrong form for new[] memory. UB.
+        why: Wrong form for new[] memory. UB.
       - t: buf[0] = 0
-        why: Changes a value; the array is still never freed on this path.
+        why: Still never freed.
     answer: 0
     hints:
-      - Every exit must hand the memory back.
-      - Match the kind of new that was used.
-    short: Every exit path must free heap memory, or it leaks.
+      - Every exit must free it.
+      - Match the new.
+    short: Every exit must free heap memory, or it leaks.
     explain: "Manual memory means every path needs its own `delete[]`: early returns, breaks and exceptions included. Miss one and the memory leaks. That's why real code uses `std::vector<int> buf(n);` or a smart pointer: they free themselves on every path."
     sideBySide:
       unsafe: |-
@@ -240,8 +240,8 @@ challenges:
 recap:
   - new pairs with delete, new[] with delete[].
   - Deleting twice is undefined behavior.
-  - Every exit path must reach the delete.
-  - After delete, reset the pointer to nullptr.
+  - Every exit path must reach delete.
+  - After delete, reset to nullptr.
 vault:
   - id: w9.newdelete
     title: new / delete pairs

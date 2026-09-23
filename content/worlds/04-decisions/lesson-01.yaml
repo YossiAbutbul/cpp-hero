@@ -6,7 +6,7 @@ skill: logic
 shield: false
 concept:
   short: "if runs a block only when its condition is true; else runs when it's false."
-  analogy: "An if is a fork in the road: the condition is the signpost, and you take exactly one path."
+  analogy: "A fork in the road: the condition picks which one path you take."
   body:
     - "`if (condition) { ... }` runs the block in braces only when the condition is `true`. The condition is any `bool` expression, like the comparisons from World 3: `hp > 0`, `gold >= 10 && level > 2`."
     - "Add `else { ... }` for the other path: exactly one of the two blocks runs, never both, never neither."
@@ -72,7 +72,7 @@ challenges:
       - t: |
           Keep saving
           Done
-        why: "Correct: 8 >= 10 is false, so the else runs, then Done."
+        why: "8 >= 10 is false, so else runs, then Done."
       - t: |
           Buy sword
           Done
@@ -128,13 +128,13 @@ challenges:
     bugLine: 4
     options:
       - t: "if (gold >= 10) {"
-        why: "Correct: without the stray ;, the block belongs to the if again."
+        why: "Without the stray ;, the block belongs to the if again."
       - t: "if (gold > 10); {"
-        why: The condition was fine. The ; still ends the if, so the block always runs.
+        why: The condition was fine. The ; still makes the block always run.
       - t: "if ((gold >= 10)); {"
         why: Extra parentheses change nothing; the ; is still the whole if body.
       - t: "if (gold == 10) {"
-        why: "Removes the ;, but changes the rule: a hero with 15 gold could no longer buy."
+        why: "Removes the ;, but now 15 gold could no longer buy."
     answer: 0
     hints:
       - Look at what comes right after the closing parenthesis.
@@ -163,11 +163,11 @@ challenges:
     prelude: int hp = 5;
     options:
       - t: '"Game over" prints; "You fell!" does not'
-        why: "Correct: without braces, only the first line belongs to the if."
+        why: "Without braces, only the first line belongs to the if."
       - t: Nothing prints
         why: The indentation lies. The second line isn't part of the if.
       - t: Both lines print
-        why: hp <= 0 is false, so the one line the if controls is skipped.
+        why: hp <= 0 is false, so the one guarded line is skipped.
       - t: Compile error
         why: It compiles. -Wall warns about misleading indentation, though.
     answer: 0
@@ -216,9 +216,9 @@ challenges:
     short: 'if (hp <= 0) { std::cout << "Game over\n"; }'
     explain: 'The condition goes in parentheses, the action in braces: `if (hp <= 0) { std::cout << "Game over\n"; }`. Braces keep it safe when you add more lines later.'
 recap:
-  - if runs its block only when the condition is true.
-  - else runs when it's false. Exactly one path runs.
-  - "Always use braces; never put ; after if (...)."
+  - if runs its block when true.
+  - else runs when false. One path runs.
+  - "Always braces; no ; after if (...)."
 vault:
   - id: w4.ifelse
     title: if / else

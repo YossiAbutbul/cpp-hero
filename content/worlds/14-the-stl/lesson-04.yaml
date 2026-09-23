@@ -6,7 +6,7 @@ skill: toolkit
 shield: false
 concept:
   short: "<algorithm> gives ready-made loops like sort, find, count and max_element; each works on a begin-end range."
-  analogy: "Algorithms are power tools: point them at a stretch of shelf, from begin() to end(), and pull the trigger."
+  analogy: "Algorithms are power tools: aim at begin() to end(), pull the trigger."
   body:
     - "`#include <algorithm>` brings dozens of tested loops. You hand each one a range: `std::sort(v.begin(), v.end());` sorts the whole vector, smallest first."
     - "`std::reverse(first, last)` flips a range. `std::count(first, last, x)` counts copies of x. `std::find(first, last, x)` returns an iterator to the first x, or `last` if there is none."
@@ -84,7 +84,7 @@ challenges:
     options:
       - t: |
           431
-        why: "Correct: sorted to 1 3 4, then reversed to 4 3 1."
+        why: Sorted to 1 3 4, then flipped, with no spaces.
       - t: |
           134
         why: That's only the sort. reverse then flips it.
@@ -106,7 +106,7 @@ challenges:
     prompt: "`std::find(v.begin(), v.end(), 42)` finds no 42. What does it return?"
     options:
       - t: v.end()
-        why: "Correct: \"not found\" is reported as the end of the range you searched."
+        why: The end of the searched range is its "not found" signal.
       - t: "-1"
         why: That's string::find's npos idea. std::find returns an iterator.
       - t: nullptr
@@ -122,7 +122,7 @@ challenges:
   - id: w14.l4.c3
     type: predict
     tags: [ w14.accumulate ]
-    prompt: What does this print? (Look closely at the starting value.)
+    prompt: What does this print? Watch the start value 0.
     code: |-
       #include <iostream>
       #include <numeric>
@@ -136,13 +136,13 @@ challenges:
     options:
       - t: |
           3
-        why: "Correct: the start 0 is an int, so the running total is an int: 1, then 3, then 3."
+        why: "The int total goes 1, then 3, then 3."
       - t: |
           4.5
-        why: That needs a double start value, 0.0. With 0, the total is an int.
+        why: That needs a double start, 0.0. With 0, the total is int.
       - t: |
           4
-        why: "Each step chops, never rounds: 0+1.5 is 1, 1+2.5 is 3, 3+0.5 is 3."
+        why: "Each step chops: 1, then 3 (from 3.5), then 3."
       - t: |
           5
         why: Fractions are chopped at every step, not rounded up.
@@ -189,7 +189,7 @@ challenges:
   - id: w14.l4.c6
     type: predict
     tags: [ w14.count ]
-    prompt: A named function as a test. What does this print?
+    prompt: What does this print?
     code: |-
       #include <algorithm>
       #include <iostream>
@@ -207,7 +207,7 @@ challenges:
     options:
       - t: |
           2
-        why: "Correct: 12 and 10 pass d >= 10."
+        why: "Only 12 and 10 pass d >= 10."
       - t: |
           1
         why: 10 >= 10 is true too.

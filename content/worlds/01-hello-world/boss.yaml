@@ -19,7 +19,7 @@ rounds:
       - t: A period .
         why: Periods are for member access, not ending statements.
       - t: A semicolon ;
-        why: Correct! The Gremlin can't steal what you remember.
+        why: Semicolons end statements, like full stops end sentences.
       - t: A new line
         why: C++ ignores line breaks between statements.
       - t: A closing brace }
@@ -33,7 +33,7 @@ rounds:
   - id: w1.boss.r2
     type: predict
     tags: [ w1.cout, w1.comments ]
-    prompt: The Gremlin growls in pieces. What exactly does this print?
+    prompt: The Gremlin growls in pieces. What does this print? (↵ marks a new line.)
     code: |-
       #include <iostream>
 
@@ -57,7 +57,7 @@ rounds:
         why: cout adds no spaces between items.
       - t: |
           Grrr!
-        why: Correct! "Gr" + "r" + "r!\n" makes one growl.
+        why: '"Gr" + "r" + "r!\n" glue into one growl.'
     answer: 3
     hints:
       - Glue all the pieces together in order.
@@ -67,7 +67,7 @@ rounds:
   - id: w1.boss.r3
     type: bug
     tags: [ w1.cout, w1.compile ]
-    prompt: "Intentionally broken: the Gremlin swapped one character. The build fails with \"'cout' was not declared in this scope\". Tap the line, then pick the fix."
+    prompt: "The Gremlin changed one character, so cout is \"not declared\". Tap the line, then pick the fix."
     code: |-
       #include <iostream>
 
@@ -84,7 +84,7 @@ rounds:
       - t: cout << "Gremlin was here\n";
         why: Plain cout isn't declared. It lives inside std.
       - t: std::cout << "Gremlin was here\n";
-        why: Correct! Two colons reach into the std namespace.
+        why: Two colons reach into the std namespace.
       - t: std;cout << "Gremlin was here\n";
         why: std alone isn't a statement. Still an error.
     answer: 2
@@ -169,7 +169,7 @@ rounds:
   - id: w1.boss.r5
     type: fill
     tags: [ w1.comments ]
-    prompt: The Gremlin opened a block comment and ran off. Close it so the rest of the program isn't swallowed!
+    prompt: The Gremlin left a block comment open. Fill in what closes it.
     code: |-
       #include <iostream>
 
@@ -295,7 +295,7 @@ defense:
         - t: "(nothing: the line break is enough)"
           why: C++ ignores line breaks. It needs a real ;.
         - t: ;
-          why: Correct! Semicolon restored, statement complete.
+          why: Semicolon restored, statement complete.
       answer: 3
       hints:
         - The Gremlin's favorite snack.
@@ -330,7 +330,7 @@ defense:
         - t: Adding three blank lines inside main()
           why: Whitespace doesn't matter to the compiler.
         - t: "Changing line 1 to #include <iostreem>"
-          why: 'Correct! "fatal error: iostreem: No such file or directory".'
+          why: '"fatal error: iostreem: No such file or directory".'
         - t: Changing "Shield holds!\n" to "Shield holds!!\n"
           why: Different text, still perfectly valid code.
       answer: 2
@@ -349,7 +349,7 @@ defense:
       id: w1.boss.d3
       type: harden
       tags: [ w1.warnings, w1.cout ]
-      prompt: "Final attack: the Gremlin swaps your quotes! Pick what fills the blank for a clean build and the right text."
+      prompt: "Final attack: swapped quotes! Fill the blank so it prints Gremlin drools! with no warnings."
       code: |-
         #include <iostream>
 
@@ -359,7 +359,7 @@ defense:
         }
       options:
         - t: '"Gremlin drools!\n"'
-          why: Correct! A proper string, clean build, and a well-deserved burn.
+          why: A proper string, clean build, and a well-deserved burn.
         - t: "'Gremlin drools!\\n'"
           why: "Single quotes around many characters: a warning, and a number prints."
         - t: "\"Gremlin drools!\\n'"
@@ -375,7 +375,7 @@ defense:
       sideBySide:
         unsafe: std::cout << 'Gremlin drools!\n';   // warning + garbage number
         hardened: std::cout << "Gremlin drools!\n";
-victory: Nooo! My semicolons! Fine, you can read errors. The Garbage Blob won't be so easy!
+victory: Nooo! My semicolons! Fine, you can read errors. The Garbage Blob won't be easy!
 reward:
   xp: 150
   cosmetic: gremlin-horns

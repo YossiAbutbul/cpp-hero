@@ -5,8 +5,8 @@ title: "Structs: bundle your data"
 skill: structure
 shield: false
 concept:
-  short: A struct bundles related variables into one new type. Reach each member with a dot.
-  analogy: "A struct is a character sheet: one card that holds name, hp and level together."
+  short: A struct bundles related variables into one type. Reach members with a dot.
+  analogy: "A struct is a character sheet: name, hp and level on one card."
   body:
     - "Three loose variables `name`, `hp` and `level` are easy to mix up between heroes. A **struct** groups them into one new type: `struct Hero { std::string name; int hp; int level; };`. Note the `;` after the closing brace."
     - "Each variable inside is a **member**. Create an object with `Hero ada{\"Ada\", 12, 3};` (members are filled in the order they are declared) and reach members with a dot: `ada.hp`, `ada.name`."
@@ -43,7 +43,7 @@ demo:
           - { name: ada.name, value: "Ada", group: ada }
           - { name: ada.hp, value: "12", group: ada }
           - { name: ada.level, value: "3", group: ada }
-      note: "ada's members are filled in order: name, hp, level."
+      note: "Filled in order: name, hp, level."
     - line: 11
       mem:
         cells:
@@ -55,12 +55,12 @@ demo:
       mem:
         cells:
           - { name: rookie.name, value: "Rex" }
-      note: The dot reaches one member of one object.
+      note: The dot reaches one member.
     - line: 13
       mem:
         cells:
           - { name: ada.hp, value: "10" }
-      note: Only ada changes. rookie has its own hp.
+      note: Only ada changes.
     - line: 14
       out: |
         Ada 10
@@ -69,7 +69,7 @@ demo:
         Rex 10 1
       note: Rex kept the default hp and level.
     - line: 16
-      note: Two objects, one blueprint. Tidy!
+      note: Two objects, one blueprint.
 challenges:
   - id: w10.l1.c1
     type: mcq
@@ -84,18 +84,18 @@ challenges:
       Potion p{};
     options:
       - t: 5 and 0
-        why: "Correct: power uses its default; {} zero-fills uses, which has no default."
+        why: power keeps 5; uses becomes 0.
       - t: 5 and garbage
-        why: "That's `Potion p;` without braces. The {} zero-fills members that have no default."
+        why: "That's `Potion p;` without braces."
       - t: 0 and 0
-        why: "{} doesn't override defaults: power keeps its 5."
+        why: "{} doesn't override defaults."
       - t: Compile error
-        why: Empty braces are a valid way to create a struct object.
+        why: Empty braces are valid here.
     answer: 0
     hints:
       - Members with a default keep it.
-      - "What does {} do to an int with no default?"
-    short: "{} keeps defaults and zero-fills members that have none."
+      - "What does {} do to a bare int?"
+    short: "{} keeps defaults and zero-fills the rest."
     explain: "`Potion p{};` value-initializes: power gets its default member initializer (5), and uses, which has none, is zero-filled. Without the braces (`Potion p;`), uses would hold garbage, and reading it is UB. Safest habit: give every member a default."
   - id: w10.l1.c2
     type: predict
@@ -119,26 +119,26 @@ challenges:
     options:
       - t: |
           6,2
-        why: "Correct: b starts as {5, 2}, then b.x becomes 6."
+        why: "b starts as {5, 2}, then x becomes 6."
       - t: |
           3,5
-        why: b was built from a.y then a.x, so its members are swapped.
+        why: "b got a.y first, so it's swapped."
       - t: |
           5,2
-        why: b.x += 1 runs before printing, so x is 6.
+        why: b.x += 1 runs before printing.
       - t: |
-          6, 2
-        why: The ',' is a single char with no space after it.
+          2,6
+        why: The code prints b.x first, then b.y.
     answer: 0
     hints:
-      - Braces fill members in declaration order.
+      - Braces fill in declaration order.
       - b.x gets a.y, which is 5.
-    short: b is {5, 2}; then b.x += 1 makes it 6.
+    short: Braces fill members in declaration order.
     explain: "`Point b{a.y, a.x}` fills x with 5 and y with 2 (declaration order). `b.x += 1` makes x 6. Output: \"6,2\" and a newline."
   - id: w10.l1.c3
     type: fill
     tags: [ w10.member ]
-    prompt: Fill in the operator that reaches the power member.
+    prompt: "Type the operator that reaches p's power member."
     prelude: "struct Potion { std::string name; int power{}; };"
     code: |-
       Potion p{"Heal", 5};
@@ -147,14 +147,14 @@ challenges:
       - "."
     placeholder: operator
     hints:
-      - "Object, then operator, then member name."
-      - It's a single punctuation character.
-    short: object.member reaches a member, like p.power.
+      - "Object, operator, member name."
+      - One punctuation character.
+    short: "The dot reaches a member: p.power."
     explain: "The dot (member access) operator reaches a member of an object: `p.power` is 5. (Through a pointer you'd use `->`: `ptr->power`.)"
   - id: w10.l1.c4
     type: predict
     tags: [ w10.struct, w10.copy ]
-    prompt: Structs are values. What does this print?
+    prompt: What does this print?
     code: |-
       #include <iostream>
 
@@ -173,21 +173,21 @@ challenges:
     options:
       - t: |
           11 3
-        why: "Correct: b is a separate copy, so each object changes on its own."
+        why: b is a separate copy.
       - t: |
           4 4
-        why: "b = a copies the members; it doesn't make b another name for a."
+        why: "b = a copies; it's not a second name."
       - t: |
           11 11
         why: b.hp was set to 3 after the copy.
       - t: |
           10 3
-        why: a.hp += 1 changes a from 10 to 11.
+        why: a.hp += 1 makes a 11.
     answer: 0
     hints:
-      - "Does Hero b = a make a copy or a second name?"
-      - "Copy: a and b each have their own hp."
-    short: "Hero b = a copies every member. They change independently."
+      - "Copy, or second name?"
+      - a and b each have their own hp.
+    short: "Hero b = a copies every member."
     explain: "Copying a struct copies each member, just like copying an int. b.hp becomes 3 and a.hp becomes 11. Output: \"11 3\" and a newline. (Want a second name instead? That's a reference, `Hero& b = a;`.)"
   - id: w10.l1.c5
     type: bug
@@ -209,18 +209,18 @@ challenges:
     bugLine: 4
     options:
       - t: "};"
-        why: "Correct: a struct definition must end with a semicolon."
+        why: A struct definition ends with a semicolon.
       - t: "} Gem;"
-        why: Declares a variable named Gem that hides the type. Gem g{} then breaks.
+        why: This declares a variable Gem that hides the type.
       - t: Change struct to class
-        why: "Still needs the ;, and every member would become private."
+        why: "Still missing the ;."
       - t: "int main(); {"
-        why: The error is reported near main, but the struct is what's missing the ;.
+        why: The struct above main lacks the ;.
     answer: 0
     hints:
-      - The error mentions main, but look just above it.
-      - How must every struct definition end?
-    short: "A struct definition ends with };, not just }."
+      - The error mentions main. Look above it.
+      - How must a struct definition end?
+    short: "A struct definition ends with };"
     explain: "`struct Gem { ... }` must be followed by `;`. Without it, the compiler thinks the next line continues the declaration, so the error points at `int main()`. Classic!"
     sideBySide:
       unsafe: |-
@@ -235,7 +235,7 @@ challenges:
   - id: w10.l1.c6
     type: write
     tags: [ w10.struct, w10.member ]
-    prompt: 'Write one line that creates a Hero named `boss` with name "Golem", hp 50 and level 9.'
+    prompt: 'Write one line creating Hero `boss`: name "Golem", hp 50, level 9.'
     prelude: "struct Hero { std::string name; int hp{10}; int level{1}; };"
     accept:
       - Hero boss{"Golem", 50, 9};
@@ -244,15 +244,15 @@ challenges:
       - ^Hero boss=?\{"Golem",50,9\};$
     placeholder: Hero boss ...
     hints:
-      - "Type, name, then the values in braces."
-      - "Values go in declaration order: name, hp, level."
-    short: 'Hero boss{"Golem", 50, 9}; fills members in order.'
+      - "Type, name, values in braces."
+      - "Order: name, hp, level."
+    short: Values fill members in declaration order.
     explain: 'Brace init fills members in declaration order: `Hero boss{"Golem", 50, 9};`. Then boss.name is "Golem", boss.hp is 50, boss.level is 9.'
 recap:
   - A struct bundles related members into one type.
   - "End every struct definition with };"
   - "Reach members with a dot: hero.hp."
-  - "Give members defaults; {} zero-fills the rest."
+  - "Give defaults; {} zero-fills the rest."
 vault:
   - id: w10.struct
     title: A struct

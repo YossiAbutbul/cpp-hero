@@ -2,39 +2,39 @@
 
 id: w9.p
 title: Slime Spawner
-intro: "Spawn a pool of slimes on the heap, each with one owner, and let the owners clean up every byte."
+intro: "Spawn heap slimes, each with one owner that cleans up every byte."
 steps:
   - id: w9.p.s1
     type: fill
     tags: [ w9.unique, w7.vector ]
-    prompt: "The pool holds one owner per slime. Fill in the element type: a unique_ptr to an int."
+    prompt: "Fill in the element type: a unique_ptr to an int, one owner per slime."
     code: std::vector<___> pool;
     accept:
       - std::unique_ptr<int>
     placeholder: element type
     hints:
-      - Each slime's HP lives on the heap with exactly one owner.
-      - "std::unique_ptr, with int in angle brackets."
-    short: A vector of unique_ptr owns every slime, and frees them all.
+      - One heap owner per slime.
+      - "std::unique_ptr, int in <>."
+    short: A vector of unique_ptr owns and frees every slime.
     explain: "`std::vector<std::unique_ptr<int>> pool;` is a container of owners. When the vector is destroyed, each unique_ptr deletes its slime. No delete to write anywhere."
   - id: w9.p.s2
     type: fill
     tags: [ w9.make-unique ]
-    prompt: "Spawn slime number i with 10 + i HP. Fill in the function that creates it."
+    prompt: "Fill in the function that creates slime i with 10 + i HP."
     code: pool.push_back(std::___<int>(10 + i));
     prelude: std::vector<std::unique_ptr<int>> pool; int i{0};
     accept:
       - make_unique
     placeholder: function name
     hints:
-      - It creates the int and its owner in one step.
+      - Makes the int and its owner.
       - It starts with make_.
-    short: make_unique creates each slime and its owner in one step.
+    short: make_unique makes each slime and its owner.
     explain: "`std::make_unique<int>(10 + i)` returns a fresh unique_ptr. It's a temporary, so push_back moves it straight into the vector: no copy needed."
   - id: w9.p.s3
     type: order
     tags: [ w9.make-unique, w5.for ]
-    prompt: Order the spawning loop so it creates n slimes.
+    prompt: Order the loop so it spawns n slimes.
     prelude: int n{3}; std::vector<std::unique_ptr<int>> pool;
     lines:
       - "for (int i = 0; i < n; ++i) {"
@@ -43,9 +43,9 @@ steps:
     distractors:
       - "    pool.push_back(new int{10 + i});"
     hints:
-      - Loop header, body, closing brace.
-      - A raw new can't slip into a vector of unique_ptr.
-    short: Loop n times, pushing a fresh make_unique each time.
+      - Header, body, closing brace.
+      - Raw new can't go in.
+    short: Loop n times, pushing a make_unique each time.
     explain: "The loop runs n times, each time pushing a new owner. The distractor `push_back(new int{...})` doesn't compile: unique_ptr's constructor from a raw pointer is explicit, which stops raw new from sneaking in."
   - id: w9.p.s4
     type: bug
@@ -61,19 +61,19 @@ steps:
     bugLine: 1
     options:
       - t: "for (const auto& slime : pool) {"
-        why: "Correct: each slime is borrowed by reference, not copied. Owners stay in the pool."
+        why: Borrows each slime by reference. No copies.
       - t: "for (auto slime : std::move(pool)) {"
-        why: Still copies each element. And moving the pool away isn't what we want.
+        why: Still copies each element, and empties the pool.
       - t: "for (auto* slime : pool) {"
-        why: The elements are unique_ptrs, not raw pointers. Doesn't compile.
+        why: The elements are unique_ptrs, not raw pointers.
       - t: "for (int slime : pool) {"
-        why: A unique_ptr doesn't convert to int. Doesn't compile.
+        why: A unique_ptr doesn't convert to int.
     answer: 0
     hints:
-      - "auto slime makes a copy of each element."
+      - "auto slime copies each element."
       - Can a unique_ptr be copied?
-    short: Loop over unique_ptrs by const reference; they can't be copied.
-    explain: "`for (auto slime : pool)` tries to copy each unique_ptr, and copying is deleted. `const auto&` borrows each element instead, just like World 7's rule for big elements. The pool keeps ownership."
+    short: Loop over unique_ptrs by const reference.
+    explain: "`for (auto slime : pool)` tries to copy each unique_ptr, and copying is deleted. `const auto&` borrows each element instead, just like World 7's rule for big elements. The pool keeps ownership. `std::move(pool)` doesn't help: the loop still copies each element, and moving the pool away isn't what we want."
     sideBySide:
       unsafe: |-
         int total{};
@@ -90,7 +90,7 @@ steps:
   - id: w9.p.s5
     type: predict
     tags: [ w9.unique, w7.range-for ]
-    prompt: "Test run with n = 3. What does the report print?"
+    prompt: "The pool holds 3 slimes. What does this print? Spaces count."
     prelude: "std::vector<std::unique_ptr<int>> pool; for (int i = 0; i < 3; ++i) { pool.push_back(std::make_unique<int>(10 + i)); }"
     code: |-
       int total{};
@@ -102,41 +102,41 @@ steps:
     options:
       - t: |
           10 11 12 | total 33
-        why: "Correct: slimes get 10, 11, 12 HP, and 10 + 11 + 12 = 33."
+        why: HP 10, 11, 12, and 10 + 11 + 12 = 33.
       - t: |
           11 12 13 | total 36
-        why: i starts at 0, so the first slime has 10 + 0 HP.
+        why: i starts at 0, so the first slime has 10 HP.
       - t: |
           10 11 12 13 | total 46
-        why: "i < n with n = 3 spawns exactly 3 slimes."
+        why: "i < 3 spawns exactly 3 slimes."
       - t: |
           10 11 12| total 33
-        why: Each number is followed by a space, including the last.
+        why: A space follows every number, even the last.
     answer: 0
     hints:
-      - i runs 0, 1, 2.
-      - Every number prints with a space after it.
-    short: Three slimes with 10, 11, 12 HP; the total is 33.
+      - Spawned with i = 0, 1, 2.
+      - A space after every number.
+    short: HP 10, 11, 12; total 33.
     explain: "The loop spawned HP 10 + 0, 10 + 1, 10 + 2. Each prints followed by a space, then \"| total 33\" and a newline."
   - id: w9.p.s6
     type: mcq
     tags: [ w9.raii, w9.rule-of-zero ]
-    prompt: The program is done. How many delete statements does it need?
+    prompt: How many delete statements does this program need?
     options:
       - t: None
-        why: "Correct: the vector destroys each unique_ptr, and each deletes its slime."
+        why: Each unique_ptr deletes its own slime.
       - t: One per slime, in a loop at the end
-        why: The unique_ptrs already delete them. Doing it too would be a double delete.
+        why: The unique_ptrs already do that. Double delete.
       - t: One delete[] for the whole pool
-        why: The pool isn't from new[]. The vector frees its own storage.
+        why: The pool isn't from new[]. The vector frees itself.
       - t: One, but only on early returns
-        why: RAII covers early returns too. That's the whole point.
+        why: RAII covers early returns too.
     answer: 0
     hints:
       - Who owns each slime?
-      - What happens to a vector at the closing brace of main?
-    short: "Zero deletes: the vector and its unique_ptrs clean up everything."
-    explain: "Rule of Zero in action: the vector owns the unique_ptrs, and each unique_ptr owns a slime. At main's }, the vector is destroyed, each unique_ptr deletes its int, and nothing leaks on any path."
+      - What happens at main's }?
+    short: "Zero deletes: the owners clean up."
+    explain: "Rule of Zero in action: the vector owns the unique_ptrs, and each unique_ptr owns a slime. At main's }, the vector is destroyed, each unique_ptr deletes its int, and nothing leaks on any path. Deleting them yourself too would be a double delete."
 program: |-
   #include <cstddef>
   #include <iostream>
@@ -167,7 +167,7 @@ program: |-
   }
 programStdin: "3\n"
 stress:
-  intro: Hard hats on! I'll throw nasty spawn counts at your pool. Patch every crack!
+  intro: Hard hats on! Nasty spawn counts incoming. Patch every crack!
   attacks:
     - input: abc
       label: Text instead of a number!
@@ -175,7 +175,7 @@ stress:
         id: w9.p.a1
         type: harden
         tags: [ w3.validate, w3.cin ]
-        prompt: "`abc` leaves n at 0 and the stream broken. Pick the check that catches the failed read."
+        prompt: "Input `abc` must be rejected. Fill the blank to catch a failed read."
         code: |-
           int n{};
           if (___ || n < 1 || n > 100) {
@@ -184,19 +184,19 @@ stress:
           }
         options:
           - t: "!(std::cin >> n)"
-            why: "Correct: reads and checks in one step; a failed read makes it true."
+            why: Reads and checks in one step.
           - t: n == 0
-            why: Never reads anything, so n is always 0 here.
+            why: Never reads anything, so n is always 0.
           - t: std::cin >> n
-            why: "Inverted: true when the read SUCCEEDS, so every good count is rejected."
+            why: "Inverted: rejects every good read."
           - t: "!std::cin"
-            why: Checks the stream, but nothing ever read n. Every run is rejected.
+            why: Nothing ever reads n. Every run is rejected.
         answer: 0
         hints:
-          - The read itself must happen inside the check.
-          - A failed read makes the stream test false.
-        short: "!(std::cin >> n) reads and rejects a failed read in one step."
-        explain: "`!(std::cin >> n)` does the read and tests the stream. Text like abc fails the read, so the program stops before spawning anything."
+          - Read inside the check.
+          - A failed read tests false.
+        short: "!(std::cin >> n) reads and catches failure."
+        explain: "`!(std::cin >> n)` does the read and tests the stream: a failed read makes it true. Text like abc fails the read (n stays 0 and the stream is broken), so the program stops before spawning anything."
         sideBySide:
           unsafe: |-
             std::cin >> n;                 // "abc": fails silently
@@ -213,7 +213,7 @@ stress:
         id: w9.p.a2
         type: harden
         tags: [ w3.validate, w9.heap ]
-        prompt: "-5 becomes a gigantic size_t in reserve(), which throws and ends the program. Pick the guard."
+        prompt: "Input -5 crashes reserve(). Fill the blank to reject every bad low count."
         code: |-
           int n{};
           if (!(std::cin >> n) || ___ || n > 100) {
@@ -223,18 +223,18 @@ stress:
         prelude: std::vector<std::unique_ptr<int>> pool;
         options:
           - t: n < 1
-            why: "Correct: rejects zero and every negative count before any allocation."
+            why: Rejects zero and every negative count.
           - t: n == -5
-            why: Blocks only -5. Any other negative still gets through.
+            why: Blocks only -5. Other negatives get through.
           - t: n > 0
-            why: "Inverted: rejects every valid count and lets negatives in."
+            why: "Inverted: rejects every valid count."
           - t: n < -100
             why: Lets -1 to -99 straight through.
         answer: 0
         hints:
-          - Guard the whole range of bad values, not one.
-          - At least one slime is needed.
-        short: "Reject n < 1 before any allocation size is computed."
+          - Guard the whole bad range.
+          - At least one slime.
+        short: "Reject n < 1 before any allocation."
         explain: "Converted to std::size_t, -5 wraps around to about 18 quintillion. reserve() can't allocate that and throws std::length_error, and nobody catches it, so the program terminates. Validate the range before any size reaches an allocation."
         sideBySide:
           unsafe: |-
@@ -252,7 +252,7 @@ stress:
         id: w9.p.a3
         type: harden
         tags: [ w3.validate, w9.heap ]
-        prompt: "A billion heap allocations would eat all memory. Pick the cap."
+        prompt: "A billion slimes would eat all memory. Fill the blank with a sane cap."
         code: |-
           int n{};
           if (!(std::cin >> n) || n < 1 || ___) {
@@ -260,18 +260,18 @@ stress:
           }
         options:
           - t: n > 100
-            why: "Correct: caps the pool at a sane size before anything is allocated."
+            why: Caps the pool before anything is allocated.
           - t: n > 1000000000
-            why: A billion itself still passes, and so does everything just below it.
+            why: A billion itself still passes.
           - t: n == 1000000000
-            why: Blocks one exact value. 999999999 slimes still get through.
+            why: Blocks one value. 999999999 still gets through.
           - t: "false"
-            why: No cap at all. The huge count sails through.
+            why: No cap at all.
         answer: 0
         hints:
-          - Valid input can still be too big.
-          - Pick a sane upper limit and enforce it.
-        short: Cap the count; the heap is big, but not infinite.
+          - Valid can still be too big.
+          - Pick a sane limit.
+        short: Cap the count; the heap isn't infinite.
         explain: "A billion slimes means a billion allocations: gigabytes of memory. new then throws std::bad_alloc (or the OS kills the program). Always cap sizes that come from input before allocating."
         sideBySide:
           unsafe: |-

@@ -2,12 +2,12 @@
 
 id: w6.p
 title: Spell Library
-intro: "Write small spells, damage(), heal() and clampHp(), then chain them into one safe battle turn."
+intro: "Write damage(), heal() and clampHp(), then chain them into one safe battle turn."
 steps:
   - id: w6.p.s1
     type: write
     tags: [ w6.prototype ]
-    prompt: "Start the library's table of contents: write the prototype of damage, which takes int hp and int amount and returns an int."
+    prompt: "Write the prototype of damage: it takes int hp and int amount, returns an int."
     accept:
       - int damage(int hp, int amount);
       - "[[nodiscard]] int damage(int hp, int amount);"
@@ -16,8 +16,8 @@ steps:
     placeholder: int damage(...);
     hints:
       - Return type, name, parameters with types.
-      - A prototype has no body and ends with a semicolon.
-    short: "int damage(int hp, int amount); promises the function exists."
+      - No body. End with a semicolon.
+    short: "A prototype promises the function exists."
     explain: "A prototype is the signature plus `;`. With all prototypes at the top, main() can call the spells, and their bodies can come later in the file."
   - id: w6.p.s2
     type: fill
@@ -46,14 +46,13 @@ steps:
       - hp <= 0
     placeholder: condition
     hints:
-      - Which values are below the valid range?
-      - The body returns 0 for them.
-    short: "if (hp < 0) return 0; clamps the low end."
+      - Which values are below the range?
+    short: "hp < 0 returns 0: the low end is clamped."
     explain: "Values below 0 are clamped to 0, values above 100 to 100, and everything else passes through. Every path returns, so there's no UB. (hp <= 0 also works: returning 0 for 0 changes nothing.)"
   - id: w6.p.s3
     type: order
     tags: [ w6.validate, w4.guard ]
-    prompt: "Order heal()'s body: the guard clause first, then the happy path."
+    prompt: "Order heal()'s body: guard clause first, then the happy path. One line is a decoy."
     prelude: "auto clampHp = [](int v) { return v < 0 ? 0 : (v > 100 ? 100 : v); }; int hp{50}; int amount{20};"
     lines:
       - "if (amount < 0) {"
@@ -64,8 +63,7 @@ steps:
       - return hp - amount;
     hints:
       - Reject bad input before doing the work.
-      - Healing adds; the result is clamped.
-    short: Guard against negative amounts, then return the clamped sum.
+    short: Reject negative amounts, then return the clamped sum.
     explain: "Guard clauses go first: a negative amount returns hp untouched. Then the happy path adds and clamps. (The final program also caps the amount before adding, so a huge potion can't overflow.)"
   - id: w6.p.s4
     type: predict
@@ -91,34 +89,32 @@ steps:
     options:
       - t: |
           0 55 100
-        why: "Correct: -7 clamps up to 0, 55 passes through, 250 clamps down to 100."
+        why: -7 becomes 0, 55 stays, 250 becomes 100.
       - t: |
           -7 55 250
-        why: The guards change out-of-range values before they're returned.
+        why: The guards clamp out-of-range values.
       - t: |
           0 55 250
-        why: The second guard catches anything above 100.
+        why: The second guard catches 250.
       - t: |
           0 0 100
-        why: 55 is in range, so it reaches the final return hp.
+        why: 55 is in range, so it returns 55.
     answer: 0
     hints:
       - Which guard does each value hit, if any?
-      - In-range values reach the last line.
-    short: "-7 becomes 0, 55 stays, 250 becomes 100."
+    short: "Out-of-range values clamp to 0 or 100."
     explain: 'Each call gets its own frame: -7 hits the first guard (0), 55 passes both (55), 250 hits the second (100). Output: "0 55 100" and a newline.'
   - id: w6.p.s5
     type: write
     tags: [ w6.return, w6.nodiscard ]
-    prompt: "battleTurn(hp, hit, potion) returns the new hp. Write the line that runs a turn with hit 30 and potion 10 and keeps the result."
+    prompt: "battleTurn(hp, hit, potion) returns the new hp. Write one line: hit 30, potion 10, keep the result."
     prelude: "auto battleTurn = [](int h, int hit, int potion) { return h - hit + potion; }; int hp{100};"
     accept:
       - hp = battleTurn(hp, 30, 10);
     placeholder: hp = ...
     hints:
-      - The function can't change hp itself.
-      - Store the returned value back into hp.
-    short: hp = battleTurn(hp, 30, 10); keeps the new hp.
+      - Store the result back into hp.
+    short: Store the returned hp, or the turn is lost.
     explain: "Every spell returns a new value instead of changing the caller's variable, so the caller stores it: `hp = battleTurn(hp, 30, 10);`. [[nodiscard]] on battleTurn makes forgetting the `hp =` a warning."
 program: |-
   #include <cassert>
@@ -182,7 +178,7 @@ program: |-
       return heal(hp, potion);
   }
 stress:
-  intro: Brace yourself! I'll cast cursed arguments at your Spell Library. Patch every crack!
+  intro: Brace yourself! Cursed arguments incoming. Patch every crack!
   attacks:
     - input: damage(hp, -20)
       label: Negative damage heals the enemy!
@@ -190,7 +186,7 @@ stress:
         id: w6.p.a1
         type: harden
         tags: [ w6.validate, w4.guard ]
-        prompt: "damage(80, -20) returns 100: the attack HEALS! Pick the guard."
+        prompt: "damage(80, -20) returns 100: the attack HEALS! Pick the guard condition."
         prelude: |-
           int clampHp(int hp) {
               return hp < 0 ? 0 : (hp > 100 ? 100 : hp);
@@ -211,18 +207,18 @@ stress:
           }
         options:
           - t: amount < 0
-            why: "Correct: negative damage is rejected and hp comes back unchanged."
+            why: Negative damage is rejected. hp stays unchanged.
           - t: amount > hp
-            why: That's overkill, which clampHp already handles. -20 still slips through.
+            why: clampHp already handles overkill. -20 slips through.
           - t: hp < 0
-            why: Wrong parameter. The attack is in amount.
+            why: Wrong parameter. The curse is in amount.
           - t: amount == 0
-            why: Zero damage is harmless. Negatives are the problem.
+            why: Zero is harmless. Negatives are the problem.
         answer: 0
         hints:
           - Which parameter carries the curse?
           - Subtracting a negative number adds.
-        short: Guard amount < 0 so damage can never heal.
+        short: Guard amount < 0 so damage never heals.
         explain: "hp - (-20) is hp + 20, so unguarded negative damage heals. The guard `amount < 0` rejects the whole negative range before the math runs."
         sideBySide:
           unsafe: return clampHp(hp - amount);   // damage(80, -20) gives 100!
@@ -238,7 +234,7 @@ stress:
         id: w6.p.a2
         type: bug
         tags: [ w6.nodiscard, w6.return ]
-        prompt: The potion does nothing, and g++ warns "ignoring return value". Tap the buggy line, then pick the fix.
+        prompt: The potion does nothing, and g++ warns. Tap the buggy line, then pick the fix.
         code: |-
           #include <iostream>
 
@@ -259,19 +255,18 @@ stress:
         bugLine: 11
         options:
           - t: hp = heal(hp, 10);
-            why: "Correct: the healed value is stored, and the warning goes away for the right reason."
+            why: The healed value is stored in hp.
           - t: (void)heal(hp, 10);
-            why: Silences the warning but still throws the healing away.
+            why: Silences the warning, still throws the healing away.
           - t: int healed = heal(hp, 10);
-            why: Stores it in a new variable, but hp is still printed unchanged.
+            why: hp itself is still printed unchanged.
           - t: heal(hp, 10 + 0);
-            why: Changes the argument, not the problem. The result is still dropped.
+            why: The result is still dropped.
         answer: 0
         hints:
           - The function returns the new hp. Who keeps it?
-          - "[[nodiscard]] is telling you exactly this."
-        short: "Store the result: hp = heal(hp, 10);. [[nodiscard]] flagged it."
-        explain: "heal() works on a copy and returns the result. Calling it without using the value does nothing. Because heal is [[nodiscard]], g++ warns; treat that warning as a bug report."
+        short: "Store the result. [[nodiscard]] flagged the drop."
+        explain: "heal() works on a copy and returns the result. Calling it without using the value does nothing. Because heal is [[nodiscard]], g++ warns \"ignoring return value\"; treat that warning as a bug report. (void) silences it but keeps the bug."
         sideBySide:
           unsafe: "heal(hp, 10);        // warning: result ignored, hp stays 40"
           hardened: hp = heal(hp, 10);   // hp is 50
@@ -283,7 +278,7 @@ stress:
         type: harden
         tags: [ w6.dangling, w6.lifetime ]
         bug: dangling-ref
-        prompt: "The Spell Library returns spell names. Pick the return type that can't dangle."
+        prompt: "Pick the return type for spellName that can't dangle."
         code: |-
           #include <iostream>
           #include <string>
@@ -299,18 +294,18 @@ stress:
           }
         options:
           - t: std::string
-            why: "Correct: returns by value, so the caller gets its own string. Nothing dangles."
+            why: By value, the caller gets its own string.
           - t: const std::string&
-            why: "A reference to local name, which dies at the return: dangling, UB."
+            why: "name dies at the return: dangling, UB."
           - t: std::string&
             why: Same dangling reference, minus the const.
           - t: void
-            why: A void function can't return a value. Compile error.
+            why: void can't return a value. Compile error.
         answer: 0
         hints:
           - name dies when spellName returns.
           - Hand back a copy, not a reference.
-        short: Return std::string by value; a reference to local name dangles.
+        short: Return std::string by value; a local reference dangles.
         explain: 'name lives in spellName''s frame and is destroyed at the return. A reference to it points at dead memory: UB that may print "Meteor" today and garbage tomorrow. g++ warns with -Wreturn-local-addr. By value is safe and cheap (the string is moved out).'
         sideBySide:
           unsafe: |-

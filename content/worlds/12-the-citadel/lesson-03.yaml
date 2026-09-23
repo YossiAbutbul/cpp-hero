@@ -5,8 +5,8 @@ title: The exception family
 skill: structure
 shield: false
 concept:
-  short: "Exceptions form a family tree under std::exception. Catch specific types first, always by const reference; noexcept promises no throws."
-  analogy: "Catch blocks are guards in a line: the first one who recognizes the flare's family takes it, so put specialists first."
+  short: "Exceptions form a family under std::exception. Catch specific types first, by const reference."
+  analogy: "Catch blocks are guards in a line: the first who recognizes it wins."
   body:
     - "The standard exceptions are classes in one family tree. At the root is **`std::exception`** (it has `what()`). Below it: **`std::logic_error`** (bugs the caller could have avoided: `std::invalid_argument`, `std::out_of_range`, `std::length_error`) and **`std::runtime_error`** (problems only visible at run time: `std::overflow_error`, `std::range_error`). `std::bad_alloc` means \"out of memory\"."
     - "A `catch` for a base class also catches every derived class, because a derived exception **is-a** base (World 11!). Handlers are tried **top to bottom**, and the first match wins. So put **specific types first** and `std::exception` last."
@@ -137,13 +137,13 @@ challenges:
     prompt: Why write `catch (const std::exception& e)` instead of `catch (std::exception e)`?
     options:
       - t: By value copies and slices off the derived part
-        why: "Correct: a NotEnoughMana caught by value becomes a plain std::exception copy. The reference keeps the real object."
+        why: A derived exception copied into a base loses its extra part.
       - t: By value doesn't compile
         why: It compiles (g++ warns with -Wcatch-value). It's legal but loses information.
       - t: The reference lets you change the exception
-        why: "const means the opposite: you promise not to change it. The point is avoiding the copy and slice."
+        why: "const means the opposite: you promise NOT to change it."
       - t: References are needed for what() to exist
-        why: what() exists either way. By value, it's the base version, so the derived message may be lost.
+        why: what() exists either way; by value you may get the base version.
     answer: 0
     hints:
       - Remember the Slicing Phantom from World 11.
@@ -154,7 +154,7 @@ challenges:
     type: review
     tags: [ w12.hierarchy, w12.catchref ]
     unsafe: true
-    prompt: "UNSAFE: code review! Tap every dangerous catch line."
+    prompt: "UNSAFE: tap every catch line that is wrong or dangerous."
     code: |-
       try {
           castSpell(cost);
@@ -234,7 +234,7 @@ challenges:
     options:
       - t: |
           8 logic end
-        why: "Correct: out_of_range is-a logic_error, so the first handler matches. The rest of try is skipped."
+        why: out_of_range is-a logic_error, so the first handler matches.
       - t: |
           8 other end
         why: "out_of_range derives from logic_error, so the FIRST handler already matches."
@@ -286,9 +286,9 @@ challenges:
     expect: warn
     options:
       - t: std::terminate is called; the catch never gets it
-        why: "Correct: an exception leaving a noexcept function calls std::terminate on the spot. g++ even warns."
+        why: A throw escaping noexcept calls std::terminate on the spot.
       - t: The caller's catch handles it normally
-        why: noexcept is a promise. Breaking it calls std::terminate before any caller can catch.
+        why: Breaking the noexcept promise kills the program before any catch.
       - t: It's a compile error
         why: It compiles, with a warning that the throw will always call terminate.
       - t: It returns -2

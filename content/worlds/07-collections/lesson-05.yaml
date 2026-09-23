@@ -5,8 +5,8 @@ title: "Shield: Stay in bounds"
 skill: defense
 shield: true
 concept:
-  short: "[] never checks, .at() throws. Loop with std::size_t i < size(), and never hold references across push_back."
-  analogy: "[] grabs from the shelf blindfolded; .at() looks first and shouts if the slot isn't there."
+  short: "[] never checks; .at() throws. Loop i < size()."
+  analogy: "[] grabs blindfolded; .at() looks first and shouts if nothing's there."
   body:
     - "**[] doesn't check.** `v[10]` on a 3-element vector is undefined behavior: it may read garbage, corrupt other data, crash, or seem to work perfectly. An index of -1 is just as bad: converted to `std::size_t`, it becomes a gigantic number."
     - "**.at() checks.** `v.at(10)` throws `std::out_of_range` (from `<stdexcept>`), which you can catch: `try { ... } catch (const std::out_of_range&) { ... }`. Uncaught, it stops the program with an error: loud, never silent. (World 12 covers exceptions fully.) Often the best move is to check `i < v.size()` yourself before indexing."
@@ -45,54 +45,54 @@ demo:
     - line: 5
       vars:
         hp: "[10, 20, 30]"
-      note: "Three slots: valid indexes are 0, 1 and 2."
+      note: "Valid indexes: 0, 1 and 2."
     - line: 6
       vars:
         hp: "[10, 20, 30]"
         i: "5"
-      note: Index 5 arrives, maybe straight from user input.
+      note: Index 5 arrives, maybe from input.
     - line: 8
       crash: "hp[5]: reading past the end!"
-      note: "Unchecked, hp[5] is UB: garbage, a crash, or silence."
+      note: "Unchecked, hp[5] is UB."
     - line: 7
       shield: Bounds checked!
-      note: "Back to reality: 5 < 3 is false, so [] never runs."
+      note: "Really, 5 < 3 fails: [] never runs."
     - line: 10
       out: |
         No slot 5
     - line: 13
-      note: ".at(5) checks the index itself and throws."
+      note: ".at(5) checks the index and throws."
     - line: 15
       out: |
         at() caught it!
       shield: std::out_of_range caught!
-      note: Loud and catchable, never silent garbage.
+      note: Loud and catchable, never silent.
     - line: 17
       vars:
         hp: "[10, 20, 30]"
         i: "5"
         first: "0"
-      note: Remember the first element by INDEX, not by reference.
+      note: Remember the first element by INDEX.
     - line: 18
       vars:
         hp: "[10, 20, 30, 40]"
         i: "5"
         first: "0"
       crash: "An int& to hp[0] would dangle now!"
-      note: push_back may move every element to new memory.
+      note: push_back may move every element.
     - line: 19
       out: |
         10
       shield: Index still valid!
-      note: hp[first] finds the element in its new home.
+      note: hp[first] finds the element's new home.
     - line: 20
-      note: Done. Every access was checked or known to be in range.
+      note: Done. Every access checked.
 challenges:
   - id: w7.l5.c1
     type: predict
     tags: [ w7.at, w7.bounds ]
     bug: out-of-bounds
-    prompt: ".at() meets a bad index. What does this print?"
+    prompt: What does this print?
     code: |-
       #include <iostream>
       #include <stdexcept>
@@ -113,27 +113,27 @@ challenges:
     options:
       - t: |
           5 caught
-        why: "Correct: v.at(1) prints 5, v.at(3) throws, and the catch block runs."
+        why: "5, then at(3) throws."
       - t: |
           caught
-        why: Output printed before the throw stays printed. The 5 is already out.
+        why: The 5 printed before the throw.
       - t: "5 0 done \n"
-        why: .at() never invents a value for a bad index. It throws.
+        why: .at() throws, never invents.
       - t: |
           4 caught
-        why: "Indexes start at 0, so v.at(1) is 5."
+        why: "v.at(1) is 5."
     answer: 0
     hints:
-      - Valid indexes for 3 elements are 0, 1, 2.
-      - "When at() throws, the rest of the try block is skipped."
-    short: "at(1) prints 5; at(3) throws, so \"caught\" prints next."
+      - Valid indexes are 0, 1, 2.
+      - "A throw skips the rest of try."
+    short: "A throw jumps straight to catch."
     explain: "v.at(1) is 5 and prints \"5 \". v.at(3) is out of range, so it throws std::out_of_range before printing anything; the rest of the try block (\"done \") is skipped and the catch prints \"caught\". Output: \"5 caught\" and a newline. With v[3] instead, it would be undefined behavior: no guarantee of anything."
   - id: w7.l5.c2
     type: bug
     tags: [ w7.bounds, w5.offbyone, w5.for ]
     bug: out-of-bounds
     unsafe: true
-    prompt: "UNSAFE: this sums the damage list but reads past the end. Tap the buggy line, then pick the fix."
+    prompt: "UNSAFE: this sum reads past the end. Tap the buggy line, pick the fix."
     code: |-
       #include <iostream>
       #include <vector>
@@ -150,19 +150,19 @@ challenges:
     bugLine: 6
     options:
       - t: for (std::size_t i = 0; i < dmg.size(); ++i) {
-        why: "Correct: i runs 0, 1, 2 and stops before 3."
+        why: "i stops before 3."
       - t: for (int i = 0; i <= dmg.size() - 1; ++i) {
-        why: "Signed/unsigned warning, and on an empty vector size() - 1 wraps to a huge number."
+        why: "Sign warning, and wraps on empty."
       - t: for (std::size_t i = 1; i <= dmg.size(); ++i) {
         why: Skips dmg[0] and still reads dmg[3].
       - t: for (std::size_t i = 0; i <= dmg.size(); i++) {
-        why: i++ vs ++i changes nothing. Still reads dmg[3].
+        why: i++ changes nothing. Still reads dmg[3].
     answer: 0
     hints:
       - What is dmg[dmg.size()]?
-      - "The last valid index is size() - 1, so stop BEFORE size()."
-    short: "i < size(), never i <= size(): dmg[3] doesn't exist."
-    explain: "With `<=`, the last pass reads dmg[3], one past the end: undefined behavior. It may add garbage, crash, or seem fine, and [] never warns. Use `i < dmg.size()` with std::size_t, or skip indexes entirely: `for (int d : dmg) { total += d; }`."
+      - "Stop BEFORE size()."
+    short: "i < size(), never i <= size()."
+    explain: "With `<=`, the last pass reads dmg[3], one past the end: undefined behavior. It may add garbage, crash, or seem fine, and [] never warns. Use `i < dmg.size()` with std::size_t, or skip indexes entirely: `for (int d : dmg) { total += d; }`. The `int i <= dmg.size() - 1` version triggers a signed/unsigned warning, and on an empty vector `size() - 1` wraps around to a huge number."
     sideBySide:
       unsafe: |-
         #include <vector>
@@ -211,9 +211,9 @@ challenges:
       "9": "Fine: a read-only loop that changes nothing."
       "13": "front() on an empty vector: UB."
     hints:
-      - What can push_back do to existing elements?
+      - What can push_back do?
       - Does scores have a front?
-    short: "A reference held across push_back dangles; front() on empty is UB."
+    short: "push_back can dangle references; empty has no front."
     explain: "push_back may reallocate: the elements move and the old memory is freed, so `leader` refers to freed memory and reading it is undefined behavior. It may print \"Curlo\" today and garbage tomorrow. Keep an index (`std::size_t leader{0};`) and read `team[leader]`. `scores.front()` on an empty vector is also UB: check `!scores.empty()` first."
     sideBySide:
       unsafe: |-
@@ -242,7 +242,7 @@ challenges:
     type: harden
     tags: [ w7.bounds, w5.signed-unsigned, w3.validate ]
     bug: out-of-bounds
-    prompt: "The player picks a slot. Pick the check that blocks every bad index."
+    prompt: "The player types a slot. Pick the check that rejects every invalid slot."
     code: |-
       #include <iostream>
       #include <string>
@@ -261,19 +261,19 @@ challenges:
       }
     options:
       - t: pick < 0 || static_cast<std::size_t>(pick) >= items.size()
-        why: "Correct: rejects negatives first, then anything at or past size(). Only 0, 1, 2 get through."
+        why: Rejects negatives and size() or more.
       - t: pick > static_cast<int>(items.size())
-        why: "Off by one: 3 gets through (items[3] is past the end), and so does -1."
+        why: "Lets 3 and -1 through."
       - t: pick < 0
-        why: Blocks -1, but 3 or 99 still read past the end.
+        why: Lets 3 and 99 through.
       - t: pick > 2
-        why: Hardcoded, so it breaks when the list changes, and -1 still gets through.
+        why: Lets -1 through.
     answer: 0
     hints:
-      - Bad indexes can be too small AND too big.
-      - Check for negatives before converting to std::size_t.
-    short: "Block both ends: pick < 0, or pick >= size()."
-    explain: "A valid index is 0 to size() - 1. Check `pick < 0` first (converted to std::size_t, -1 becomes a huge number), then compare the converted value with size(). The explicit cast also avoids World 5's signed/unsigned warning."
+      - Too small AND too big.
+      - Check negatives before converting.
+    short: "Block both ends."
+    explain: "A valid index is 0 to size() minus 1. Check `pick < 0` first (converted to std::size_t, -1 becomes a huge number), then compare the converted value with size(). The explicit cast also avoids World 5's signed/unsigned warning. `pick > 2` works for this exact list, but it's a hardcoded number that goes stale when items change, and it still lets -1 through."
     sideBySide:
       unsafe: |-
         #include <string>
@@ -299,7 +299,7 @@ challenges:
     tags: [ w7.invalidation, w7.reserve, w5.for ]
     bug: iterator-invalidation
     unsafe: true
-    prompt: "UNSAFE: room for 4 is reserved, then a reference is held while pushing n more. Which n can break it?"
+    prompt: "UNSAFE: room for 4 is reserved, then n more are pushed. Which n can make `first` dangle?"
     code: |-
       #include <iostream>
       #include <vector>
@@ -320,18 +320,18 @@ challenges:
       }
     options:
       - t: "4"
-        why: "Correct: size becomes 5, past the reserved 4, so push_back may reallocate and first dangles."
+        why: "Size 5 passes the reserved 4."
       - t: "3"
-        why: Size reaches exactly 4. reserve(4) guarantees no reallocation up to 4.
+        why: Size 4 fits the reserved room.
       - t: "0"
-        why: Nothing is pushed, so first stays valid.
+        why: Nothing is pushed.
       - t: "-2"
-        why: The loop never runs (0 < -2 is false). Nothing moves.
+        why: The loop never runs.
     answer: 0
     hints:
-      - reserve(4) promises room for at least 4 elements.
-      - "1 element is already inside. How many more fit?"
-    short: "Pushing past the reserved room can reallocate: first dangles."
+      - reserve(4) makes room for 4.
+      - "1 is inside. How many more fit?"
+    short: "Past the reserved room, references can dangle."
     explain: "reserve(4) guarantees no reallocation while size stays at 4 or less. With n = 4 the size reaches 5, so push_back may move the elements and `first` refers to freed memory. Writing 99 through it is undefined behavior: it might corrupt memory silently. Safest fix: keep an index and write `v[0] = 99;` after the loop."
     sideBySide:
       unsafe: |-
@@ -359,7 +359,7 @@ challenges:
   - id: w7.l5.c6
     type: safe
     tags: [ w7.bounds, w7.npos, w7.empty, w7.invalidation ]
-    prompt: Safe or unsafe? The Overflow Blob's minions are leaking in. Go fast!
+    prompt: Safe or unsafe? Tap fast before the minions leak in!
     seconds: 30
     items:
       - code: |-
@@ -368,25 +368,25 @@ challenges:
           }
         prelude: std::string s{"hi"};
         safe: true
-        why: "i stops before size(): every index is valid."
+        why: "i stops before size()."
       - code: |-
           std::string s;
           char last = s.back();
         safe: false
-        why: back() on an empty string is UB.
+        why: back() on empty is UB.
       - code: |-
           if (!s.empty()) {
               std::cout << s.back();
           }
         prelude: std::string s{"hi"};
         safe: true
-        why: Checked for empty before calling back().
+        why: Checks empty first.
       - code: |-
           std::size_t p = s.find('!');
           std::cout << s[p];
         prelude: std::string s{"hi"};
         safe: false
-        why: "No '!' means p is npos: a gigantic index. UB."
+        why: "No '!': p is npos."
       - code: |-
           std::size_t p = s.find('!');
           if (p != std::string::npos) {
@@ -394,7 +394,7 @@ challenges:
           }
         prelude: std::string s{"hi!"};
         safe: true
-        why: find's result is checked against npos before use.
+        why: Checked against npos first.
       - code: |-
           #include <vector>
 
@@ -403,29 +403,29 @@ challenges:
           v.push_back(3);
           r = 7;
         safe: false
-        why: push_back may reallocate, so r dangles. Writing through it is UB.
+        why: r may dangle after push_back.
       - code: |-
           int a[3]{};
           for (int i = 0; i <= 3; ++i) {
               a[i] = i;
           }
         safe: false
-        why: "i reaches 3: writes one past the end of a C array. UB."
+        why: "i reaches 3: past the end."
       - code: |-
           std::string name{"Curlo"};
           name += " the Brave";
         safe: true
-        why: std::string grows as needed. No buffer to overflow.
+        why: Strings grow as needed.
     hints:
-      - "Look for indexes that can reach size(), or npos."
-      - Look for references held across push_back, and empty front/back.
-    short: Safe code checks bounds, npos and empty before touching elements.
+      - "Indexes reaching size(), or npos?"
+      - References across push_back? Empty back()?
+    short: Check bounds, npos and empty first.
     explain: "Safe code keeps every index below size(), checks find() against npos, checks empty() before front()/back(), and never keeps a reference into a vector across push_back. std::string and std::vector grow by themselves; raw arrays don't."
 recap:
-  - "[] is unchecked (UB); .at() throws std::out_of_range."
-  - "Loop std::size_t i < size(), or use range-for."
-  - "Check empty() before front(), back(), pop_back()."
-  - "push_back can move elements: keep indexes, not references."
+  - "[] is unchecked; .at() throws."
+  - "Loop i < size(), or use range-for."
+  - "Check empty() before front() or back()."
+  - "Keep indexes, not references, across push_back."
 vault:
   - id: w7.bounds-check
     title: Check the index (or use .at())
@@ -460,7 +460,7 @@ vault:
       if (!v.empty()) {
           std::cout << v.back() << '\n';   // front/back need a non-empty vector
       }
-    note: size() is std::size_t. size() - 1 on an empty vector wraps to a huge number.
+    note: size() is std::size_t. size() minus 1 on an empty vector wraps to a huge number.
     defense: true
   - id: w7.no-dangling
     title: Don't hold references across push_back

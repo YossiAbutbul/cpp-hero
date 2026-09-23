@@ -7,7 +7,7 @@ icon: rocket
 blurb: "Your first program: what C++ code looks like and how it becomes something that runs."
 story:
   intro:
-    - Oh! A visitor! Hi hi! I'm Curlo, and I live between these braces { }.
+    - Oh! A visitor! Hi! I'm Curlo, and I live between these braces { }.
     - This is my home, the Codebase. It used to be so tidy...
     - But bugs keep sneaking in through every missing semicolon!
     - Learn C++ with me, and together we'll kick out the bug lords.

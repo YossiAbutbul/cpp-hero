@@ -5,8 +5,8 @@ title: Numbers as template parameters
 skill: structure
 shield: false
 concept:
-  short: "Template parameters can be values too: template <typename T, std::size_t N> fixes a size at compile time."
-  analogy: N is the number of cups molded into an egg carton; it's set at the factory and never changes.
+  short: "Template parameters can be values too: std::size_t N fixes a size at compile time."
+  analogy: N is the cup count of an egg carton, fixed at the factory.
   body:
     - "Besides types, a template can take a compile-time **value**, called a non-type template parameter: `template <typename T, std::size_t N> class Pouch { std::array<T, N> slots_{}; };`. `Pouch<int, 3>` holds exactly 3 ints."
     - "`std::array<int, 5>` from World 7 works exactly like this: the 5 is a non-type template parameter, so the size is part of the type. `std::array<int, 3>` and `std::array<int, 5>` are different types."
@@ -93,7 +93,7 @@ challenges:
     options:
       - t: |
           6
-        why: "Correct: N is deduced as 4 and then 2 from the array types, and 4 + 2 = 6."
+        why: N is deduced as 4, then 2, from the array types.
       - t: |
           42
         why: + adds the two numbers; it doesn't glue them together like strings.
@@ -102,7 +102,7 @@ challenges:
         why: countOf(tags) deduces its own N, 2, from std::array<char, 2>.
       - t: |
           0
-        why: N is the array's size (its type), not its contents, which are all 0.
+        why: N is the array's size, not its contents (all 0).
     answer: 0
     hints:
       - N is part of each array's type.
@@ -119,14 +119,14 @@ challenges:
       - t: "constexpr std::size_t cap{4}; Pouch<int, cap> b;"
         why: A constexpr variable is a compile-time constant. Fine.
       - t: "std::size_t n{}; std::cin >> n; Pouch<int, n> c;"
-        why: "Correct: n is only known at runtime, but N must be fixed while compiling."
+        why: n is only known at runtime; N must be fixed while compiling.
       - t: Pouch<double, 2 * 3> d;
         why: 2 * 3 is a constant expression, so N = 6. Fine.
     answer: 2
     hints:
       - When is the value of N needed?
       - Which value isn't known until the program runs?
-    short: N must be known at compile time; a value read from cin isn't.
+    short: N must be known at compile time; cin input isn't.
     explain: "Non-type template arguments must be compile-time constants: literals, constexpr variables, or constant expressions. A value read from std::cin exists only at runtime. For a runtime size, use std::vector."
   - id: w13.l4.c3
     type: harden
@@ -152,9 +152,9 @@ challenges:
       };
     options:
       - t: count_ >= N
-        why: "Correct: valid indexes are 0 to N - 1, so once count_ reaches N the pouch is full."
+        why: Once count_ reaches N, every slot is used.
       - t: count_ > N
-        why: "Off by one: when count_ == N, slots_[N] is one past the end. UB."
+        why: "Off by one: at count_ == N it writes slots_[N]. UB."
       - t: N == 0
         why: Only catches a zero-size pouch. A full Pouch<int, 3> still overflows.
       - t: item >= N
@@ -221,16 +221,16 @@ challenges:
       - t: "2"
         why: The last slot of a size-3 pouch. Valid.
       - t: "3"
-        why: "Exposes it: 3 > 3 is false, so slots_[3] is read, one past the end."
+        why: 3 > 3 is false, so slots_[3] is read past the end.
       - t: "-1"
-        why: "Exposes it: -1 > 3 is false, and a negative index is never valid."
+        why: -1 > 3 is false, and negative indexes are never valid.
       - t: "7"
         why: 7 > 3 is true, so the guard returns T{} safely.
     answers: [ 2, 3 ]
     hints:
       - Try the value exactly equal to N.
       - Does the check stop anything below zero?
-    short: "> N misses i == N, and negatives slip through. Use std::size_t and >= N."
+    short: "> N misses i == N and negatives. Use >= N."
     explain: "Valid indexes are 0 to N - 1. `i > N` lets i == N through (one past the end), and a signed int can be negative, which the check never tests. Take a std::size_t (no negatives) and check `i >= N`, or use slots_.at(i)."
     sideBySide:
       unsafe: |-
@@ -306,8 +306,8 @@ challenges:
 recap:
   - Template parameters can be compile-time values.
   - N must be known while compiling.
-  - Valid indexes are 0 to N - 1.
-  - N knows the size; your code must check it.
+  - Index N is already out of bounds.
+  - N gives the size; you must check it.
 vault:
   - id: w13.nontype
     title: Non-type template parameter

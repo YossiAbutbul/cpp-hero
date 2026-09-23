@@ -5,8 +5,8 @@ title: "Classes: public and private"
 skill: structure
 shield: false
 concept:
-  short: "private members can only be touched by the class's own functions; public functions are the only doorway."
-  analogy: "A class is a vending machine: the buttons are public, the coins inside stay locked away."
+  short: "Only the class's own functions touch private members."
+  analogy: "A class is a vending machine: public buttons, coins locked inside."
   body:
     - "Access labels split a class in two: everything after `public:` can be used by anyone; everything after `private:` only by the class's own member functions."
     - "`class` and `struct` are the same thing except for the default: a `class` starts out private, a `struct` starts out public. Convention: use `struct` for a plain bundle with no rules, `class` when there are rules to protect."
@@ -43,12 +43,12 @@ demo:
     }
   steps:
     - line: 13
-      note: "private: only Vault's own functions touch gold_."
+      note: "private: only Vault touches gold_."
     - line: 18
       mem:
         cells:
           - { name: v.gold_, value: "0" }
-      note: v starts with 0 gold, locked inside.
+      note: v starts with 0 gold.
     - line: 19
       push: { name: deposit, vars: { amount: "30" } }
       note: The only way in is a public function.
@@ -61,43 +61,43 @@ demo:
       pop: true
     - line: 20
       push: { name: deposit, vars: { amount: "-500" } }
-      note: Someone tries to deposit a negative amount!
+      note: A negative deposit!
     - line: 5
       shield: Negative deposit blocked!
-      note: The class checks every change to its own data.
+      note: The class checks every change.
     - line: 8
       pop: true
     - line: 21
       out: |
         30
-      note: Read through the public getter. Still 30.
+      note: Read through the getter. Still 30.
     - line: 22
-      note: "Nobody can write v.gold_ = -500 from outside."
+      note: "Outside code can't touch v.gold_."
 challenges:
   - id: w10.l4.c1
     type: mcq
     tags: [ w10.access, w10.class-vs-struct ]
-    prompt: What's the ONLY difference between `class` and `struct` in C++?
+    prompt: What's the ONLY difference between `class` and `struct`?
     options:
       - t: "The default access: class members start private, struct members start public"
-        why: "Correct: add labels, and they behave identically."
+        why: With labels, they behave identically.
       - t: Only classes can have member functions
-        why: Structs can have methods, constructors and destructors too.
+        why: Structs can have methods too.
       - t: Structs can't have private members
-        why: "A struct can use private: just like a class."
+        why: "A struct can use private: too."
       - t: Classes live on the heap, structs on the stack
-        why: Where an object lives depends on how you create it, not the keyword.
+        why: How you create it decides that.
     answer: 0
     hints:
       - Both can have methods and constructors.
-      - Think about what you get before writing any label.
-    short: "Only the default differs: class is private, struct is public."
+      - What do you get before any label?
+    short: Same feature; only the default access differs.
     explain: "`class` and `struct` are the same feature. The only difference is the default access (and the default for inheritance, World 11). Convention: struct for plain data, class when there are rules to guard."
   - id: w10.l4.c2
     type: bug
     tags: [ w10.access, w10.ctor ]
     expect: error
-    prompt: This won't compile. Tap the line that needs a change, then pick the fix.
+    prompt: This won't compile. Tap the buggy line, then pick the fix.
     code: |-
       #include <iostream>
 
@@ -114,18 +114,18 @@ challenges:
     bugLine: 4
     options:
       - t: "public: Timer(int s) : seconds_{s} {}"
-        why: "Correct: the constructor must be public so main can create a Timer. seconds_ stays private."
+        why: Now main can call it. seconds_ stays private.
       - t: "private: Timer(int s) : seconds_{s} {}"
-        why: It's already private (class default). That's the problem.
+        why: Already private by default. That's the problem.
       - t: "Timer(int s) : seconds_{s} {} // public"
-        why: A comment changes nothing for the compiler.
+        why: A comment changes nothing.
       - t: "Timer(int s) { seconds_ = s; }"
-        why: Still private. How it initializes doesn't matter if nobody can call it.
+        why: Still private, so main can't call it.
     answer: 0
     hints:
-      - What's the default access in a class?
+      - Default access in a class?
       - main is outside the class.
-    short: "A class starts private. Put public: before the constructor."
+    short: "A class starts private. Add public: before the constructor."
     explain: "Everything in a class is private until a label says otherwise, including the constructor. main can't call it, so `Timer t{30};` fails. Add `public:` before the constructor and keep seconds_ private."
     sideBySide:
       unsafe: |-
@@ -148,7 +148,7 @@ challenges:
     tags: [ w10.access, w10.encapsulation, w10.invariant ]
     bug: broken-invariant
     unsafe: true
-    prompt: "Rules: balance is never negative, and owner is never empty. Tap every line that lets outside code break them."
+    prompt: "Rules: balance never negative, owner never empty. Tap every unchecked write."
     code: |-
       struct Account {
           std::string owner;
@@ -168,9 +168,9 @@ challenges:
       "6": "No check: withdrawing 250 from 100 gives -150."
       "10": "No check: an empty name slips right in."
     hints:
-      - Look for writes that never check the new value.
-      - Two functions change the account. Do they check anything?
-    short: Public data plus unchecked writes means nothing guards the rules.
+      - Find writes with no check.
+      - Two functions change the account.
+    short: Unchecked writes to public data guard nothing.
     explain: "With public members, the rules are only true if EVERY piece of code remembers them. Here withdraw and renameOwner write without checking. Make the members private and let the class's own functions check every change."
     sideBySide:
       unsafe: |-
@@ -204,7 +204,7 @@ challenges:
   - id: w10.l4.c4
     type: predict
     tags: [ w10.encapsulation, w10.getter, w3.modulo ]
-    prompt: The Dial keeps its level between 0 and 9. What does this print?
+    prompt: What does this print?
     code: |-
       #include <iostream>
 
@@ -234,26 +234,26 @@ challenges:
     options:
       - t: |
           2 8
-        why: "Correct: 12 % 10 = 2; then 2 - 4 = -2, % 10 is -2, plus 10 is 8."
+        why: "12 % 10 is 2; then -2 is repaired to 8."
       - t: |
           12 8
-        why: turn applies % 10 every time, so the level can't reach 12.
+        why: turn applies % 10 every time.
       - t: |
           2 -2
-        why: -2 % 10 is -2, but the if adds 10 to fix negatives.
+        why: The if adds 10 to negatives.
       - t: |
           2 2
-        why: turn(-4) really turns backward from 2.
+        why: turn(-4) really turns backward.
     answer: 0
     hints:
-      - "% keeps the sign of the left side (World 3)."
-      - The if repairs negative results.
-    short: "2, then -2 repaired to 8. The class keeps level in 0..9."
+      - "% keeps the left side's sign (World 3)."
+      - The if repairs negatives.
+    short: "turn is the only way in, so level stays 0 to 9."
     explain: "turn(7): 7. turn(5): 12 % 10 = 2, printed with a space. turn(-4): (2 - 4) % 10 = -2, which is negative, so +10 gives 8. Output: \"2 8\" and a newline. Because level_ is private, turn is the only way to change it, so 0..9 always holds."
   - id: w10.l4.c5
     type: fill
     tags: [ w10.access, w10.private ]
-    prompt: Fill in the label that hides value_ from outside code.
+    prompt: Type the label that hides value_ from outside code.
     code: |-
       class Score {
       public:
@@ -266,16 +266,16 @@ challenges:
       - private
     placeholder: access label
     hints:
-      - It's the opposite of public.
-      - Only the class's own functions will be able to touch value_.
-    short: "private: hides value_; only Score's own functions can touch it."
+      - The opposite of public.
+      - Only the class can touch it.
+    short: Only the class itself can touch private members.
     explain: "After `private:`, members can only be used inside the class. Outside code reads the score through the public `value()` getter and can't overwrite it."
   - id: w10.l4.c6
     type: edge
     tags: [ w10.setter, w10.invariant ]
     bug: broken-invariant
     unsafe: true
-    prompt: "The rule: age is 0 to 150. Pick ALL calls that break it."
+    prompt: "age must stay 0 to 150. Pick ALL calls that break it."
     code: |-
       class Pet {
       public:
@@ -287,20 +287,20 @@ challenges:
       };
     options:
       - t: setAge(-1)
-        why: "Correct: a negative age goes straight in. private alone doesn't check anything."
+        why: A negative age goes straight in.
       - t: setAge(0)
-        why: A newborn pet. 0 is inside the range.
+        why: 0 is inside the range.
       - t: setAge(42)
-        why: A wise old pet, but inside the range.
+        why: Inside the range.
       - t: setAge(150)
-        why: The upper edge is still allowed.
+        why: The upper edge is allowed.
       - t: setAge(9000)
-        why: "Correct: way over 150, and the setter accepts it blindly."
+        why: Way over 150, yet accepted.
     answers: [ 0, 4 ]
     hints:
-      - Test just outside both ends of the range.
-      - The setter copies whatever it gets.
-    short: A setter that checks nothing makes private pointless.
+      - Test just outside both ends.
+      - The setter copies anything.
+    short: An unchecked setter makes private pointless.
     explain: "age_ is private, but setAge copies any int, so -1 and 9000 get in. Private only helps if the public functions guard the door. Check (or clamp) in the setter, and test just outside each edge: -1 and 151."
     sideBySide:
       unsafe: |-
@@ -322,9 +322,9 @@ challenges:
         };
       prelude: "int age_{0};"
 recap:
-  - "private: only the class's own functions touch it."
+  - "private: only the class touches it."
   - "class starts private; struct starts public."
-  - Offer a few public operations, not raw data.
+  - Offer operations, not raw data.
   - A setter must check, or it's a hole.
 vault:
   - id: w10.class

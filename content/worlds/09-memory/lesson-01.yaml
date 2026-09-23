@@ -5,11 +5,12 @@ title: Stack vs heap
 skill: memory
 shield: false
 concept:
-  short: "Locals live on the stack and vanish at their closing brace; heap memory from new stays until you delete it."
-  analogy: "The stack is a tray rack that clears itself after every meal; the heap is a storage unit you rent and must hand back."
+  short: "Stack locals vanish at }. Heap memory from new stays until delete."
+  analogy: "Stack: a self-clearing tray rack. Heap: a rented locker."
   body:
     - "Your program's memory has two main areas. The **stack** holds local variables and function parameters. Every function call pushes a **frame** onto it; when the function returns, the frame pops and its locals are gone. It is fast and fully automatic."
     - "The **heap** (also called the free store) is a big pool you ask for at run time. `new int{7}` finds room for an int on the heap and gives you back a **pointer** to it. That int stays alive until you say `delete` on that pointer, no matter which function ends."
+    - "Think of the stack as a tray rack that clears itself after every meal, and the heap as a storage unit you rent and must hand back."
     - "Why use the heap at all? When something must **outlive** the function that makes it, or when its size is only known at run time (and could be big: the stack is small, often around 1 to 8 MB)."
     - "In `int* gem = new int{7};` there are two things: the pointer `gem` is a normal local on the **stack**; the int it points at lives on the **heap**. When `gem` goes out of scope, only the pointer vanishes. The heap int stays, unless someone deletes it."
     - "Good news: you've already used the heap safely. `std::vector` and `std::string` keep their elements on the heap and free them for you. In modern C++ you rarely write `new` yourself; this world shows why, and what to use instead."
@@ -36,7 +37,7 @@ demo:
     - line: 7
       push:
         name: main
-      note: "main's frame is pushed onto the stack."
+      note: "main's frame is pushed."
     - line: 8
       vars:
         hp: "10"
@@ -47,7 +48,7 @@ demo:
     - line: 9
       push:
         name: makeGold
-      note: Calling makeGold pushes a new frame on top.
+      note: The call pushes a new frame.
     - line: 3
       vars:
         gold: "50"
@@ -60,14 +61,14 @@ demo:
         returns: "50"
       mem:
         drop: [ gold ]
-      note: "Frame popped: gold vanished; 50 flies back."
+      note: "Frame popped: gold is gone; 50 returns."
     - line: 9
       vars:
         loot: "50"
       mem:
         cells:
           - { name: loot, value: "50", addr: stack }
-      note: main stores the returned copy in loot.
+      note: loot keeps the returned copy.
     - line: 10
       vars:
         gem: "→ heap int"
@@ -75,7 +76,7 @@ demo:
         cells:
           - { name: heap int, value: "7", addr: heap }
           - { name: gem, ptr: heap int, addr: stack }
-      note: new puts an int on the heap; gem points at it.
+      note: new makes a heap int; gem points at it.
     - line: 11
       out: |
         10 50 7
@@ -85,14 +86,14 @@ demo:
         gem: "→ (freed)"
       mem:
         drop: [ heap int ]
-      note: delete hands the heap int back. gem now dangles!
+      note: delete frees the int. gem now dangles!
     - line: 13
       vars:
         gem: "nullptr"
       mem:
         cells:
           - { name: gem, ptr: null }
-      note: Reset gem so nobody follows a dead arrow.
+      note: Reset gem so nobody follows it.
     - line: 14
       pop: true
       mem:
@@ -102,21 +103,21 @@ challenges:
   - id: w9.l1.c1
     type: mcq
     tags: [ w9.stack, w6.scope ]
-    prompt: "Where does `int arrows = 12;` inside a function live, and when does it go away?"
+    prompt: "`int arrows = 12;` is inside a function. Where does it live, and when is it gone?"
     options:
       - t: On the stack; gone when the function returns
-        why: "Correct: locals live in the function's stack frame, which pops on return."
+        why: Its frame pops when the function returns.
       - t: On the heap; gone when you delete it
-        why: Only memory from new lives on the heap. A plain local needs no delete.
+        why: Only memory from new is on the heap.
       - t: On the stack; it lives until the program ends
-        why: Stack frames pop when their function returns. Locals don't linger.
+        why: Frames pop on return.
       - t: On the heap; freed automatically at the closing brace
         why: A plain local isn't on the heap at all.
     answer: 0
     hints:
       - Did anybody write new?
-      - Every call pushes a frame; every return pops it.
-    short: Locals live on the stack and vanish when their scope ends.
+      - Returns pop frames.
+    short: Locals live on the stack and vanish at scope end.
     explain: "A local variable lives in its function's stack frame. When the function returns (or the block's `}` is reached), the frame pops and the local is gone. No new, no delete, no cleanup to forget."
   - id: w9.l1.c2
     type: predict
@@ -139,43 +140,43 @@ challenges:
     options:
       - t: |
           9
-        why: "Correct: the int lives on the heap, so it survives forge() returning."
+        why: The heap int survives forge() returning.
       - t: |
           0
-        why: The heap int was initialized with {9} and nothing changed it.
+        why: The int was set to 9 and never changed.
       - t: Garbage, because sword is dangling
-        why: "The pointer sword dies, but the heap int it pointed at doesn't. s holds the same address."
+        why: Only the pointer sword dies, not the int.
       - t: Nothing; it doesn't compile
-        why: Returning a pointer to heap memory is legal C++.
+        why: Returning a pointer to heap memory is legal.
     answer: 0
     hints:
-      - Which dies at forge's }, the pointer or the int?
-      - Heap memory lives until someone deletes it.
+      - Which dies at }, pointer or int?
+      - Heap memory lives until deleted.
     short: Heap memory outlives the function that created it.
     explain: "`sword` is a local pointer and dies when forge() returns, but it only held an address. The int itself is on the heap and lives until `delete s;`. main gets a copy of the address, so `*s` is 9. (Unlike World 8's `return &local;`, nothing dangles here.) Returning a raw owning pointer is still risky: the caller must remember to delete. Lesson 3 fixes that with std::unique_ptr."
   - id: w9.l1.c3
     type: mcq
     tags: [ w9.heap, w9.stack, w7.vector ]
-    prompt: Which is a good reason for data to live on the heap?
+    prompt: Which is a good reason to put data on the heap?
     options:
       - t: Its size is only known at run time and may be large
-        why: "Correct: the stack is small and fixed; the heap grows on demand. std::vector does exactly this."
+        why: The stack is small; the heap grows on demand.
       - t: It's a small counter used inside one loop
-        why: A plain local on the stack is simpler and faster.
+        why: A plain stack local is simpler and faster.
       - t: The heap is faster than the stack
-        why: The stack is faster; heap allocation has to search for room.
+        why: The stack is faster.
       - t: Heap memory can never leak
-        why: "Heap memory is exactly what leaks when nobody frees it."
+        why: Heap memory is exactly what leaks.
     answer: 0
     hints:
-      - The stack is small and sized before the program runs.
-      - Think of a player-chosen number of monsters.
-    short: Use the heap for run-time sizes or data that must outlive a function.
-    explain: "The heap is for data that must outlive its function or whose size is only known at run time (and may be too big for the small stack). Even then, prefer a container: `std::vector<int> scores(n);` uses the heap and frees it for you."
+      - The stack is small.
+      - "Think: player picks how many monsters."
+    short: Heap is for run-time sizes or long-lived data.
+    explain: "The heap is for data that must outlive its function or whose size is only known at run time (and may be too big for the small stack). std::vector does exactly this. Even then, prefer a container: `std::vector<int> scores(n);` uses the heap and frees it for you."
   - id: w9.l1.c4
     type: fill
     tags: [ w9.new, w9.heap ]
-    prompt: Put an int holding 7 on the heap. Fill in the keyword.
+    prompt: Fill in the keyword that puts an int holding 7 on the heap.
     code: |-
       int* gem = ___ int{7};
       std::cout << *gem << '\n';
@@ -184,14 +185,14 @@ challenges:
       - new
     placeholder: keyword
     hints:
-      - It's the opposite of delete.
-      - It returns the address of fresh heap memory.
-    short: new int{7} creates an int on the heap and returns its address.
+      - The opposite of delete.
+      - It returns a heap address.
+    short: new int{7} makes a heap int, returns its address.
     explain: "`new int{7}` asks the heap for room for one int, initializes it to 7 and returns a pointer to it. Every `new` needs exactly one matching `delete` later."
   - id: w9.l1.c5
     type: order
     tags: [ w9.new, w9.delete, w8.nullptr ]
-    prompt: "Order the life of a heap int: create it, use it, give it back, then drop the stale address."
+    prompt: "Order the life of a heap int: create, use, delete, then reset the pointer."
     lines:
       - int* gem = new int{7};
       - "std::cout << *gem << '\\n';"
@@ -200,15 +201,15 @@ challenges:
     distractors:
       - delete *gem;
     hints:
-      - You can't use memory after giving it back.
-      - "delete takes the pointer, not the value it points at."
-    short: new, use, delete, then reset the pointer to nullptr.
+      - No use after giving it back.
+      - "delete takes the pointer."
+    short: new, use, delete, then set to nullptr.
     explain: "Create with `new`, use through the pointer, `delete gem;` exactly once, then `gem = nullptr;` so the stale address can't be followed. `delete *gem;` doesn't compile: delete needs a pointer, and *gem is an int."
 recap:
-  - Locals live on the stack and vanish automatically.
-  - new puts data on the heap and returns a pointer.
-  - Heap data lives until someone deletes it.
-  - The pointer is on the stack; its target isn't.
+  - Locals live on the stack.
+  - new puts data on the heap.
+  - Heap data lives until deleted.
+  - The pointer itself is on the stack.
 vault:
   - id: w9.stackheap
     title: Stack vs heap

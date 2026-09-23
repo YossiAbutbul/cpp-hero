@@ -6,7 +6,7 @@ skill: toolkit
 shield: false
 concept:
   short: const values can never change; auto lets the compiler pick the type.
-  analogy: "`const` is a jar with a glued lid, and `auto` is a label maker that reads the contents for you."
+  analogy: "const is a glued jar lid; auto is a label maker that reads contents."
   body:
     - "`const int maxHp{100};` creates a value that can never change. Writing `maxHp = 50;` later is a **compile error**, and that's the point: the compiler guards it for you."
     - A `const` must get its value when it's declared. There's no later chance to fill a sealed jar.
@@ -38,7 +38,7 @@ demo:
       vars:
         maxHp: "100"
         hp: "100"
-      note: "auto copies maxHp's type, int, but not const: hp can change."
+      note: "hp gets maxHp's type, int, but not const."
     - line: 5
       vars:
         maxHp: "100"
@@ -50,7 +50,7 @@ demo:
         maxHp: "100"
         hp: "70"
         regen: "0.5"
-      note: hp changes to 70. Trying this on maxHp would not compile.
+      note: hp becomes 70. On maxHp, this wouldn't compile.
     - line: 7
       vars:
         maxHp: "100"
@@ -66,7 +66,7 @@ demo:
         regen: "0.5"
       out: |
         5
-      note: 0.5 * 10 is the double 5.0, which cout prints as 5.
+      note: 0.5 * 10 is 5.0, which cout prints as 5.
     - line: 9
       note: Done!
 challenges:
@@ -81,13 +81,13 @@ challenges:
     expect: error
     options:
       - t: "Compile error: you can't assign to a const variable"
-        why: "Correct: the compiler refuses to change a const. That's the protection working."
+        why: The compiler refuses to change a const. Protection working!
       - t: It compiles and maxLevel becomes 60
         why: const means the value can never change after initialization.
       - t: It compiles, but maxLevel silently stays 50
         why: "C++ doesn't silently ignore it: the compiler stops with an error."
       - t: It compiles, then crashes when that line runs
-        why: The problem is caught at compile time, so the program is never built.
+        why: The compiler catches it, so no program is ever built.
     answer: 0
     hints:
       - What does const promise?
@@ -146,7 +146,7 @@ challenges:
         answer: 1
     hints:
       - auto copies the type of the initializer.
-      - A decimal point means double; auto drops a top-level const.
+      - A decimal point means double; auto drops const.
     explain: 42 is int, 4.0 is double, 'x' is char, true is bool. "hi" is a raw text literal, so auto gives const char*, not std::string. auto drops a top-level const, so g is a plain int.
   - id: w2.l3.c3
     type: fill
@@ -174,16 +174,16 @@ challenges:
     options:
       - t: |
           2
-        why: "Correct: auto made hp an int at its declaration. Storing 2.7 into an int drops the fraction."
+        why: hp is an int, so storing 2.7 drops the .7.
       - t: |
           2.7
-        why: auto doesn't change the type later. hp became an int on line 1, forever.
+        why: hp became an int on line 1, and stays one.
       - t: |
           3
         why: Converting a double to an int truncates, it doesn't round.
       - t: |
           10
-        why: The assignment on line 2 does happen; hp gets the int part of 2.7.
+        why: Line 2 does run, so hp changes.
     answer: 0
     hints:
       - What type did auto pick on line 1?

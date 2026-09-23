@@ -5,8 +5,8 @@ title: One recipe, many types
 skill: structure
 shield: false
 concept:
-  short: Write a function once with a placeholder type T; the compiler stamps out a version for each type used.
-  analogy: A function template is a cookie cutter; press it into any dough and you get a matching cookie.
+  short: Write a function once with a placeholder type T; the compiler makes one per type.
+  analogy: A template is a cookie cutter; any dough gives a matching cookie.
   body:
     - "Without templates you'd write `int biggest(int, int)`, `double biggest(double, double)`, `std::string biggest(...)`: the same code again and again, once per type. Overloading (World 6) helps with the name, not with the copy-paste."
     - "A **function template** writes it once. `template <typename T>` introduces a placeholder type called `T`; inside, use `T` like any other type: `T biggest(T a, T b) { return (a > b) ? a : b; }`."
@@ -81,13 +81,13 @@ challenges:
     prompt: What does `template <typename T>` in front of a function mean?
     options:
       - t: T is a placeholder type; the compiler fills it in for each call
-        why: "Correct: T is deduced per call, and each type gets its own compiled version."
+        why: T is deduced per call; each type gets its own compiled version.
       - t: T is a variable that can hold any type at runtime
-        why: No runtime magic. The compiler picks T while compiling and stamps out a real function.
+        why: No runtime magic. The compiler picks T while compiling.
       - t: The function only accepts objects of a class named T
-        why: T is just a name for whatever type gets filled in, like a parameter name.
+        why: T is just a name for the type that gets filled in.
       - t: The function returns a template
-        why: The line introduces a type parameter. The return type is whatever you write before the name.
+        why: It introduces a type parameter. The return type comes before the name.
     answer: 0
     hints:
       - Think "blank to fill in", but for a type.
@@ -113,13 +113,13 @@ challenges:
     options:
       - t: |
           42 2.5
-        why: "Correct: twice<int>(21) is 42 and twice<double>(1.25) is 2.5."
+        why: twice<int>(21) is 42 and twice<double>(1.25) is 2.5.
       - t: |
           42 2
-        why: 1.25 is a double, so T is double. Nothing gets chopped to an int.
+        why: 1.25 is a double, so T is double. Nothing is chopped.
       - t: |
           2121 2.5
-        why: 21 is an int, so + adds numbers. Only strings would glue together.
+        why: 21 is an int, so + adds numbers. Only strings glue.
       - t: |
           42 2.50
         why: std::cout prints 2.5 without trailing zeros by default.
@@ -144,7 +144,7 @@ challenges:
     placeholder: keyword
     hints:
       - It names a TYPE parameter.
-      - Two keywords work here; modern code prefers the one with "type" in it.
+      - Two keywords work; modern code prefers the one saying "type".
     short: "template <typename T> (or the older spelling, class T)."
     explain: "`typename` and `class` mean the same thing inside a template parameter list. `typename` says more clearly that T can be any type, not only a class."
   - id: w13.l1.c4
@@ -169,13 +169,13 @@ challenges:
     bugLine: 3
     options:
       - t: T biggest(T a, T b) {
-        why: "Correct: the result has the same type as the inputs, so 2.5 stays 2.5."
+        why: The result has the inputs' type, so 2.5 stays 2.5.
       - t: double biggest(T a, T b) {
-        why: Fixes doubles, but now biggest of two strings can't compile. The return type should follow T.
+        why: Fixes doubles, but breaks strings. The return type should follow T.
       - t: "template <typename T> int biggest(double a, double b) {"
-        why: Still returns int, so 2.5 is still chopped. And T is never used.
+        why: Still returns int, so 2.5 is still chopped.
       - t: std::cout << biggest<double>(2.5, 1.5) << '\n';
-        why: T already is double here. The int return type still chops the result.
+        why: T already is double. The int return type still chops it.
     answer: 0
     hints:
       - The comparison works. Look at what type comes out.
@@ -212,7 +212,7 @@ challenges:
   - id: w13.l1.c6
     type: write
     tags: [ w13.functpl, w6.call ]
-    prompt: Using `biggest`, write one line that declares an int `best` holding the bigger of the ints `hp` and `armor`.
+    prompt: Write one line declaring int `best` as the bigger of `hp` and `armor`, using `biggest`.
     code: |-
       template <typename T>
       T biggest(T a, T b) {

@@ -2,12 +2,12 @@
 
 id: w14.p
 title: Bug Ledger
-intro: "Keep score of every bug we squash: zap, undo, ask and find the top pest, with a map at the heart."
+intro: "Build a map that counts every bug we zap, and finds the top pest."
 steps:
   - id: w14.p.s1
     type: write
     tags: [ w14.map ]
-    prompt: The ledger maps bug names to zap counts. Write one line that declares an empty `std::map` named `ledger` from `std::string` to `int`.
+    prompt: Declare an empty `std::map` named `ledger` from `std::string` to `int`.
     accept:
       - std::map<std::string, int> ledger;
       - std::map<std::string, int> ledger{};
@@ -22,14 +22,14 @@ steps:
   - id: w14.p.s2
     type: mcq
     tags: [ w14.map, w14.bracket-insert ]
-    prompt: '"zap imp" adds one to imp''s count, starting a brand-new bug at 0. Which line does it?'
+    prompt: "Which line adds 1 to bug's count, and also works for a brand-new bug?"
     options:
       - t: ++ledger[bug];
-        why: "Correct: here inserting is exactly what we want. A new bug starts at 0, then becomes 1."
+        why: Here inserting is wanted; a new bug goes 0, then 1.
       - t: ++ledger.at(bug);
-        why: at() throws for a bug we've never zapped, so the first zap would fail.
+        why: at() throws for a never-zapped bug, so first zaps fail.
       - t: ++ledger.find(bug)->second;
-        why: For a new bug, find returns end(), and incrementing through it is UB.
+        why: A new bug makes find return end(); incrementing it is UB.
       - t: ledger.insert(bug);
         why: A map stores pairs; inserting just a name doesn't compile.
     answer: 0
@@ -42,7 +42,7 @@ steps:
     type: fill
     tags: [ w14.find-end ]
     bug: unchecked-find
-    prompt: '"undo slime" takes back a zap. Fill in the blank so a bug we never zapped is reported, not dereferenced.'
+    prompt: Fill in the blank so a bug that's not in the ledger is reported safely.
     code: |-
       auto it = ledger.find(bug);
       if (it == ledger.___()) {
@@ -105,7 +105,7 @@ steps:
       - t: |
           imp 2
           1
-        why: "Correct: imp was zapped twice; slime was added, then erased. One entry left."
+        why: imp has 2; slime was added, then erased.
       - t: |
           imp 2
           slime 1
@@ -214,13 +214,13 @@ stress:
         prelude: std::map<std::string, int> ledger{{"imp", 2}}; std::string bug{"ghost"};
         options:
           - t: it != ledger.end()
-            why: "Correct: it->second only runs when find really found the bug."
+            why: it->second only runs when find really found the bug.
           - t: it->second > 0
-            why: For ghost, it is end(), so this reads end() before deciding. UB.
+            why: For ghost, it is end(), so this reads end(). UB.
           - t: ledger[bug] > 0
-            why: No UB, but asking inserts ghost with 0. The ledger grows with every question.
+            why: No UB, but asking inserts ghost with 0.
           - t: it != ledger.begin()
-            why: begin() is the first real entry. This skips imp and still reads end() for ghost.
+            why: end() isn't begin() here, so ghost still reads end().
         answer: 0
         hints:
           - What does find return for a missing key?
@@ -254,7 +254,7 @@ stress:
         bugLine: 1
         options:
           - t: 'if (auto it = ledger.find(bug); it != ledger.end()) { --it->second; }'
-            why: "Correct: only bugs already in the ledger can be undone. No phantom entries."
+            why: Only bugs already in the ledger change. No phantoms.
           - t: --ledger.at(bug);
             why: No phantom, but an unknown bug throws std::out_of_range and ends the program.
           - t: ledger[bug] = 0;
@@ -299,13 +299,13 @@ stress:
           auto fewerZaps = [](const std::pair<const std::string, int>& a, const std::pair<const std::string, int>& b) { return a.second < b.second; };
         options:
           - t: best == ledger.end()
-            why: "Correct: an empty range makes max_element return end(), so we never read best->first."
+            why: Empty input makes max_element return end(); nothing is read.
           - t: best == ledger.begin()
-            why: For an empty ledger that works, but it also calls a real top bug "empty" when it's first.
+            why: Also true when the real top bug is the first entry.
           - t: ledger.size() > 0
             why: "Inverted: says empty when it isn't, and reads end() when it is."
           - t: best->second == 0
-            why: Reads through best before knowing it's valid. For an empty ledger that's UB.
+            why: Reads through best before checking it. Empty means UB.
         answer: 0
         hints:
           - What does max_element return for an empty range?

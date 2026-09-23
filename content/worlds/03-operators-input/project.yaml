@@ -7,7 +7,7 @@ steps:
   - id: w3.p.s1
     type: write
     tags: [ w2.init, w3.cin ]
-    prompt: First, a place to store the loot. Write one line that declares an int named `gold` and initializes it to 0.
+    prompt: "Write one line: declare an int named `gold`, starting at 0."
     accept:
       - int gold{};
       - int gold{0};
@@ -23,7 +23,7 @@ steps:
   - id: w3.p.s2
     type: order
     tags: [ w3.cin, w1.cout ]
-    prompt: "Order the input section: ask for the gold, read it, then ask for the party size and read it."
+    prompt: "Order the lines: ask for gold, read it, ask for party size, read it."
     prelude: int gold{}; int party{};
     lines:
       - 'std::cout << "Total gold: ";'
@@ -48,7 +48,7 @@ steps:
     placeholder: operator
     hints:
       - Splitting equally means dividing.
-      - "int / int drops the fraction: exactly what we want for whole coins."
+      - "int / int drops the fraction: perfect for whole coins."
     short: gold / party gives each hero's whole coins.
     explain: "gold / party is integer division: each hero gets the whole coins, and the fraction is dropped."
   - id: w3.p.s4
@@ -68,7 +68,7 @@ steps:
   - id: w3.p.s5
     type: predict
     tags: [ w3.arith, w3.modulo, w1.cout ]
-    prompt: "Test run: the player enters 17 gold and a party of 5. What do the last two output lines say?"
+    prompt: The player enters 17 gold and a party of 5. What do these two lines print?
     code: |-
       std::cout << "Each hero gets " << share << " gold.\n";
       std::cout << "Left in the chest: " << leftover << " gold.\n";
@@ -77,7 +77,7 @@ steps:
       - t: |
           Each hero gets 3 gold.
           Left in the chest: 2 gold.
-        why: "Correct: 17 / 5 = 3 and 17 % 5 = 2."
+        why: 5 heroes get 3 each (15), and 2 coins remain.
       - t: |
           Each hero gets 3.4 gold.
           Left in the chest: 2 gold.
@@ -85,7 +85,7 @@ steps:
       - t: |
           Each hero gets 3 gold.
           Left in the chest: 3 gold.
-        why: The remainder is 17 - 5 * 3 = 2, not 3.
+        why: 15 coins are shared, so 2 remain, not 3.
       - t: |
           Each hero gets 3 gold.Left in the chest: 2 gold.
         why: Each line ends with \n, so they print on separate lines.
@@ -142,13 +142,13 @@ stress:
         prelude: int gold{17}; int party{};
         options:
           - t: party <= 0
-            why: "Correct: blocks zero (UB) and negative sizes (nonsense shares), in one check."
+            why: Blocks zero (UB) and negative sizes (nonsense), in one check.
           - t: party == 0
-            why: Stops this attack, but -3 heroes would still produce negative shares. <= 0 covers both.
+            why: Stops 0, but a party of -3 would still get negative shares.
           - t: party < 0
-            why: "Misses exactly the attack: 0 is not less than 0, so gold / 0 still happens."
+            why: 0 is not less than 0, so gold / 0 still happens.
           - t: gold == 0
-            why: Wrong variable. 0 gold split among 5 is fine (everyone gets 0); the divisor is the danger.
+            why: 0 gold is fine. The divisor, party, is the danger.
         answer: 0
         hints:
           - What values of party make no sense?
@@ -174,7 +174,7 @@ stress:
         tags: [ w3.validate, w3.cin ]
         bug: cin-fail
         unsafe: true
-        prompt: Typing `abc` for the gold sets gold to 0 AND jams cin, so party can't be read either. It stays 0, and gold / party divides by zero! Tap the line that needs protection, then pick the fix.
+        prompt: "Typing `abc` jams cin: party stays 0, then gold / 0. Tap the bad line, pick the fix."
         code: |-
           int gold{};
           int party{};
@@ -185,13 +185,13 @@ stress:
         bugLine: 3
         options:
           - t: if (!(std::cin >> gold)) { std::cout << "Not a number!\n"; return 1; }
-            why: "Correct: checks the read and exits before the jammed stream can cause more damage."
+            why: Stops right at the failed read, before the jam spreads.
           - t: std::cin >> gold; std::cin.clear();
-            why: Unjams cin, but "abc" is still waiting, so reading party fails again. Also never tells the player.
+            why: Unjams cin, but "abc" is still waiting, and the player isn't told.
           - t: std::cin >> std::ws >> gold;
             why: std::ws only skips whitespace. "abc" still fails.
           - t: std::string gold;
-            why: Reading into a string accepts "abc", but then gold can't be used in math at all.
+            why: A string accepts "abc", but you can't do math with it.
         answer: 0
         hints:
           - The first failed read is where everything goes wrong.
@@ -214,7 +214,7 @@ stress:
         id: w3.p.a3
         type: harden
         tags: [ w3.validate, w3.compare ]
-        prompt: -50 gold split among 3 gives each hero -16 and leaves -2 in the chest. Nonsense! Pick the check.
+        prompt: "-50 gold split 3 ways gives each hero -16. Nonsense! Pick the check."
         code: |-
           std::cout << "Total gold: ";
           if (!(std::cin >> gold) || ___) {
@@ -224,9 +224,9 @@ stress:
         prelude: int gold{};
         options:
           - t: gold < 0
-            why: "Correct: rejects negatives but still allows an empty chest (0 gold is sad, but valid)."
+            why: Blocks negatives but allows an empty chest (0 gold is valid).
           - t: gold <= 0
-            why: "Rejects a legitimately empty chest. 0 / party is fine: everyone gets 0."
+            why: "Rejects an empty chest. Splitting 0 gold is fine: everyone gets 0."
           - t: gold > 0
             why: "Inverted: rejects every real haul and lets negatives in."
           - t: gold == -50

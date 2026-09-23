@@ -6,7 +6,7 @@ skill: structure
 shield: false
 concept:
   short: "A class template is a blueprint for classes: Box<int> and Box<std::string> are two different types."
-  analogy: A class template is a lunchbox mold; each box it makes is shaped for exactly one kind of lunch.
+  analogy: A class template is a lunchbox mold; each box fits one lunch.
   body:
     - "Put `template <typename T>` in front of a class, and `T` can be used for its members and methods: `template <typename T> class Box { T value_; ... };`."
     - "You choose the type in angle brackets: `Box<int> coins{50};`, `Box<std::string> name{\"Curlo\"};`. `Box<int>` and `Box<std::string>` are completely separate classes: you can't assign one to the other."
@@ -74,9 +74,9 @@ challenges:
     prompt: "`Box` is a class template. Which is true about `Box<int>` and `Box<double>`?"
     options:
       - t: They are two different, unrelated types
-        why: "Correct: each type argument stamps out a separate class, like two different structs."
+        why: Each type argument stamps out a separate class.
       - t: They are the same type; only the stored value differs
-        why: The type argument is part of the type. Box<int> and Box<double> don't mix.
+        why: The type argument is part of the type itself.
       - t: Box<int> converts to Box<double> automatically
         why: No conversion exists unless you write one. They're unrelated classes.
       - t: Box<double> is a derived class of Box<int>
@@ -114,13 +114,13 @@ challenges:
     options:
       - t: |
           4 4.5
-        why: "Correct: a.sum() is the int 9, so 9 / 2 is 4. b.sum() is 9.0, so 4.5."
+        why: a.sum() is int 9, so 4. b.sum() is 9.0, so 4.5.
       - t: |
           4.5 4.5
         why: Pair<int>::sum() returns an int, so 9 / 2 is integer division.
       - t: |
           4 4
-        why: Pair<double> stores 7.0 and 2.0; its sum is a double, so / is real division.
+        why: Pair<double> sums to 9.0, so / is real division.
       - t: |
           9 9
         why: Both sums are divided by 2 before printing.
@@ -133,7 +133,7 @@ challenges:
   - id: w13.l3.c3
     type: fill
     tags: [ w13.classtpl, w2.string ]
-    prompt: Fill in the type so `label` holds a real string with `.size()`.
+    prompt: Fill in the type so `label.get().size()` compiles and prints 4.
     code: |-
       #include <iostream>
       #include <string>

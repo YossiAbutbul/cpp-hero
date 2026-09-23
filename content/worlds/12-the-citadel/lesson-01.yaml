@@ -5,7 +5,7 @@ title: Trust no input
 skill: defense
 shield: false
 concept:
-  short: "Everything crossing a boundary is hostile until checked: validate type, range and format, then let only good values in."
+  short: "Anything from outside is hostile until checked: validate type, range and format first."
   analogy: The Citadel gate checks every cart, even ones flying your own flag.
   body:
     - "A **boundary** is anywhere data enters your code from outside your control: the keyboard, files, network messages, command-line arguments, and even another programmer's call into your function. **Trust no input** from any of them."
@@ -117,13 +117,13 @@ challenges:
     prompt: Which of these can your code use WITHOUT checking it first?
     options:
       - t: None of them. Check at every boundary.
-        why: "Correct: keyboard, files and network are all outside your control. Check once at the gate."
+        why: Keyboard, files and network are all outside your control.
       - t: A save file your own game wrote yesterday
-        why: Files get edited, corrupted or truncated. A hand-edited save with gold = -1 is still input.
+        why: Save files can be hand-edited or corrupted. Still input.
       - t: A message from your own server
-        why: Networks drop and mangle data, and attackers can pretend to be your server.
+        why: Networks mangle data, and attackers can fake your server.
       - t: Keyboard input, if you asked politely
-        why: Players make typos, and some type nasty input on purpose. Politeness is not validation.
+        why: Players make typos, some on purpose. Politeness is not validation.
     answer: 0
     hints:
       - Where does each value come from?
@@ -133,22 +133,22 @@ challenges:
   - id: w12.l1.c2
     type: edge
     tags: [ w12.validate, w12.edge ]
-    prompt: "A shop allows 1 to 99 potions per order. Which quantities slip past this check? Select all."
+    prompt: "Valid orders are 1 to 99 potions. Which INVALID quantities does this check accept? Select all."
     code: |-
       bool validQuantity(int qty) {
           return qty <= 99;
       }
     options:
       - t: "0"
-        why: "Slips past: 0 <= 99 is true, but an empty order isn't allowed."
+        why: "0 <= 99 is true, but an empty order isn't allowed."
       - t: "-5"
-        why: "Slips past: -5 <= 99 is true. A negative order could pay the player!"
+        why: "-5 <= 99 is true. A negative order could pay the player!"
       - t: "50"
         why: A normal order. It should pass, and it does.
       - t: "99"
         why: The top of the range. It should pass, and it does.
       - t: "100"
-        why: Correctly rejected, since 100 <= 99 is false.
+        why: Rejected as it should be, since 100 <= 99 is false.
     answers: [ 0, 1 ]
     hints:
       - The check only guards one side of the range.
@@ -213,7 +213,7 @@ challenges:
       - t: |
           1 0
           -1
-        why: "Correct: door 3 has a key, door 7 doesn't, so value_or gives the fallback -1."
+        why: "Door 3 has a key, door 7 doesn't, so value_or gives -1."
       - t: |
           true false
           -1
@@ -221,7 +221,7 @@ challenges:
       - t: |
           1 0
           0
-        why: value_or returns the fallback you pass in, here -1. An empty optional has no hidden 0.
+        why: value_or returns the fallback you pass in, here -1.
       - t: |
           1 0
           42
@@ -252,13 +252,13 @@ challenges:
       }
     options:
       - t: cmd != "look" && cmd != "move"
-        why: "Correct: an allow-list. Anything that isn't exactly look or move is refused."
+        why: "An allow-list: anything not exactly look or move is refused."
       - t: cmd == "delete"
-        why: "A block-list: it stops delete, but format, sudo and 1000 others walk in."
+        why: "A block-list: stops delete, but every other junk word gets in."
       - t: cmd.empty()
         why: Stops empty input only. Any non-empty junk is accepted.
       - t: cmd != "look" || cmd != "move"
-        why: "Always true: no word equals both, so even look and move are rejected."
+        why: "Always true, so even look and move are rejected."
     answer: 0
     hints:
       - List what is allowed, not what is forbidden.

@@ -4,31 +4,31 @@ id: w9.boss
 name: The Heap Hoarder
 art: blob
 hp: 8
-intro: "Mine! MINE! Every byte you new, I keep. Delete? Never heard of it!"
+intro: "Mine! MINE! Every byte you new, I keep!"
 taunt:
-  - Another new? Another treasure for my pile. Hee hee!
-  - Forget one delete on one path. That's all I need.
+  - Another new? Another treasure for my pile!
+  - Forget one delete. That's all I need.
   - Delete it twice, little hero. I dare you.
-  - It printed the right value after delete? My favorite trick.
+  - Fine after delete? My favorite trick.
 rounds:
   - id: w9.boss.r1
     type: mcq
     tags: [ w9.stack, w9.heap ]
-    prompt: "The Hoarder asks a riddle: in `int* p = new int{3};`, where do p and the int live?"
+    prompt: "In `int* p = new int{3};`, where do p and the int live?"
     options:
       - t: p on the stack, the int on the heap
-        why: "Correct: p is a normal local holding an address; new put the int on the heap."
+        why: p is a local; new's int is on the heap.
       - t: Both on the heap
-        why: p itself is a local variable, so it lives in the stack frame.
+        why: p is a local, so it's in the stack frame.
       - t: Both on the stack
         why: new always allocates on the heap.
       - t: p on the heap, the int on the stack
-        why: Backwards. The local pointer is on the stack; its target is on the heap.
+        why: Backwards.
     answer: 0
     hints:
-      - Is p declared like any other local?
-      - What does new give you back?
-    short: The pointer is a stack local; new puts its target on the heap.
+      - Is p a normal local?
+      - Where does new put things?
+    short: Pointer on the stack, target on the heap.
     explain: "`p` is an ordinary local variable, so it lives on the stack and vanishes at its }. The int created by `new` lives on the heap until something deletes it. If p vanishes first, the int leaks."
   - id: w9.boss.r2
     type: predict
@@ -49,28 +49,28 @@ rounds:
     options:
       - t: |
           3 2
-        why: "Correct: a and b share one int (1 + 2 = 3), with two owners."
+        why: a and b share one int (1 + 2) with two owners.
       - t: |
           1 2
-        why: "b is a copy of the shared_ptr, not of the int. Changes through b show in a."
+        why: a and b share the int.
       - t: |
           3 3
-        why: c is a separate unique_ptr; it isn't one of a's owners.
+        why: c isn't one of a's owners.
       - t: |
           3 1
-        why: auto b = a made a second owner, so the count is 2.
+        why: auto b = a added a second owner.
     answer: 0
     hints:
-      - Do a and b own the same int?
-      - Does c count as an owner of a's int?
-    short: a and b share one int, so it becomes 3 with 2 owners.
+      - Same int for a and b?
+      - Is c an owner of it?
+    short: "a and b share one int: 3, with 2 owners."
     explain: "`auto b = a;` copies the shared_ptr, so a and b own the same int and use_count is 2. c owns a different int (2), which is added through b. Output: \"3 2\" and a newline."
   - id: w9.boss.r3
     type: bug
     tags: [ w9.leak, w9.make-unique, w5.for ]
     bug: memory-leak
     unsafe: true
-    prompt: UNSAFE code. Each wave feeds the Hoarder. Tap the leaking line, then pick the fix.
+    prompt: UNSAFE code. Each wave leaks memory. Tap the leaking line, then pick the fix.
     code: |-
       #include <iostream>
 
@@ -84,19 +84,19 @@ rounds:
     bugLine: 4
     options:
       - t: auto slime = std::make_unique<int>(wave * 10);
-        why: "Correct: each slime is freed at the end of every loop pass. Add #include <memory>."
+        why: Freed at the end of every pass.
       - t: static int* slime = new int{wave * 10};
-        why: static runs the initializer only once, so every wave prints 0. Nothing is freed either.
+        why: "Runs once: every wave prints 0."
       - t: int* slime = new int[wave * 10];
-        why: Still never freed, and a whole uninitialized array now.
+        why: Still never freed.
       - t: int* slime = nullptr;
         why: Then *slime dereferences nullptr. UB.
     answer: 0
     hints:
-      - How many new, how many delete?
-      - Let an owner free it at the end of each pass.
-    short: Each pass leaks a new; a unique_ptr frees it at every }.
-    explain: "Every pass of the loop runs `new` and never `delete`, so each slime leaks when the pointer vanishes at the loop body's }. With `auto slime = std::make_unique<int>(wave * 10);` the owner frees the int at the end of each pass, automatically."
+      - Count new vs delete.
+      - Let an owner free it.
+    short: Each pass leaks; a unique_ptr frees it at }.
+    explain: "Every pass of the loop runs `new` and never `delete`, so each slime leaks when the pointer vanishes at the loop body's }. With `auto slime = std::make_unique<int>(wave * 10);` (plus `#include <memory>`) the owner frees the int at the end of each pass, automatically. A `static` pointer runs its initializer only once, so every wave would print 0, and nothing is freed either."
     sideBySide:
       unsafe: |-
         for (int wave = 0; wave < 3; ++wave) {
@@ -113,7 +113,7 @@ rounds:
   - id: w9.boss.r4
     type: fill
     tags: [ w9.move-owner, w9.unique ]
-    prompt: "Take the treasure away from `hoard` so `keeper` becomes its only owner."
+    prompt: "Fill the blank so `keeper` takes ownership from `hoard`."
     prelude: auto hoard = std::make_unique<int>(99);
     code: |-
       auto keeper = ___(hoard);
@@ -122,14 +122,14 @@ rounds:
       - std::move
     placeholder: function
     hints:
-      - A unique_ptr can't be copied.
-      - It's the ownership hand-over function, in std.
-    short: std::move(hoard) hands ownership over; hoard is left empty.
+      - No copies allowed.
+      - The hand-over function.
+    short: std::move hands it over; hoard is empty.
     explain: "`auto keeper = std::move(hoard);` transfers ownership: keeper owns the 99, and hoard is empty (null). A plain `auto keeper = hoard;` would try to copy a unique_ptr and fail to compile."
   - id: w9.boss.r5
     type: speed
     tags: [ w9.new, w9.delete, w9.unique, w9.shared, w9.raii ]
-    prompt: SPEED ROUND! The Hoarder is grabbing bytes. Answer fast!
+    prompt: SPEED ROUND! Answer fast!
     seconds: 45
     items:
       - q: "Memory from new int[5] is freed with..."
@@ -175,9 +175,9 @@ rounds:
           - fine once
         answer: 1
     hints:
-      - "Brackets in, brackets out; one owner, freed once."
-      - Locals stack, new heap.
-    short: "Match delete forms, one owner per object, never touch freed memory."
+      - "Brackets in, brackets out."
+      - One owner, freed once.
+    short: "Match delete forms; never touch freed memory."
     explain: "new[] pairs with delete[]. unique_ptr can only be moved (the source is left empty); shared_ptr frees when its last owner leaves. delete nullptr is a no-op. Locals live on the stack. Touching memory after delete is use-after-free: UB."
   - id: w9.boss.r6
     type: review
@@ -213,9 +213,9 @@ rounds:
       "13": "Use-after-free: *a reads memory c just freed."
       "14": "Double delete: c already freed this int."
     hints:
-      - Who owns a's int after line 10?
+      - Who owns a's int after c?
       - Is b ever freed?
-    short: "b leaks; a is used after c freed it, then deleted twice."
+    short: "b leaks; a is used after free, then freed twice."
     explain: "hoard returns a raw pointer that someone must delete. b never is: a leak. c takes over a's int, so after `c.reset()` the int is gone: `*a` is use-after-free and `delete a;` is a double delete. Fix: have hoard return `std::unique_ptr<int>` (via make_unique) and never keep raw owning pointers."
     sideBySide:
       unsafe: |-
@@ -252,7 +252,7 @@ rounds:
     type: harden
     tags: [ w9.uaf, w9.unique, w8.nullcheck ]
     bug: use-after-free
-    prompt: "`view` is a raw, non-owning pointer, and the owner may be reset. Pick the check that makes the print safe."
+    prompt: "boss may be reset. Fill the blank so it prints only if the int is alive."
     code: |-
       auto boss = std::make_unique<int>(500);
       int* view = boss.get();
@@ -265,19 +265,19 @@ rounds:
     prelude: int hit{600};
     options:
       - t: boss
-        why: "Correct: ask the owner. If boss is empty, the int is gone and we skip."
+        why: Ask the owner.
       - t: view != nullptr
-        why: reset() doesn't touch view. It still holds the old address, so this passes. Use-after-free.
+        why: reset() doesn't change view.
       - t: "*view > 0"
-        why: Reads through view to decide. If the int was freed, the check itself is use-after-free.
+        why: The check itself reads freed memory.
       - t: "true"
-        why: No check at all. After reset, the print reads freed memory.
+        why: No check at all.
     answer: 0
     hints:
-      - Does resetting boss change view?
-      - Only the owner knows if the int is alive.
-    short: A raw view can't tell its target died; ask the owner.
-    explain: "`boss.reset()` deletes the int and empties boss, but view still holds the old address and is not null. Only the owner knows whether the int is alive, so test `boss` (true when it owns something). Better still: don't keep raw views longer than you need them."
+      - Does reset change view?
+      - Only the owner knows.
+    short: A raw view can't tell its target died.
+    explain: "`view` is a raw, non-owning pointer. `boss.reset()` deletes the int and empties boss, but view still holds the old address and is not null, so `view != nullptr` passes and the print is a use-after-free. Reading `*view` inside the check is itself a use-after-free. Only the owner knows whether the int is alive, so test `boss` (true when it owns something). Better still: don't keep raw views longer than you need them."
     sideBySide:
       unsafe: |-
         auto boss = std::make_unique<int>(500);
@@ -298,7 +298,7 @@ rounds:
   - id: w9.boss.r8
     type: write
     tags: [ w9.shared, w9.make-unique ]
-    prompt: "Write one line that creates a shared_ptr named `relic` owning an int with the value 7."
+    prompt: "Write one line that makes a shared_ptr named `relic` owning an int 7."
     accept:
       - auto relic = std::make_shared<int>(7);
       - std::shared_ptr<int> relic = std::make_shared<int>(7);
@@ -307,28 +307,28 @@ rounds:
       - '^(auto|std::shared_ptr<int>) relic(=std::make_shared<int>\(7\)|\{std::make_shared<int>\(7\)\});$'
     placeholder: auto relic ...
     hints:
-      - Just like make_unique, for shared owners.
-      - The type goes in <>, the value in ().
-    short: auto relic = std::make_shared<int>(7); creates a shared owner.
+      - Like make_unique, but shared.
+      - Type in <>, value in ().
+    short: make_shared makes the int and its first owner.
     explain: "`std::make_shared<int>(7)` creates the int and its reference count together (one allocation) and returns the first shared_ptr owner."
   - id: w9.boss.r9
     type: mcq
     tags: [ w9.rule-of-zero, w9.raii ]
-    prompt: "The Hoarder's last trick: what does the Rule of Zero say you write for cleanup?"
+    prompt: "Last trick! How much cleanup code does the Rule of Zero say you write?"
     options:
       - t: Nothing; use owners that clean up themselves
-        why: "Correct: containers and smart pointers free memory, so you write zero cleanup code."
+        why: Owners free the memory.
       - t: One delete for every new
-        why: That's manual memory, the very thing that leaks on forgotten paths.
+        why: Manual memory leaks on missed paths.
       - t: A delete at the end of main
-        why: Early returns and exceptions skip it. RAII covers every path.
+        why: Early returns and exceptions skip it.
       - t: Set every pointer to nullptr
-        why: That frees nothing. The heap memory would leak.
+        why: That frees nothing. The memory leaks.
     answer: 0
     hints:
-      - How many delete statements did the Slime Spawner need?
-      - The rule's name is a number.
-    short: "Rule of Zero: pick self-cleaning owners and write no cleanup code."
+      - Slime Spawner deletes?
+      - The name is a number.
+    short: "Self-cleaning owners, zero cleanup code."
     explain: "Rule of Zero: build on types that manage their own resources (std::vector, std::string, std::unique_ptr, std::shared_ptr). Then you write no delete, no cleanup, and nothing leaks or double-frees. In World 10 your own types will follow this rule too."
 defense:
   - attack: quit
@@ -338,7 +338,7 @@ defense:
       type: harden
       tags: [ w9.leak, w9.raii, w9.make-unique ]
       bug: memory-leak
-      prompt: "The Hoarder types `quit` to jump out early. Pick the line that can't leak on any path."
+      prompt: "Typing `quit` returns early. Fill the blank with the line that never leaks."
       code: |-
         #include <iostream>
         #include <memory>
@@ -357,18 +357,18 @@ defense:
         }
       options:
         - t: auto gold = std::make_unique<int>(100);
-          why: "Correct: freed automatically on the quit path and the normal path."
+          why: Freed on both paths.
         - t: int* gold = new int{100};
-          why: Neither path ever deletes it. quit or not, it leaks.
+          why: No path ever deletes it.
         - t: std::unique_ptr<int> gold;
-          why: Owns nothing. *gold dereferences a null pointer. UB.
+          why: Owns nothing; *gold is a null dereference.
         - t: "int* gold = new int{100}; delete gold;"
-          why: Freed right away, so *gold += 50 is use-after-free.
+          why: Freed at once, so *gold += 50 is use-after-free.
       answer: 0
       hints:
-        - The early return must not skip any cleanup.
-        - Let an owner clean up at every exit.
-      short: A unique_ptr frees memory on every exit path, early or not.
+        - Returns must not skip cleanup.
+        - Let an owner clean up.
+      short: unique_ptr frees on every exit.
       explain: "With a raw new, every return needs its own delete, and the quit path is easy to forget. `std::make_unique` ties the int to gold's lifetime, so both returns free it automatically. That's RAII."
       sideBySide:
         unsafe: |-
@@ -391,7 +391,7 @@ defense:
       id: w9.boss.d2
       type: harden
       tags: [ w9.array-new, w3.validate ]
-      prompt: "`new int[n]` with n = -1 throws std::bad_array_new_length. Pick the guard."
+      prompt: "A size of -1 crashes the allocation. Fill the blank to allow only 1 to 1000."
       code: |-
         int n{};
         if (!(std::cin >> n) || ___) {
@@ -401,18 +401,18 @@ defense:
         std::vector<int> hoard(n);
       options:
         - t: n < 1 || n > 1000
-          why: "Correct: rejects zero, negatives and absurd sizes before allocating."
+          why: Rejects zero, negatives and huge sizes.
         - t: n == -1
           why: Blocks one value. -2 still gets through.
         - t: n > 1000
-          why: Caps the top but lets every negative in.
+          why: Lets every negative in.
         - t: n != 0
-          why: "Rejects every valid size and lets only 0 through."
+          why: "Rejects every valid size; only 0 passes."
       answer: 0
       hints:
-        - Guard both ends of the range.
-        - Zero is not a useful hoard either.
-      short: Validate both ends of a size before allocating.
+        - Guard both ends.
+        - Zero is useless too.
+      short: Check both ends of a size first.
       explain: "A negative size for array new throws std::bad_array_new_length; for a vector it converts to a huge size_t and throws std::length_error. Uncaught, both end the program. Check `n < 1 || n > 1000` first, and use std::vector so there's no delete[] to forget."
       sideBySide:
         unsafe: |-
@@ -433,7 +433,7 @@ defense:
       type: breakit
       tags: [ w7.bounds, w7.empty, w3.validate ]
       unsafe: true
-      prompt: UNSAFE code. It rejects negatives. Which input still breaks it?
+      prompt: UNSAFE code. Negatives are rejected. Which input still causes undefined behavior?
       code: |-
         #include <iostream>
         #include <vector>
@@ -449,7 +449,7 @@ defense:
         }
       options:
         - t: "0"
-          why: "Correct: passes the check, makes an empty vector, and hoard[0] reads past the end. UB."
+          why: Empty vector, so hoard[0] reads past the end.
         - t: "5"
           why: Five zeroed slots; hoard[0] is fine.
         - t: "-3"
@@ -458,9 +458,9 @@ defense:
           why: The failed read is caught.
       answer: 0
       hints:
-        - Which valid-looking size gives no elements?
-        - What does hoard[0] need to exist?
-      short: 0 slips through; hoard[0] on an empty vector is UB.
+        - Which size gives no elements?
+        - What must exist for hoard[0]?
+      short: 0 slips through; hoard[0] on empty is UB.
       explain: "0 passes `n < 0`, so the vector is empty and `hoard[0]` reads past the end: undefined behavior that may print garbage or crash. Reject n < 1, or check `hoard.empty()` before reading."
       sideBySide:
         unsafe: |-
@@ -476,7 +476,7 @@ defense:
           std::vector<int> hoard(n);
           std::cout << hoard.at(0) << '\n';
         prelude: int n{};
-victory: "Nooo... my hoard... freed... every byte... returned... exactly... once..."
+victory: "Nooo... my hoard... every byte... returned... exactly once..."
 reward:
   xp: 275
   cosmetic: raii-hardhat

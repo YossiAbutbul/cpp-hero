@@ -6,7 +6,7 @@ skill: logic
 shield: false
 concept:
   short: switch jumps to the case matching a value; break leaves; default catches everything else.
-  analogy: "A switch is an elevator panel: press a floor number and it takes you straight to that case."
+  analogy: "An elevator panel: press a number, go straight to that floor."
   body:
     - "`switch (choice) { case 1: ... break; case 2: ... break; default: ... }` compares one value against constant cases and jumps straight to the match."
     - "The value must be an integer type, a `char` or an enum. You can't switch on a `double` or a `std::string` (use if / else if for those). Case labels must be compile-time constants, and no two can be equal."
@@ -81,7 +81,7 @@ challenges:
           Bag
           Run
           ???
-        why: "Correct: jump to case 2, then fall through every case below it."
+        why: Jump to case 2, then fall through every case below.
       - t: |
           Bag
         why: Without break, execution keeps going into the next cases.
@@ -90,7 +90,7 @@ challenges:
           Bag
           Run
           ???
-        why: switch jumps straight to case 2; case 1 is above it and never runs.
+        why: switch jumps straight to case 2; case 1 never runs.
       - t: |
           Bag
           Run
@@ -108,13 +108,13 @@ challenges:
     prompt: Which of these can you use as the value in a switch?
     options:
       - t: An int or a char
-        why: "Correct: switch works on integer types, char and enums."
+        why: switch works on integer types, char and enums.
       - t: A std::string
         why: Doesn't compile. Compare strings with if / else if instead.
       - t: A double
         why: Doesn't compile. Floating-point values can't be switch values.
-      - t: A condition like hp > 0
-        why: It compiles (a bool is an integer type), but an if says it far more clearly.
+      - t: A range, like 1 to 10
+        why: Case labels are single values. Use if for ranges.
     answer: 0
     hints:
       - Case labels are whole-number constants.
@@ -234,7 +234,7 @@ challenges:
     options:
       - t: |
           Cape Boots
-        why: "Correct: start at case 2, fall through on purpose into case 1, then break."
+        why: Start at case 2, fall through on purpose to case 1, break.
       - t: |
           Crown Cape Boots
         why: Execution jumps to case 2; case 3 is skipped.

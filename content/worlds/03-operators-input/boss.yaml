@@ -25,7 +25,7 @@ rounds:
     options:
       - t: |
           2 3
-        why: "Correct: 20 % 6 is 2, 20 / 6 is 3, printed in that order."
+        why: 6 fits in 20 three times, with 2 left over.
       - t: |
           3 2
         why: "The order is swapped: % comes first in the chain."
@@ -39,7 +39,7 @@ rounds:
     hints:
       - "Read the chain left to right: which comes first?"
       - 6 * 3 = 18. What's left from 20?
-    short: 20 % 6 = 2 prints first, then 20 / 6 = 3.
+    short: "% comes first in the chain: 2, then 3."
     explain: '20 % 6 = 2, 20 / 6 = 3. Printed in that order with a space: "2 3" and a newline.'
   - id: w3.boss.r2
     type: mcq
@@ -48,18 +48,18 @@ rounds:
     code: 2 + 10 / 4 * 2
     options:
       - t: "6"
-        why: "Correct: 10 / 4 = 2 (int), 2 * 2 = 4, then 2 + 4 = 6."
+        why: 10 / 4 is 2, times 2 is 4, plus 2.
       - t: "7"
-        why: That uses real division (2.5 * 2 = 5). With ints, 10 / 4 is 2.
+        why: That uses 2.5. With ints, 10 / 4 is 2.
       - t: "3"
-        why: That's 2 + 10 / (4 * 2). Left to right, / happens before *.
+        why: That does 4 * 2 first. / comes first, left to right.
       - t: "8"
         why: That rounds 10 / 4 up to 3. Integer division truncates.
     answer: 0
     hints:
       - / and * before +, left to right.
       - 10 / 4 with ints is 2, not 2.5.
-    short: 10 / 4 = 2, times 2 is 4, plus 2 is 6.
+    short: 10 / 4 is 2 with ints, so the answer is 6.
     explain: "Precedence: 10 / 4 = 2, then 2 * 2 = 4, then 2 + 4 = 6."
   - id: w3.boss.r3
     type: predict
@@ -77,10 +77,10 @@ rounds:
     options:
       - t: |
           3 6
-        why: "Correct: a++ hands over the old value 2 (so b = 6), then a becomes 3."
+        why: b gets 2 * 3; the ++ still bumps a.
       - t: |
           3 9
-        why: "Postfix uses the OLD value in the expression: 2 * 3, not 3 * 3."
+        why: "Postfix uses the OLD value: 2 * 3, not 3 * 3."
       - t: |
           2 6
         why: a++ really does increment a, so it prints 3.
@@ -91,7 +91,7 @@ rounds:
     hints:
       - "Postfix: old value now, increment afterward."
       - a is modified once here, so this is well-defined.
-    short: a++ gives the old 2, so b = 6; then a = 3.
+    short: a++ uses the old 2, so b is 6. a becomes 3.
     explain: 'b = (old a) * 3 = 2 * 3 = 6, and a becomes 3. Output: "3 6" and a newline.'
   - id: w3.boss.r4
     type: predict
@@ -109,10 +109,10 @@ rounds:
     options:
       - t: |
           11
-        why: "Correct: left is false, so || runs ++keys: keys is 1, and 1 > 0."
+        why: Left is false, so ++keys runs. Both print 1.
       - t: |
           10
-        why: "|| only skips the right side when the LEFT side is true. Here it's false, so ++keys runs."
+        why: "|| skips the right side only when the left is true."
       - t: |
           01
         why: The right side is true, so open is true (1).
@@ -144,10 +144,10 @@ rounds:
     options:
       - t: |
           0 1
-        why: "Correct: since C++11, a failed number read stores 0, and cin.fail() is true (prints 1)."
+        why: "abc isn't a number: n becomes 0, and fail() prints 1."
       - t: |
           7 1
-        why: That was the old C++98 behavior. Since C++11, a failed read overwrites n with 0.
+        why: Old C++98 kept 7. Since C++11, a failed read stores 0.
       - t: |
           7 0
         why: The read definitely failed, so fail() is true.
@@ -231,7 +231,7 @@ rounds:
     type: bug
     tags: [ w3.incdec ]
     unsafe: true
-    prompt: "UNSAFE: the Golem snuck undefined behavior into the turn counter. Tap the buggy line, then pick the fix. (Goal: add this turn and the next, then advance two turns.)"
+    prompt: "Goal: add this turn and the next, then advance two turns. Tap the UB line, pick the fix."
     code: |-
       int turn = 1;
       int next = turn++ + turn++;
@@ -239,7 +239,7 @@ rounds:
     bugLine: 1
     options:
       - t: int next = turn + (turn + 1); turn += 2;
-        why: "Correct: reads turn without changing it, then modifies it once in its own statement. next = 3, turn = 3."
+        why: Reads turn first, then changes it once on its own.
       - t: int next = ++turn + ++turn;
         why: "Still two unsequenced modifications of turn: still UB."
       - t: int next = (turn++) + (turn++);
@@ -278,13 +278,13 @@ rounds:
       }
     options:
       - t: "!(std::cin >> age) || age < 0 || age > 150"
-        why: 'Correct: reads first; if the read fails, || short-circuits straight to "invalid". Otherwise the range is checked.'
+        why: 'A failed read short-circuits to "invalid"; else the range is checked.'
       - t: "!(std::cin >> age) && age < 0"
-        why: "&& needs BOTH: \"abc\" gives 0, 0 < 0 is false, so it's accepted."
+        why: '&& needs BOTH true, so "abc" (read as 0) slips through.'
       - t: std::cin >> age || age < 0
-        why: "Inverted: a successful read makes the whole thing true, so every good age is rejected."
+        why: "Inverted: every successful read is called invalid."
       - t: age < 0 || age > 150 || !(std::cin >> age)
-        why: Checks age BEFORE reading it (it's still 0). Then -5 is read successfully and never range-checked.
+        why: Checks age before reading it, so -5 is never range-checked.
     answer: 0
     hints:
       - You must read before you can check the value.
@@ -306,7 +306,7 @@ rounds:
     type: edge
     tags: [ w3.overflow ]
     unsafe: true
-    prompt: This adds a bonus to a score (both ints, 32-bit). Which test inputs expose overflow? Select all that apply.
+    prompt: This adds bonus to score (32-bit ints). Which inputs expose overflow? Pick all.
     code: int total = score + bonus;
     prelude: int score{}; int bonus{};
     options:
@@ -317,7 +317,7 @@ rounds:
       - t: score 100, bonus 50
         why: 150 fits easily. No problem.
       - t: score 2000000000, bonus 2000000000
-        why: "Exposes it: 4 billion is far beyond the largest int (about 2.1 billion)."
+        why: "Exposes it: 4 billion is far past the largest int (2.1 billion)."
       - t: score 0, bonus -5
         why: -5 fits fine. Negative isn't the problem; crossing the limits is.
     answers: [ 0, 1, 3 ]
@@ -355,7 +355,7 @@ defense:
         int cost = potions * 25;
       options:
         - t: potions < 0
-          why: "Correct: rejects every negative amount; 0 potions is a valid (if boring) order."
+          why: Rejects every negative; 0 potions is a valid, boring order.
         - t: potions > 0
           why: "Inverted: rejects every real order and lets negatives through."
         - t: potions == -5
@@ -396,7 +396,7 @@ defense:
         int cost = potions * 25;
       options:
         - t: "2147483647"
-          why: "Correct: it's a valid int, so the read succeeds, but potions * 25 overflows: UB."
+          why: "It passes both checks, but potions * 25 overflows: UB."
         - t: abc
           why: "Caught: the read fails and the program exits."
         - t: "-5"
@@ -447,9 +447,9 @@ defense:
         }
       options:
         - t: std::cin.fail()
-          why: 'Correct: fail() is true after a failed read, exactly when "abc" was typed.'
+          why: 'It asks the stream, which knows the "abc" read failed.'
         - t: damage == 0
-          why: A real 0 would trigger it too; the value alone can't tell "0" from "abc". Check the stream.
+          why: A real 0 would trigger it too. Ask the stream instead.
         - t: std::cin.eof()
           why: eof() means input ended. "abc" sets the failbit, not eof.
         - t: "!std::cin.clear()"
@@ -493,19 +493,19 @@ defense:
         std::cout << shards / golems << ' ' << shards % golems << '\n';
       options:
         - t: golems <= 0
-          why: "Correct: blocks division by zero, and negatives too (which also closes the sneaky smallest-int / -1 overflow)."
+          why: Blocks 0 golems, and negative counts too.
         - t: shards == 0
-          why: "Wrong variable: 0 / 3 is fine. The divisor is what matters."
+          why: "0 shards is fine: 0 / 3 is 0. Check the divisor."
         - t: golems > 0
           why: "Inverted: rejects every valid split and lets 0 through."
         - t: golems == 0 && shards == 0
-          why: Only blocks when BOTH are 0. 10 shards / 0 golems still divides by zero.
+          why: Needs both 0. 10 shards, 0 golems still divides by zero.
       answer: 0
       hints:
         - Which variable is the divisor?
         - Only positive counts make sense here.
       short: "Check the divisor: golems <= 0 means no split."
-      explain: "Both / and % by zero are UB. Check the divisor before either one runs: golems <= 0 means no split."
+      explain: "Both / and % by zero are UB. Check the divisor before either one runs: golems <= 0 means no split. (Blocking negatives also closes the sneaky smallest-int / -1 overflow.)"
       sideBySide:
         unsafe: std::cout << shards / golems << ' ' << shards % golems << '\n';
         hardened: |-

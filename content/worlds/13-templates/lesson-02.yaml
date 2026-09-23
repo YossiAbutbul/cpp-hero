@@ -6,7 +6,7 @@ skill: structure
 shield: false
 concept:
   short: "The compiler deduces T from the arguments; if they disagree, name T yourself: biggest<double>(3, 4.5)."
-  analogy: Deduction is a tailor measuring you; explicit arguments are you telling the tailor your size up front.
+  analogy: Deduction is a tailor measuring you; explicit arguments tell your size.
   body:
     - "**Deduction**: for `template <typename T> T biggest(T a, T b)`, the call `biggest(3, 7)` makes T int. Every argument that uses `T` must agree on what T is."
     - "`biggest(3, 4.5)` does **not** compile: the first argument says `T = int`, the second says `T = double`. Deduction never converts to make them match (a normal function taking `double` would)."
@@ -62,13 +62,13 @@ challenges:
     prompt: "`biggest` is `template <typename T> T biggest(T a, T b)`. What happens with `biggest(2, 3.5)`?"
     options:
       - t: "Compile error: T can't be both int and double"
-        why: "Correct: deduction gets int from 2 and double from 3.5. It never converts to make them agree."
+        why: 2 says int, 3.5 says double, and deduction never converts.
       - t: T becomes double and the result is 3.5
-        why: That's what a normal function taking double would do. Template deduction doesn't convert.
+        why: A plain double function would. Template deduction doesn't convert.
       - t: T becomes int and the result is 3
         why: Deduction doesn't pick the first argument's type and convert the rest.
       - t: It compiles with a warning and returns 3.5
-        why: It's a hard error, not a warning. You must resolve the conflict yourself.
+        why: It's a hard error, not a warning. You must resolve it.
     answer: 0
     hints:
       - What does each argument say T is?
@@ -94,7 +94,7 @@ challenges:
     options:
       - t: |
           3 3.5 3.5
-        why: "Correct: half<int> divides ints (3); the other two use T = double (3.5)."
+        why: "half(7) divides ints (3); the others use T = double (3.5)."
       - t: |
           3.5 3.5 3.5
         why: half(7) deduces T = int, so 7 / 2 is integer division.
@@ -113,7 +113,7 @@ challenges:
   - id: w13.l2.c3
     type: fill
     tags: [ w13.explicit, w13.deduce ]
-    prompt: This call doesn't compile. Fill in the blank so it compiles and prints 4.5.
+    prompt: Fill the blank so the call compiles and prints 4.5. Include the angle brackets.
     code: |-
       #include <iostream>
 
@@ -155,7 +155,7 @@ challenges:
       - t: -1.0 and 0.0
         why: Chopping whole numbers changes nothing. Returns 0.
       - t: 2.4 and 2.9
-        why: "Correct: both are chopped to 2 before comparing, so it returns 2 instead of 2.9."
+        why: Both are chopped to 2 before comparing, so 2.9 is lost.
     answer: 3
     hints:
       - "biggest<int> converts both arguments to int first."
@@ -202,11 +202,11 @@ challenges:
     prompt: Why write `const T&` in `template <typename T> void show(const T& value)`?
     options:
       - t: T might be big (a long string or vector); a const reference avoids copying it
-        why: "Correct: same rule as World 6. No copy, and const promises show won't change it."
+        why: Same rule as World 6. No copy, and show can't change it.
       - t: Templates can't take parameters by value
         why: They can. T by value is fine for small types like int.
       - t: It makes T always deduce as a reference type
-        why: For const T&, T is deduced as the plain type (std::string), not a reference.
+        why: With const T&, T deduces as the plain type, like std::string.
       - t: It's required so the template works with int
         why: int works either way. The reference helps with big types.
     answer: 0

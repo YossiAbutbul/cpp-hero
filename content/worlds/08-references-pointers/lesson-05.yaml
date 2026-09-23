@@ -5,8 +5,8 @@ title: "Shield: No null, no dangling"
 skill: defense
 shield: true
 concept:
-  short: "Initialize every pointer, check nullptr before following it, and never keep an arrow to something that's gone."
-  analogy: "Following a pointer is walking to an address: check the house exists before you knock, or you knock on the void."
+  short: "Initialize every pointer, check nullptr before following, and never point at something gone."
+  analogy: "Before knocking at an address, check the house still exists."
   body:
     - "**Always initialize pointers**: `int* p = nullptr;` or `int* p = &hp;`. An uninitialized pointer holds a garbage address; dereferencing it is undefined behavior."
     - "**Check before you follow**: when a pointer may be null (a search with no match), test `if (p != nullptr)` before `*p`. Dereferencing nullptr is UB: usually a crash, but not guaranteed."
@@ -39,12 +39,12 @@ demo:
       mem:
         cells:
           - { name: target, ptr: null, addr: "0x10" }
-      note: "Born pointing nowhere: known and testable, never garbage."
+      note: "Born pointing nowhere: testable, never garbage."
     - line: 5
       mem:
         cells:
           - { name: goblin, value: "12", addr: "0x14" }
-      note: A goblin lives only inside these braces.
+      note: The goblin lives only inside these braces.
     - line: 6
       mem:
         cells:
@@ -53,37 +53,37 @@ demo:
     - line: 7
       out: |
         12
-      note: Safe to follow while the goblin exists.
+      note: Safe while the goblin exists.
     - line: 9
       mem:
         drop: [ goblin ]
       crash: "Dangling pointer: target aims at a dead goblin!"
-      note: Without line 8, target would dangle right here.
+      note: Without line 8, target would dangle here.
     - line: 8
       mem:
         cells:
           - { name: goblin, value: "12" }
           - { name: target, ptr: null }
       shield: Pointer reset!
-      note: "Back to reality: we let go before the goblin vanished."
+      note: "Rewind: we let go before the goblin vanished."
     - line: 9
       mem:
         drop: [ goblin ]
-      note: The goblin is gone, but target is safely null.
+      note: Goblin gone; target is safely null.
     - line: 10
       shield: nullptr check!
-      note: Check before following. target is null, so skip.
+      note: target is null, so skip.
     - line: 13
       out: |
         No target
-      note: Handled cleanly. No void, no crash.
+      note: Handled cleanly. No crash.
 challenges:
   - id: w8.l5.c1
     type: breakit
     tags: [ w8.nullcheck, w7.vector, w2.string ]
     bug: null-deref
     unsafe: true
-    prompt: UNSAFE code. The player types a hero name to damage. Pick the input that breaks it.
+    prompt: The player types a hero name. Which input causes undefined behavior?
     code: |-
       #include <iostream>
       #include <string>
@@ -106,18 +106,17 @@ challenges:
       }
     options:
       - t: Knight
-        why: Found. target points at 30; it prints 25.
+        why: Found. Prints 25.
       - t: Mage
-        why: Found. target points at 12; it prints 7.
+        why: Found. Prints 7.
       - t: Bard
-        why: "Correct: no match, so target stays nullptr, and *target is UB."
+        why: No match, so *target follows nullptr.
       - t: Mage Knight
-        why: cin >> reads one word, "Mage", which is found. Prints 7.
+        why: cin >> reads just "Mage", which is found.
     answer: 2
     hints:
-      - What is target if the loop finds nothing?
-      - The code never checks target before using it.
-    short: No match leaves target null; dereferencing it is UB.
+      - What is target if nothing matches?
+    short: No match leaves target null, and following null is UB.
     explain: "Any name that isn't in the list (Bard, or even lowercase \"knight\") leaves target as nullptr, and `*target -= 5` dereferences null: undefined behavior. It usually crashes, but UB guarantees nothing. Check `target == nullptr` before following it."
     sideBySide:
       unsafe: |-
@@ -145,18 +144,17 @@ challenges:
     prelude: int hp{30}; int* found = &hp;
     options:
       - t: found != nullptr
-        why: "Correct: only follows the pointer when it points somewhere."
+        why: Follows only when it points somewhere.
       - t: "*found != 0"
-        why: This dereferences to check, so a null pointer triggers UB inside the check itself.
+        why: The check itself dereferences null. UB.
       - t: found == nullptr
-        why: "Inverted: follows the pointer exactly when it's null."
+        why: "Inverted: follows it exactly when it's null."
       - t: "&found != nullptr"
-        why: That's the address of the pointer variable itself, which is never null. Always true.
+        why: The pointer variable's own address. Always true.
     answer: 0
     hints:
-      - Test the arrow, not the box it points at.
-      - Compare the pointer itself with nullptr.
-    short: Test found != nullptr before *found.
+      - Test the arrow, not the box.
+    short: Test the pointer against nullptr before following it.
     explain: "Check the pointer itself: `found != nullptr` (or simply `if (found)`). Checking `*found` already dereferences it, which is the very UB we're guarding against."
     sideBySide:
       unsafe: |-
@@ -172,7 +170,7 @@ challenges:
     type: harden
     tags: [ w8.dangling, w6.scope ]
     bug: dangling-pointer
-    prompt: The goblin dies at the closing brace. What goes in the blank so `target` doesn't dangle?
+    prompt: goblin dies at the closing brace. What goes in the blank so `target` won't dangle?
     code: |-
       int* target = nullptr;
       {
@@ -186,18 +184,17 @@ challenges:
       }
     options:
       - t: target = nullptr
-        why: "Correct: let go before the goblin vanishes; the later check then skips safely."
+        why: Let go first; the later check then skips.
       - t: goblin = 0
-        why: Changes the value, but goblin still dies at }, and target still points at it.
+        why: target still points at a dying goblin.
       - t: "*target = 0"
-        why: Same thing through the pointer. The arrow still aims at a box that's about to vanish.
+        why: Changes a value; the arrow still aims at goblin.
       - t: delete target
-        why: "UB: never delete what you didn't new. goblin is a normal local."
+        why: "UB: goblin wasn't made with new."
     answer: 0
     hints:
-      - The problem is the arrow, not the value.
-      - What does the later if check for?
-    short: Reset the pointer to nullptr before its target goes away.
+      - Fix the arrow, not the value.
+    short: Reset the pointer to nullptr before its target dies.
     explain: "When goblin's scope ends, any pointer to it dangles. Setting `target = nullptr` first turns a dangling pointer into a testable \"nothing\". Even better: don't let a pointer outlive what it points at. And never `delete` something you didn't create with `new` (World 9)."
     sideBySide:
       unsafe: |-
@@ -223,7 +220,7 @@ challenges:
     tags: [ w8.dangling, w6.return ]
     bug: dangling-pointer
     unsafe: true
-    prompt: Code review! Tap every dangerous line, then submit.
+    prompt: Tap the line that makes a dangling pointer and the line that uses it.
     code: |-
       #include <iostream>
 
@@ -253,8 +250,7 @@ challenges:
       "15": "Fine: best names knight, which is alive in main."
       "16": "UB: *boost reads a dead local. It might print 35, junk, or crash."
     hints:
-      - Which function returns an address of something that dies?
-      - Where is that dead address finally followed?
+      - Which function returns an address that dies?
     short: Returning a local's address creates a dangling pointer.
     explain: "makeBoost returns `&boost`, but boost is destroyed when the function returns, so the pointer dangles and `*boost` is UB. g++ warns (\"function returns address of local variable\"). strongest is fine: it returns a reference to the caller's own variables. Fix makeBoost by returning `int` by value."
     sideBySide:
@@ -287,36 +283,35 @@ challenges:
   - id: w8.l5.c5
     type: mcq
     tags: [ w8.sanitizers, w1.warnings ]
-    prompt: Your program sometimes reads a local through a pointer after its scope ended. Which tool reports that at run time?
+    prompt: Which tool reports, at run time, reading a local after its scope ended?
     options:
       - t: "AddressSanitizer: g++ -fsanitize=address -g"
-        why: "Correct: it instruments memory accesses and stops with a report on use of out-of-scope stack memory."
+        why: It watches memory accesses and stops on bad ones.
       - t: -Wall -Wextra alone
-        why: Warnings catch some cases at compile time, but many dangling uses only show up at run time.
+        why: Compile time only; many dangling uses slip past.
       - t: Turning on -O2
-        why: Optimization changes how UB behaves, often hiding it. It detects nothing.
+        why: Optimization detects nothing, and often hides UB.
       - t: Nothing can; UB is invisible
-        why: "UB is hard to spot by eye, but sanitizers exist exactly for this."
+        why: Sanitizers exist exactly for this.
     answer: 0
     hints:
-      - You want a checker that runs WITH the program.
       - Its flag starts with -fsanitize.
-    short: AddressSanitizer catches use of dead stack memory at run time.
+    short: AddressSanitizer catches dead memory reads at run time.
     explain: "Use both layers: `-Wall -Wextra` for compile-time warnings (like returning a local's address), and `-fsanitize=address -g` while testing, which aborts with a detailed report when a bad access happens. Neither replaces careful code: a sanitizer only sees the paths your tests actually run."
   - id: w8.l5.c6
     type: safe
     tags: [ w8.init-ptr, w8.nullcheck, w8.dangling ]
-    prompt: Safe or unsafe? The Wraith's minions are coming. Go fast!
+    prompt: Safe or unsafe? Go fast!
     seconds: 30
     items:
       - code: int* p = nullptr;
         safe: true
-        why: Initialized to a known "nowhere" that can be tested.
+        why: A known, testable "nowhere".
       - code: |-
           int* p;
           *p = 5;
         safe: false
-        why: "Uninitialized pointer: writes to a garbage address. UB."
+        why: "Writes to a garbage address. UB."
       - code: |-
           if (p != nullptr) {
               std::cout << *p;
@@ -343,29 +338,28 @@ challenges:
           r += 1;
         prelude: int hp{3};
         safe: true
-        why: A reference to a living variable is always valid.
+        why: A reference to a living variable is valid.
       - code: |-
           int hp = 5;
           int* p = &hp;
           delete p;
         safe: false
-        why: hp wasn't created with new, so deleting it is UB.
+        why: hp wasn't made with new. UB.
       - code: |-
           int x = 7;
           int* p = &x;
           std::cout << *p;
         safe: true
-        why: p points at x, which is alive in the same scope.
+        why: x is alive in the same scope.
     hints:
-      - Where does each pointer point right now?
-      - Is the target still alive, and was it ever set?
-    short: "Safe pointers are initialized, checked, and never outlive their target."
+      - Where does each pointer point now?
+    short: "Safe pointers: initialized, checked, never outliving their target."
     explain: "Initialize pointers, check nullptr before following, never keep an arrow to something out of scope, and never delete what you didn't new."
 recap:
-  - "Initialize every pointer: nullptr or a real address."
+  - "Initialize every pointer."
   - Check nullptr before every dereference.
-  - Never return a local's address or reference.
-  - Prefer references when null makes no sense.
+  - Never return a local's address.
+  - No null needed? Use a reference.
 vault:
   - id: w8.nullguard
     title: Check before you follow

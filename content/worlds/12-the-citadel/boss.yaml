@@ -44,10 +44,10 @@ rounds:
     options:
       - t: |
           H1 H2 x2 x1 | too many heads
-        why: "Correct: grow(2) throws, unwinding destroys head 2, then head 1, then the catch runs."
+        why: "grow(2) throws: head 2 dies, then head 1, then the catch."
       - t: |
           H1 H2 x1 x2 | too many heads
-        why: The newest frame unwinds first, so head 2 is destroyed before head 1.
+        why: The newest frame unwinds first, so head 2 goes first.
       - t: |
           H1 H2 | too many heads x2 x1
         why: Destructors run during unwinding, before the catch body starts.
@@ -66,11 +66,11 @@ rounds:
     prompt: A Map constructor can't open its map file. How should it report the failure?
     options:
       - t: Throw an exception
-        why: "Correct: constructors can't return a value. Throwing means no half-built Map ever exists."
+        why: "Constructors can't return errors; a throw means no half-built Map."
       - t: Return -1
-        why: Constructors have no return value at all, so this can't even be written.
+        why: Constructors have no return value, so this can't be written.
       - t: Set an isValid flag and hope callers check it
-        why: A zombie object that looks alive. Every caller must remember the check forever.
+        why: A zombie object that looks alive. Callers will forget to check.
       - t: assert that the file opened
         why: Missing files happen in real life, and asserts vanish with NDEBUG.
     answer: 0
@@ -82,7 +82,7 @@ rounds:
   - id: w12.boss.r3
     type: bug
     tags: [ w12.catchref, w12.hierarchy ]
-    prompt: 'The Hydra throws length_error("too many heads"), but this prints "std::exception". Tap the line, then pick the fix.'
+    prompt: 'This should print "too many heads" but prints "std::exception". Tap the bad line, then pick the fix.'
     code: |-
       try {
           summonHydra(heads);
@@ -100,11 +100,11 @@ rounds:
     expect: warn
     options:
       - t: "} catch (const std::exception& e) {"
-        why: "Correct: the reference refers to the real length_error, so what() returns \"too many heads\"."
+        why: "The reference sees the real length_error and its real message."
       - t: "} catch (std::exception* e) {"
         why: A pointer handler only catches thrown pointers. The object would go uncaught.
       - t: "} catch (...) {"
-        why: Catches it, but there's no e, so you can't read the message at all.
+        why: Catches it, but there's no e to read the message from.
       - t: "} catch (std::logic_error e) {"
         why: Still a copy that slices, and runtime errors wouldn't match at all.
     answer: 0
@@ -128,7 +128,7 @@ rounds:
   - id: w12.boss.r4
     type: speed
     tags: [ w12.throw, w12.catch, w12.assert, w12.static-assert, w12.tools, w12.optional ]
-    prompt: SPEED ROUND! Heads are snapping from every side. Answer fast!
+    prompt: SPEED ROUND! Answer each quick question before time runs out.
     seconds: 45
     items:
       - q: Which header declares std::runtime_error?
@@ -184,7 +184,7 @@ rounds:
     type: review
     tags: [ w12.assert, w12.validate, w12.ub ]
     unsafe: true
-    prompt: "UNSAFE: the Hydra wrote this loot code. Tap every dangerous line."
+    prompt: "UNSAFE: the Hydra wrote this loot code. Tap every line with a bug or UB."
     code: |-
       std::vector<int> loot(size);
       int index;
@@ -223,7 +223,7 @@ rounds:
   - id: w12.boss.r6
     type: predict
     tags: [ w12.untrusted, w12.catch ]
-    prompt: "\"It seemed to work\": what does std::stoi make of these? (Watch the spaces.)"
+    prompt: What does this print? Think about how std::stoi handles each input.
     code: |-
       #include <iostream>
       #include <stdexcept>
@@ -244,13 +244,13 @@ rounds:
       }
     options:
       - t: "42 bad 7 \n"
-        why: "Correct: stoi reads the leading 42 and quietly ignores \"abc\". Only text with no leading number throws."
+        why: "stoi reads the leading 42 and quietly drops \"abc\"."
       - t: "bad bad 7 \n"
-        why: stoi stops at the first non-digit and returns what it read. "42abc" gives 42, no throw.
+        why: 'stoi stops at the first non-digit: "42abc" gives 42.'
       - t: "42abc bad 7 \n"
         why: stoi returns an int; it can't return the letters.
       - t: "42 0 7 \n"
-        why: '"abc" has no number at all, so stoi throws invalid_argument and the catch prints "bad ".'
+        why: '"abc" has no number, so stoi throws and the catch prints "bad".'
     answer: 0
     hints:
       - stoi reads as many digits as it can from the start.
@@ -299,7 +299,7 @@ rounds:
     type: harden
     tags: [ w12.catch, w12.terminate ]
     bug: uncaught-exception
-    prompt: Last line of defense in main. Pick the handler that stops any standard exception from reaching std::terminate.
+    prompt: Pick the catch that stops ANY standard exception from reaching std::terminate.
     code: |-
       #include <iostream>
       #include <stdexcept>
@@ -318,7 +318,7 @@ rounds:
       }
     options:
       - t: const std::exception& e
-        why: "Correct: the root of the family catches every standard exception, by reference, with what()."
+        why: The family root catches every standard exception, by reference.
       - t: std::exception e
         why: Catches it, but copies and slices, so what() may lose the message.
       - t: "..."
@@ -354,16 +354,16 @@ rounds:
   - id: w12.boss.r9
     type: mcq
     tags: [ w12.tools, w12.ub ]
-    prompt: Your tests pass, but one reads past a vector's end and happens to print a sensible number. What catches it?
+    prompt: A passing test reads past a vector's end but prints a sensible number. What catches it?
     options:
       - t: Running the tests built with -fsanitize=address
-        why: "Correct: ASan checks every memory access and stops on the out-of-bounds read, with a report."
+        why: ASan checks every memory access and reports the bad read.
       - t: Running the tests again, more times
         why: UB can print the same plausible number every time. Repetition proves nothing.
       - t: Building with -O2
         why: Optimization changes how UB behaves, often hiding it further.
       - t: Adding more std::cout lines
-        why: Printing may even move memory around and hide the bug. It detects nothing.
+        why: Printing detects nothing and may even hide the bug.
     answer: 0
     hints:
       - You need a tool that checks memory accesses while the program runs.
@@ -394,13 +394,13 @@ defense:
         }
       options:
         - t: name.empty()
-          why: "Correct: an empty string has no front(). Reject it before reading."
+          why: An empty string has no front(). Reject it before reading.
         - t: name.front() == ' '
-          why: Calls front() on the empty string to check it. That IS the UB.
+          why: Calls front() on the empty string. That IS the UB.
         - t: name.size() < 0
           why: size() is unsigned, so it's never negative. Always false.
         - t: "!std::cin"
-          why: Reading an empty line succeeds, so the stream is fine. The string is still empty.
+          why: An empty line reads fine, so cin is OK. name is empty.
       answer: 0
       hints:
         - What can't an empty string give you?
@@ -426,7 +426,7 @@ defense:
       type: harden
       tags: [ w12.catch, w12.untrusted ]
       bug: uncaught-exception
-      prompt: 'The Hydra types "abc" and std::stoi throws. Pick the handler.'
+      prompt: 'The Hydra types "abc" and std::stoi throws. Pick the catch type that handles it.'
       code: |-
         #include <iostream>
         #include <stdexcept>
@@ -448,7 +448,7 @@ defense:
         }
       options:
         - t: const std::invalid_argument&
-          why: "Correct: that's exactly what stoi throws when there's no number at all."
+          why: That's exactly what stoi throws when there's no number.
         - t: const std::runtime_error&
           why: invalid_argument is a logic_error, not a runtime_error. It slips past.
         - t: std::string
@@ -498,7 +498,7 @@ defense:
         }
       options:
         - t: "99999999999"
-          why: "Correct: too big for an int, so stoi throws out_of_range. Nobody catches it: terminate."
+          why: "Too big for an int: out_of_range, and nobody catches it."
         - t: abc
           why: Caught. That's invalid_argument, which has a handler.
         - t: "-12"
@@ -550,9 +550,9 @@ defense:
         }
       options:
         - t: slot < 0 || slot >= static_cast<int>(heads.size())
-          why: "Correct: both ends of the range are checked, so only 0, 1 and 2 get through."
+          why: Both ends are checked, so only 0, 1 and 2 get through.
         - t: slot >= static_cast<int>(heads.size())
-          why: Guards the top only. -1 walks right in and reads out of bounds.
+          why: Guards the top only. -1 walks right in.
         - t: slot < 0
           why: Guards the bottom only. 3 still reads past the end.
         - t: slot == -1
@@ -560,7 +560,7 @@ defense:
       answer: 0
       hints:
         - A valid index has a smallest AND a largest value.
-        - Check both ends of 0 to size - 1.
+        - The last valid slot is size minus 1.
       short: "Check both ends: 0 <= slot < size."
       explain: "A valid index is 0 up to size - 1. Check both ends before using []. Casting size() to int keeps the comparison signed, so -1 isn't turned into a huge unsigned number."
       sideBySide:

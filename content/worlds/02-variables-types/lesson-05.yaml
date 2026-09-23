@@ -6,7 +6,7 @@ skill: defense
 shield: true
 concept:
   short: "Always give variables a value: reading an empty one is UB. Braces block lossy conversions."
-  analogy: An uninitialized variable is an attic box still full of old junk, and braces `{}` are a gate that rejects anything that doesn't fit.
+  analogy: An unfilled box holds old junk. Braces reject anything that doesn't fit.
   body:
     - "`int hp;` inside a function creates a box but puts nothing in it. It holds an **indeterminate** value: leftover bits from whatever used that memory before."
     - 'Reading it (`std::cout << hp;`, `hp + 1`) is **undefined behavior (UB)**: it might print 0, print garbage, crash, or seem fine today and break on another compiler. "It worked on my machine" proves nothing.'
@@ -35,7 +35,7 @@ demo:
     - line: 3
       vars:
         damage: "?"
-      note: A box is created but never filled. Its contents are garbage.
+      note: A box is made but never filled. Garbage inside.
     - line: 4
       vars:
         damage: "?"
@@ -80,7 +80,7 @@ challenges:
     tags: [ w2.init, w2.narrowing ]
     bug: uninit-var
     short: Read only what you've filled; braces stop silent truncation.
-    prompt: Safe or unsafe? Go fast!
+    prompt: Safe or unsafe? Unsafe means garbage is read or data silently lost.
     seconds: 30
     items:
       - code: |-
@@ -105,10 +105,10 @@ challenges:
           std::string name;
           std::cout << name.size();
         safe: true
-        why: std::string's default is an empty string, so this prints 0. (ints, doubles, chars and bools get no such default.)
+        why: A string starts empty, so this prints 0.
       - code: int level = 7.9;
         safe: false
-        why: "It compiles, but silently truncates to 7: hidden data loss. Braces would have refused it."
+        why: Compiles, but silently chops to 7. Braces would refuse it.
       - code: char grade{'A'};
         safe: true
         why: Initialized with a char literal.
@@ -116,7 +116,7 @@ challenges:
           bool done;
           std::cout << done;
         safe: false
-        why: An uninitialized bool is garbage too; reading it is UB (it might not even be a valid 0 or 1).
+        why: done was never given a value; reading it is UB.
     hints:
       - Is every variable given a value before it's read?
       - Watch for silent double-to-int conversions with =.
@@ -171,13 +171,13 @@ challenges:
       std::cout << "Potions: " << potions << '\n';
     options:
       - t: "{}"
-        why: "Correct: empty braces value-initialize potions to 0."
+        why: Empty braces set potions to 0.
       - t: = potions
         why: "Initializing a variable from itself still reads garbage: UB."
       - t: ()
-        why: Trap! `int potions();` declares a function named potions, not a variable (the "most vexing parse"). Braces never have this problem.
+        why: Trap! `int potions();` declares a function, not a variable.
       - t: "{0.0}"
-        why: "0.0 is a double, and braces refuse to narrow double to int: compile error."
+        why: 0.0 is a double; braces won't squeeze it into an int.
     answer: 0
     hints:
       - Braces with nothing inside mean "the zero value".
@@ -194,20 +194,20 @@ challenges:
     type: mcq
     tags: [ w2.narrowing, w1.compile ]
     short: = silently truncates; braces reject narrowing at compile time.
-    prompt: "Intentionally broken snippet: what does the compiler do with these two lines?"
+    prompt: What does the compiler do with these two lines?
     code: |-
       int a = 3.7;
       int b{3.7};
     expect: error
     options:
       - t: "Line 1 compiles (a becomes 3); line 2 is a compile error: narrowing"
-        why: "Correct: = silently truncates, but braces refuse any conversion that can lose data."
+        why: = chops to 3 quietly; braces refuse to lose data.
       - t: Both compile; a and b are both 3
         why: "Brace initialization doesn't allow narrowing: double to int is rejected."
       - t: Both compile; a and b are both 4
         why: Double-to-int never rounds, and line 2 doesn't compile anyway.
       - t: Both lines are compile errors
-        why: Line 1 is legal C++ (maybe with a warning), which is why it's sneaky.
+        why: Line 1 is legal C++, which is why it's sneaky.
     answer: 0
     hints:
       - One of these syntaxes is picky about lost data.
@@ -219,7 +219,7 @@ challenges:
     bug: narrowing
     unsafe: true
     short: "0.9 silently truncates to 0: the shield vanishes."
-    prompt: The shield strength comes from a double. Which value breaks this code the worst?
+    prompt: Which boost value makes the shield silently lose power?
     code: |-
       double boost{/* value */};
       int shieldPower = boost;   // silent double to int
@@ -230,7 +230,7 @@ challenges:
       - t: "5.0"
         why: "Becomes 5: nothing lost."
       - t: "0.9"
-        why: "Correct: truncates to 0. The hero's shield silently drops to nothing!"
+        why: Chops to 0. The shield silently vanishes!
       - t: "3.0"
         why: "Becomes 3: nothing lost."
     answer: 2
@@ -262,8 +262,8 @@ challenges:
     explain: "`int gold{};` (or `int gold{0};`) guarantees a known starting value. Initialize every variable where you declare it."
 recap:
   - "Reading an uninitialized variable is UB: always initialize."
-  - "`int x{};` gives 0; std::string starts empty on its own."
-  - "Braces refuse narrowing: `int x{3.7};` is a compile error."
+  - "`int x{};` gives 0; strings start empty."
+  - "Braces refuse lossy values: `int x{3.7};` errors."
   - UB can seem fine, then break later.
 vault:
   - id: w2.always-init

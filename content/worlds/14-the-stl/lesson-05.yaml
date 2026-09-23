@@ -5,8 +5,8 @@ title: "Shield: Guard the iterators"
 skill: defense
 shield: true
 concept:
-  short: "Check find() against end(), look keys up without [], and never reuse an iterator after erase or growth."
-  analogy: "An iterator is a bookmark: check it's on a real page, and grab a fresh one after tearing pages out."
+  short: "Check find() against end(), look up without [], and never reuse iterators after changes."
+  analogy: "Check your bookmark marks a real page; after tearing pages, re-mark."
   body:
     - "**Unchecked find.** `m.find(k)`, `s.find(x)` and `std::find` return `end()` when nothing matches. Dereferencing `end()` is **undefined behavior**: it might print garbage, crash, or seem fine until the day it doesn't. Always check: `if (auto it = m.find(k); it != m.end()) { use it->second }`. (The `auto it = ...;` inside the if keeps `it` scoped to the check.)"
     - "**Phantom keys.** `m[k]` on a missing key **inserts** k with a default value (0, empty string). So `if (m[name] == 0)` quietly adds `name` to the map, grows `size()`, and can't tell \"missing\" from \"really 0\". For lookups use `find`, `contains` (C++20) or `count`; use `at` when the key must exist (it throws `std::out_of_range`). Save `[]` for when you **want** insert-or-update, like `++counts[word]`."
@@ -69,7 +69,7 @@ challenges:
     tags: [ w14.find-end, w14.map ]
     bug: unchecked-find
     unsafe: true
-    prompt: UNSAFE shop lookup. The player types an item name. Pick the input that breaks it.
+    prompt: UNSAFE shop lookup. Which typed input causes undefined behavior?
     code: |-
       #include <iostream>
       #include <map>
@@ -89,7 +89,7 @@ challenges:
       - t: shield
         why: Found, so it prints 25.
       - t: Sword
-        why: "Correct: keys are case-sensitive, find returns end(), and it->second reads end(): UB."
+        why: "Keys are case-sensitive, so find returns end(): UB."
       - t: sword shield
         why: ">> stops at the space, so item is \"sword\". Found."
     answer: 2
@@ -125,11 +125,11 @@ challenges:
     prelude: std::vector<int> hp{0, 5, 0, 7};
     options:
       - t: it = hp.erase(it)
-        why: "Correct: erase returns a valid iterator to the next element, so the loop continues safely."
+        why: erase hands back a valid iterator to the next element.
       - t: hp.erase(it)
-        why: it now points at an erased slot. The loop keeps using a dead iterator.
+        why: it is now dead, but the loop keeps using it.
       - t: hp.erase(it); ++it
-        why: Moving on from a dead iterator is UB, and it would skip an element anyway.
+        why: Stepping from a dead iterator is UB, and skips an element.
       - t: hp.push_back(0)
         why: Adds instead of removing, may reallocate, and loops forever.
     answer: 0
@@ -192,7 +192,7 @@ challenges:
       - Look for iterators still used after their container changed.
       - One line changes the map just by reading it.
     short: Erase and push_back kill iterators; [] inserts missing keys.
-    explain: "Line 9: after erase(it), ++it steps from a dead iterator. Line 15: push_back may move all elements, leaving w dangling. Line 18: hp[\"boss\"] inserts a phantom key. The first two are UB: they may seem to work, then fail on another run or compiler."
+    explain: "Line 10: after erase(it), ++it steps from a dead iterator. Line 16: push_back may move all elements, leaving w dangling. Line 19: hp[\"boss\"] inserts a phantom key. The first two are UB: they may seem to work, then fail on another run or compiler."
     sideBySide:
       unsafe: |-
         for (auto it = hp.begin(); it != hp.end(); ++it) {
@@ -238,11 +238,11 @@ challenges:
     bugLine: 2
     options:
       - t: "return it != scores.end() ? *it : 0;"
-        why: "Correct: an empty vector gives end(), which is now checked before reading."
+        why: Empty input gives end(), and that's now checked first.
       - t: return scores.back();
         why: back() on an empty vector is UB too.
       - t: return *(it - 1);
-        why: "For an empty vector, end() - 1 is before the first element: even worse."
+        why: "When empty, that's before the first element: even worse."
       - t: return *scores.begin();
         why: For an empty vector, begin() == end(). Same UB.
     answer: 0
@@ -267,7 +267,7 @@ challenges:
     tags: [ w14.bracket-insert, w14.map ]
     bug: map-bracket-insert
     unsafe: true
-    prompt: "The kill tracker should never grow when you merely ask. Which typed names expose the bug? Select all."
+    prompt: "Which typed names make the map grow (print 2 kinds tracked)? Select all."
     code: |-
       std::map<std::string, int> kills{{"imp", 2}};
       std::string name;
@@ -280,9 +280,9 @@ challenges:
       - t: imp
         why: imp exists, so [] just reads 2. Size stays 1.
       - t: slime
-        why: "Exposes it: slime is missing, so [] inserts it and size becomes 2."
+        why: "slime is missing, so [] inserts it: size 2."
       - t: Imp
-        why: "Exposes it: keys are case-sensitive, so Imp is a new phantom entry."
+        why: Keys are case-sensitive, so Imp becomes a new phantom entry.
       - t: "   imp"
         why: ">> skips leading spaces and reads \"imp\". It's found."
     answers: [ 1, 2 ]
@@ -304,7 +304,7 @@ challenges:
   - id: w14.l5.c6
     type: safe
     tags: [ w14.find-end, w14.bracket-insert, w14.invalidation ]
-    prompt: Safe or unsafe? The Wraith's minions are slipping past end(). Go fast!
+    prompt: Safe or unsafe? Judge each snippet, fast!
     seconds: 30
     items:
       - code: |-

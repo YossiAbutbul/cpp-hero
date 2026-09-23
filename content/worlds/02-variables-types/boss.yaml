@@ -18,13 +18,13 @@ rounds:
     prompt: The Blob oozes out of `int x;` inside main(). What's in x?
     options:
       - t: An indeterminate garbage value; reading it is undefined behavior
-        why: "Correct: nothing was stored, so reading it is UB."
+        why: Nothing was stored, so reading it is UB.
       - t: Always 0
-        why: Local ints are not zeroed for you. It might happen to be 0, which is the sneaky part.
+        why: Nobody zeroes it. It might be 0 by luck, sneakily.
       - t: "Nothing: reading it just prints an empty line"
-        why: An int always has some bit pattern; you just don't know which, and reading it is UB.
+        why: An int always holds some number; you just can't know which.
       - t: A random number the compiler picks on purpose
-        why: "Nothing is picked on purpose: it's leftover memory, and the rules don't define what you get."
+        why: Nothing is picked on purpose; it's leftover memory.
     answer: 0
     hints:
       - Was anything ever put in the box?
@@ -34,7 +34,7 @@ rounds:
     type: predict
     tags: [ w2.int, w2.convert ]
     short: 9 / 4 is 2 with ints; 9 % 4 is 1.
-    prompt: What does this print?
+    prompt: What does this print? Spaces count.
     code: |-
       int a{9};
       int b{4};
@@ -42,7 +42,7 @@ rounds:
     options:
       - t: |
           2 1
-        why: "Correct: 9 / 4 is 2 (integer division), 9 % 4 is 1."
+        why: Int division gives 2, and the remainder is 1.
       - t: |
           2.25 1
         why: Both are ints, so / drops the fraction.
@@ -114,7 +114,7 @@ rounds:
     tags: [ w2.init ]
     bug: uninit-var
     unsafe: true
-    short: blobHp - 1 reads garbage; initialize it where it's declared.
+    short: Reading blobHp before it has a value is UB.
     prompt: The Blob's own HP counter is garbage! Tap the buggy line, then pick the fix.
     code: |-
       #include <iostream>
@@ -128,9 +128,9 @@ rounds:
     bugLine: 3
     options:
       - t: int blobHp{6};
-        why: "Correct: now line 4 computes 6 - 1 = 5, every time."
+        why: blobHp starts at 6, so line 4 always gives 5.
       - t: "int blobHp;  // TODO: set this"
-        why: A TODO doesn't fill the box; blobHp - 1 still reads garbage.
+        why: A TODO comment doesn't fill the box. Still garbage.
       - t: unsigned blobHp;
         why: "Changing the type doesn't initialize it: still garbage, still UB."
     answer: 0
@@ -148,7 +148,7 @@ rounds:
   - id: w2.boss.r5
     type: predict
     tags: [ w2.char, w2.convert ]
-    short: c + 1 is int 67, stored back into a char as 'C'.
+    short: c + 1 is 67; stored in a char, it's 'C'.
     prompt: What does this print? (Compare with char + int from Lesson 2.)
     code: |-
       char c{'B'};
@@ -157,10 +157,10 @@ rounds:
     options:
       - t: |
           C
-        why: "Correct: c + 1 is int 67, but storing it in a char makes it 'C'."
+        why: c is still a char, so 67 prints as C.
       - t: |
           67
-        why: c + 1 is an int, but it's stored back into c, a char, so cout prints a character.
+        why: The result goes back into c, a char, so a letter prints.
       - t: |
           B1
         why: + on a char does arithmetic on its code, not text joining.
@@ -182,7 +182,7 @@ rounds:
     items:
       - code: double d{5};
         safe: true
-        why: "5 is a constant that fits a double exactly, so braces allow it: d is 5.0."
+        why: 5 fits a double exactly, so braces allow it.
       - code: |-
           int total;
           total += 5;
@@ -211,7 +211,7 @@ rounds:
         why: "A std::string starts empty: prints 0."
       - code: int hits = 4.9;
         safe: false
-        why: "Compiles, but silently becomes 4: lost data the compiler would have caught with braces."
+        why: Compiles, but silently becomes 4. Braces would refuse it.
     hints:
       - Is every variable filled before it's read?
       - Silent double-to-int with = is a hidden bug.
@@ -240,7 +240,7 @@ rounds:
     tags: [ w2.convert, w2.int ]
     unsafe: true
     short: Any odd sum loses its .5; divide by 2.0 instead.
-    prompt: The Blob hid a bug in this average. Which test values expose it? Select all that apply.
+    prompt: The Blob hid a bug in this average. Which test values show it? Pick all.
     code: |-
       int a{/* test */};
       int b{/* test */};
@@ -256,7 +256,7 @@ rounds:
       - t: a = 10, b = 10
         why: "20 / 2 = 10 exactly: hidden."
       - t: a = -3, b = 0
-        why: "Exposes it: -3 / 2 truncates toward zero to -1, instead of -1.5."
+        why: "Exposes it: prints -1 instead of -1.5."
     answers: [ 1, 2, 4 ]
     hints:
       - The bug shows whenever a + b is odd.
@@ -281,11 +281,11 @@ defense:
         std::cout << std::boolalpha << isShielded << '\n';
       options:
         - t: "{false}"
-          why: "Correct: the switch starts in a known position."
+          why: The switch starts in a known position.
         - t: = isShielded
           why: "Self-initialization reads the garbage it's supposed to replace: UB."
         - t: "{maybe}"
-          why: "There is no maybe: bools are true or false, and maybe is an undeclared name, so it won't compile."
+          why: Bools are only true or false; maybe won't compile.
       answer: 0
       hints:
         - A bool must start as true or false.
@@ -315,7 +315,7 @@ defense:
         - t: "4.0"
           why: "Becomes 4: nothing lost."
         - t: "0.9"
-          why: "Correct: silently truncated to 0. No armor at all!"
+          why: Silently chopped to 0. No armor at all!
         - t: "10.0"
           why: "Becomes 10: nothing lost."
       answer: 1
@@ -342,11 +342,11 @@ defense:
         std::cout << perSquad << '\n';
       options:
         - t: static_cast<double>(blobs) / squads
-          why: "Correct: blobs becomes 7.0 first, so the division is real: 3.5."
+          why: blobs becomes 7.0 first, so 7.0 / 2 = 3.5.
         - t: blobs / squads
-          why: Gives 3, and braces flag int-to-double narrowing (error on Clang/MSVC, warning on GCC).
+          why: int / int gives 3, losing the .5.
         - t: static_cast<double>(blobs / squads)
-          why: "Too late: 7 / 2 is already 3 before the cast, so perSquad is 3."
+          why: "Too late: 7 / 2 is already 3 before the cast."
       answer: 0
       hints:
         - Convert before dividing.

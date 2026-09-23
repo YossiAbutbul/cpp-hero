@@ -6,7 +6,7 @@ skill: structure
 shield: false
 concept:
   short: The compiler translates your C++ into a program the computer can run. Rebuild after every change.
-  analogy: Compiling is translating a book once, so the CPU can read it as often as you like.
+  analogy: Compiling translates a book once; then the CPU can read it anytime.
   body:
     - "Building has stages: the **preprocessor** handles `#include`, the **compiler** turns code into machine code (an object file), and the **linker** joins it with library code into an **executable**."
     - "Typical: `g++ -std=c++20 -Wall -Wextra main.cpp -o hero`, then `./hero`. `-o hero` names the output."
@@ -56,12 +56,12 @@ challenges:
   - id: w1.l5.c2
     type: mcq
     tags: [ w1.compile ]
-    prompt: You fixed a typo in the text of main.cpp, then ran ./hero again, but the OLD text still appears. Why?
+    prompt: You fixed a typo in main.cpp and ran ./hero again. The OLD text still shows. Why?
     options:
       - t: The computer caches text for a day
         why: No such cache. The executable itself holds the old code.
       - t: You didn't recompile, so ./hero is still the old build
-        why: Correct! Rebuild after every change.
+        why: Rebuild after every change.
       - t: std::cout remembers old output
         why: cout doesn't remember anything between runs.
       - t: Typos can't be fixed after the first compile
@@ -75,7 +75,7 @@ challenges:
   - id: w1.l5.c3
     type: mcq
     tags: [ w1.compile ]
-    prompt: "Intentionally broken code: line 5 is missing its semicolon. What happens when you try to build and run it?"
+    prompt: Line 5 is missing its semicolon. What happens when you build and run this?
     code: |-
       #include <iostream>
 
@@ -93,7 +93,7 @@ challenges:
       - t: "It prints all three steps: the compiler adds the ; itself"
         why: Compilers never guess missing semicolons. They report an error.
       - t: The build fails with an error, so there's no program to run
-        why: Correct! No executable is produced.
+        why: No executable is produced.
       - t: It prints Step 1 and Step 2, then crashes
         why: It never runs. This is a compile-time error, not a run-time one.
     answer: 2
@@ -122,13 +122,13 @@ challenges:
     prompt: Which problem can the compiler catch for you BEFORE the program ever runs?
     options:
       - t: The report prints "Helo" instead of "Hello"
-        why: A typo inside a string is valid C++. The compiler can't know your intent.
+        why: Any text in a string is valid. The compiler can't guess intent.
       - t: A missing ; after a statement
-        why: Correct! Broken syntax is caught at compile time.
+        why: Broken syntax is caught at compile time.
       - t: The user wanted the report in French
         why: That's a requirements question, not something a compiler checks.
       - t: The program's logic gives a wrong total
-        why: Wrong logic in valid code compiles fine. Testing catches it.
+        why: Valid code with bad logic compiles fine. Testing catches it.
     answer: 1
     hints:
       - The compiler checks language rules, not your intentions.

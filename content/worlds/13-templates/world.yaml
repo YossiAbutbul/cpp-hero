@@ -8,7 +8,7 @@ blurb: "Write a function or class once and let the compiler stamp out a copy for
 story:
   intro:
     - The Chaos Hydra is gone, and the Citadel stands! {^_^}
-    - But behind its walls, the Codebase is full of copy-pasted code. One version per type!
+    - But the Codebase is full of copy-pasted code, one version per type!
     - "Let's learn templates: write it once, and the compiler stamps out the rest."
   bossIntro:
     - The Template Sentinel guards the blueprint vault. It lets ANY type through!

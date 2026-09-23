@@ -5,8 +5,8 @@ title: The ternary shortcut
 skill: logic
 shield: false
 concept:
-  short: "condition ? a : b gives a when the condition is true, otherwise b. It picks a value."
-  analogy: "The ternary is a coin with two faces: the condition flips it, and you get one value back."
+  short: "condition ? a : b gives a when the condition is true, otherwise b."
+  analogy: "A coin toss: the condition decides which of two values you get."
   body:
     - "`condition ? valueIfTrue : valueIfFalse` is an **expression**: it produces a value you can store or print. `int bonus = level >= 10 ? 50 : 10;`"
     - "It's the only C++ operator with three parts, hence the name **ternary** (also called the conditional operator)."
@@ -37,7 +37,7 @@ demo:
       vars:
         hp: "0"
         status: '"down"'
-      note: "0 > 0 is false: take the value after the colon."
+      note: "0 > 0 is false: take the second value."
     - line: 6
       vars:
         hp: "0"
@@ -73,7 +73,7 @@ challenges:
       - t: |
           Too poor
           45
-        why: "Correct: 45 >= 50 is false, so both ternaries pick their second value."
+        why: 45 >= 50 is false, so both pick their second value.
       - t: |
           Buy
           -5
@@ -81,7 +81,7 @@ challenges:
       - t: |
           Too poor
           -5
-        why: The false side of the second ternary is gold (45), not gold - price.
+        why: The false side of the second ternary is gold, 45.
       - t: |
           0
           45
@@ -102,7 +102,7 @@ challenges:
     prelude: int hp{3};
     options:
       - t: "<< binds tighter than > and ?:, so it becomes (std::cout << hp) > 0 ..."
-        why: "Correct: comparing a stream with 0 doesn't compile. Parenthesize the ternary."
+        why: "Comparing a stream with 0 doesn't compile. Parenthesize the ternary."
       - t: The ternary can't hold strings
         why: It can, as long as both sides are strings.
       - t: The ternary needs an if around it
@@ -118,7 +118,7 @@ challenges:
   - id: w4.l4.c3
     type: write
     tags: [ w4.ternary, w2.init ]
-    prompt: "Write one line: declare an int `bonus` that is 50 when `level` is 10 or more, and 10 otherwise. Use ?:"
+    prompt: "Using ?:, declare int `bonus`: 50 when `level` is 10 or more, else 10."
     prelude: int level{};
     accept:
       - 'int bonus = level >= 10 ? 50 : 10;'
@@ -222,7 +222,7 @@ challenges:
     prompt: When is the ternary operator the best choice?
     options:
       - t: Picking one of two simple values, like a label or a bonus
-        why: "Correct: short, readable, and it's an expression you can store."
+        why: "Short, readable, and it's an expression you can store."
       - t: Choosing among five menu options
         why: Five choices means nested ternaries. A switch is much clearer.
       - t: Running several statements on each path
@@ -238,7 +238,7 @@ challenges:
 recap:
   - "cond ? a : b picks a value."
   - Wrap it in parentheses when printing.
-  - Two simple values only. Otherwise use if or switch.
+  - Only for two simple values.
 vault:
   - id: w4.ternary
     title: Ternary operator

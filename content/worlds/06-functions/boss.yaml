@@ -4,17 +4,17 @@ id: w6.boss
 name: The Scope Sentinel
 art: sentinel
 hp: 7
-intro: HALT. I AM THE SCOPE SENTINEL. NOTHING LEAVES ITS SCOPE ALIVE... EXCEPT BY VALUE.
+intro: HALT. NOTHING LEAVES ITS SCOPE ALIVE... EXCEPT BY VALUE.
 taunt:
   - YOUR LOCALS ARE MINE THE MOMENT YOU RETURN.
-  - RETURN ME A REFERENCE. I PROMISE IT IS STILL THERE.
-  - IGNORE THAT RESULT. NOTHING BAD EVER HAPPENS. PROBABLY.
-  - LEVEL ZERO? YOUR FUNCTION FORGOT THAT PATH. I DID NOT.
+  - RETURN ME A REFERENCE. IT IS STILL THERE. PROMISE.
+  - IGNORE THAT RESULT. NOTHING BAD HAPPENS. PROBABLY.
+  - LEVEL ZERO? YOUR FUNCTION FORGOT THAT PATH.
 rounds:
   - id: w6.boss.r1
     type: predict
     tags: [ w6.call, w6.return ]
-    prompt: The Sentinel stacks frames on frames. What does this print?
+    prompt: Calls inside calls. What does this print?
     code: |-
       #include <iostream>
 
@@ -33,45 +33,43 @@ rounds:
     options:
       - t: |
           8 7
-        why: "Correct: the inner call runs first. twice(4) = 8, then plusOne(6) = 7."
+        why: Inner call first. twice(4) = 8, plusOne(6) = 7.
       - t: |
           7 8
-        why: "Inner calls run first: twice(plusOne(3)) is twice(4) = 8."
+        why: twice(plusOne(3)) is twice(4) = 8, printed first.
       - t: |
           8 8
-        why: Order matters. (3 * 2) + 1 is 7, not 8.
+        why: plusOne(twice(3)) is 6 + 1 = 7.
       - t: |
           7 7
-        why: (3 + 1) * 2 is 8, not 7.
+        why: twice(plusOne(3)) is 4 * 2 = 8.
     answer: 0
     hints:
-      - An argument must be computed before the call can start.
-      - Work from the innermost parentheses outward.
+      - An argument is computed before the call starts.
     short: "Innermost call first: twice(4) = 8, plusOne(6) = 7."
     explain: 'To call twice(plusOne(3)), plusOne(3) must return first (4), then twice(4) = 8. In the other order, twice(3) = 6, then plusOne(6) = 7. Output: "8 7" and a newline.'
   - id: w6.boss.r2
     type: mcq
     tags: [ w6.overload ]
-    prompt: Which pair CANNOT coexist as overloads?
+    prompt: Which pair CANNOT exist together as overloads?
     options:
       - t: int roll(int sides); and double roll(int sides);
-        why: "Correct: same parameter list, only the return type differs. That's a compile error."
+        why: Same parameters; only the return type differs.
       - t: void show(int); and void show(double);
-        why: Different parameter types. A valid overload set.
+        why: Different parameter types. Valid.
       - t: void hit(int); and void hit(int, int);
         why: Different number of parameters. Valid.
       - t: void say(char); and void say(const std::string&);
         why: Different parameter types. Valid.
     answer: 0
     hints:
-      - What does the compiler use to choose an overload?
       - A call doesn't mention the return type.
-    short: Overloads must differ in parameters; return type alone isn't enough.
-    explain: The compiler picks an overload from the arguments of a call, and roll(6) would look identical for both. So functions that differ only by return type are an error.
+    short: Overloads must differ in parameters, not just return type.
+    explain: The compiler picks an overload from the arguments of a call, and roll(6) would look identical for both. So functions that differ only by return type are a compile error.
   - id: w6.boss.r3
     type: predict
     tags: [ w6.byvalue, w6.scope ]
-    prompt: The Sentinel tries to change your hp through a copy. What does this print?
+    prompt: The Sentinel changes a copy of your hp. What does this print?
     code: |-
       #include <iostream>
 
@@ -89,21 +87,20 @@ rounds:
     options:
       - t: |
           3 16
-        why: "Correct: the copy becomes 8 and 8 * 2 = 16 comes back. main's hp stays 3."
+        why: The copy becomes 8, returns 16. main's hp stays 3.
       - t: |
           8 16
-        why: shield changed its own copy. main's hp is a different variable.
+        why: shield changed only its copy.
       - t: |
           3 6
-        why: hp += 5 runs first on the copy, so 8 * 2 is returned.
+        why: "hp += 5 runs first, then 8 * 2."
       - t: |
           8 6
-        why: "Both wrong: main's hp is untouched, and the copy is 8 before doubling."
+        why: main's hp is untouched, and 8 * 2 is 16.
     answer: 0
     hints:
       - The parameter is a copy of 3.
-      - The copy is changed before the multiplication.
-    short: main's hp stays 3; the copy becomes 8 and returns 16.
+    short: main's hp stays 3; the copy returns 16.
     explain: 'shield''s hp is a copy: 3 + 5 = 8, returns 16. main''s hp is still 3. Output: "3 16" and a newline.'
   - id: w6.boss.r4
     type: predict
@@ -127,26 +124,26 @@ rounds:
     options:
       - t: |
           10 7
-        why: "Correct: 1 + 2 + 3 + 4 = 10, and 3 + 4 = 7."
+        why: Default start 1 gives 10; start 3 gives 7.
       - t: |
           6 3
-        why: "That's i < n, stopping one early. <= includes n itself."
+        why: "That's i < n. <= includes n itself."
       - t: |
           10 10
-        why: The second call passes start = 3, overriding the default.
+        why: The second call passes start = 3.
       - t: |
           9 7
-        why: With start = 1 the sum begins at 1, giving 10.
+        why: Starting at 1 gives 10, not 9.
     answer: 0
     hints:
       - sumTo(4) means sumTo(4, 1).
       - "<= n includes n."
-    short: "sumTo(4) adds 1..4 = 10; sumTo(4, 3) adds 3 + 4 = 7."
+    short: "sumTo(4) means sumTo(4, 1): 10. Then 3 + 4 = 7."
     explain: 'The default start is 1, so sumTo(4) = 1 + 2 + 3 + 4 = 10. sumTo(4, 3) = 3 + 4 = 7. total is a fresh local in each call. Output: "10 7" and a newline.'
   - id: w6.boss.r5
     type: speed
     tags: [ w6.prototype, w6.scope, w6.default, w6.dangling, w6.nodiscard, w6.assert, w4.switch ]
-    prompt: SPEED ROUND! The Sentinel sweeps the stack. Answer fast!
+    prompt: SPEED ROUND! Answer each question fast!
     seconds: 45
     items:
       - q: Which line is a prototype?
@@ -209,9 +206,8 @@ rounds:
           - "1"
         answer: 2
     hints:
-      - "Locals die at their }; copies can't change the caller."
-      - "Warnings are clues: -Wreturn-local-addr, [[nodiscard]]."
-    short: "Prototypes end in ;, locals die at }, defaults trail, warnings help."
+      - "Locals die at }; copies can't change the caller."
+    short: "Prototypes end in ;, locals die at }, defaults trail."
     explain: "A prototype is a body-less declaration. switch(2) hits case 2. Locals die at their block's end. Defaults are trailing. -Wreturn-local-addr flags dangling returns, [[nodiscard]] flags ignored results, -DNDEBUG deletes asserts, and by-value parameters leave a unchanged."
   - id: w6.boss.r6
     type: bug
@@ -237,18 +233,17 @@ rounds:
     bugLine: 9
     options:
       - t: "    return 5;  (then the closing })"
-        why: "Correct: now levels below 5 get a real value. Every path returns."
+        why: Levels below 5 now get a value.
       - t: "}  // UB is fine if tests pass"
-        why: UB can pass tests and still break with another compiler or optimization level.
+        why: UB can pass tests, then break on another compiler.
       - t: "    return;  (then the closing })"
-        why: A bare return in an int function is a compile error. It needs a value.
+        why: An int function must return a value. Compile error.
       - t: "    assert(level >= 5);  (then the closing })"
-        why: Disappears with NDEBUG, and the path still has no return value.
+        why: NDEBUG deletes it, and there's still no return.
     answer: 0
     hints:
-      - What does lootFor(2) return? Follow each if.
       - g++ says "control reaches end of non-void function".
-    short: Add a final return; falling off an int function is UB.
+    short: Add a final return; falling off the end is UB.
     explain: "For level 2 both ifs are false and execution reaches the closing } of an int function: undefined behavior. It may print 0, garbage or crash. Add a final `return 5;` for the \"none of the above\" case."
     sideBySide:
       unsafe: |-
@@ -281,7 +276,7 @@ rounds:
   - id: w6.boss.r7
     type: harden
     tags: [ w6.constref, w2.string ]
-    prompt: The Sentinel feeds you a 10,000-character spellbook on every call. Pick the parameter type.
+    prompt: "name can be huge. Pick the parameter type: no copy, no changes."
     code: |-
       #include <iostream>
       #include <string>
@@ -296,18 +291,17 @@ rounds:
       }
     options:
       - t: const std::string&
-        why: "Correct: no copy, read-only, and it accepts literals like \"Curlo the Magnificent\"."
+        why: No copy, read-only, and it accepts string literals.
       - t: std::string
-        why: Works, but copies every character on every call.
+        why: Works, but copies every character each call.
       - t: std::string&
-        why: A non-const reference can't bind to a temporary string from a literal. Compile error here.
+        why: Can't bind to a literal's temporary string. Compile error.
       - t: const std::string
-        why: Still a full copy; const doesn't prevent that.
+        why: Still a full copy.
     answer: 0
     hints:
-      - You only read name.
-      - "No copy AND no changes: const plus &."
-    short: const std::string& reads big text without copying or changing it.
+      - "No copy AND no changes."
+    short: const std::string& reads big text, no copy.
     explain: 'By value copies the whole string per call. `const std::string&` refers to the caller''s text, promises not to change it, and binds to temporaries like the one made from "Curlo the Magnificent".'
     sideBySide:
       unsafe: |-
@@ -330,7 +324,7 @@ rounds:
     type: edge
     tags: [ w6.validate, w3.divzero, w3.overflow ]
     unsafe: true
-    prompt: "UNSAFE: percent() has no guards. Which calls expose a bug? Select all. (32-bit int.)"
+    prompt: "UNSAFE: percent() has no guards. Which calls cause UB? Select all. (32-bit int.)"
     code: |-
       int percent(int part, int whole) {
           return part * 100 / whole;
@@ -341,9 +335,9 @@ rounds:
       }
     options:
       - t: percent(5, 0)
-        why: "Exposes it: dividing by zero is UB."
+        why: Dividing by zero is UB.
       - t: percent(30000000, 50000000)
-        why: "Exposes it: 30000000 * 100 is 3 billion, past the int limit. Signed overflow is UB."
+        why: "30000000 * 100 is 3 billion: int overflow, UB."
       - t: percent(1, 4)
         why: 100 / 4 = 25. Fine.
       - t: percent(0, 7)
@@ -351,7 +345,7 @@ rounds:
     answers: [ 0, 1 ]
     hints:
       - Check the divisor, then the multiplication.
-      - The largest 32-bit int is about 2.1 billion.
+      - The biggest 32-bit int is about 2.1 billion.
     short: A zero divisor and a huge part both cause UB.
     explain: "whole = 0 divides by zero, and a big part overflows part * 100 before the division. Guard the parameters, and do the multiplication in long long."
     sideBySide:
@@ -396,18 +390,17 @@ rounds:
       }
     options:
       - t: name is destroyed at the return, so the reference dangles. Using it is UB
-        why: "Correct: UB can look fine in one test and print garbage or crash in the next."
+        why: UB can look fine once, then print garbage.
       - t: It isn't a bug, since it printed correctly
-        why: '"It worked once" proves nothing with UB. g++ even warns about it.'
+        why: '"It worked once" proves nothing with UB.'
       - t: Returning std::string by value would be slower and unsafe
-        why: By value is safe, and the string is moved out cheaply.
+        why: By value is safe, and moving out is cheap.
       - t: The const makes the reference safe
-        why: const doesn't extend the life of a local. It still dies at the return.
+        why: const doesn't keep a local alive.
     answer: 0
     hints:
       - When does name die?
-      - g++ says "reference to local variable returned".
-    short: The local dies at return; the reference dangles. UB, even if it "worked".
+    short: The local dies at return, so the reference dangles.
     explain: "name lives in bestSpell's frame. The frame pops at the return, so the caller gets a reference to a destroyed string. That's UB: it may print correctly, print junk, or crash. g++ warns with -Wreturn-local-addr. Return std::string by value."
 defense:
   - attack: "-50"
@@ -416,7 +409,7 @@ defense:
       id: w6.boss.d1
       type: harden
       tags: [ w6.validate, w4.guard ]
-      prompt: The Sentinel casts a spell costing -50 mana, which would ADD mana. Pick the guard.
+      prompt: A spell costing -50 mana would ADD mana. Pick the guard condition.
       code: |-
         #include <iostream>
 
@@ -433,18 +426,17 @@ defense:
         }
       options:
         - t: cost < 0
-          why: "Correct: a negative cost is nonsense, so the cast is refused."
+          why: A negative cost is nonsense, so it's refused.
         - t: cost > mana
-          why: The last line already handles that. -50 still passes as "affordable".
+          why: The last line handles that. -50 still passes.
         - t: mana < 0
-          why: Checks the wrong parameter; the curse is in cost.
+          why: Wrong parameter. The curse is in cost.
         - t: cost == -50
-          why: Blocks one value. The Sentinel just tries -51.
+          why: Blocks one value. -51 still works.
       answer: 0
       hints:
         - Which parameter is cursed?
-        - Block the whole invalid range.
-      short: Guard cost < 0 before checking affordability.
+      short: Reject cost < 0 before checking affordability.
       explain: 'Without the guard, -50 <= 10 is true, so the spell "succeeds" and spending it would add mana. Reject impossible arguments first, then answer the real question.'
       sideBySide:
         unsafe: |-
@@ -466,7 +458,7 @@ defense:
       id: w6.boss.d2
       type: harden
       tags: [ w6.validate, w6.assert ]
-      prompt: "Valid levels are 1 to 10, and the level comes from player input. Pick the guard that survives a release build."
+      prompt: "Valid levels are 1 to 10. Pick the guard that works in every build."
       code: |-
         #include <iostream>
 
@@ -483,19 +475,18 @@ defense:
         }
       options:
         - t: level < 1 || level > 10
-          why: "Correct: rejects both sides of the range, in every build."
+          why: Rejects both sides of the range.
         - t: level < 1 && level > 10
-          why: No number is both below 1 and above 10, so this is never true.
+          why: No number is below 1 AND above 10.
         - t: level > 10
-          why: Catches 999 but lets 0 and negatives through.
+          why: Catches 999 but lets 0 through.
         - t: assert(level <= 10)
-          why: assert is void, so this doesn't compile, and NDEBUG would delete it anyway.
+          why: Won't compile here, and NDEBUG would delete it.
       answer: 0
       hints:
         - Check both ends of the range.
-        - Player input needs a real if, not an assert.
-      short: "Check both ends with ||: level < 1 || level > 10."
-      explain: "Input from the player must be validated with a real check that exists in every build. `level < 1 || level > 10` rejects everything outside 1..10, including 999."
+      short: "Check both ends with ||."
+      explain: "The level comes from player input, so it must be validated with a real check that exists in every build. `level < 1 || level > 10` rejects everything outside 1..10, including 999. `&&` is never true, and `assert(...)` is void, so it can't be an if condition (and NDEBUG would delete it anyway)."
       sideBySide:
         unsafe: |-
           #include <cassert>
@@ -521,7 +512,7 @@ defense:
       tags: [ w6.dangling, w6.lifetime ]
       bug: dangling-ref
       unsafe: true
-      prompt: "UNSAFE: the Sentinel slipped a dangling reference into bestScore. Tap the buggy line, then pick the fix."
+      prompt: "UNSAFE: bestScore returns a dangling reference. Tap the buggy line, then pick the fix."
       code: |-
         #include <iostream>
 
@@ -537,18 +528,18 @@ defense:
       bugLine: 2
       options:
         - t: int bestScore(int a, int b) {
-          why: "Correct: return the int by value. The caller gets its own copy of 7."
+          why: Return the int by value, a safe copy.
         - t: "const int& bestScore(const int& a, const int& b) {"
-          why: Still returns a reference to the local best, which dies at the return.
+          why: Still a reference to the dead local best.
         - t: int& bestScore(int a, int b) {
-          why: Dropping const doesn't help. It's still a reference to a dead local.
+          why: Dropping const doesn't help. Still dangling.
         - t: "const int* bestScore(int a, int b) {"
-          why: A pointer to a local dangles too (and return best wouldn't compile).
+          why: A pointer to a local dangles too.
       answer: 0
       hints:
         - What does the & in the return type refer to?
         - Small values are cheap to copy.
-      short: Return int by value; a reference to local best dangles.
+      short: Return int by value; a local reference dangles.
       explain: "best lives in bestScore's frame and is destroyed at the return, so the returned reference points at nothing. Using it is UB. g++ warns with -Wreturn-local-addr. An int is tiny: return it by value."
       sideBySide:
         unsafe: |-
@@ -568,7 +559,7 @@ defense:
       id: w6.boss.d4
       type: harden
       tags: [ w6.missing-return, w4.if ]
-      prompt: The Sentinel calls title(0). Pick the line that closes the missing path.
+      prompt: title(0) has no return. Pick the line that fixes it.
       code: |-
         #include <iostream>
         #include <string>
@@ -589,18 +580,17 @@ defense:
         }
       options:
         - t: return "Unknown";
-          why: "Correct: every path now returns a real std::string."
+          why: Every path now returns a std::string.
         - t: "// nothing needed"
-          why: Falling off the end of a non-void function is UB, often a crash for std::string.
+          why: Falling off the end is UB, often a crash.
         - t: return;
-          why: A non-void function must return a value. Compile error.
+          why: title must return a value. Compile error.
         - t: assert(level >= 1);
-          why: Deleted by NDEBUG, and the path still falls off the end.
+          why: NDEBUG deletes it, and there's still no return.
       answer: 0
       hints:
-        - What does title(0) reach?
-        - Every path of a non-void function needs a return value.
-      short: 'Add return "Unknown"; so level 0 gets a real value.'
+        - Every path needs a return value.
+      short: A final return covers level 0.
       explain: 'For level 0 both conditions are false, so execution reaches the closing }. For a std::string function that is UB and often a crash. A final return covers "none of the above".'
       sideBySide:
         unsafe: |-
@@ -622,7 +612,7 @@ defense:
               return "Unknown";   // every path returns
           }
           int main() { return title(0).empty() ? 1 : 0; }
-victory: FRAME... POPPED... The Sentinel's visor clatters down. Every value returned home safely.
+victory: FRAME... POPPED... The Sentinel's visor clatters down.
 reward:
   xp: 225
   cosmetic: sentinel-visor

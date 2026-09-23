@@ -2,12 +2,12 @@
 
 id: w4.p
 title: Quest Board
-intro: "Build the guild's Quest Board: read a hero's level and gold, show their rank, and let them pick a quest from a menu."
+intro: "Build the guild's Quest Board: rank a hero and offer a quest menu."
 steps:
   - id: w4.p.s1
     type: fill
     tags: [ w4.combine, w4.guard, w3.validate ]
-    prompt: "Guard clause first: levels outside 1 to 99 are rejected. Fill in the operator that joins the two checks."
+    prompt: Levels outside 1 to 99 must be rejected. Fill in the operator joining the checks.
     code: |-
       if (!(std::cin >> level) || level < 1 ___ level > 99) {
           std::cout << "Level must be a whole number from 1 to 99.\n";
@@ -91,7 +91,7 @@ steps:
     options:
       - t: |
           Too dangerous! Reach level 5 first.
-        why: "Correct: case 2 runs, and 4 < 5 takes the if path."
+        why: Case 2 runs, and 4 < 5 takes the if path.
       - t: |
           Explore the Echo Cave.
         why: Level 4 is below 5, so the else path is skipped.
@@ -114,13 +114,13 @@ steps:
     prompt: Why does every quest case end with break?
     options:
       - t: Without it, the next case's code runs too (fallthrough)
-        why: "Correct: switch keeps going downward until a break or the closing brace."
+        why: switch keeps going down until a break or the closing brace.
       - t: Without it, the program doesn't compile
         why: It compiles. -Wextra warns, but the danger is the silent fallthrough.
       - t: break jumps back to the menu
         why: break leaves the switch and continues after it. It doesn't loop.
       - t: It's only needed on the last case
-        why: The last case is the one place where break changes nothing (though it's good style).
+        why: On the last case, break changes nothing, though it's good style.
     answer: 0
     hints:
       - What happened in the Switchboard lesson without break?
@@ -216,18 +216,18 @@ stress:
         prelude: int level{};
         options:
           - t: level < 1 || level > 99
-            why: "Correct: both ends of the range are guarded, so -3, 0 and 500 are all rejected."
+            why: Both ends are guarded, so -3, 0 and 500 are rejected.
           - t: level < 0
-            why: Blocks -3, but level 0 and level 500 still get onto the board.
+            why: Blocks -3, but 0 and 500 still get through.
           - t: level < 1 && level > 99
-            why: No number is both below 1 AND above 99, so nothing is ever rejected.
+            why: No number is below 1 AND above 99, so nothing is rejected.
           - t: level == -3
             why: Only this exact attack. -4 walks right in.
         answer: 0
         hints:
           - The valid range is 1 to 99. Guard both ends.
           - Either problem alone should reject the level.
-        short: Guard both ends of the range with level < 1 || level > 99.
+        short: "Guard both ends: level < 1 || level > 99."
         explain: "Without a lower bound, the else of the rank ladder happily calls -3 a Rookie. A guard clause checks the whole valid range before anything else runs."
         sideBySide:
           unsafe: |-
@@ -247,7 +247,7 @@ stress:
         type: bug
         tags: [ w4.default, w4.switch ]
         bug: missing-default
-        prompt: "Quest 7 doesn't exist, yet the hero is sent to rescue the cat! Tap the buggy line, then pick the fix."
+        prompt: "Quest 7 doesn't exist, yet it starts the cat quest. Tap the buggy line, then pick the fix."
         code: |-
           switch (choice) {
               case 2:
@@ -264,13 +264,13 @@ stress:
         bugLine: 8
         options:
           - t: Give the cat quest its own case 1, and make default print "No such quest"
-            why: "Correct: each real quest has a case, and default reports every unexpected number."
+            why: Each real quest gets a case; default reports unknown numbers.
           - t: Delete the default
             why: Then 7 does nothing at all, silently. The player never learns why.
           - t: Add case 7 above default
             why: Only covers 7. The Phantom tries 8, 0 or -1 next.
           - t: Change default to case 1
-            why: Fixes quest 1, but now 7 is silently ignored. There should still be a default.
+            why: Fixes quest 1, but 7 is now silently ignored.
         answer: 0
         hints:
           - Which label does 7 land on?
@@ -297,7 +297,7 @@ stress:
         type: harden
         tags: [ w4.float, w2.double ]
         bug: float-equality
-        prompt: "The hero has exactly 0.3 gold; torch and map cost 0.1 + 0.2. The board says \"not enough\"! Pick the fix."
+        prompt: 'Supplies cost 0.1 + 0.2 gold. A hero with 0.3 gold is told "not enough". Pick the fix.'
         code: |-
           #include <cmath>
           #include <iostream>
@@ -317,13 +317,13 @@ stress:
           }
         options:
           - t: std::abs(gold - supplies) < 1e-9
-            why: "Correct: 0.3 and 0.30000000000000004 are within the tolerance, so they count as equal."
+            why: "0.3 and 0.30000000000000004 are within the tolerance: equal."
           - t: gold == supplies
-            why: "The Phantom's trick: 0.3 == 0.30000000000000004 is false, so the hero is turned away."
+            why: 0.3 == 0.30000000000000004 is false, so the hero is turned away.
           - t: gold == 0.3
-            why: Only works for this exact price, and hardcodes a number that will change.
+            why: Works only for this exact price; hardcoded numbers break later.
           - t: gold - supplies < 1e-9
-            why: No std::abs, so a hero with 0 gold also passes. Free supplies for everyone!
+            why: No std::abs, so a hero with 0 gold also passes.
         answer: 0
         hints:
           - 0.1 + 0.2 is not exactly 0.3 as a double.

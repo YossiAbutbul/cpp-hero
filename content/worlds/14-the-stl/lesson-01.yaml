@@ -6,7 +6,7 @@ skill: toolkit
 shield: false
 concept:
   short: std::map stores key-value pairs sorted by key; each key appears at most once.
-  analogy: "A map is a cabinet of labeled drawers: find the drawer by its label, not by its position."
+  analogy: "A map is a cabinet of labeled drawers: find drawers by label."
   body:
     - "A `std::map<Key, Value>` (from `<map>`) links each **key** to one **value**: `std::map<std::string, int> hp;` maps names to hit points."
     - "`hp[\"Curlo\"] = 10;` writes a value: it creates the entry if the key is new, or overwrites the old value if it exists. Keys are unique: writing the same key twice keeps one entry."
@@ -84,7 +84,7 @@ challenges:
       - t: |
           Ann=5
           Zed=9
-        why: "Correct: keys are sorted, and the second write to Zed overwrote the 3."
+        why: Keys print sorted, and the second write replaced Zed's 3.
       - t: |
           Zed=9
           Ann=5
@@ -110,7 +110,7 @@ challenges:
     prompt: "In `for (const auto& entry : scores)` over a `std::map<std::string, int>`, what is `entry.first`?"
     options:
       - t: The key (the std::string)
-        why: "Correct: each element is a pair; first is the key, second is the value."
+        why: first is the key; the key decides the sort order.
       - t: The value (the int)
         why: That's entry.second.
       - t: The position of the entry, like 0 or 1
@@ -121,7 +121,7 @@ challenges:
     hints:
       - Each element of a map holds two things.
       - Which one decides the sorting order?
-    short: A map element is a pair; first is the key, second the value.
+    short: "Each map element is a pair: first = key, second = value."
     explain: "Every element of a std::map<K, V> is a std::pair<const K, V>. first is the key (const, so you can't change it and break the sort order); second is the value."
   - id: w14.l1.c3
     type: fill
@@ -190,7 +190,7 @@ challenges:
     options:
       - t: |
           2 1 0
-        why: "Correct: keys 1 and 2 exist (size 2), key 1 counts 1, key 3 counts 0."
+        why: Two keys exist; 1 is there, 3 is not.
       - t: |
           3 1 0
         why: rank[2] was written twice, but it's still one key. Size is 2.
@@ -209,8 +209,8 @@ challenges:
 recap:
   - A map links unique keys to values.
   - Keys stay sorted, whatever the insertion order.
-  - "Elements are pairs: first = key, second = value."
-  - at() throws for a missing key; count() just checks.
+  - "Elements are pairs: first key, second value."
+  - at() throws if missing; count() just checks.
 vault:
   - id: w14.map-basics
     title: std::map basics

@@ -51,9 +51,9 @@ demo:
       vars:
         age: "12"
         name: '""'
-      note: "Input: `12` + Enter. >> reads 12, leaves the '\\n' behind."
+      note: "Input `12`, Enter. >> takes 12 and leaves the '\\n'."
     - line: 9
-      note: ignore() throws away everything up to and including that leftover '\n'.
+      note: ignore() throws away that leftover '\n'.
     - line: 10
       out: "Full name? "
     - line: 11
@@ -71,7 +71,7 @@ challenges:
   - id: w3.l4.c1
     type: predict
     tags: [ w3.cin, w2.string ]
-    prompt: The player types `Curlo the Brave` and presses Enter. What does this print?
+    prompt: The player types `Curlo the Brave`. What does this print? Spaces count.
     code: |-
       #include <iostream>
       #include <string>
@@ -87,7 +87,7 @@ challenges:
     options:
       - t: |
           [Curlo]
-        why: "Correct: >> into a string reads one word and stops at the first space."
+        why: Reading stops at the first space, so only Curlo.
       - t: |
           [Curlo the Brave]
         why: That's what std::getline would read. >> stops at whitespace.
@@ -96,7 +96,7 @@ challenges:
         why: ">> doesn't include the space it stops at."
       - t: |
           []
-        why: ">> skips leading whitespace and reads the first word, so word isn't empty."
+        why: "The first word is there to read, so word isn't empty."
     answer: 0
     hints:
       - ">> reads a string until what?"
@@ -106,7 +106,7 @@ challenges:
   - id: w3.l4.c2
     type: predict
     tags: [ w3.getline, w3.cin ]
-    prompt: The player types `5`, Enter, `Dragon Slayer`, Enter. What does this print?
+    prompt: The player types `5`, Enter, `Dragon Slayer`, Enter. What does this print? Spaces count.
     code: |-
       #include <iostream>
       #include <string>
@@ -125,13 +125,13 @@ challenges:
     options:
       - t: |
           5:!
-        why: "Correct: getline reads the rest of the first line, which is just the leftover '\\n'. title is empty."
+        why: Line 1 had nothing after 5, so getline returns empty.
       - t: |
           5:Dragon Slayer!
-        why: That's what you'd get with a cin.ignore(...) between the two reads. Here, getline eats the leftover newline.
+        why: That needs a cin.ignore(...) between the two reads.
       - t: |
           5: Dragon Slayer!
-        why: getline never gets to the second line, and there's no extra space printed.
+        why: getline never reaches line 2, and no space is printed.
       - t: |
           0:!
         why: Reading 5 into level succeeds; the problem is only the string.
@@ -163,13 +163,13 @@ challenges:
     prompt: Which line reads a whole line of text (spaces included) into `std::string line`?
     options:
       - t: std::getline(std::cin, line);
-        why: "Correct: the stream comes first, then the string. Reads up to the newline."
+        why: Stream first, then the string. Reads up to the newline.
       - t: std::cin >> line;
         why: "Only reads one word: it stops at the first space."
       - t: std::getline(line, std::cin);
         why: "Arguments are swapped: the stream goes first. Compile error."
       - t: std::cin.getline(line);
-        why: The member cin.getline works with char arrays and a size, not std::string. Compile error.
+        why: "cin.getline is for char arrays, not std::string: compile error."
     answer: 0
     hints:
       - It's a free function, not a member of cin.
@@ -179,7 +179,7 @@ challenges:
   - id: w3.l4.c5
     type: predict
     tags: [ w3.cin, w3.arith, w3.modulo ]
-    prompt: The input is `  8` on one line and `  3` on the next (with leading spaces). What does this print?
+    prompt: Input is `  8` and `  3` on two lines, spaces first. What does this print?
     code: |-
       #include <iostream>
 
@@ -196,7 +196,7 @@ challenges:
     options:
       - t: |
           5 2
-        why: "Correct: >> skips whitespace, so a = 8, b = 3: 5 and 2."
+        why: 8 minus 3 is 5, and 8 % 3 is 2.
       - t: |
           0 0
         why: "Leading whitespace doesn't make >> fail: it's skipped automatically."
@@ -205,12 +205,12 @@ challenges:
         why: "% on ints gives a whole-number remainder."
       - t: |
           53
-        why: This prints a - b and a % b, separated by a space, not a and b.
+        why: "A ' ' is printed between the two results."
     answer: 0
     hints:
       - ">> skips leading whitespace, including newlines."
       - "8 % 3: how much is left after taking out 3s?"
-    short: ">> skips whitespace: a = 8, b = 3, printing 5 and 2."
+    short: ">> skips the spaces and newline: a is 8, b is 3."
     explain: '>> skips all whitespace before each number: a = 8, b = 3. 8 - 3 = 5, 8 % 3 = 2. Output: "5 2" and a newline.'
   - id: w3.l4.c6
     type: write
@@ -229,7 +229,7 @@ challenges:
     short: std::getline(std::cin, quest); reads the whole line.
     explain: std::getline(std::cin, quest); reads everything up to the newline. (std::cin >> std::ws first skips leading whitespace, another fix for the leftover-newline trap.)
 recap:
-  - std::cin >> x skips spaces, then reads one value.
+  - std::cin >> x skips spaces, reads one value.
   - std::getline(std::cin, s) reads a whole line, spaces included.
   - After >>, ignore the leftover '\n' before getline.
 vault:

@@ -5,8 +5,8 @@ title: "Shield: Loops that always end"
 skill: defense
 shield: true
 concept:
-  short: "Guard every loop: correct bounds, a counter that reaches the exit, matching signedness, and checked input."
-  analogy: "A safe loop is a racetrack with a finish line you can't miss: right length, always moving forward, no potholes."
+  short: "Guard every loop: right bounds, a counter that reaches the exit, matching types, checked input."
+  analogy: "A racetrack with a finish line you can't miss."
   body:
     - "**Off-by-one**: `for (int i = 0; i < n; ++i)` runs n times; `i <= n` runs n + 1. Starting at 1 with `<` runs n - 1. Test every loop by hand with n = 0, 1 and 2. Rule of thumb: start at 0 and use `<` (a \"half-open\" range)."
     - "**Infinite loops** happen when the condition can never become false: the counter isn't updated, is updated the wrong way, a `continue` skips the update, or it jumps over the exit (`i != 10` with `i += 3` goes 9, 12, ...). Guards: keep the update in the `for` header, use `<` or `>` instead of `!=`, and cap retries (`tries < 5`). Signed overflow from a runaway counter is UB too."
@@ -37,10 +37,10 @@ demo:
       vars:
         word: '"loop"'
         i: "4"
-      note: "Start at size(), not size() - 1. 4 > 0."
+      note: "Start at size(), not `size() - 1`."
     - line: 6
       out: "p"
-      note: "Index i - 1 = 3: the last letter."
+      note: "Index `i - 1` is 3: the last letter."
     - line: 5
       vars:
         word: '"loop"'
@@ -78,7 +78,7 @@ challenges:
     type: bug
     tags: [ w5.offbyone, w5.for ]
     bug: off-by-one
-    prompt: "This should print Round 1, Round 2, Round 3. It prints four lines. Tap the buggy line, then pick the fix."
+    prompt: "This should print Round 1 to Round 3, but prints four lines. Tap the buggy line, then fix."
     code: |-
       #include <iostream>
 
@@ -92,7 +92,7 @@ challenges:
     bugLine: 4
     options:
       - t: for (int r = 1; r <= rounds; ++r) {
-        why: "Correct: r takes 1, 2, 3. Three laps with the right labels."
+        why: "r takes 1, 2, 3: three laps, right labels."
       - t: for (int r = 0; r < rounds; ++r) {
         why: "Three laps, but labeled 0, 1, 2. Right count, wrong numbers."
       - t: for (int r = 1; r < rounds; ++r) {
@@ -103,7 +103,7 @@ challenges:
     hints:
       - Which labels print? Count them.
       - The labels should start at 1 and include 3.
-    short: "0 to <= 3 is four laps. Start at 1 to print 1..3."
+    short: "0 to <= 3 is four laps. Start at 1 instead."
     explain: "r = 0, 1, 2, 3 is four laps: 3 - 0 + 1. To print 1 to 3, start at 1 and keep <=. (Or keep 0 and < rounds, and print r + 1.) Always check the first and last lap."
     sideBySide:
       unsafe: |-
@@ -119,7 +119,7 @@ challenges:
     type: harden
     tags: [ w5.signed-unsigned, w5.for, w2.string ]
     bug: signed-unsigned
-    prompt: "g++ -Wall warns about this loop. Pick the counter that compares cleanly with name.size()."
+    prompt: "g++ warns about this loop. Pick the counter that compares cleanly with name.size()."
     code: |-
       #include <iostream>
       #include <string>
@@ -134,13 +134,13 @@ challenges:
       }
     options:
       - t: std::size_t i = 0
-        why: "Correct: same unsigned type as size(), so the comparison is clean and can't go negative."
+        why: Same unsigned type as size(), so no mixed comparison.
       - t: int i = 0
-        why: "Works here, but warns: -Wsign-compare. Mixing signed and unsigned is a trap waiting to spring."
+        why: "Works here, but g++ warns: signed vs unsigned is a trap."
       - t: int i = -1
-        why: -1 converts to a huge unsigned number, so -1 < size() is false and nothing prints.
+        why: -1 turns into a huge unsigned number. Nothing prints.
       - t: std::size_t i = 1
-        why: Clean types, but skips name[0], so the C is lost. Off by one.
+        why: Clean types, but skips name[0], so the C is lost.
     answer: 0
     hints:
       - What type does .size() return?
@@ -163,7 +163,7 @@ challenges:
     bug: signed-unsigned
     unsafe: true
     expect: warn
-    prompt: "UNSAFE comparison (g++ warns). What does this print?"
+    prompt: "UNSAFE: g++ warns here. What does this print? (true prints 1, false prints 0.)"
     code: |-
       #include <iostream>
       #include <string>
@@ -177,10 +177,10 @@ challenges:
     options:
       - t: |
           0
-        why: "Correct: -1 is converted to unsigned, becoming a huge number, and huge < 5 is false."
+        why: "As unsigned, -1 is huge, and huge < 5 is false."
       - t: |
           1
-        why: That's the math answer. C++ converts -1 to std::size_t first, which is enormous.
+        why: That's the math answer, but C++ converts -1 to unsigned first.
       - t: |
           -1
         why: A comparison gives a bool, which prints as 1 or 0.
@@ -190,14 +190,14 @@ challenges:
     hints:
       - What type does name.size() return?
       - What does -1 become as an unsigned number?
-    short: -1 converts to a huge unsigned number, so -1 < 5 is false.
+    short: -1 becomes a huge unsigned number, so the test is false.
     explain: "Comparing int with std::size_t converts the int to unsigned. -1 becomes 18446744073709551615 (64-bit), and that's not less than 5, so it prints 0. -Wall catches it with -Wsign-compare."
   - id: w5.l5.c4
     type: breakit
     tags: [ w5.signed-unsigned, w5.infinite, w3.validate ]
     bug: signed-unsigned
     unsafe: true
-    prompt: "UNSAFE countdown: it compiles without a single warning. Which input breaks it?"
+    prompt: "UNSAFE: no warnings here. Which typed number breaks this countdown?"
     code: |-
       #include <iostream>
 
@@ -218,14 +218,14 @@ challenges:
       - t: "0"
         why: 0 > 0 is false, so it goes straight to Liftoff! Fine.
       - t: "-1"
-        why: "Correct: -1 becomes 4294967295 as unsigned: over four billion numbers before liftoff."
+        why: "Stored in unsigned, -1 becomes 4294967295: billions of laps."
       - t: "100"
-        why: A long countdown, but it ends. Big is fine; wrapped is the problem.
+        why: A long countdown, but it ends. Big is fine.
     answer: 2
     hints:
       - What happens when a negative int is stored in an unsigned?
       - "-Wall -Wextra don't warn here. Only validation saves you."
-    short: -1 stored in an unsigned wraps to over four billion.
+    short: A negative number stored in an unsigned wraps to huge.
     explain: "Converting -1 to unsigned int wraps to 4294967295 (32-bit), so the loop prints billions of numbers. No warning at -Wall -Wextra (that needs -Wsign-conversion). Validate the range, and keep the counter signed."
     sideBySide:
       unsafe: |-
@@ -293,7 +293,7 @@ challenges:
   - id: w5.l5.c6
     type: safe
     tags: [ w5.offbyone, w5.infinite, w5.signed-unsigned ]
-    prompt: Safe or unsafe? Loop bugs incoming. Go fast!
+    prompt: Is each loop safe or unsafe? Go fast!
     seconds: 40
     items:
       - code: |-
@@ -315,7 +315,7 @@ challenges:
               std::cout << i;
           }
         safe: false
-        why: An unsigned is always >= 0. It wraps past 0 and never stops.
+        why: Unsigned is always >= 0, so it wraps and never stops.
       - code: |-
           int i{0};
           while (i < 3) {
@@ -336,7 +336,7 @@ challenges:
               std::cout << i;
           }
         safe: true
-        why: "10, 7, 4, 1, then -2 fails i > 0. > catches the overshoot."
+        why: "10, 7, 4, 1, then -2 fails i > 0."
       - code: |-
           for (int i = 0; i != 10; i += 3) {
               std::cout << i;
@@ -360,13 +360,13 @@ challenges:
     hints:
       - "Does the counter always reach the exit?"
       - "Watch for >= 0 on unsigned and int vs .size()."
-    short: Safe loops move toward an exit they can't skip, with matching types.
+    short: Safe loops always reach an exit they can't skip.
     explain: "Safe loops always reach their exit: the counter moves every lap, the comparison can't be skipped (< not !=), unsigned counters never test >= 0, and failed reads are cleared before retrying."
 recap:
   - "Half-open 0 to < n: exactly n laps."
-  - Every lap must move toward an exit you can't skip.
+  - Every lap moves toward an exit.
   - ".size() is unsigned: count with std::size_t."
-  - "Unsigned countdown: i > 0 and index i - 1."
+  - "Count down: `i > 0`, read `s[i-1]`."
 vault:
   - id: w5.halfopen
     title: Beat off-by-one

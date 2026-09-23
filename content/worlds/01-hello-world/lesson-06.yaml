@@ -6,7 +6,7 @@ skill: defense
 shield: true
 concept:
   short: Turn warnings on, read the first error first, and fix every warning. They're free bug reports.
-  analogy: An error is a locked door; a warning is a smoke alarm you should never unplug.
+  analogy: Errors are locked doors; warnings are smoke alarms. Never unplug one.
   body:
     - "Build with warnings on: `g++ -std=c++20 -Wall -Wextra -pedantic main.cpp -o hero` (MSVC: `/W4`). `-Werror` turns warnings into errors."
     - "Messages read `file:line:column: error: message`, counting lines from 1. Fix the **first** error first: one missing `;` can cause a cascade."
@@ -47,7 +47,7 @@ challenges:
       - t: Line 5, column 12
         why: "The format is file:line:column: line 12 first, then column 5."
       - t: "Line 12 of hero.cpp, around column 5, for a misspelled std:: name"
-        why: "Correct! And cot doesn't exist in std: you meant cout."
+        why: The first number is the line; the quoted name is misspelled.
       - t: The last line of the file
         why: The message gives the exact line. No need to guess.
       - t: "Nowhere: reinstall the compiler"
@@ -94,7 +94,7 @@ challenges:
   - id: w1.l6.c3
     type: harden
     tags: [ w1.warnings, w1.cout ]
-    prompt: The compiler warned about this line. Pick what fills the blank so it builds cleanly and prints the right text.
+    prompt: Pick what fills the blank so it builds with no warnings and prints Shields up!
     code: |-
       #include <iostream>
 
@@ -108,7 +108,7 @@ challenges:
       - t: Shields up!\n
         why: "No quotes: the compiler reads Shields as a name. Error."
       - t: '"Shields up!\n"'
-        why: "Correct! Double quotes make a string: clean build, right output."
+        why: "Double quotes make a string: clean build, right output."
       - t: '"Shields up!\n'
         why: 'Missing the closing quote: error: missing terminating " character.'
     answer: 2
@@ -123,7 +123,7 @@ challenges:
   - id: w1.l6.c4
     type: safe
     tags: [ w1.warnings, w1.compile ]
-    prompt: Speed round! Each line sits inside main() with <iostream>, built with -Wall -Wextra. Safe = clean build.
+    prompt: Speed round! Each line sits in main(), built with -Wall -Wextra. Safe = no errors, no warnings.
     seconds: 30
     items:
       - code: std::cout << "Hi\n";
@@ -160,7 +160,7 @@ challenges:
   - id: w1.l6.c5
     type: bug
     tags: [ w1.warnings, w1.compile ]
-    prompt: "Intentionally broken: \"error: expected ';' before 'std'\", pointing at the \"line A\" line. Tap the mistake, then pick the fix."
+    prompt: "Build error: \"expected ';' before 'std'\" near line A. Tap the mistake, then pick the fix."
     code: |-
       #include <iostream>
 
@@ -178,7 +178,7 @@ challenges:
       - t: 'Delete std:: from the "line B" statement'
         why: Then cout is unknown, and the ; is still missing.
       - t: Add ; at the end of the "line A" statement
-        why: Correct! The statement before the next std was unfinished.
+        why: The statement before the next std was unfinished.
       - t: Change "line A\n" to 'line A\n'
         why: That adds a warning and still no semicolon.
       - t: "Add #include <string> at the top"
@@ -217,7 +217,7 @@ challenges:
       - t: Add a blank line between the two statements
         why: Blank lines don't matter to the compiler.
       - t: Delete the ; after "Stable\n"
-        why: Correct! The statement runs into return 0 and the build fails.
+        why: The statement runs into return 0 and the build fails.
     answer: 3
     hints:
       - Whitespace and comments are ignored by the compiler.

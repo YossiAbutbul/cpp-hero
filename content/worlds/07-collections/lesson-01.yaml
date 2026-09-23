@@ -5,10 +5,10 @@ title: Rows of boxes
 skill: toolkit
 shield: false
 concept:
-  short: An array holds a fixed number of same-type values. Indexes run from 0 to size - 1.
-  analogy: "An array is an egg carton: a fixed number of slots, numbered starting at 0."
+  short: An array holds a fixed count of same-type values, indexed from 0.
+  analogy: "An egg carton: a fixed number of slots, numbered from 0."
   body:
-    - "A **C-style array** is the old way, inherited from C: `int hp[3] = {10, 20, 30};`. Its size is fixed when you write the code. The elements are `hp[0]`, `hp[1]` and `hp[2]`: the first index is 0 and the last is size - 1."
+    - "A **C-style array** is the old way, inherited from C: `int hp[3] = {10, 20, 30};`. Its size is fixed when you write the code. The elements are `hp[0]`, `hp[1]` and `hp[2]`: the first index is 0 and the last is size minus 1."
     - "C-style arrays have sharp edges. They don't remember their size once you pass them to a function (they **decay** to a pointer), you can't copy one with `=`, and `hp[3]` is not checked at all. The Shield lesson shows why that's dangerous."
     - "**std::array** (`#include <array>`) is the modern fixed-size array: `std::array<int, 3> hp{10, 20, 30};`. The type says what it holds and how many. It's just as fast, but it knows its size (`hp.size()`), can be copied and compared, and has `.at()` for checked access."
     - "Braces fill the gaps with zeros: `std::array<int, 5> slots{};` is five 0s, and `std::array<int, 4> a{5, 8};` is 5, 8, 0, 0. Without the braces, the ints inside are uninitialized garbage (remember World 2!)."
@@ -29,26 +29,26 @@ demo:
     }
   steps:
     - line: 0
-      note: std::array lives in the <array> header.
+      note: std::array needs <array>.
     - line: 4
       vars:
         hp: "[10, 20, 30]"
-      note: "Three int slots, filled in order: indexes 0, 1, 2."
+      note: "Three int slots: indexes 0, 1, 2."
     - line: 5
       out: |
         10
-      note: "hp[0] is the FIRST slot. Counting starts at 0."
+      note: "hp[0] is the FIRST slot."
     - line: 6
       vars:
         hp: "[10, 20, 35]"
-      note: "hp[2] is the last slot. Assigning replaces its value."
+      note: "The last slot gets a new value."
     - line: 7
       out: |
         35
     - line: 8
       out: |
         3
-      note: std::array knows its own size. A C array doesn't.
+      note: std::array knows its own size.
     - line: 9
       note: Done. Every index stayed between 0 and 2.
 challenges:
@@ -58,23 +58,23 @@ challenges:
     prompt: "You declare `int scores[5];`. Which indexes are valid?"
     options:
       - t: 0 to 4
-        why: "Correct: five slots numbered 0, 1, 2, 3, 4."
+        why: "Five slots: 0, 1, 2, 3, 4."
       - t: 1 to 5
-        why: "Indexes start at 0, not 1. scores[5] is one past the end."
+        why: Indexes start at 0, not 1.
       - t: 0 to 5
-        why: That's six slots. scores[5] is past the end and reading it is UB.
+        why: Six slots. scores[5] is past the end.
       - t: 1 to 4
-        why: That skips scores[0], the first slot, and only counts four.
+        why: Skips scores[0], the first slot.
     answer: 0
     hints:
       - The first index is always 0.
-      - With 5 slots starting at 0, where do you end?
+      - Five slots starting at 0 end where?
     short: A 5-slot array has indexes 0 to 4.
     explain: "Arrays are zero-based: the first element is [0] and the last is [size - 1]. For `int scores[5]` that's scores[0] through scores[4]. Using scores[5] reads past the end: undefined behavior."
   - id: w7.l1.c2
     type: predict
     tags: [ w7.std-array, w2.init ]
-    prompt: Only three values for four slots. What does this print?
+    prompt: What does this print?
     code: |-
       #include <array>
       #include <iostream>
@@ -87,25 +87,25 @@ challenges:
     options:
       - t: |
           8 4
-        why: "Correct: a[1] is 8, the missing a[3] is filled with 0, and the size is 4."
+        why: "8 + 0, and the size is 4."
       - t: |
           8 3
-        why: The size comes from the type, std::array<int, 4>, not from how many values you gave.
+        why: "size() comes from the type: 4."
       - t: |
           7 4
-        why: "That counts from 1 (5 + 2). Indexes start at 0: a[1] is 8."
+        why: "a[1] is the second value, 8."
       - t: Compile error
-        why: Fewer values than slots is fine; the rest become 0. Too MANY would be an error.
+        why: Fewer values than slots is fine.
     answer: 0
     hints:
-      - Brace init fills the missing slots with something known.
-      - a[1] is the second value. What's the size in the type?
+      - Braces fill the missing slots with 0.
+      - What size does the type say?
     short: Missing values become 0; size() comes from the type.
-    explain: "`std::array<int, 4> a{5, 8, 2};` holds 5, 8, 2, 0: braces zero-fill the rest. a[1] + a[3] is 8 + 0 = 8, and a.size() is 4. Output: \"8 4\" and a newline."
+    explain: "`std::array<int, 4> a{5, 8, 2};` holds 5, 8, 2, 0: braces zero-fill the rest. a[1] + a[3] is 8 + 0 = 8, and a.size() is 4. Output: \"8 4\" and a newline. Giving MORE values than slots would be a compile error."
   - id: w7.l1.c3
     type: fill
     tags: [ w7.std-array, w2.init ]
-    prompt: Make a week of temperatures that all start at 0.0, never garbage. Fill in the blank.
+    prompt: Fill in the blank so all seven temperatures start at 0.0.
     code: |-
       #include <array>
 
@@ -117,13 +117,13 @@ challenges:
     placeholder: initializer
     hints:
       - "World 2's rule: always initialize."
-      - Empty braces value-initialize every slot.
-    short: "std::array<double, 7> temps{}; starts every slot at 0.0."
+      - Empty braces set every slot to zero.
+    short: "temps{} starts every slot at 0.0."
     explain: "Empty braces value-initialize every element: seven 0.0s. Without them, a local std::array of doubles holds garbage, and reading garbage is undefined behavior."
   - id: w7.l1.c4
     type: order
     tags: [ w7.std-array, w1.include ]
-    prompt: "Order the lines: include the header, make three grades, upgrade the first to 'S', print it."
+    prompt: "Order the lines: include, make three grades, change the first to 'S', print it."
     lines:
       - "#include <array>"
       - "std::array<char, 3> grade{'A', 'B', 'C'};"
@@ -132,16 +132,16 @@ challenges:
     distractors:
       - "std::array<char> grade{'A', 'B', 'C'};"
     hints:
-      - The header comes first, then declare before you use.
-      - "std::array needs both the type AND the count."
-    short: Include, declare with type and count, change slot 0, print.
+      - Header first, declare before use.
+      - std::array needs a type AND a count.
+    short: Header, declare, change, print.
     explain: "The header comes first, the array must exist before you change it, and you print after the change. `std::array<char>` doesn't compile: the size is part of the type."
   - id: w7.l1.c5
     type: bug
     tags: [ w7.array, w5.offbyone, w5.for ]
     bug: out-of-bounds
     unsafe: true
-    prompt: "UNSAFE: this should add up four loot values but reads one slot too many. Tap the buggy line, then pick the fix."
+    prompt: "UNSAFE: this sums 4 loot values but reads one too many. Tap the buggy line, pick the fix."
     code: |-
       #include <iostream>
 
@@ -157,18 +157,18 @@ challenges:
     bugLine: 5
     options:
       - t: for (int i = 0; i < 4; ++i) {
-        why: "Correct: i takes 0, 1, 2, 3, exactly the four valid indexes."
+        why: "i takes 0 to 3: all valid."
       - t: for (int i = 1; i <= 4; ++i) {
-        why: Skips loot[0] AND still reads loot[4], past the end.
+        why: Skips loot[0] and still reads loot[4].
       - t: for (int i = 0; i <= 4; i++) {
-        why: i++ vs ++i changes nothing here. It still reaches loot[4].
+        why: i++ changes nothing. Still reads loot[4].
       - t: for (int i = 0; i <= 5; ++i) {
-        why: Worse! Now it reads two slots past the end.
+        why: Worse! Reads two slots past the end.
     answer: 0
     hints:
-      - What is the last valid index of a 4-slot array?
+      - Last valid index of 4 slots?
       - "<= 4 lets i become 4."
-    short: "Use i < 4, not i <= 4: loot[4] is past the end."
+    short: "Use i < 4: loot[4] is past the end."
     explain: "With `i <= 4`, the last pass reads loot[4], which doesn't exist: undefined behavior. It might add garbage, crash, or seem fine, and C arrays never warn you. Loop with `<` the size, or better, use std::array with size() (or a range-for, coming soon)."
     sideBySide:
       unsafe: |-
@@ -188,27 +188,27 @@ challenges:
   - id: w7.l1.c6
     type: mcq
     tags: [ w7.std-array, w7.array ]
-    prompt: Why prefer `std::array<int, 3>` over the old `int hp[3]`?
+    prompt: What's the main reason to prefer `std::array<int, 3>` over `int hp[3]`?
     options:
       - t: It knows its size and can be copied, at the same speed
-        why: "Correct: same memory layout and speed, plus size(), copying, comparing and .at()."
+        why: Same speed, plus size(), copying and .at().
       - t: It's much faster
-        why: Both are the same fixed block of ints. The win is safety, not speed.
+        why: Same speed. The win is safety.
       - t: It can grow with push_back
-        why: std::array has a fixed size. Growing is std::vector's job.
+        why: Fixed size. Growing is vector's job.
       - t: It checks every [] access
-        why: "[] is unchecked on std::array too. Only .at() checks the index."
+        why: "[] is unchecked here too. Only .at() checks."
     answer: 0
     hints:
-      - Think about what a C array forgets.
-      - Both are fixed-size. What does only one of them remember?
-    short: std::array knows its size and copies safely, with no speed cost.
-    explain: "A C array forgets its size when passed to a function, can't be assigned with =, and has no checked access. std::array fixes all of that at zero cost. But its [] is still unchecked: use .at() or check the index when it might be wrong."
+      - What does a C array forget?
+      - Which one knows its size?
+    short: Knows its size, copies, same speed.
+    explain: "A C array forgets its size when passed to a function, can't be assigned with =, and has no checked access. std::array fixes all of that at zero cost: it's the same block of ints in memory. But its [] is still unchecked: use .at() or check the index when it might be wrong."
 recap:
-  - "Fixed size; indexes run 0 to size - 1."
-  - "std::array<int, 3> knows its size: hp.size()."
-  - "Braces zero-fill: std::array<int, 5> a{};"
-  - C arrays forget their size. Prefer std::array.
+  - "Fixed size; the first index is 0."
+  - "hp.size() gives the count."
+  - "Braces zero-fill: a{};"
+  - Prefer std::array over C arrays.
 vault:
   - id: w7.std-array
     title: std::array basics

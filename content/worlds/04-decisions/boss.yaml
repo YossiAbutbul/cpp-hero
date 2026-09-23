@@ -35,7 +35,7 @@ rounds:
     options:
       - t: |
           Guarded
-        why: "Correct: 40 > 50 is false; 40 > 20 && true is true, so the chain stops."
+        why: 40 > 50 is false; 40 > 20 && true is true.
       - t: |
           Wounded
         why: "hp > 20 is true, but \"Guarded\" is checked first and wins."
@@ -81,7 +81,7 @@ rounds:
     options:
       - t: |
           Light the torches. Stay alert.
-        why: "Correct: jump to case 1, fall through on purpose to case 0, then break."
+        why: Jump to case 1, fall through to case 0, then break.
       - t: |
           Lock the gate. Light the torches. Stay alert.
         why: The switch jumps straight to case 1; case 2 is above it.
@@ -105,11 +105,11 @@ rounds:
     prelude: int level{15}; int gold{80};
     options:
       - t: "2"
-        why: "Correct: level > 10 is true, so the inner ternary runs; 80 > 100 is false, giving 2."
+        why: "Outer is true, so the inner runs: 80 > 100 is false."
       - t: "3"
         why: gold is 80, which is not more than 100.
       - t: "1"
-        why: level is 15, so the outer condition is true and 1 is skipped.
+        why: level is 15, so the outer condition is true.
       - t: It doesn't compile
         why: Nested ternaries are legal, just hard to read.
     answer: 0
@@ -134,7 +134,7 @@ rounds:
     options:
       - t: |
           false
-        why: "Correct: 0.1 + 0.2 is 0.30000000000000004 as a double, not 0.3."
+        why: 0.1 + 0.2 is 0.30000000000000004 as a double, not 0.3.
       - t: |
           true
         why: True in math, false in binary floating point.
@@ -218,7 +218,7 @@ rounds:
     type: bug
     tags: [ w4.assign, w1.warnings ]
     unsafe: true
-    prompt: "The Phantom tampered with the shield check: the shield never breaks. Tap the buggy line, then pick the fix."
+    prompt: 'The shield is 0, but it prints "Shield holds." Tap the buggy line, then pick the fix.'
     code: |-
       #include <iostream>
 
@@ -234,7 +234,7 @@ rounds:
     bugLine: 4
     options:
       - t: "if (shield == 0) {"
-        why: "Correct: == compares, so a 0 shield is reported as broken."
+        why: "== compares, so a 0 shield is reported as broken."
       - t: "if ((shield = 0)) {"
         why: Silences -Wall but still assigns 0, which is false. Always "holds".
       - t: "if (!shield = 0) {"
@@ -353,11 +353,11 @@ defense:
       prelude: int spell{4};
       options:
         - t: 'default: std::cout << "Unknown spell!\n"; break;'
-          why: "Correct: spell 4, 99 or -1 all get a clear response."
+          why: Spell 4, 99 or -1 all get a clear response.
         - t: 'case 4: std::cout << "Dark\n"; break;'
           why: Handles 4 today. The Phantom casts 5 next.
         - t: "break;"
-          why: A break with no label just ends the last case again. 4 is still ignored.
+          why: A lone break just ends the last case. 4 is still ignored.
         - t: 'else std::cout << "Unknown spell!\n";'
           why: else belongs to if, not switch. Compile error.
       answer: 0
@@ -386,7 +386,7 @@ defense:
       type: harden
       tags: [ w4.float, w2.double ]
       bug: float-equality
-      prompt: "The Phantom pays 0.1 + 0.2 for a 0.3 ward, then claims it was refused. Pick the check."
+      prompt: The Phantom pays 0.1 + 0.2 for a 0.3 ward. Pick the check that accepts it.
       code: |-
         #include <cmath>
         #include <iostream>
@@ -403,18 +403,18 @@ defense:
         }
       options:
         - t: std::abs(paid - wardPrice) < 1e-9
-          why: "Correct: equal within a tiny tolerance, whichever side is bigger."
+          why: Equal within a tiny tolerance, whichever side is bigger.
         - t: paid == wardPrice
           why: The bits differ by a rounding error, so this is false.
         - t: paid - wardPrice == 0.0
-          why: Still an exact == on doubles. The difference is about 5.5e-17, not 0.
+          why: Still exact == on doubles; the difference is about 5.5e-17.
         - t: std::abs(paid - wardPrice) < 1.0
-          why: Way too loose. Paying 0.0 or 1.2 gold would also count as correct.
+          why: "Way too loose: paying 0.0 or 1.2 would count too."
       answer: 0
       hints:
         - Never ask a double "exactly equal?"
         - The tolerance should be tiny.
-      short: "std::abs(a - b) < 1e-9: equal within a tiny tolerance."
+      short: "`std::abs(a - b) < 1e-9` means equal within a tiny tolerance."
       explain: "Exact == on doubles fails because of rounding. Compare the absolute difference with a small tolerance that fits your values."
       sideBySide:
         unsafe: |-
@@ -435,7 +435,7 @@ defense:
       type: breakit
       tags: [ w4.else, w2.init ]
       unsafe: true
-      prompt: "UNSAFE: bonus is only set on some paths. Which level makes the program read garbage?"
+      prompt: "UNSAFE: the user types a level. Which input leaves bonus never set?"
       code: |-
         #include <iostream>
 
@@ -455,7 +455,7 @@ defense:
         }
       options:
         - t: "-1"
-          why: "Correct: no branch runs, so bonus is never set. Reading it is UB."
+          why: No branch runs, so bonus is never set. Reading it is UB.
         - t: "10"
           why: level >= 10 sets bonus to 50.
         - t: "1"
@@ -503,13 +503,13 @@ defense:
         }
       options:
         - t: hp == 0
-          why: "Correct: compares without changing hp."
+          why: Compares without changing hp.
         - t: hp = 0
-          why: Assigns 0 to hp (always false) and wipes out the 5 hp. -Wall warns.
+          why: "Assigns 0 to hp: always false, and the 5 hp is gone."
         - t: (hp = 0)
           why: Same assignment; the parentheses only hide the warning.
         - t: hp =! 0
-          why: That's hp = !0, which assigns 1. Always true, and hp is wrecked.
+          why: "That's hp = !0, which assigns 1: always true."
       answer: 0
       hints:
         - One = assigns. How many does comparing need?

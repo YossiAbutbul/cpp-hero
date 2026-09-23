@@ -6,7 +6,7 @@ skill: defense
 shield: true
 concept:
   short: "Never trust input: check every read, check divisors before dividing, check limits before adding."
-  analogy: '`std::cin` is a gate guard: hand it "abc" and it slams the gate until you clear the alarm.'
+  analogy: '`std::cin` is a gate guard: bad input slams the gate until you clear it.'
   body:
     - "**Never trust input.** If `std::cin >> x` gets `abc`, x becomes `0` (since C++11) and cin enters a **fail state**: every later read fails until you fix it."
     - "Check every read: `if (!(std::cin >> x)) { ... }`. The stream is false after a failed read. A number too big for an int fails too."
@@ -61,7 +61,7 @@ demo:
       out: |
         That's not a number!
     - line: 8
-      note: "return 1: leave early with an error code. No garbage math."
+      note: "return 1: leave early with an error code."
     - line: 5
       out: "Gold and party size? "
       note: "Run 2. Simulated input: `100 0`"
@@ -69,13 +69,13 @@ demo:
       vars:
         gold: "100"
         party: "0"
-      note: Both reads succeed. They're numbers... but is 0 a sane party size?
+      note: Both reads work. But is 0 a sane party size?
     - line: 14
       crash: "100 / 0: undefined behavior!"
       note: "Without the party check, 100 / 0 runs here: UB!"
     - line: 10
       shield: Divisor checked!
-      note: "Back to reality: the guard runs first. party <= 0 is true."
+      note: "With the guard: party <= 0 is true. Stop!"
     - line: 11
       out: |
         Party size must be positive.
@@ -102,9 +102,9 @@ challenges:
       - t: 10 2
         why: 10 / 2 = 5. Works fine.
       - t: 0 5
-        why: 0 / 5 = 0. A zero on top is harmless; only the divisor matters.
+        why: 0 / 5 is just 0. Zero on top is harmless.
       - t: 7 0
-        why: "Correct: 7 / 0 is integer division by zero: undefined behavior."
+        why: b is 0, so 7 / 0 divides by zero.
       - t: -9 3
         why: -9 / 3 = -3. Negative numbers divide just fine.
     answer: 2
@@ -153,7 +153,7 @@ challenges:
       }
     options:
       - t: "!(std::cin >> x)"
-        why: "Correct: reads x AND checks whether the read worked, in one step."
+        why: The ! makes the if run only when the read failed.
       - t: x == 0
         why: Nothing is ever read! And a valid 0 would be rejected too.
       - t: std::cin >> x
@@ -163,7 +163,7 @@ challenges:
     answer: 0
     hints:
       - The read itself can tell you if it worked.
-      - std::cin >> x gives back the stream, which is false after a failed read.
+      - std::cin >> x is false when the read fails.
     short: "!(std::cin >> x) reads and detects failure in one step."
     explain: "`std::cin >> x` returns std::cin, which converts to false if the read failed. `!(...)` flips it, so the if runs exactly when input is bad."
     sideBySide:
@@ -181,7 +181,7 @@ challenges:
     type: harden
     tags: [ w3.validate, w3.cin ]
     bug: cin-fail
-    prompt: The first read failed. cin is cleared, but the junk is still waiting. What goes in the blank so the retry can work?
+    prompt: cin was cleared, but `abc` is still waiting. What fills the blank so the retry works?
     code: |-
       #include <iostream>
       #include <limits>
@@ -202,19 +202,19 @@ challenges:
       }
     options:
       - t: std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n')
-        why: 'Correct: throws away everything up to and including the newline, so "abc" is gone.'
+        why: 'Skips past the end of the line, so "abc" is gone.'
       - t: std::cin.ignore()
         why: 'Discards just ONE character: "abc" becomes "bc", and the retry fails again.'
       - t: std::cin.clear()
         why: Already cleared. Clearing again doesn't remove the junk characters.
       - t: std::cin.flush()
-        why: "Input streams have no flush(): compile error. (And fflush(stdin) is UB, never use it.)"
+        why: "Input streams have no flush(): compile error."
     answer: 0
     hints:
       - The bad characters are still sitting on the belt.
       - You need to skip everything up to the end of the line.
     short: After clear(), ignore the rest of the bad line.
-    explain: "Recovery is two steps: clear() resets the fail state, then ignore(max, '\\n') discards the rest of the bad line. Now the next read sees fresh input."
+    explain: "Recovery is two steps: clear() resets the fail state, then ignore(max, '\\n') discards the rest of the bad line. Now the next read sees fresh input. (Never use fflush(stdin): it's UB.)"
     sideBySide:
       unsafe: |-
         if (!(std::cin >> x)) {
@@ -239,13 +239,13 @@ challenges:
       hp += 1;
     options:
       - t: "Undefined behavior: anything can happen, including seeming to work"
-        why: "Correct: signed integer overflow is UB. The compiler is allowed to assume it never happens."
+        why: Signed int overflow is UB. The compiler may assume it never happens.
       - t: hp becomes -2147483648, guaranteed
-        why: Wrapping around is common in practice, but NOT guaranteed for signed ints. Optimizers can and do produce other results.
+        why: Wrapping is common, but NOT guaranteed for signed ints.
       - t: hp stays at 2147483647
         why: C++ doesn't clamp ints to their maximum.
       - t: Compile error
-        why: The compiler can't generally know values at compile time; it compiles (maybe with a warning).
+        why: It compiles, maybe with a warning. The problem is at run time.
     answer: 0
     hints:
       - Is there a rule for what happens past the maximum?
@@ -255,7 +255,7 @@ challenges:
   - id: w3.l5.c5
     type: harden
     tags: [ w3.overflow, w3.validate ]
-    prompt: bonus is already checked to be a number and not negative. Pick the check that stops score from overflowing.
+    prompt: bonus is a number, 0 or more. Pick the check that stops score from overflowing.
     code: |-
       #include <iostream>
       #include <limits>
@@ -277,18 +277,18 @@ challenges:
       }
     options:
       - t: bonus > std::numeric_limits<int>::max() - score
-        why: "Correct: max - score can't overflow (score is positive), and it tells you exactly how much room is left."
+        why: It measures the room left without ever overflowing.
       - t: score + bonus > std::numeric_limits<int>::max()
-        why: The addition itself overflows (UB) before the comparison, and no int is ever bigger than max anyway.
+        why: score + bonus overflows (UB) before the check even runs.
       - t: score + bonus < 0
-        why: Relies on overflow wrapping around. It's UB, so the optimizer may delete this check entirely.
+        why: Relies on overflow wrapping. That's UB; the check may vanish.
       - t: bonus > std::numeric_limits<int>::max()
-        why: An int can never be bigger than the largest int, so this is always false.
+        why: "No int is ever bigger than the largest int: always false."
     answer: 0
     hints:
       - Don't do the risky addition to find out if it's risky.
-      - "Rearrange a + b > max as b > max - a: no overflow."
-    short: Check bonus > max - score before adding; that side can't overflow.
+      - Move score to the other side of the comparison.
+    short: Check the room left (max minus score) before adding.
     explain: "Move the math to the safe side: bonus > max - score. Since score is positive, max - score can't overflow. Input 147483648 is rejected; 147483647 exactly reaches max, which is fine."
     sideBySide:
       unsafe: |-
@@ -323,7 +323,7 @@ challenges:
           std::cout << 100 / n;
         prelude: int n{};
         safe: false
-        why: 'Unchecked: typing 0 (or "abc", which sets n to 0) divides by zero.'
+        why: 'Unchecked: typing 0 or "abc" makes n 0, then 100 / 0.'
       - code: |-
           if (!(std::cin >> n)) {
               return 1;
@@ -344,7 +344,7 @@ challenges:
       - code: long long sum = static_cast<long long>(a) + b;
         prelude: int a{}; int b{};
         safe: true
-        why: long long is at least 64 bits, so two ints can always be added in it without overflow.
+        why: "long long is 64+ bits: two ints always fit their sum."
       - code: |-
           std::cin >> age;
           int days = age * 365;
@@ -353,7 +353,7 @@ challenges:
         why: Unchecked read, and a huge age makes the multiplication overflow.
     hints:
       - Look for any divisor that isn't checked.
-      - Look for reads that aren't checked and math that could go past the largest int.
+      - Spot unchecked reads and math that could pass the int limit.
     short: Safe code checks reads, divisors, and limits before the math.
     explain: Safe code checks the read, checks the divisor, and makes sure math can't pass the int limits. Everything else is an open gate.
     sideBySide:
@@ -368,10 +368,10 @@ challenges:
         std::cout << 100 / n;
       prelude: int n{};
 recap:
-  - "Check every read: if (!(std::cin >> x)) { ... }."
+  - "Check every read: if (!(std::cin >> x))."
   - Recover with std::cin.clear(), then std::cin.ignore(max, '\n').
-  - "Integer / 0 and % 0 are UB: check first."
-  - "Signed overflow is UB: check against std::numeric_limits BEFORE the math."
+  - "Dividing by 0 is UB: check first."
+  - "Signed overflow is UB: check limits first."
 vault:
   - id: w3.cinguard
     title: Validate every read

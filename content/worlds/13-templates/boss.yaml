@@ -30,13 +30,13 @@ rounds:
     options:
       - t: |
           7 7.5 7
-        why: "Correct: int math gives 15 / 2 = 7; double gives 7.5; <int> chops 5.9 to 5, then 7."
+        why: "Int math gives 7, double gives 7.5, <int> chops 5.9 first."
       - t: |
           7.5 7.5 8.85
-        why: scale(5) deduces int, and scale<int> forces int. Only the middle call uses double.
+        why: Only the middle call uses double; the others use int.
       - t: |
           7 7.5 8
-        why: scale<int>(5.9) converts 5.9 to 5 BEFORE the math, so 5 * 3 / 2 = 7.
+        why: <int> turns 5.9 into 5 BEFORE the math, giving 7.
       - t: |
           7 7 7
         why: 5.0 is a double, so scale(5.0) does real division.
@@ -52,7 +52,7 @@ rounds:
     prompt: "`template <typename T> T biggest(T a, T b)`. The Sentinel calls `biggest(10, 2.5)`. What happens?"
     options:
       - t: Compile error; T is deduced as both int and double
-        why: "Correct: deduction never converts. Fix with biggest<double>(10, 2.5)."
+        why: "Deduction never converts. Fix: biggest<double>(10, 2.5)."
       - t: Returns 10
         why: It never gets to run. The two arguments disagree about T.
       - t: Returns 10.0 with T = double
@@ -95,7 +95,7 @@ rounds:
     options:
       - t: |
           3 0.75
-        why: "Correct: Tally<int> totals 7, and 7 / 2 is 3. Tally<double> totals 0.75."
+        why: Tally<int> totals 7, halved to 3. Tally<double> keeps 0.75.
       - t: |
           3.5 0.75
         why: a.total() returns an int, so 7 / 2 is integer division.
@@ -147,7 +147,7 @@ rounds:
     type: bug
     tags: [ w13.staticassert ]
     bug: unconstrained-template
-    prompt: "average(3, 4) compiles and returns 3, while average(3.0, 4.0) is rejected. Tap the buggy line, then pick the fix."
+    prompt: "average(3, 4) compiles but average(3.0, 4.0) is rejected. Tap the buggy line, then pick the fix."
     code: |-
       #include <type_traits>
 
@@ -159,11 +159,11 @@ rounds:
     bugLine: 4
     options:
       - t: static_assert(std::is_floating_point_v<T>, "average needs double or float");
-        why: "Correct: now the check matches the message. Doubles pass; truncating ints are rejected."
+        why: Now the check matches the message. Doubles pass, ints don't.
       - t: static_assert(!std::is_integral_v<T>, "average needs double or float");
         why: Rejects ints, but lets std::string and every other non-integer type in.
       - t: assert(std::is_floating_point_v<T>);
-        why: A runtime check for a compile-time fact, and it vanishes in release builds.
+        why: A runtime check for a compile-time fact. Gone in release builds.
       - t: Delete the static_assert
         why: Then average(3, 4) silently returns 3 again, and strings get in too.
     answer: 0
@@ -193,7 +193,7 @@ rounds:
     tags: [ w13.nontype, w7.bounds ]
     bug: out-of-bounds
     unsafe: true
-    prompt: UNSAFE ring buffer blueprint. Tap every line that can cause undefined behavior.
+    prompt: UNSAFE ring buffer. Tap every line that can read or write out of bounds.
     code: |-
       template <typename T, std::size_t N>
       class Ring {
@@ -265,16 +265,16 @@ rounds:
       - t: average(4, 6)
         why: 10 / 2 = 5. Fine.
       - t: average(2'000'000'000, 2'000'000'000)
-        why: "Exposes it: a + b is 4 billion, past the int maximum. Signed overflow is UB."
+        why: a + b is 4 billion, past the int maximum. UB.
       - t: average(-3, -5)
         why: -8 / 2 = -4. Fine.
       - t: average(2'147'483'647, 1)
-        why: "Exposes it: the largest int plus 1 overflows before the division."
+        why: The largest int plus 1 overflows before the division.
       - t: average(0, 0)
         why: 0. Fine.
     answers: [ 1, 3 ]
     hints:
-      - The concept checks the type. What about the size of a + b?
+      - The concept checks the type. How big can a + b get?
       - The sum can be too big even when the average isn't.
     short: Concepts check types, not values; a + b can still overflow.
     explain: "std::integral guarantees integers, not safe arithmetic. a + b overflows for big inputs even when the average itself would fit. std::midpoint(a, b) from <numeric> (C++20) computes it without overflow."
@@ -304,7 +304,7 @@ rounds:
       - t: template <std::integral T>
         why: Rejects std::string, but rejects double too.
       - t: template <typename T> requires std::integral<T> || std::floating_point<T>
-        why: "Correct: integers OR floating-point types. A string is neither."
+        why: Integers OR floating-point types. A string is neither.
       - t: template <std::floating_point T>
         why: Rejects std::string, but rejects int too.
     answer: 2
@@ -332,13 +332,13 @@ defense:
         }
       options:
         - t: static_assert(std::is_arithmetic_v<T>, "healBy needs a number type")
-          why: "Correct: std::string isn't arithmetic, so the build stops with your message."
+          why: std::string isn't arithmetic, so the build stops with your message.
         - t: static_assert(true, "healBy needs a number type")
           why: Always true. It blocks nothing, and "999" + "1" becomes "9991".
         - t: assert(hp >= 0)
-          why: Runtime, checks a value, and a string can't even be compared with 0.
+          why: A runtime value check, and a string can't compare with 0.
         - t: static_assert(sizeof(T) == 4, "healBy needs a number type")
-          why: Checks the size, not the kind. It rejects double and long long, and may admit odd types.
+          why: Checks size, not kind. Rejects double, may admit odd types.
       answer: 0
       hints:
         - Check what kind of type T is.
@@ -376,11 +376,11 @@ defense:
         }
       options:
         - t: (!std::same_as<T, bool>) && std::integral<T>
-          why: "Correct: integers only, and bool explicitly shut out."
+          why: Integers only, with bool explicitly shut out.
         - t: std::integral<T>
           why: bool IS integral, so true + true still gets in.
         - t: "!std::same_as<T, bool>"
-          why: Blocks bool, but lets std::string and double in. (And a bare ! needs parentheses here.)
+          why: Blocks bool, but lets std::string and double in.
         - t: std::integral<T> || (!std::same_as<T, bool>)
           why: "|| admits anything that isn't bool, integral or not."
       answer: 0
@@ -409,7 +409,7 @@ defense:
       id: w13.boss.d3
       type: harden
       tags: [ w13.concepts, w3.divzero ]
-      prompt: "The type passes the concept. The VALUE 0 doesn't care. Pick the runtime guard."
+      prompt: "`perHero(100, 0)` passes the concept. Pick the guard that rejects every impossible party size."
       code: |-
         #include <concepts>
 
@@ -422,11 +422,11 @@ defense:
         }
       options:
         - t: heroes <= 0
-          why: "Correct: blocks zero (UB) and negative party sizes (nonsense)."
+          why: Blocks zero (UB) and negative party sizes (nonsense).
         - t: heroes == 0
-          why: Stops the UB, but -3 heroes still gives negative shares, and INT_MIN / -1 overflows.
+          why: Stops the UB, but -3 heroes still slips through.
         - t: "!std::integral<T>"
-          why: Always false here. The concept already checked the type; the value is the problem.
+          why: Always false here. The value is the problem, not the type.
         - t: gold < heroes
           why: That just means everyone gets 0. Valid, not dangerous.
       answer: 0

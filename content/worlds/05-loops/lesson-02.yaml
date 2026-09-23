@@ -6,7 +6,7 @@ skill: logic
 shield: false
 concept:
   short: "for (start; condition; update) puts the whole counting plan in one line."
-  analogy: "A for loop is a training schedule: where to start, when to stop, and how to step, written on one card."
+  analogy: "A training card: where to start, when to stop, how to step."
   body:
     - "`for (int i = 0; i < 5; ++i) { ... }` has three parts, separated by semicolons: the **start** runs once, the **condition** is checked before every lap, the **update** runs after every lap."
     - "It's a while loop with the counter bookkeeping moved into the header, so it's much harder to forget the update."
@@ -85,7 +85,7 @@ challenges:
   - id: w5.l2.c1
     type: predict
     tags: [ w5.for ]
-    prompt: What does this print? (Watch the spaces.)
+    prompt: What does this print? Spaces count.
     code: |-
       #include <iostream>
 
@@ -98,7 +98,7 @@ challenges:
       }
     options:
       - t: "0 2 4 \n"
-        why: "Correct: i is 0, 2, 4; then 6 < 5 is false. Each number is followed by a space."
+        why: "i is 0, 2, 4, each followed by a space."
       - t: "0 2 4 6 \n"
         why: 6 < 5 is false, so 6 is never printed.
       - t: "2 4 \n"
@@ -157,11 +157,11 @@ challenges:
       }
     options:
       - t: Once
-        why: "Correct: the ; is the loop's empty body. The block below is separate and runs once."
+        why: "The ; is the whole loop body. The block is separate."
       - t: Three times
-        why: That's what was intended, but the ; ended the loop before the block.
+        why: That was the plan, but the ; ended the loop early.
       - t: Zero times
-        why: The block isn't part of the loop, so nothing stops it from running once.
+        why: The block is outside the loop, so it runs once normally.
       - t: Forever
         why: The empty loop still counts 0, 1, 2 and ends normally.
     answer: 0
@@ -188,10 +188,10 @@ challenges:
     options:
       - t: |
           16
-        why: "Correct: 4 laps of doubling: 2, 4, 8, 16."
+        why: "i = 0, 1, 2, 3 gives 4 doublings."
       - t: |
           8
-        why: i < 4 runs for i = 0, 1, 2, 3. That's 4 laps, not 3.
+        why: i < 4 gives 4 laps, not 3.
       - t: |
           32
         why: That's 5 doublings. i = 4 fails the condition.
@@ -202,13 +202,13 @@ challenges:
     hints:
       - How many laps does i < 4 give, starting at 0?
       - Double 1 that many times.
-    short: "4 laps of doubling: 1 → 2 → 4 → 8 → 16."
+    short: "4 laps of doubling: 2, 4, 8, 16."
     explain: "i = 0, 1, 2, 3 gives 4 laps, and each doubles power: 2, 4, 8, 16. The accumulator here multiplies instead of adding, so it starts at 1, not 0."
   - id: w5.l2.c6
     type: edge
     tags: [ w5.offbyone, w5.for ]
     bug: off-by-one
-    prompt: This should print exactly `count` stars. Which test values expose the bug? Select all.
+    prompt: This should print exactly `count` stars. Which values of count show the bug? Select all.
     code: |-
       for (int i = 1; i < count; ++i) {
           std::cout << '*';
@@ -219,16 +219,16 @@ challenges:
       - t: "0"
         why: "Prints 0 stars, which is right. Zero hides this bug."
       - t: "1"
-        why: "Exposes it: 1 < 1 is false, so 0 stars instead of 1."
+        why: "Shows it: 1 < 1 is false, so 0 stars, not 1."
       - t: "3"
-        why: "Exposes it: laps are i = 1 and 2, so 2 stars instead of 3."
+        why: "Shows it: laps are i = 1 and 2, so 2 stars."
       - t: "10"
-        why: "Exposes it: 9 stars instead of 10."
+        why: "Shows it: 9 stars instead of 10."
     answers: [ 1, 2, 3 ]
     hints:
       - Count the laps for each value by hand.
       - "Starting at 1 with < means one lap short."
-    short: "Starting at 1 with < runs count - 1 times. Test 0, 1 and more."
+    short: "Starting at 1 with < loses one lap. Test 0 and 1."
     explain: "Starting at 1 and stopping at < count gives count - 1 laps. Only 0 looks right, by luck. Fix: start at 0 with <, or start at 1 with <=. Good tests always try 0, 1 and a bigger value."
     sideBySide:
       unsafe: |-
@@ -241,7 +241,7 @@ challenges:
         }
       prelude: int count{3};
 recap:
-  - "for (start; condition; update): the plan in one line."
+  - "for (start; check; update): one line."
   - "0 to < n runs exactly n times."
   - Never put ; right after a loop header.
   - A header counter only lives inside the loop.

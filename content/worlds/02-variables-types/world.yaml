@@ -8,7 +8,7 @@ blurb: "Give your data a home: labelled boxes for numbers, letters, true/false a
 story:
   intro:
     - "Remember the Gremlin's note full of random numbers? We're in World 2 now!"
-    - Bugs raided the Codebase pantry and ripped off every box label! Help me {sort} them!
+    - Bugs raided the pantry and ripped off every box label! Help me {sort} them!
   bossIntro:
     - That squelch? The Garbage Blob, made of uninitialized values! Stay behind my braces!
   victory:

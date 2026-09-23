@@ -14,7 +14,7 @@ rounds:
   - id: w5.boss.r1
     type: predict
     tags: [ w5.while, w5.counter ]
-    prompt: The Hydra counts its heads. What does this print? (Watch the spaces.)
+    prompt: The Hydra counts its heads. What does this print? Spaces count.
     code: |-
       #include <iostream>
 
@@ -29,7 +29,7 @@ rounds:
       }
     options:
       - t: "5 3 1 \n"
-        why: "Correct: 5, 3, 1 print; then heads is -1 and -1 > 0 is false."
+        why: "After 1, heads is -1, and -1 > 0 is false."
       - t: "5 3 1 -1 \n"
         why: -1 > 0 is false, so -1 is never printed.
       - t: "5 4 3 2 1 \n"
@@ -60,7 +60,7 @@ rounds:
     options:
       - t: |
           20
-        why: "Correct: 2 + 4 + 6 + 8 = 20. 8 <= 8 is true, so 8 is included."
+        why: "8 <= 8 is true, so 8 is included."
       - t: |
           12
         why: That stops before 8. <= includes the last value.
@@ -84,9 +84,9 @@ rounds:
     code: for (int i = 3; i <= 9; ++i) {}
     options:
       - t: "7"
-        why: "Correct: 3 to 9 inclusive is 9 - 3 + 1 = 7 laps."
+        why: "Count them: 3, 4, 5, 6, 7, 8, 9."
       - t: "6"
-        why: "That's 9 - 3, the fencepost mistake: both ends count."
+        why: "That forgets the + 1. Both 3 and 9 count."
       - t: "9"
         why: The loop starts at 3, not 1.
       - t: "10"
@@ -94,13 +94,13 @@ rounds:
     answer: 0
     hints:
       - Count 3, 4, 5, ... 9 on your fingers.
-      - "Inclusive ranges: last - first + 1."
-    short: "3 to 9 inclusive: 9 - 3 + 1 = 7 laps."
+      - "Both ends count: last minus first, plus 1."
+    short: "3 to 9 with both ends is 7 laps."
     explain: "Inclusive at both ends means last - first + 1: 3, 4, 5, 6, 7, 8, 9 is 7 laps. Forgetting the + 1 is the fencepost error, the Off-by-One Imp's favorite trick."
   - id: w5.boss.r4
     type: predict
     tags: [ w5.nested, w5.continue ]
-    prompt: The heads tangle. What does this print? (Watch the spaces.)
+    prompt: The heads tangle. What does this print? Spaces count.
     code: |-
       #include <iostream>
 
@@ -118,13 +118,13 @@ rounds:
       }
     options:
       - t: "12 13 21 23 31 32 \n"
-        why: "Correct: every pair except where i equals j."
+        why: Every pair except where i equals j.
       - t: "11 22 33 \n"
         why: "Reversed: continue SKIPS the pairs where j == i."
       - t: "12 13 \n"
         why: continue only skips one inner lap; it doesn't end any loop.
       - t: "12 13 23 \n"
-        why: The inner loop restarts at 1 for every i, so 21, 31 and 32 print too.
+        why: The inner loop restarts for every i, so 21, 31, 32 print.
     answer: 0
     hints:
       - The inner loop runs fully for each i.
@@ -190,14 +190,14 @@ rounds:
     hints:
       - "< n from 0 gives n laps; <= adds one."
       - "Unsigned comparisons turn -1 into a huge number."
-    short: "< n gives n laps, do-while runs once, -1 < size() is false."
+    short: "< n: n laps. do-while: once. -1 < size(): false."
     explain: "0 to < 4 is 4 laps and <= 4 is 5; a do-while runs at least once; continue skips to the next lap; n doubles to 64; 10, 7, 4, 1, -2 skips 0 forever; and -1 converts to a huge unsigned, so -1 < s.size() is false."
   - id: w5.boss.r6
     type: bug
     tags: [ w5.signed-unsigned, w5.infinite ]
     bug: signed-unsigned
     unsafe: true
-    prompt: "UNSAFE: the Hydra spells its name backwards and never stops. Tap the buggy line, then pick the fix."
+    prompt: "UNSAFE: this backwards spelling never stops. Tap the buggy line, then pick the fix."
     code: |-
       std::string word{"hydra"};
       for (std::size_t i = word.size() - 1; i >= 0; --i) {
@@ -206,11 +206,11 @@ rounds:
     bugLine: 1
     options:
       - t: for (std::size_t i = word.size(); i-- > 0; ) {
-        why: "Correct: checks i > 0, THEN decrements, so the body sees 4 down to 0 and the loop stops."
+        why: "Tests i > 0, then lowers i: body sees 4 to 0."
       - t: for (std::size_t i = word.size() - 1; i > 0; --i) {
         why: "Ends, but skips index 0: prints \"ardy\". Off by one."
       - t: for (std::size_t i = word.size(); i >= 0; --i) {
-        why: Still >= 0 on an unsigned, still endless, and word[5] is past the letters.
+        why: Still >= 0 on unsigned, so still endless.
       - t: for (unsigned int i = word.size() - 1; i >= 0; --i) {
         why: Still unsigned, so i >= 0 is still always true.
     answer: 0
@@ -234,7 +234,7 @@ rounds:
     tags: [ w5.retry, w5.infinite, w3.cin ]
     bug: infinite-loop
     unsafe: true
-    prompt: "UNSAFE retry loop. Which inputs make it spin forever? Select all."
+    prompt: "UNSAFE: which inputs make this retry loop run forever? Select all."
     code: |-
       int n{0};
       do {
@@ -243,13 +243,13 @@ rounds:
       } while (n < 1 || n > 5);
     options:
       - t: abc
-        why: "Exposes it: n becomes 0, cin jams, and every retry fails instantly."
+        why: "Shows it: n becomes 0, cin jams, every retry fails."
       - t: "0"
-        why: Out of range, so it asks again and reads the next answer. Fine.
+        why: Out of range, so it just asks again. Fine.
       - t: "7"
         why: Asks again, and the next read works normally.
       - t: End of input (Ctrl+D)
-        why: "Exposes it: no more input ever arrives, so n stays invalid and the loop never ends."
+        why: "Shows it: no more input ever comes, so n stays invalid."
       - t: "3"
         why: Valid. The loop ends on the first try.
     answers: [ 0, 3 ]
@@ -280,7 +280,7 @@ rounds:
   - id: w5.boss.r8
     type: harden
     tags: [ w5.accum, w5.while, w3.divzero ]
-    prompt: The Hydra averages bite damage until a negative number. Pick the guard for the average.
+    prompt: This averages bites until a negative number. Pick the guard that makes the division safe.
     code: |-
       #include <iostream>
 
@@ -299,11 +299,11 @@ rounds:
       }
     options:
       - t: count > 0
-        why: "Correct: only divide after at least one bite was counted."
+        why: Divides only after at least one bite was counted.
       - t: total != 0
-        why: "Avoids / 0 here, but hides a real average of 0 (three bites of 0)."
+        why: "Hides a real average of 0, like three bites of 0."
       - t: bite >= 0
-        why: bite is the negative number that ended the loop. It says nothing about count.
+        why: bite is the negative that ended the loop. Wrong variable.
       - t: count >= 0
         why: Always true, so an empty list still divides by zero.
     answer: 0
@@ -347,7 +347,7 @@ rounds:
     hints:
       - Can an unsigned number fail >= 0?
       - Does every loop change its counter?
-    short: "Unsigned >= 0 never fails, and a loop without an update never ends."
+    short: "Unsigned >= 0 never fails. No update means no end."
     explain: "The first loop is fine. The second can't end: an unsigned is always >= 0, and after 0 it wraps to 4294967295. The third never updates k. Fix: use left > 0 and add ++k."
     sideBySide:
       unsafe: |-
@@ -391,13 +391,13 @@ defense:
         }
       options:
         - t: s <= swings
-          why: "Correct: 1 through swings, exactly swings laps. 0 swings means no laps."
+          why: "1 through swings: exactly swings laps, zero for 0."
         - t: s < swings
           why: One short. With 3 swings it only prints 1 and 2.
         - t: s <= swings + 1
           why: "One extra swing: the Hydra's trick."
         - t: s != swings
-          why: With 0 swings, s starts at 1 and never equals 0. Runs until overflow.
+          why: With 0 swings, s starts at 1 and never equals 0.
       answer: 0
       hints:
         - Starting at 1, which comparison includes the last swing?
@@ -422,7 +422,7 @@ defense:
       tags: [ w5.nested, w5.infinite, w5.counter ]
       bug: infinite-loop
       unsafe: true
-      prompt: "UNSAFE: the Hydra swapped a counter in this 3 × 3 grid. It never finishes. Tap the buggy line, then pick the fix."
+      prompt: "UNSAFE: this 3 × 3 grid never finishes. Tap the buggy line, then pick the fix."
       code: |-
         for (int r = 0; r < 3; ++r) {
             for (int c = 0; c < 3; ++r) {
@@ -433,18 +433,18 @@ defense:
       bugLine: 1
       options:
         - t: for (int c = 0; c < 3; ++c) {
-          why: "Correct: the inner loop must move its own counter, c."
+          why: The inner loop now moves its own counter, c.
         - t: for (int c = 0; c <= 3; ++r) {
-          why: Still bumps r, so c stays 0 and the inner loop never ends.
+          why: Still bumps r, so c stays 0 forever.
         - t: for (int c = 0; r < 3; ++c) {
-          why: Now the condition checks the wrong counter. r stays 0, so it never ends.
+          why: Checks r, which never changes inside. Never ends.
         - t: for (int c = 1; c < 3; ++c) {
           why: Ends, but prints only 2 per row. Off by one.
       answer: 0
       hints:
         - Which variable does the inner condition check?
         - Which variable does the inner update change?
-      short: "The inner loop bumped r instead of c. Update the counter you test."
+      short: "Update the same counter the condition tests."
       explain: "The inner loop checks c but updates r. c stays 0 forever, so c < 3 never becomes false, while r races upward until signed overflow (UB). Every loop must update the same counter its condition tests."
       sideBySide:
         unsafe: |-
@@ -485,14 +485,14 @@ defense:
         - t: a
           why: last is 0, so one lap prints a!. Fine.
         - t: (an empty line)
-          why: "Correct: size() is 0, and 0 - 1 wraps to a huge number: reads far past the text (UB)."
+          why: "size() is 0, so last becomes huge. Reads past the text."
         - t: two words
           why: getline keeps the space. Nine characters, nine laps. Fine.
       answer: 2
       hints:
-        - What is heads.size() - 1 when heads is empty?
+        - What is `heads.size() - 1` when heads is empty?
         - Unsigned numbers can't go below 0; they wrap.
-      short: "size() - 1 on an empty string wraps to a huge number."
+      short: "Empty string: `size() - 1` wraps to a huge number."
       explain: "For an empty string, size() is 0 and 0 - 1 wraps to 18446744073709551615, so the loop reads way past the end: UB, which may crash or print garbage. Loop with i < heads.size() and nothing wraps."
       sideBySide:
         unsafe: |-
@@ -535,13 +535,13 @@ defense:
         }
       options:
         - t: std::cin.clear()
-          why: "Correct: resets the fail state, so ignore() can drop the junk and the next read works."
+          why: Resets the fail state so ignore() can drop the junk.
         - t: std::cin.ignore()
           why: A jammed stream ignores nothing. It must be cleared first.
         - t: n = 1
-          why: Changes the number, not the stream. cin is still jammed, and n is overwritten anyway.
+          why: Changes n, not the stream. cin is still jammed.
         - t: break
-          why: Leaves the loop with n = 0, an invalid number. The Hydra wins.
+          why: Leaves the loop with n = 0, an invalid number.
       answer: 0
       hints:
         - While cin is in the fail state, every operation on it fails.

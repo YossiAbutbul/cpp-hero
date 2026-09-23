@@ -6,7 +6,7 @@ skill: structure
 shield: false
 concept:
   short: "A variable is a named box with a type: int for whole numbers, double for fractions."
-  analogy: "A variable is a labelled box in Curlo's pantry: the label is its name, the box's shape is its type, and what's inside is its value."
+  analogy: "A labelled box: the label is its name, the shape its type."
   body:
     - "A **variable** is a named piece of memory. You declare it with a type, a name and a starting value: `int hp{10};`"
     - "`int` holds whole numbers like `42` or `-7`. `double` holds numbers with a fractional part like `2.5` or `-0.75`."
@@ -42,7 +42,7 @@ demo:
       vars:
         hp: "7"
         speed: "2.5"
-      note: "Right side first: 10 - 3 = 7, then stored in hp."
+      note: Right side first, then the 7 goes in hp.
     - line: 6
       vars:
         hp: "7"
@@ -67,13 +67,13 @@ challenges:
     prompt: Which line correctly creates a variable holding 3.5?
     options:
       - t: double ratio{3.5};
-        why: "Correct: type, then name, then the value in braces. A double can hold 3.5."
+        why: "Type, name, value in braces. A double holds 3.5."
       - t: int ratio{3.5};
-        why: An int holds whole numbers only. With braces this is a compile error (narrowing), which is the compiler protecting you.
+        why: An int holds whole numbers only, so this won't compile.
       - t: ratio double{3.5};
         why: "The order is wrong: the type comes first, then the name."
       - t: double{3.5} ratio;
-        why: The value goes after the name, not between the type and the name.
+        why: The value goes after the name, not before it.
     answer: 0
     hints:
       - 3.5 has a fractional part. Which type can hold that?
@@ -92,13 +92,13 @@ challenges:
     options:
       - t: |
           21
-        why: "Correct: 5 + 2 = 7 is stored first, then 7 * 3 = 21."
+        why: "coins becomes 7, then 7 * 3 = 21."
       - t: |
           11
-        why: That's 5 + 2 * 3 in one expression. Here each line stores its result first.
+        why: That's 5 + 2 * 3. Here each line runs separately.
       - t: |
           7
-        why: "The third line runs too: coins is multiplied by 3 after becoming 7."
+        why: The third line runs too and multiplies by 3.
       - t: |
           coins
         why: cout prints the value inside the variable, not its name.
@@ -128,7 +128,7 @@ challenges:
     type: predict
     tags: [ w2.double, w2.int ]
     short: "cout drops trailing zeros: 7.0 prints as 7."
-    prompt: What does this print? Watch how cout shows doubles.
+    prompt: What does this print? Spaces count.
     code: |-
       double a{7.0};
       double b{2.5};
@@ -136,7 +136,7 @@ challenges:
     options:
       - t: |
           7 2.5
-        why: "Correct: by default cout drops trailing zeros, so 7.0 prints as 7."
+        why: "By default, cout shows 7.0 as just 7."
       - t: |
           7.0 2.5
         why: Default formatting doesn't show a trailing .0; 7.0 prints as 7.
@@ -165,10 +165,10 @@ challenges:
       - int score{0};
     explain: "`int score{0};` creates an int box holding 0. Empty braces, `int score{};`, also give 0."
 recap:
-  - "A variable = type + name + value: `int hp{10};`"
+  - "Type, name, value: `int hp{10};`"
   - "`int` for whole numbers, `double` for fractional ones."
   - "`=` replaces the value; the type never changes."
-  - "cout prints doubles without trailing zeros: 7.0 shows as 7."
+  - "cout shows 7.0 as 7."
 vault:
   - id: w2.vars
     title: Declaring variables

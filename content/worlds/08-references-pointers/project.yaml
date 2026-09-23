@@ -2,12 +2,12 @@
 
 id: w8.p
 title: Party Swap
-intro: "Swap two heroes' stats by reference, point at the active hero, and find heroes by name without ever following a null arrow."
+intro: "Swap hero stats, point at the active hero, and never follow null."
 steps:
   - id: w8.p.s1
     type: fill
     tags: [ w8.byref, w6.params ]
-    prompt: "A swap potion trades two heroes' stats. Fill in the first parameter's type so it swaps the REAL values (b is done)."
+    prompt: "Fill in the type of `a` so the swap changes the caller's real values, like `b`."
     code: |-
       #include <iostream>
 
@@ -29,13 +29,12 @@ steps:
     placeholder: type
     hints:
       - A plain int would be a copy.
-      - Match the second parameter.
     short: "`int& a` is the caller's variable, so the swap sticks."
     explain: "With `int& a, int& b`, a and b are other names for knightHp and mageHp. The three-line swap then trades the real values: 12 30. With plain `int`, only copies would be swapped."
   - id: w8.p.s2
     type: predict
     tags: [ w8.byref, w7.vector ]
-    prompt: "Vector elements can be passed by reference too. What does this print?"
+    prompt: What does this print?
     code: |-
       #include <iostream>
       #include <vector>
@@ -57,26 +56,25 @@ steps:
     options:
       - t: |
           12 30 15 5
-        why: "Correct: hp[0] and hp[1] trade; mana[0] and mana[2] trade."
+        why: Each swap trades the real elements.
       - t: |
           30 12 5 15
-        why: hp[i] gives a reference to the element, so the swaps change the vectors.
+        why: hp[0] binds to the real element, so swaps stick.
       - t: |
           12 30 40 5
-        why: The second swap uses mana[0] and mana[2], not mana[1].
+        why: The second swap uses mana[2], not mana[1].
       - t: |
           12 12 15 15
-        why: The temp variable saves the old value, so nothing gets duplicated.
+        why: temp saves the old value, so nothing duplicates.
     answer: 0
     hints:
-      - hp[0] is itself a reference to the element.
-      - Check which mana slots are swapped.
-    short: "Both swaps change the real elements: 12 30 15 5."
+      - hp[0] is a reference to the element.
+    short: Vector elements can be passed by reference too.
     explain: "`hp[0]` returns a reference to the element, so `int& a` binds straight to it. hp becomes {12, 30, 20} and mana becomes {15, 40, 5}. Output: \"12 30 15 5\" and a newline."
   - id: w8.p.s3
     type: write
     tags: [ w8.pointer, w8.addressof ]
-    prompt: "The Knight leads first. Write one line declaring a pointer named `active` that points at hp[0]."
+    prompt: "Write one line declaring an int pointer named `active` that points at hp[0]."
     code: |-
       #include <vector>
 
@@ -92,13 +90,12 @@ steps:
     placeholder: int* active ...
     hints:
       - "A pointer to int has type int*."
-      - "Take the element's address with &hp[0]."
     short: "`int* active = &hp[0];` points at the Knight."
     explain: "`&hp[0]` is the address of the first element; storing it in an `int*` gives an arrow to the Knight's hp. A pointer (not a reference) because the active hero must be able to switch."
   - id: w8.p.s4
     type: predict
     tags: [ w8.pointer, w8.deref ]
-    prompt: "Switch the active hero mid-battle. What does this print?"
+    prompt: What does this print?
     code: |-
       #include <vector>
 
@@ -111,26 +108,25 @@ steps:
     options:
       - t: |
           10 25 25
-        why: "Correct: the Knight took 2 damage, then the Rogue got +5 and is active."
+        why: Knight lost 2; then the Rogue got +5.
       - t: |
           10 20 10
-        why: "After active = &hp[2], *active is the Rogue's hp, not the Knight's."
+        why: "After active = &hp[2], *active is the Rogue."
       - t: |
           15 20 15
-        why: Moving the arrow doesn't carry the Knight's value along.
+        why: Moving the arrow carries no value along.
       - t: |
           12 25 25
-        why: "*active -= 2 ran while active pointed at hp[0]."
+        why: "*active -= 2 hit hp[0] first."
     answer: 0
     hints:
       - Where does active point before each change?
-      - Reseating moves the arrow; it doesn't copy values.
-    short: Knight drops to 10; the arrow moves; Rogue rises to 25.
+    short: Each write hits whatever active points at right then.
     explain: "active starts at hp[0]: 12 - 2 = 10. Then it's reseated to hp[2]: 20 + 5 = 25. *active is the Rogue's 25. Output: \"10 25 25\" and a newline."
   - id: w8.p.s5
     type: fill
     tags: [ w8.nullptr, w6.return ]
-    prompt: "findHero returns a pointer to the hero's hp. What should it return when nobody matches?"
+    prompt: "Fill in what findHero returns when no name matches."
     code: |-
       #include <iostream>
       #include <string>
@@ -158,27 +154,25 @@ steps:
     placeholder: value
     hints:
       - There's a special value for "points nowhere".
-      - Modern C++ spells it with a keyword, not 0 or NULL.
-    short: "Return nullptr: \"no hero\", clearly and testably."
+    short: "nullptr means \"no hero\", and callers can test it."
     explain: "`nullptr` says \"no result\" in a way callers can test. That's exactly why findHero returns a pointer instead of a reference: a reference can't be \"nothing\". The price: every caller must check before using it."
   - id: w8.p.s6
     type: mcq
     tags: [ w7.invalidation, w8.dangling ]
-    prompt: "active points at hp[2]. Then a new hero joins: `hp.push_back(18);`. What about active?"
+    prompt: "active points at hp[2]. Then `hp.push_back(18);` runs. What is true of active now?"
     options:
       - t: It may now dangle
-        why: "Correct: push_back may move all elements to new memory, leaving active pointing at the old spot."
+        why: push_back may move elements, leaving the old address.
       - t: It automatically follows the Rogue
-        why: Pointers never update themselves. They keep the old address.
+        why: Pointers never update themselves.
       - t: It now points at the new hero
-        why: Nothing reseats active; it holds the same address as before.
+        why: Nothing reseats active.
       - t: push_back won't compile while a pointer exists
-        why: The compiler doesn't track pointers into vectors. It compiles, and the risk is yours.
+        why: It compiles fine. The risk is yours.
     answer: 0
     hints:
-      - Remember iterator invalidation from World 7.
       - Growing a vector can move its elements.
-    short: Growing a vector can move elements, leaving pointers into it dangling.
+    short: Growing a vector can leave pointers into it dangling.
     explain: "When a vector grows beyond its capacity, it moves its elements to a bigger block of memory. Pointers, references and iterators to the old elements dangle. Re-fetch the pointer after adding heroes (or store an index instead)."
 program: |-
   #include <iostream>
@@ -233,7 +227,7 @@ program: |-
   }
 programStdin: "Mage\n"
 stress:
-  intro: "Boo! I'm playing the Wraith. Let's see if your arrows survive!"
+  intro: "Boo! I'm the Wraith. Will your arrows survive?"
   attacks:
     - input: Bard
       label: A hero who isn't in the party!
@@ -242,7 +236,7 @@ stress:
         type: harden
         tags: [ w8.nullcheck, w8.nullptr ]
         bug: null-deref
-        prompt: "There's no Bard, so findHero returns nullptr. Pick the guard before healing."
+        prompt: "findHero returns nullptr for Bard. Pick the condition that exits before *found."
         code: |-
           int* found = findHero(who);
           if (___) {
@@ -253,18 +247,17 @@ stress:
         prelude: 'std::string who{"Bard"}; auto findHero = [](const std::string& w) -> int* { static int knightHp{30}; return w == "Knight" ? &knightHp : nullptr; };'
         options:
           - t: found == nullptr
-            why: "Correct: stops before *found can follow a null pointer."
+            why: Exits before following null.
           - t: "*found == 0"
-            why: This dereferences found to check it. With nullptr, the check itself is UB.
+            why: The check itself dereferences null. UB.
           - t: found != nullptr
-            why: "Inverted: exits for every real hero and heals the void."
+            why: "Inverted: exits for real heroes, heals null."
           - t: who.empty()
-            why: "\"Bard\" isn't empty. The name is fine; the search result is the danger."
+            why: The name is fine; the null result is the danger.
         answer: 0
         hints:
-          - What does findHero return for an unknown name?
-          - Check the pointer, not what it points at.
-        short: Check found == nullptr before *found.
+          - What does findHero return for Bard?
+        short: Check a returned pointer for nullptr before following it.
         explain: "A function that returns a pointer is telling you \"this might be nothing\". Test the result against nullptr before dereferencing. `*found += 10` on nullptr is UB: usually a crash, never something to rely on."
         sideBySide:
           unsafe: |-
@@ -285,7 +278,7 @@ stress:
         type: harden
         tags: [ w8.dangling, w6.scope ]
         bug: dangling-pointer
-        prompt: "A guest joins for one fight, then leaves at the closing brace. active must not dangle. Fill the blank."
+        prompt: "guestHp dies at the closing brace. Fill the blank so the later lines stay safe."
         code: |-
           int* active = &knightHp;
           {
@@ -299,18 +292,17 @@ stress:
         prelude: int knightHp{30};
         options:
           - t: active = &knightHp
-            why: "Correct: hand leadership back to a hero who's still alive before the guest leaves."
+            why: Points back at a hero who stays alive.
           - t: active = nullptr
-            why: "No longer dangling, but *active -= 5 then dereferences nullptr: still UB."
+            why: "Then *active -= 5 follows nullptr: still UB."
           - t: guestHp = 0
-            why: guestHp still dies at the }, and active still points at it.
+            why: active still points at the dying guestHp.
           - t: delete active
-            why: "UB: guestHp wasn't created with new. Never delete what you didn't new."
+            why: "UB: guestHp wasn't made with new."
         answer: 0
         hints:
           - After the }, which heroes still exist?
-          - The next lines dereference active without a check.
-        short: Point active at a living hero before the guest's scope ends.
+        short: Re-point active at a living hero before the guest leaves.
         explain: "guestHp dies at the closing brace. If active still points there, `*active -= 5` touches dead stack memory: UB, which might even seem to work. Re-point active at a hero that outlives the block (or set it to nullptr AND check it before use)."
         sideBySide:
           unsafe: |-
@@ -338,7 +330,7 @@ stress:
         type: bug
         tags: [ w8.init-ptr, w3.validate ]
         unsafe: true
-        prompt: "Choice 3 matches neither branch, so target is never set. Tap the root cause, then pick the fix."
+        prompt: "Choice 3 leaves target unset. Tap the root cause line, then pick the fix."
         code: |-
           int choice{};
           if (!(std::cin >> choice)) {
@@ -355,17 +347,16 @@ stress:
         bugLine: 4
         options:
           - t: int* target = nullptr;   // and check it before *target
-            why: "Correct: target starts known-null, and the check turns choice 3 into an error message."
+            why: Starts known-null; the check handles choice 3.
           - t: int* target = &choice;
-            why: "Initialized, but to the wrong thing: choice 3 would \"damage\" the menu choice."
+            why: "Choice 3 would then \"damage\" the menu choice."
           - t: int& target;
-            why: A reference must be bound at once; this doesn't compile.
+            why: An unbound reference doesn't compile.
           - t: int target;
-            why: Not a pointer at all, and still uninitialized. The later lines won't compile.
+            why: Not a pointer; later lines won't compile.
         answer: 0
         hints:
           - What does target hold when choice is 3?
-          - Give every pointer a known value at birth.
         short: Start pointers at nullptr, then check before dereferencing.
         explain: "`int* target;` holds a garbage address. For choice 3 neither branch runs, and `*target -= 3` writes to that garbage address: UB that may corrupt something unrelated and stay hidden. Initialize to nullptr and check before use."
         sideBySide:

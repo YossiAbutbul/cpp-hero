@@ -5,8 +5,8 @@ title: String toolkit
 skill: toolkit
 shield: false
 concept:
-  short: "A std::string is a row of chars with tools: size, substr, find, += and comparisons."
-  analogy: "A string is a bead necklace: each char is a bead with a numbered spot, starting at 0."
+  short: "A std::string is a row of chars with tools: size, substr, find."
+  analogy: "A bead necklace: each char is a bead, numbered from 0."
   body:
     - "`s.size()` (same as `s.length()`) counts the characters. `s[0]` is the first char and `s.back()` the last (on a non-empty string only!)."
     - "`s += \"!\";` appends text, and `s += 'x';` appends one char. `a + b` makes a new, joined string."
@@ -44,11 +44,11 @@ demo:
     - line: 6
       out: |
         drag
-      note: "substr(0, 4): four chars starting at index 0."
+      note: "substr(0, 4): four chars from index 0."
     - line: 7
       out: |
         3
-      note: "\"gon\" starts at index 3: d-r-a-g-o-n."
+      note: "\"gon\" starts at index 3."
     - line: 8
       vars:
         name: '"dragonfly"'
@@ -57,13 +57,13 @@ demo:
       out: |
         dragonfly
     - line: 10
-      note: "No x anywhere, so find returns npos."
+      note: "No x, so find returns npos."
     - line: 11
       out: |
         no x
       note: Always compare find's answer with npos.
     - line: 13
-      note: Done. Strings track their own size, always.
+      note: Done.
 challenges:
   - id: w7.l4.c1
     type: predict
@@ -81,20 +81,20 @@ challenges:
     options:
       - t: |
           ball Fi
-        why: "Correct: from index 4 to the end is \"ball\"; two chars from index 0 is \"Fi\"."
+        why: "\"ball\" from index 4; 2 chars: \"Fi\"."
       - t: |
           eball Fi
-        why: That counts from 1. Index 4 is the fifth char, 'b'.
+        why: Index 4 is 'b', not 'e'.
       - t: |
           ball Fir
-        why: The second number is a LENGTH (2 chars), not an end index.
+        why: The 2 is a LENGTH.
       - t: |
           Fire Fi
-        why: substr(4) STARTS at index 4 and takes the rest.
+        why: substr(4) STARTS at 4.
     answer: 0
     hints:
       - "F-i-r-e are indexes 0 to 3."
-      - substr(pos, len) takes len chars. No len means "to the end".
+      - No len means "to the end".
     short: "substr(4) is \"ball\"; substr(0, 2) is \"Fi\"."
     explain: "Indexes: F0 i1 r2 e3 b4 a5 l6 l7. substr(4) starts at 'b' and takes the rest: \"ball\". substr(0, 2) takes 2 chars from index 0: \"Fi\". Output: \"ball Fi\" and a newline."
   - id: w7.l4.c2
@@ -103,23 +103,23 @@ challenges:
     prompt: "`s.find('z')` finds no z. What does it return?"
     options:
       - t: std::string::npos
-        why: "Correct: a special std::size_t value that means \"not found\"."
+        why: It means "not found".
       - t: "-1"
-        why: find returns an unsigned std::size_t, which can't be -1. Compare with npos.
+        why: std::size_t can't be -1.
       - t: "0"
-        why: "0 means \"found at the very start\". That's a real match."
+        why: "0 means found at the start."
       - t: s.size()
-        why: "Close, but no. The \"not found\" answer is always npos."
+        why: "\"Not found\" is always npos."
     answer: 0
     hints:
-      - It's a named constant that lives inside std::string.
-      - 0 is a valid index, so it can't mean "not found".
-    short: "No match returns std::string::npos. Always compare against it."
-    explain: "find returns the match's start index, or std::string::npos (the largest std::size_t) when there's no match. Not -1, not 0: index 0 is a real match at the start."
+      - A constant inside std::string.
+      - 0 is a valid index.
+    short: "No match returns std::string::npos."
+    explain: "find returns the match's start index, or std::string::npos (the largest std::size_t) when there's no match. Not -1, not 0: index 0 is a real match at the start. Always compare against npos before using the result."
   - id: w7.l4.c3
     type: harden
     tags: [ w7.find, w7.npos, w4.guard ]
-    prompt: "Split the user name off an email. Pick the check that catches a missing @."
+    prompt: "Pick the condition that is true when the email has no @."
     code: |-
       #include <iostream>
       #include <string>
@@ -136,18 +136,18 @@ challenges:
       }
     options:
       - t: at == std::string::npos
-        why: "Correct: npos is exactly what find returns when there's no @."
+        why: No @ means npos.
       - t: at == 0
-        why: 0 means the @ is the first char. A missing @ gives npos.
+        why: 0 means @ is first.
       - t: "!at"
-        why: "Same as at == 0: it misses npos entirely."
+        why: "Same as at == 0."
       - t: at < 0
-        why: at is an unsigned std::size_t; it's never below 0. Always false.
+        why: Never true for std::size_t.
     answer: 0
     hints:
-      - What does find return when nothing matches?
+      - What does find return on no match?
       - std::size_t can never be negative.
-    short: "Compare find's answer with std::string::npos before using it."
+    short: "Check find's answer against npos first."
     explain: "Without the check, `substr(0, npos)` means \"up to the end\", so the program silently prints the whole email as the user name: wrong, with no error. Check `at == std::string::npos` first. `at < 0` can never be true for an unsigned type (g++ -Wextra warns about it)."
     sideBySide:
       unsafe: |-
@@ -164,7 +164,7 @@ challenges:
   - id: w7.l4.c4
     type: predict
     tags: [ w7.string-chars, w7.range-for, w4.if ]
-    prompt: Count the a's. What does this print?
+    prompt: What does this print?
     code: |-
       #include <iostream>
       #include <string>
@@ -183,26 +183,26 @@ challenges:
     options:
       - t: |
           3 6
-        why: "Correct: b-a-n-a-n-a has three a's and six chars."
+        why: "3 a's, 6 chars."
       - t: |
           3 7
-        why: size() counts only the real chars. No hidden extra is counted.
+        why: size() counts only real chars.
       - t: |
           2 6
-        why: The loop visits every char, including the last 'a'.
+        why: The last 'a' counts too.
       - t: |
           3 5
-        why: size() is the count (6). The last INDEX is 5.
+        why: 5 is the last INDEX, not the size.
     answer: 0
     hints:
-      - Range-for visits every char, first to last.
+      - Range-for visits every char.
       - size() is a count, not the last index.
-    short: "banana has 3 a's and size() 6."
+    short: "size() is the count, not the last index."
     explain: "The loop checks each of the 6 chars and counts 3 a's. size() is the number of chars, 6 (the last index is 5). Output: \"3 6\" and a newline."
   - id: w7.l4.c5
     type: write
     tags: [ w7.string-append, w3.arith ]
-    prompt: "Write one line that adds an exclamation mark to the end of `shout`."
+    prompt: "Write one line that adds `!` to the end of `shout`."
     code: |-
       #include <string>
 
@@ -217,16 +217,16 @@ challenges:
       - shout = shout + '!';
     placeholder: shout...
     hints:
-      - "Strings support a compound operator you know from World 3."
-      - "+= works with a string or a single char."
-    short: "shout += '!'; appends to the string in place."
+      - "A World 3 compound operator."
+      - "+= works on strings."
+    short: "+= appends in place."
     explain: "`shout += \"!\";` or `shout += '!';` appends in place, and the string grows as needed. (`push_back('!')` and `append(\"!\")` work too.) No buffer to overflow, no size to track."
   - id: w7.l4.c6
     type: edge
     tags: [ w7.substr, w7.bounds, w3.getline ]
     bug: out-of-bounds
     unsafe: true
-    prompt: "UNSAFE: this drops a word's first 2 chars, then adds its last char. Which inputs expose a bug? Select all."
+    prompt: "UNSAFE: cuts a word's first 2 chars, adds its last char. Which inputs break it? Select all."
     code: |-
       #include <iostream>
       #include <string>
@@ -240,19 +240,19 @@ challenges:
       }
     options:
       - t: an empty line
-        why: "Exposes it: substr(2) on \"\" throws std::out_of_range, and back() on empty is UB."
+        why: "substr(2) throws; back() is UB."
       - t: a
-        why: "Exposes it: 2 is past the end of a 1-char string, so substr throws."
+        why: "2 is past the end: throws."
       - t: ab
-        why: "substr(2) at exactly size() is allowed: rest is \"\", back() is 'b'."
+        why: "Start == size() is allowed."
       - t: hello
-        why: "Works: rest is \"llo\", back() is 'o'. Prints \"lloo\"."
+        why: "Prints \"lloo\"."
     answers: [ 0, 1 ]
     hints:
-      - "What if the word is shorter than 2 chars?"
-      - substr's start may equal size(), but not go past it.
-    short: "Words shorter than 2 chars break substr(2) and back()."
-    explain: "substr(pos) needs pos <= size(), otherwise it throws std::out_of_range (uncaught, the program stops). back() on an empty string is undefined behavior: it might print garbage or seem fine. Test short and empty inputs, and check the size first."
+      - "Words under 2 chars?"
+      - Start may equal size(), not pass it.
+    short: "Short and empty inputs break it."
+    explain: "The program prints the word without its first 2 chars, then the word's last char again. substr(pos) needs pos <= size(), otherwise it throws std::out_of_range (uncaught, the program stops). For \"ab\", substr(2) is allowed and gives \"\", and back() is 'b'. back() on an empty string is undefined behavior: it might print garbage or seem fine. Test short and empty inputs, and check the size first."
     sideBySide:
       unsafe: |-
         std::string rest = word.substr(2);          // throws if size < 2
@@ -266,10 +266,10 @@ challenges:
         std::cout << rest << word.back() << '\n';
       prelude: std::string word{"hi"};
 recap:
-  - size() counts chars; indexes run 0 to size - 1.
-  - "substr(pos, len) copies len chars from pos."
-  - "find returns an index or std::string::npos."
-  - "+= appends; ==, < compare by content."
+  - size() counts chars.
+  - "substr(pos, len) copies len chars."
+  - "find gives an index or npos."
+  - "+= appends; == compares content."
 vault:
   - id: w7.string-ops
     title: std::string toolkit

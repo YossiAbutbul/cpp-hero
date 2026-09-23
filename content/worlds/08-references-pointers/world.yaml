@@ -4,16 +4,16 @@ id: w8
 num: 8
 title: References & Pointers
 icon: arrow
-blurb: "Give a variable a second name, pass the real thing instead of a copy, and follow arrows to memory addresses, without ever following one into the void."
+blurb: "Second names, the real thing instead of copies, and safe arrows to memory."
 story:
   intro:
-    - The Codebase shelves are tidy again, but look! Arrows everywhere, pointing at... nothing?
-    - Some arrows point at boxes that vanished long ago. Spooky {o_o}
-    - "Let's learn references and pointers: names and arrows that lead to real data."
+    - The shelves are tidy, but look! Arrows pointing at... nothing?
+    - Some point at boxes that vanished long ago. Spooky {o_o}
+    - "Let's learn references and pointers: names and arrows to real data."
   bossIntro:
-    - Brr! The Dangling Wraith haunts every address whose owner has gone.
-    - Its arrows point into the void. Check every pointer before you follow it!
+    - Brr! The Dangling Wraith haunts addresses whose owners are gone.
+    - Check every pointer before you follow it!
   victory:
-    - The Wraith faded to nullptr, and we checked before touching it! {^_^}
-    - "But deep below, something is grabbing memory and never giving it back..."
+    - The Wraith faded to nullptr, and we checked first! {^_^}
+    - "But below, something grabs memory and never gives it back..."
     - The heap awaits in World 9. Bring your goggles!

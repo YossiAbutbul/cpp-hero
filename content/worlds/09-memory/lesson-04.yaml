@@ -5,11 +5,11 @@ title: "shared_ptr: shared owners"
 skill: memory
 shield: false
 concept:
-  short: "std::shared_ptr lets several owners share one object; the last owner to let go deletes it."
-  analogy: "A shared_ptr is a group rental: everyone gets a key, and the last one out locks up and returns the place."
+  short: "std::shared_ptr has many owners. The last one out deletes."
+  analogy: "A group rental: the last one out returns the key."
   body:
     - "`auto treasure = std::make_shared<int>(3);` creates a heap int plus a hidden **reference count**. Copying a shared_ptr is allowed: every copy is another owner and bumps the count. `use_count()` shows how many owners there are."
-    - "When an owner goes out of scope (or is reset), the count drops. When it reaches **zero**, the last owner deletes the object. Nobody writes delete."
+    - "When an owner goes out of scope (or is reset), the count drops. When it reaches **zero**, the last owner deletes the object. Nobody writes delete. Like a group rental: everyone gets a key, and the last one out locks up and returns the place."
     - "**Default to unique_ptr.** shared_ptr costs more (a counter that must be updated safely, even across threads) and blurs the question \"who owns this?\". Use it only when ownership is truly shared and no single owner clearly outlives the others."
     - "Never build two separate shared_ptrs from the same raw pointer (`std::shared_ptr<int> b(a.get());`): each has its own count, and both delete the object. Copy the shared_ptr instead, or better, always start with `std::make_shared`."
     - "One trap: owners that point at each other in a **cycle** keep each other's count above zero forever, so nothing is freed: a leak. `std::weak_ptr` (a non-owning observer) breaks such cycles; you'll meet cases like this once you build your own types."
@@ -49,7 +49,7 @@ demo:
       mem:
         cells:
           - { name: copy, ptr: heap int, addr: stack }
-      note: Copying makes a second owner of the SAME int.
+      note: The copy co-owns the SAME int.
     - line: 8
       vars:
         treasure: "→ 4"
@@ -67,7 +67,7 @@ demo:
         copy: null
       mem:
         drop: [ copy ]
-      note: copy leaves; the count drops to 1. The int survives.
+      note: copy leaves; count drops to 1.
     - line: 11
       out: |
         1
@@ -101,46 +101,46 @@ challenges:
     options:
       - t: |
           1 2 1 6
-        why: "Correct: b joins (2), leaves at } (1), and its +1 changed the shared int."
+        why: b joins, leaves at }, and its +1 stays.
       - t: |
           1 2 2 6
-        why: b is destroyed at its closing brace, so the count drops back to 1.
+        why: b dies at its }, so the count drops to 1.
       - t: |
           1 2 1 5
-        why: "b and a own the SAME int, so *b += 1 changes *a too."
+        why: "a and b share one int, so *b += 1 changes *a."
       - t: |
           1 1 1 6
-        why: Copying a shared_ptr adds an owner, so the count becomes 2 inside the block.
+        why: b is a second owner.
     answer: 0
     hints:
-      - A copy is one more owner of the same int.
-      - When does b stop existing?
-    short: Copies share one int; the count rises and falls with the owners.
+      - A copy is one more owner.
+      - When does b die?
+    short: Copies share one int; the count tracks owners.
     explain: "a starts with 1 owner. `auto b = a;` adds a second owner of the same int (count 2), and `*b += 1` makes it 6. At the block's }, b is destroyed and the count drops back to 1. Output: \"1 2 1 6\" and a newline."
   - id: w9.l4.c2
     type: mcq
     tags: [ w9.shared, w9.unique ]
-    prompt: A player's sword is held by exactly one inventory at a time. Which owner fits?
+    prompt: A sword is always in exactly one inventory. Which is the best owner for it?
     options:
       - t: std::unique_ptr
-        why: "Correct: one owner at a time, handed over with std::move when it changes hands."
+        why: One owner at a time; std::move hands it over.
       - t: std::shared_ptr
-        why: "Works, but costs more and hides that there's always exactly one owner."
+        why: Works, but costs more and hides the owner.
       - t: A raw pointer from new
-        why: Then you must delete it by hand on every path. Leaks and double deletes await.
+        why: Manual delete on every path.
       - t: A reference to a local
-        why: The local dies at its closing brace; the reference would dangle.
+        why: The local dies at its }; the reference dangles.
     answer: 0
     hints:
       - How many owners at once?
-      - Pick the cheapest smart pointer that fits.
-    short: One owner at a time means unique_ptr; share only when truly shared.
-    explain: "Exactly one owner at a time is unique_ptr's job, and std::move hands it between inventories. shared_ptr is for when several parts of the program must keep the object alive together and none clearly outlives the rest."
+      - Pick the cheapest fit.
+    short: One owner at a time means unique_ptr.
+    explain: "Exactly one owner at a time is unique_ptr's job, and std::move hands it between inventories. shared_ptr also works, but costs more and hides that there's always exactly one owner. shared_ptr is for when several parts of the program must keep the object alive together and none clearly outlives the rest."
   - id: w9.l4.c3
     type: harden
     tags: [ w9.shared, w9.double-delete ]
     bug: double-delete
-    prompt: "b must share ownership with a. Pick what goes in the blank so the int is deleted exactly once."
+    prompt: "b must share a's int. Fill the blank so the int is deleted exactly once."
     code: |-
       int* raw = new int{8};
       std::shared_ptr<int> a(raw);
@@ -148,19 +148,19 @@ challenges:
       std::cout << a.use_count() << '\n';
     options:
       - t: a
-        why: "Correct: copying a shares its count. Two owners, one delete."
+        why: Copying a shares its count. One delete.
       - t: raw
-        why: "A second, separate count for the same int: both delete it. Double delete."
+        why: A second count. Double delete.
       - t: a.get()
-        why: "Same trap: a new count for an int that a already owns. Double delete."
+        why: Same trap as raw. Double delete.
       - t: new int{8}
-        why: No crash, but b owns a different int. They don't share anything.
+        why: b owns a different int.
     answer: 0
     hints:
-      - Only copies of a shared_ptr share its counter.
-      - A raw pointer carries no count with it.
-    short: Copy the shared_ptr; never wrap the same raw pointer twice.
-    explain: "Each shared_ptr built from a raw pointer starts its own reference count. Two counts for one int means two deletes: undefined behavior. Copying `a` shares its count, so the int is deleted once, when the last owner leaves. Safest: start with `std::make_shared` and never touch the raw pointer."
+      - Only copies share the count.
+      - A raw pointer has no count.
+    short: Copy the shared_ptr; never wrap one raw pointer twice.
+    explain: "Each shared_ptr built from a raw pointer starts its own reference count. Two counts for one int means two deletes: undefined behavior. `a.get()` is the same trap: a new count for an int that a already owns. Copying `a` shares its count, so the int is deleted once, when the last owner leaves. Safest: start with `std::make_shared` and never touch the raw pointer."
     sideBySide:
       unsafe: |-
         int* raw = new int{8};
@@ -173,7 +173,7 @@ challenges:
   - id: w9.l4.c4
     type: fill
     tags: [ w9.use-count, w9.shared ]
-    prompt: Print how many shared_ptrs currently own the relic. Fill in the member function.
+    prompt: Fill in the member function that gives relic's owner count.
     code: |-
       auto relic = std::make_shared<int>(7);
       auto guard = relic;
@@ -182,35 +182,35 @@ challenges:
       - use_count
     placeholder: member function
     hints:
-      - It counts how many owners use it.
-      - Two words joined by an underscore.
-    short: use_count() tells how many shared_ptrs own the object.
+      - It counts the users.
+      - Two words, one underscore.
+    short: use_count() counts the owners.
     explain: "`relic.use_count()` returns the number of shared_ptrs sharing ownership: 2 here (relic and guard). It's mostly for learning and debugging; real logic shouldn't depend on it."
   - id: w9.l4.c5
     type: mcq
     tags: [ w9.shared, w9.leak ]
     bug: memory-leak
-    prompt: "Two objects hold shared_ptrs to each other, and nothing else points at them. What happens?"
+    prompt: "Two objects hold shared_ptrs to each other. Nothing else points at them. What happens?"
     options:
       - t: Neither is ever freed, a memory leak
-        why: "Correct: each keeps the other's count at 1, so neither count reaches 0."
+        why: Each keeps the other's count at 1 forever.
       - t: Both are freed normally
-        why: A count only hits 0 when every owner is gone. In a cycle, that never happens.
+        why: In a cycle, the count never reaches 0.
       - t: It's a double delete
-        why: Nothing gets deleted at all; that's the problem.
+        why: Nothing gets deleted at all.
       - t: It doesn't compile
-        why: Cycles compile fine. That's what makes them sneaky.
+        why: Cycles compile fine.
     answer: 0
     hints:
-      - When does a shared_ptr delete its object?
-      - Can a count in a cycle ever reach 0?
-    short: A shared_ptr cycle keeps both counts above zero forever, so it leaks.
+      - When does it delete?
+      - Can a cycle's count reach 0?
+    short: A cycle never hits count 0, so it leaks.
     explain: "A shared_ptr frees its object only when the count reaches zero. In a cycle, each object owns the other, so both counts stay at 1 forever: a leak. Make one side a `std::weak_ptr`, which watches without owning. Or design one clear owner with unique_ptr."
 recap:
-  - make_shared creates the object and a shared count.
+  - make_shared makes the object and a count.
   - Each copy is another owner.
-  - The last owner to leave deletes it.
-  - Prefer unique_ptr; share only when truly shared.
+  - The last owner out deletes it.
+  - Prefer unique_ptr; share only when needed.
 vault:
   - id: w9.sharedptr
     title: std::shared_ptr

@@ -5,11 +5,11 @@ title: "unique_ptr: one owner"
 skill: memory
 shield: false
 concept:
-  short: "std::unique_ptr owns heap memory alone and deletes it automatically when it goes out of scope."
-  analogy: "A unique_ptr is a locker with a single key: you can hand the key over, never copy it, and the locker empties itself when the holder leaves."
+  short: "std::unique_ptr is the sole owner and deletes automatically at }."
+  analogy: "A locker with one key: hand it over, never copy it."
   body:
     - "`#include <memory>`, then `auto hp = std::make_unique<int>(100);`. You get a smart pointer that owns a heap int. Use it like a pointer: `*hp`, and `if (hp)` tests whether it owns anything."
-    - "When the unique_ptr goes out of scope (a `}`, an early `return`, an exception), it deletes what it owns. You never write `delete`, so you can't forget it, do it twice, or use the wrong form."
+    - "When the unique_ptr goes out of scope (a `}`, an early `return`, an exception), it deletes what it owns. You never write `delete`, so you can't forget it, do it twice, or use the wrong form. Like a locker with a single key: you can hand the key over, never copy it, and the locker empties itself when the holder leaves."
     - "There is only **one owner**, so copying is a compile error: `auto b = a;` won't build. To hand ownership over, **move** it: `auto b = std::move(a);`. Afterwards `a` is empty (it tests false, like nullptr) and `b` owns the int."
     - "Functions: take `const int&` or a raw `int*` when you only **use** the value; take a `std::unique_ptr<int>` by value when the function **takes over** ownership (the caller writes `std::move`). A factory can simply `return std::make_unique<int>(9);`."
     - "Handy members: `p.get()` gives a raw, non-owning pointer (never delete it), and `p.reset()` deletes the object now and leaves p empty. For arrays, `std::make_unique<int[]>(n)` exists, but `std::vector<int>` is usually the better choice."
@@ -38,14 +38,14 @@ demo:
         cells:
           - { name: heap int, value: "100", addr: heap }
           - { name: hero, ptr: heap int, addr: stack }
-      note: make_unique creates the int; hero owns it.
+      note: hero owns a new heap int.
     - line: 5
       vars:
         hero: "→ 70"
       mem:
         cells:
           - { name: heap int, value: "70" }
-      note: Use it like a normal pointer.
+      note: Use it like a pointer.
     - line: 6
       out: |
         70
@@ -57,16 +57,16 @@ demo:
         cells:
           - { name: backup, ptr: heap int, addr: stack }
           - { name: hero, ptr: null }
-      note: "Ownership moves: backup owns it, hero is empty."
+      note: "Moved: backup owns it, hero is empty."
     - line: 8
-      note: An empty unique_ptr tests false, like nullptr.
+      note: An empty unique_ptr tests false.
     - line: 9
       out: |
         hero is empty
     - line: 11
       out: |
         70
-      note: The one owner still works fine.
+      note: The owner works fine.
     - line: 13
       vars:
         hero: null
@@ -79,7 +79,7 @@ challenges:
   - id: w9.l3.c1
     type: fill
     tags: [ w9.unique, w9.make-unique ]
-    prompt: Create a heap int holding 50, owned by a unique_ptr. Fill in the function.
+    prompt: Fill in the function that makes a unique_ptr owning 50.
     code: |-
       auto shield = std::___<int>(50);
       std::cout << *shield << '\n';
@@ -89,7 +89,7 @@ challenges:
     hints:
       - It starts with make_.
       - It makes a unique_ptr.
-    short: std::make_unique<int>(50) creates the int and its single owner.
+    short: make_unique makes the int and its one owner.
     explain: "`std::make_unique<int>(50)` allocates the int and wraps it in a `std::unique_ptr<int>` in one step. There's no `new` to pair with a `delete`, and it's freed automatically at the end of the scope."
   - id: w9.l3.c2
     type: predict
@@ -108,20 +108,20 @@ challenges:
     options:
       - t: |
           a empty, 42
-        why: "Correct: moving hands ownership to b and leaves a empty."
+        why: b owns it now; a is empty.
       - t: |
           a owns, 42
-        why: "A move isn't a copy: after it, a owns nothing."
+        why: A move isn't a copy.
       - t: |
           a empty, 0
-        why: The int wasn't changed. It just has a new owner, b.
+        why: Only the owner changed, not the int.
       - t: It doesn't compile
-        why: Moving a unique_ptr is allowed; only copying is forbidden.
+        why: Moving a unique_ptr is allowed; copying isn't.
     answer: 0
     hints:
-      - How many owners can a unique_ptr have?
-      - An empty unique_ptr tests false.
-    short: std::move transfers ownership; the source is left empty.
+      - How many owners can it have?
+      - Empty tests false.
+    short: std::move hands ownership over; the source is empty.
     explain: "`std::move(a)` hands ownership to b. A unique_ptr that was moved from is empty (null), so `a` tests false and the ternary picks \"a empty\". `*b` is still 42."
   - id: w9.l3.c3
     type: bug
@@ -142,19 +142,19 @@ challenges:
     bugLine: 5
     options:
       - t: std::unique_ptr<int> spare = std::move(potion);
-        why: "Correct: ownership moves to spare; potion becomes empty. Still one owner."
+        why: Moves ownership. Still one owner.
       - t: std::unique_ptr<int> spare{potion.get()};
-        why: "Compiles, but two owners delete the same int: a double delete."
+        why: Compiles, but two owners delete one int.
       - t: int* spare = potion;
-        why: A unique_ptr doesn't convert to a raw pointer. Still a compile error.
+        why: A unique_ptr doesn't convert to a raw pointer.
       - t: std::unique_ptr<int> spare = *potion;
-        why: "*potion is an int, not an owner. It doesn't compile."
+        why: "*potion is an int, not an owner."
     answer: 0
     hints:
-      - How many owners may a unique_ptr have?
-      - "Hand the key over; don't copy it."
-    short: "unique_ptr can't be copied; std::move hands ownership over."
-    explain: "Copying a unique_ptr is deliberately a compile error: two owners would both delete the int. `std::move(potion)` transfers ownership instead. The sneaky `spare{potion.get()}` compiles, but then both unique_ptrs delete the same int at the end: double delete, undefined behavior."
+      - How many owners may it have?
+      - "Hand it over; don't copy."
+    short: "unique_ptr can't be copied, only moved."
+    explain: "Copying a unique_ptr is deliberately a compile error: two owners would both delete the int. `std::move(potion)` transfers ownership instead, and potion becomes empty. The sneaky `spare{potion.get()}` compiles, but then both unique_ptrs delete the same int at the end: double delete, undefined behavior. `int* spare = potion;` and `spare = *potion;` are still compile errors."
     sideBySide:
       unsafe: |-
         auto potion = std::make_unique<int>(25);
@@ -166,26 +166,26 @@ challenges:
   - id: w9.l3.c4
     type: mcq
     tags: [ w9.unique, w6.constref ]
-    prompt: "`hp` is a `std::unique_ptr<int>`. `show(...)` only prints the value. Which parameter fits best?"
+    prompt: "`hp` is a `std::unique_ptr<int>`. `show` only prints the int. Which parameter is simplest?"
     options:
       - t: void show(const int& hp)
-        why: "Correct: it just reads the value. No ownership involved."
+        why: It only reads. No ownership needed.
       - t: void show(std::unique_ptr<int> hp)
-        why: That takes ownership, needs std::move, and deletes the int when show ends.
+        why: Takes ownership; deletes the int at show's end.
       - t: void show(int* hp) and delete it at the end
-        why: show doesn't own the int. Deleting it causes a double delete later.
+        why: show doesn't own it. Double delete.
       - t: void show(std::unique_ptr<int>& hp)
-        why: Works, but ties show to how the caller stores the int. A plain reference is simpler.
+        why: Works, but ties show to how the int is stored.
     answer: 0
     hints:
-      - Does show need to own the int, or just look at it?
-      - Only owners should decide when memory dies.
-    short: Pass a plain reference to code that only uses the value.
-    explain: "Ownership only matters to whoever decides when the memory dies. A function that just reads the value takes `const int&` (or a raw `const int*` if \"nothing\" is allowed). Take a `std::unique_ptr` by value only when the function should take over ownership."
+      - Own it, or just look?
+      - Only owners decide when memory dies.
+    short: Readers get a plain reference, not ownership.
+    explain: "Ownership only matters to whoever decides when the memory dies. A function that just reads the value takes `const int&` (or a raw `const int*` if \"nothing\" is allowed); the caller writes `show(*hp)`. Taking `std::unique_ptr<int>&` works, but it ties show to how the caller stores the int, so a plain reference is simpler. Take a `std::unique_ptr` by value only when the function should take over ownership (it needs std::move and deletes the int when it ends)."
   - id: w9.l3.c5
     type: write
     tags: [ w9.make-unique, w9.unique ]
-    prompt: Write one line that creates a unique_ptr named `mana` owning an int with the value 30.
+    prompt: Write one line that makes a unique_ptr named `mana` owning an int 30.
     accept:
       - auto mana = std::make_unique<int>(30);
       - std::unique_ptr<int> mana = std::make_unique<int>(30);
@@ -195,13 +195,13 @@ challenges:
     placeholder: auto mana ...
     hints:
       - Use auto and std::make_unique.
-      - The type goes in <>, the value in ().
-    short: auto mana = std::make_unique<int>(30); owns a heap int.
+      - Type in <>, value in ().
+    short: make_unique gives mana its heap int.
     explain: "`auto mana = std::make_unique<int>(30);` creates the int on the heap and its one owner. Spelling out `std::unique_ptr<int>` instead of auto also works."
 recap:
-  - make_unique creates the object and its owner.
-  - unique_ptr deletes automatically at end of scope.
-  - "Can't copy it; std::move hands ownership over."
+  - make_unique makes the object and owner.
+  - unique_ptr deletes automatically at }.
+  - "No copies; std::move hands it over."
   - A moved-from unique_ptr is empty.
 vault:
   - id: w9.uniqueptr

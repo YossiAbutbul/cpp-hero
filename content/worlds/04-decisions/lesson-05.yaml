@@ -5,8 +5,8 @@ title: "Shield: Cover every path"
 skill: defense
 shield: true
 concept:
-  short: "Give every case a path, reject bad values early, compare doubles with a tolerance, and use == in conditions."
-  analogy: "A good decision is a map with no blank areas: every road, even the weird ones, leads somewhere planned."
+  short: "Cover every case, reject bad values early, doubles need a tolerance, conditions need ==."
+  analogy: "A good map has no blank areas: every road leads somewhere planned."
   body:
     - "**Handle every case.** A switch should always have a `default`, and an if / else if chain usually ends in an `else`. Values nobody expected (a menu choice of 7, a negative level) must go somewhere visible, not vanish silently."
     - "**Guard clauses**: check for bad values first and leave early with `return 1;`. After the guards, the rest of the code can trust its data, and it isn't buried in nested ifs."
@@ -75,10 +75,10 @@ challenges:
     options:
       - t: |
           Not equal
-        why: "Correct: 0.1 + 0.2 is really 0.30000000000000004, so == is false."
+        why: 0.1 + 0.2 is really 0.30000000000000004, so == is false.
       - t: |
           Equal
-        why: "Math says yes, doubles say no: 0.1 and 0.2 are stored with tiny errors."
+        why: True in math, but 0.1 and 0.2 are stored with tiny errors.
       - t: |
           Equal
           Not equal
@@ -89,7 +89,7 @@ challenges:
     hints:
       - Can 0.1 be stored exactly in binary?
       - The sum is off by about 0.00000000000000004.
-    short: 0.1 + 0.2 isn't exactly 0.3 as a double, so == is false.
+    short: 0.1 + 0.2 isn't exactly 0.3 as a double.
     explain: "0.1 and 0.2 have no exact binary form, so each is stored slightly off. Their sum is 0.30000000000000004, while the literal 0.3 is 0.29999999999999999. Different bits, so == is false. Compare with a tolerance."
   - id: w4.l5.c2
     type: harden
@@ -112,18 +112,18 @@ challenges:
       }
     options:
       - t: std::abs(paid - price) < 1e-9
-        why: "Correct: equal within a tiny tolerance, in either direction."
+        why: Equal within a tiny tolerance, in either direction.
       - t: paid == price
-        why: The rounding error makes these differ in the last bits, so this says "Wrong amount".
+        why: 'Rounding makes them differ slightly, so it prints "Wrong amount".'
       - t: paid - price < 1e-9
-        why: "Missing std::abs: paying 0.0 gives a negative difference and would count as paid!"
+        why: "No std::abs: paying 0.0 would also count as paid!"
       - t: static_cast<int>(paid) == static_cast<int>(price)
         why: Both become 0. Paying 0.9 or 0.0 would also match.
     answer: 0
     hints:
       - Don't ask "equal?", ask "close enough?"
       - The difference could be positive or negative.
-    short: "Compare doubles with a tolerance: std::abs(a - b) < 1e-9."
+    short: "Compare doubles with a tolerance: `std::abs(a - b) < 1e-9`."
     explain: "std::abs(paid - price) < 1e-9 is true when the two are within a billionth of each other, whichever is bigger. For real money, count whole cents in an int so there's no rounding at all."
     sideBySide:
       unsafe: |-
@@ -156,13 +156,13 @@ challenges:
     bugLine: 4
     options:
       - t: "if (level == 10) {"
-        why: "Correct: == compares; level stays 3 and the if is skipped."
+        why: "== compares; level stays 3 and the if is skipped."
       - t: "if ((level = 10)) {"
         why: Extra parentheses only silence the warning. It still assigns 10.
       - t: "if (level => 10) {"
         why: "=> isn't a C++ operator. Compile error."
       - t: "if (level != 10) {"
-        why: "Stops the assignment, but flips the meaning: every other level is a boss level."
+        why: Stops the assignment, but every other level becomes a boss level.
     answer: 0
     hints:
       - How many = signs does a comparison need?
@@ -202,7 +202,7 @@ challenges:
       }
     options:
       - t: 'default: std::cout << "Unknown choice: pick 1 or 2\n"; break;'
-        why: "Correct: every unexpected value gets a clear message."
+        why: Every unexpected value gets a clear message.
       - t: 'case 3: std::cout << "Run\n"; break;'
         why: A new option is nice, but 7 is still silently ignored.
       - t: "default: break;"
@@ -232,7 +232,7 @@ challenges:
     type: edge
     tags: [ w4.guard, w3.validate, w3.divzero ]
     unsafe: true
-    prompt: This checks bad text and levels over 99. Which inputs still cause trouble? Select all.
+    prompt: Guards catch text and levels over 99. Which typed inputs still cause trouble? Select all.
     code: |-
       #include <iostream>
 
@@ -264,7 +264,7 @@ challenges:
     hints:
       - "Guards cover text and big numbers. What's left?"
       - Think about the divisor, and the low end of the range.
-    short: The guard misses the low end; 0 divides by zero, negatives are nonsense.
+    short: "Nothing guards the low end: 0 divides by zero, negatives are nonsense."
     explain: "Guard both ends of the range: level < 1 || level > 99. Then 0 (UB: division by zero) and negatives never reach the math. After the guards, the code can trust level."
     sideBySide:
       unsafe: |-
@@ -344,17 +344,17 @@ challenges:
           std::cout << bonus;
         prelude: int level{};
         safe: false
-        why: "No else: for level 5 or less, bonus is never set. Reading it is UB."
+        why: "No else: for level 5 or less, bonus is never set (UB)."
     hints:
       - Look for =, == on doubles, and missing breaks.
       - Does every path give every variable a value?
     short: Cover every path, compare doubles with a tolerance, use == for ints.
     explain: Safe branches give every value a path, compare doubles with a tolerance, use == (not =) and guard before the risky part.
 recap:
-  - Every switch gets a default; chains get an else.
+  - default for switches, else for chains.
   - Guard clauses reject bad values early with return.
-  - "Doubles: std::abs(a - b) < 1e-9, never ==."
-  - "if (x = 5) assigns. Use ==, and read warnings."
+  - "Doubles: compare with a tolerance, never ==."
+  - "if (x = 5) assigns. Use ==."
 vault:
   - id: w4.floatcompare
     title: Compare doubles with a tolerance

@@ -5,8 +5,8 @@ title: "Iterators: bookmarks"
 skill: toolkit
 shield: false
 concept:
-  short: "An iterator marks a position: *it reads the element, ++it moves on, end() is one past the last."
-  analogy: "An iterator is a bookmark: begin() is page one, and end() is the back cover, not a page."
+  short: "An iterator marks a position: *it reads, ++it moves on, end() is past the last."
+  analogy: "A bookmark: begin() is page one, end() is the back cover."
   body:
     - "Every standard container hands out **iterators**: `c.begin()` marks the first element and `c.end()` marks the spot **one past the last** one. Together they form a half-open range `[begin, end)`."
     - "`*it` gives the element the iterator points at, `++it` moves to the next one, and `it != c.end()` tells you there's still an element to read. An empty container has `begin() == end()`."
@@ -111,7 +111,7 @@ challenges:
     options:
       - t: |
           bd1
-        why: "Correct: begin() + 1 is 'b', two steps later is 'd', and one past 'd' is end()."
+        why: "Starts at 'b', moves to 'd', and one past 'd' is end()."
       - t: |
           ac1
         why: begin() + 1 already skips 'a'; it starts at 'b'.
@@ -133,11 +133,11 @@ challenges:
     prompt: What does `v.end()` point at?
     options:
       - t: The spot one past the last element
-        why: "Correct: it marks where the range stops. There's no element there."
+        why: It marks where the range stops; no element lives there.
       - t: The last element
-        why: That's v.end() - 1, or v.back(), and only when v isn't empty.
+        why: That's v.back(), and only when v isn't empty.
       - t: nullptr
-        why: end() is an iterator, not a null pointer. It's a real position, just not an element.
+        why: end() is a real position, not a null pointer.
       - t: The first element, when v is empty
         why: An empty vector has no elements at all; begin() == end() there.
     answer: 0
@@ -166,10 +166,10 @@ challenges:
     options:
       - t: |
           a1b
-        why: "Correct: begin() is the smallest key \"a\" (value 1); the next key is \"b\"."
+        why: "begin() is the smallest key \"a\"; the next key is \"b\"."
       - t: |
           b2a
-        why: A map is sorted by key; begin() is the smallest key, not the first one written.
+        why: begin() is the smallest key, not the first one written.
       - t: |
           a1c
         why: ++it moves one step, to the next key in order, "b".
@@ -223,13 +223,13 @@ challenges:
     prompt: "`it` points at the Curlo entry of a `std::map<std::string, int>`. Which line sets Curlo's value to 12?"
     options:
       - t: it->second = 12;
-        why: "Correct: second is the value, and it can be changed through the iterator."
+        why: second is the value, and the iterator can change it.
       - t: it->first = 12;
         why: first is the key, and keys are const. This doesn't compile.
       - t: "*it = 12;"
         why: "*it is the whole pair, not the value. This doesn't compile."
       - t: it.second = 12;
-        why: The iterator itself has no second; use -> to reach the pair it points at.
+        why: The iterator has no second; -> reaches the pair.
     answer: 0
     hints:
       - The value is the pair's second part.

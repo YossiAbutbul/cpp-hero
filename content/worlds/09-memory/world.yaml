@@ -7,13 +7,13 @@ icon: memory
 blurb: "Meet the stack and the heap, borrow memory with new, and let smart pointers give every byte back, exactly once."
 story:
   intro:
-    - Down here, heap memory piles up like dragon gold. Nobody gives any back!
-    - "Stack boxes clean themselves up at }. Heap boxes wait for delete."
-    - Let's learn to borrow memory and always return it. Hard hats on!
+    - Down here, heap memory piles up like dragon gold. Nobody returns any!
+    - "Stack boxes clean up at }. Heap boxes wait for delete."
+    - Let's borrow memory and always give it back. Hard hats on!
   bossIntro:
-    - Whoa! The Heap Hoarder grabs every byte and never lets go!
-    - "Free what you take, exactly once. Smart pointers will do it for us!"
+    - The Heap Hoarder grabs every byte and never lets go!
+    - "Free what you take, exactly once. Smart pointers help!"
   victory:
-    - The hoard melted back into free memory. Not one byte leaked! {^_^}
+    - The hoard is free memory again. Not one byte leaked! {^_^}
     - Every box has one owner now. But they're just loose ints...
-    - "World 10 awaits: let's build our own types with structs and classes!"
+    - "World 10: let's build our own types!"

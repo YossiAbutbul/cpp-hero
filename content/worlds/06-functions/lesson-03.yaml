@@ -5,8 +5,8 @@ title: Prototypes, overloads, defaults
 skill: structure
 shield: false
 concept:
-  short: "A prototype declares a function before its body; overloads share a name; defaults fill in missing trailing arguments."
-  analogy: A prototype is a table of contents entry; it promises the chapter exists, and the pages come later.
+  short: "Prototypes declare a function early. Overloads share a name. Defaults fill missing arguments."
+  analogy: A prototype is a table of contents entry. The pages come later.
   body:
     - "A **declaration** (prototype) tells the compiler a function's return type, name and parameter types, then ends with `;` and no body: `int damage(int attack, int armor);`. A **definition** has the body."
     - "With prototypes at the top, `main()` can call functions whose definitions come further down the file. Big programs put the declarations in header files and the definitions in `.cpp` files."
@@ -44,12 +44,12 @@ demo:
     }
   steps:
     - line: 3
-      note: "Prototypes: promises that these functions are defined below."
+      note: "Prototypes: promises that bodies come below."
     - line: 5
       note: amount = 10 is a default argument.
     - line: 8
       push: { name: main }
-      note: heal(5) leaves out amount, so it defaults to 10.
+      note: heal(5) leaves out amount, so it's 10.
     - line: 22
       push: { name: heal, vars: { hp: "5", amount: "10" } }
       note: "push frame: heal(hp=5, amount=10)."
@@ -58,14 +58,14 @@ demo:
       note: "pop frame: return 15."
     - line: 14
       push: { name: show(int), vars: { value: "15" } }
-      note: An int argument picks the show(int) overload.
+      note: An int argument picks show(int).
     - line: 15
       out: |
         HP 15
     - line: 22
       pop: true
       push: { name: heal, vars: { hp: "5", amount: "2" } }
-      note: "push frame: heal(hp=5, amount=2). No default needed."
+      note: "push frame: heal(hp=5, amount=2)."
     - line: 23
       pop: { returns: "7" }
       note: "pop frame: return 7."
@@ -75,38 +75,37 @@ demo:
         HP 7
     - line: 10
       pop: true
-      note: Text argument, so the compiler picks the string overload.
+      note: Text argument picks the string overload.
     - line: 19
       push: { name: show(string), vars: { text: '"Full!"' } }
       out: |
         Full!
     - line: 11
       pop: true
-      note: Three calls, two overloads, one default. Done!
+      note: Three calls, two overloads, one default.
 challenges:
   - id: w6.l3.c1
     type: mcq
     tags: [ w6.prototype ]
-    prompt: Which line is a declaration (prototype), not a definition?
+    prompt: Which line is a prototype (a declaration with no body)?
     options:
       - t: int damage(int attack, int armor);
-        why: "Correct: types and name, ending in ; with no body."
+        why: Types and name, then ; with no body.
       - t: "int damage(int attack, int armor) { return attack - armor; }"
-        why: It has a body in { }, so it's a definition (which also declares it).
+        why: It has a body, so it's a definition.
       - t: damage(10, 3);
-        why: That's a call, not a declaration.
+        why: That's a call.
       - t: int damage = 10;
-        why: That's a variable named damage, not a function.
+        why: That's a variable, not a function.
     answer: 0
     hints:
       - A prototype has no body.
-      - Look for the ; right after the parentheses.
     short: A prototype ends with ; and has no body.
-    explain: "A prototype gives the return type, name and parameter types, then a semicolon. The definition, with the body, can come later in the file (or in another file)."
+    explain: "A prototype gives the return type, name and parameter types, then a semicolon. The definition, with the body, can come later in the file (or in another file). A definition also counts as a declaration, but it isn't a prototype."
   - id: w6.l3.c2
     type: predict
     tags: [ w6.overload, w2.char, w2.double ]
-    prompt: Three overloads named describe. What does this print? (Watch the spaces.)
+    prompt: Three overloads named describe. What does this print?
     code: |-
       #include <iostream>
 
@@ -131,19 +130,18 @@ challenges:
       }
     options:
       - t: "int:7 double:2.5 char:A \n"
-        why: "Correct: each argument's type exactly matches one overload."
+        why: Each argument's type matches one overload exactly.
       - t: "int:7 double:2.5 int:65 \n"
-        why: "'A' is a char, and describe(char) is an exact match. No conversion to int needed."
+        why: "'A' is a char, and describe(char) matches exactly."
       - t: "int:7 int:2 char:A \n"
-        why: 2.5 is a double literal, so describe(double) is the exact match.
+        why: 2.5 is a double, so describe(double) matches.
       - t: "double:7 double:2.5 char:A \n"
-        why: 7 is an int literal; describe(int) matches exactly.
+        why: 7 is an int, so describe(int) matches.
     answer: 0
     hints:
       - What type is each literal? 7, 2.5, 'A'.
-      - An exact type match always wins.
-    short: "Each argument picks the overload whose parameter type matches exactly."
-    explain: '7 is an int, 2.5 is a double, ''A'' is a char, and each has an exact-match overload. Each call prints a trailing space, so the output is "int:7 double:2.5 char:A " and a newline.'
+    short: "Each argument picks the overload with its exact type."
+    explain: '7 is an int, 2.5 is a double, ''A'' is a char, and each has an exact-match overload, so no conversion (like char to int) is needed. Each call prints a trailing space, so the output is "int:7 double:2.5 char:A " and a newline.'
   - id: w6.l3.c3
     type: bug
     tags: [ w6.default, w6.prototype ]
@@ -165,19 +163,19 @@ challenges:
     bugLine: 9
     options:
       - t: int heal(int hp, int amount) {
-        why: "Correct: the default lives in the prototype only. The definition just names the parameters."
+        why: The default stays in the prototype only.
       - t: int heal(int hp, int amount = 5) {
-        why: Any default in the definition repeats one from the prototype. Still an error.
+        why: Still a default in the definition.
       - t: int heal(int hp = 0, int amount = 10) {
-        why: Adds more defaults in the definition. Still an error.
+        why: Even more defaults in the definition.
       - t: int heal(int hp, int amount);
-        why: Now there's no body at all, so linking fails with "undefined reference".
+        why: No body at all, so linking fails.
     answer: 0
     hints:
-      - The default is written twice. Where should it live?
-      - The caller sees the prototype, so that's where the default belongs.
-    short: Write the default once, in the prototype; drop it from the definition.
-    explain: "A default argument may be given only once. Callers see the declaration, so put it there and leave it out of the definition: `int heal(int hp, int amount) { ... }`."
+      - The default is written twice.
+      - Callers see the prototype. Keep it there.
+    short: Write the default once, in the prototype.
+    explain: "A default argument may be given only once. Callers see the declaration, so put it there and leave it out of the definition: `int heal(int hp, int amount) { ... }`. Any default in the definition repeats one, so it's still an error. Turning the definition into a second prototype leaves no body, and linking fails with \"undefined reference\"."
     sideBySide:
       unsafe: |-
         int heal(int hp, int amount = 10);
@@ -200,7 +198,7 @@ challenges:
   - id: w6.l3.c4
     type: fill
     tags: [ w6.default ]
-    prompt: Make bonus optional, defaulting to 0, so attack(8) compiles.
+    prompt: Make bonus default to 0, so attack(8) compiles.
     code: |-
       #include <iostream>
 
@@ -218,8 +216,7 @@ challenges:
       - "= 0"
     placeholder: default value
     hints:
-      - A default is written with = after the parameter name.
-      - It goes in the prototype, not the definition.
+      - A default is written with = after the name.
     short: int bonus = 0 lets callers leave bonus out.
     explain: "`int bonus = 0` in the prototype means attack(8) is treated as attack(8, 0). The program prints \"8 12\"."
   - id: w6.l3.c5
@@ -234,23 +231,23 @@ challenges:
     expect: error
     options:
       - t: "Compile error: the call is ambiguous"
-        why: "Correct: 5 is an int. int to long and int to double are equally good conversions."
+        why: int to long and int to double are equally good.
       - t: It calls f(long), because long is closer to int
-        why: Both are ranked as plain conversions. Neither beats the other, so it's ambiguous.
+        why: Both conversions rank the same. Neither wins.
       - t: It calls f(double), because double is bigger
-        why: Size doesn't decide overloads. Both conversions rank the same.
+        why: Size doesn't decide overloads.
       - t: It compiles but crashes at runtime
-        why: Overload resolution happens at compile time. The error is reported before any run.
+        why: Overloads are picked at compile time.
     answer: 0
     hints:
-      - Is there an overload taking exactly an int?
-      - If two conversions are equally good, who wins?
-    short: Two equally good conversions make the call ambiguous, a compile error.
-    explain: 'There''s no f(int). Converting int to long and int to double rank the same, so g++ reports "call of overloaded f(int) is ambiguous". Add an f(int) overload or pass 5L / 5.0.'
+      - Is there an f(int)?
+      - Two equally good conversions. Who wins?
+    short: Two equally good conversions make the call ambiguous.
+    explain: 'There''s no f(int). 5 is an int, and converting int to long or int to double rank the same, so g++ reports "call of overloaded f(int) is ambiguous" at compile time. Add an f(int) overload or pass 5L / 5.0.'
   - id: w6.l3.c6
     type: predict
     tags: [ w6.default, w5.for ]
-    prompt: A default argument meets a loop. What does this print?
+    prompt: What does this print?
     code: |-
       #include <iostream>
 
@@ -270,30 +267,29 @@ challenges:
       - t: |
           ***
           *
-        why: "Correct: stars() uses the default 3; stars(1) prints one star."
+        why: stars() uses the default 3; stars(1) prints one.
       - t: |
 
           *
-        why: stars() doesn't pass 0. A missing argument uses the default, 3.
+        why: A missing argument uses the default, 3, not 0.
       - t: |
           ***
           ***
-        why: The default is only used when the argument is left out. stars(1) passes 1.
+        why: stars(1) passes 1, so the default isn't used.
       - t: |
           ****
           **
-        why: "i goes 0, 1, 2 for n = 3: the loop runs exactly n times."
+        why: i < n from 0 runs exactly n times.
     answer: 0
     hints:
       - What is n when no argument is given?
-      - i < n with i starting at 0 runs n times.
-    short: stars() means stars(3); stars(1) prints one star.
-    explain: 'The first call uses the default: 3 stars. The second passes 1. Each call ends its line with a newline: "***", then "*".'
+    short: stars() means stars(3).
+    explain: 'The first call uses the default: 3 stars. The second passes 1, so the default is ignored. i goes 0, 1, 2 for n = 3, so the loop runs exactly n times. Each call ends its line with a newline: "***", then "*".'
 recap:
-  - "Prototype: a declaration ending in ; with no body."
-  - "Declared but never defined: linker error."
-  - Overloads differ by parameter types, not return type.
-  - Defaults go on trailing parameters, written once.
+  - "Prototype: ends in ;, no body."
+  - "Declared, never defined: linker error."
+  - Overloads differ by parameter types.
+  - Defaults trail, written once.
 vault:
   - id: w6.prototype
     title: Prototype first, body later

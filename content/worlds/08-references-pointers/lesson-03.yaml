@@ -5,8 +5,8 @@ title: "Pointers: arrows to memory"
 skill: memory
 shield: false
 concept:
-  short: "A pointer stores an address. &x gets x's address, *p follows the arrow, and nullptr means \"points nowhere\"."
-  analogy: "A pointer is a signpost: it isn't the treasure, it tells you where the treasure is, and you can repaint it to point elsewhere."
+  short: "A pointer stores an address. &x takes it, *p follows it, nullptr means nowhere."
+  analogy: "A signpost: not the treasure, just where it is. You can repaint it."
   body:
     - "Every variable lives somewhere in memory, at an **address**. `&hp` (address-of) gives that address."
     - "`int* p = &hp;` declares a **pointer to int** named p and stores hp's address in it. Think of p as an arrow pointing at hp's box."
@@ -60,7 +60,7 @@ demo:
       mem:
         cells:
           - { name: p, ptr: mana }
-      note: "Reseat! The arrow now points at mana. hp untouched."
+      note: "Reseat! Now it points at mana."
     - line: 9
       out: |
         8 7
@@ -73,7 +73,7 @@ demo:
     - line: 11
       out: |
         1
-      note: "Testing for nullptr is safe; following it is not."
+      note: "Testing nullptr is safe; following it is not."
 challenges:
   - id: w8.l3.c1
     type: predict
@@ -92,21 +92,20 @@ challenges:
     options:
       - t: |
           25 25
-        why: "Correct: *p is gold, so adding 5 through p changes gold."
+        why: Adding through p changes gold itself.
       - t: |
           20 25
-        why: p isn't a copy of gold; it points at gold's box.
+        why: p isn't a copy; it points at gold.
       - t: |
           20 20
-        why: "*p += 5 writes through the arrow into gold."
+        why: "*p += 5 writes into gold."
       - t: |
           25 20
-        why: "*p reads gold's box, which now holds 25."
+        why: "*p reads gold, which now holds 25."
     answer: 0
     hints:
       - "*p means \"the box p points at\"."
-      - Which box does p point at?
-    short: "*p is gold, so gold becomes 25 and both print 25."
+    short: "*p is gold, so both print 25."
     explain: "p holds gold's address. `*p += 5` follows the arrow and adds 5 to gold. Both gold and *p read the same box: \"25 25\" and a newline."
   - id: w8.l3.c2
     type: mcq
@@ -114,23 +113,22 @@ challenges:
     prompt: "In the expression `&hp`, what does `&` mean?"
     options:
       - t: The address of hp
-        why: "Correct: in an expression, & is the address-of operator."
+        why: In an expression, & is address-of.
       - t: A reference to hp
-        why: "& means reference only in a declaration, like int& r = hp."
+        why: "& means reference only in a declaration."
       - t: The value stored in hp
-        why: Just writing hp gives the value. & gives where it lives.
+        why: Plain hp gives the value.
       - t: Follow the pointer hp
-        why: "Following a pointer is *, not &. And hp isn't a pointer."
+        why: "Following a pointer is *, not &."
     answer: 0
     hints:
       - Declaration or expression?
-      - "int* p = &hp; stores this in a pointer."
     short: "In an expression, &hp is hp's address."
     explain: "`&` has two jobs: in a declaration (`int& r = hp;`) it makes a reference; in an expression (`&hp`) it takes the address. `int* p = &hp;` stores hp's address in p."
   - id: w8.l3.c3
     type: predict
     tags: [ w8.pointer, w8.deref ]
-    prompt: The arrow moves. What does this print?
+    prompt: What does this print?
     code: |-
       #include <iostream>
 
@@ -147,26 +145,25 @@ challenges:
     options:
       - t: |
           10 20
-        why: "Correct: p wrote 10 into a, then moved to b and wrote 20 there."
+        why: Each write hit p's target at that moment.
       - t: |
           20 2
-        why: "p = &b moves the arrow; it doesn't drag a along."
+        why: "p = &b moves the arrow, not a."
       - t: |
           1 20
-        why: "*p = 10 happened while p still pointed at a."
+        why: "*p = 10 ran while p pointed at a."
       - t: |
           20 20
-        why: A pointer can be reseated. After p = &b, a is left alone.
+        why: After p = &b, a is left alone.
     answer: 0
     hints:
       - Track where p points before each *p =.
-      - "p = &b repaints the arrow; it's not a write to a."
-    short: p wrote 10 into a, moved to b, wrote 20 there.
+    short: A pointer can be reseated; each write hits its current target.
     explain: "p starts at a: `*p = 10` sets a to 10. `p = &b` reseats p (pointers can do that, references can't). `*p = 20` sets b. Output: \"10 20\" and a newline."
   - id: w8.l3.c4
     type: fill
     tags: [ w8.deref ]
-    prompt: Fill in the operator so the line prints hp's value (42), not an address.
+    prompt: Fill in the operator so this prints hp's value, 42, not an address.
     code: |-
       int* p = &hp;
       std::cout << ___p << '\n';   // prints 42
@@ -176,13 +173,12 @@ challenges:
     placeholder: operator
     hints:
       - p alone is an address.
-      - You need to follow the arrow.
     short: "*p follows the arrow to hp's value."
     explain: "`std::cout << p` prints an address (some hex number that changes between runs). `*p` dereferences: it follows the arrow and gives 42."
   - id: w8.l3.c5
     type: write
     tags: [ w8.pointer, w8.addressof ]
-    prompt: Write one line that declares a pointer to int named `ptr` pointing at the int `mana`.
+    prompt: Write one line declaring an int pointer named `ptr` that points at `mana`.
     prelude: int mana{8};
     accept:
       - int* ptr = &mana;
@@ -194,7 +190,6 @@ challenges:
     placeholder: int* ptr ...
     hints:
       - "The type is int*: pointer to int."
-      - "Store mana's address: &mana."
     short: "`int* ptr = &mana;` stores mana's address in ptr."
     explain: "`int* ptr = &mana;` (or `int* ptr{&mana};`) declares a pointer and initializes it with mana's address in one step. `int *ptr` means the same; spaces around * don't matter."
   - id: w8.l3.c6
@@ -202,7 +197,7 @@ challenges:
     tags: [ w8.nullptr, w8.deref, w2.init ]
     bug: null-deref
     unsafe: true
-    prompt: Code review! Tap every dangerous line, then submit.
+    prompt: Tap every line that is UB or sets up a trap, then submit.
     code: |-
       int hp = 10;
       int* p = &hp;
@@ -222,8 +217,7 @@ challenges:
       "6": "UB: dereferencing nullptr. Usually a crash, but not guaranteed."
     hints:
       - "Ask of every pointer: where does it point?"
-      - A pointer declared with no value is a problem already.
-    short: Uninitialized and null pointers must never be dereferenced.
+    short: Never dereference uninitialized or null pointers.
     explain: "q was never initialized, so it holds some leftover address: reading `*q` is UB. r is nullptr, which is fine to hold and test, but `*r` is UB too. UB may crash, print junk, or look fine today and fail tomorrow. Initialize every pointer, and check before following."
     sideBySide:
       unsafe: |-
@@ -241,8 +235,8 @@ challenges:
       prelude: int hp{10};
 recap:
   - "&x is x's address; *p follows the arrow."
-  - A pointer can be pointed somewhere else.
-  - "nullptr means nowhere: test it, never follow it."
+  - A pointer can be reseated.
+  - "Test nullptr; never follow it."
 vault:
   - id: w8.pointer
     title: Pointer basics

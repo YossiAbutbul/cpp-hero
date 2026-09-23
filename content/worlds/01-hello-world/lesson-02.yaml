@@ -6,7 +6,7 @@ skill: toolkit
 shield: false
 concept:
   short: "#include <iostream> brings in the printing tools; std::cout means the cout from the standard library."
-  analogy: "#include borrows a toolbox, and `std::` is the label on the shelf it came from."
+  analogy: "#include borrows a toolbox; `std::` labels the shelf it came from."
   body:
     - "`#include <iostream>` is a **preprocessor directive**: before compiling, it pastes in the declarations for `std::cout`. Directives start with `#` and take **no** semicolon."
     - The standard library lives in the **namespace** `std`. `std::cout` = "the `cout` in `std`". `::` is the scope resolution operator.
@@ -50,7 +50,7 @@ challenges:
       - t: It creates a variable called iostream
         why: No variables here. It pastes in a header file's contents.
       - t: Before compiling, it pastes in the declarations for input/output tools like std::cout
-        why: Correct! The compiler then knows what std::cout is.
+        why: The compiler then knows what std::cout is.
     answer: 3
     hints:
       - "Lines starting with # are handled before real compiling begins."
@@ -76,9 +76,9 @@ challenges:
     prompt: "In std::cout, what does the std:: part mean?"
     options:
       - t: "\"Standard output\": it's what makes cout print"
-        why: 'No: std names the namespace. The "out" in cout is the output part.'
+        why: 'std names a namespace. The "out" in cout means output.'
       - t: It's the cout that lives in the standard library's namespace, std
-        why: "Correct! :: picks a name out of the std namespace."
+        why: ":: picks a name out of the std namespace."
       - t: It's optional decoration the compiler ignores
         why: Not ignored! Without std::, the compiler says cout is not declared.
       - t: It marks cout as a comment
@@ -92,7 +92,7 @@ challenges:
   - id: w1.l2.c4
     type: bug
     tags: [ w1.include, w1.compile ]
-    prompt: 'Intentionally broken: the build fails with "fatal error: iostrem: No such file or directory". Tap the buggy line, then pick the fix.'
+    prompt: 'Build error: "iostrem: No such file or directory". Tap the buggy line, then pick the fix.'
     code: |-
       #include <iostrem>
 
@@ -109,7 +109,7 @@ challenges:
       - t: "#import <iostream>"
         why: "#import isn't standard C++. Use #include."
       - t: "#include <iostream>"
-        why: "Correct! i-o-s-t-r-e-a-m: input/output stream."
+        why: "i-o-s-t-r-e-a-m: input/output stream."
       - t: '#include "iostrem"'
         why: Quotes change where it searches, but the name is still misspelled.
     answer: 2
@@ -126,7 +126,7 @@ challenges:
   - id: w1.l2.c5
     type: predict
     tags: [ w1.cout, w1.include ]
-    prompt: What exactly does this program print?
+    prompt: What does this print? Spaces count. (↵ marks a new line.)
     code: |-
       #include <iostream>
 
@@ -141,7 +141,7 @@ challenges:
         why: "Text inside quotes prints exactly, std:: included."
       - t: |
           std::cout works
-        why: Correct! The second string starts with a space.
+        why: The second string starts with a space.
       - t: |
           std::coutworks
         why: "Look closely: the second string begins with a space."

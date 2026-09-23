@@ -5,8 +5,8 @@ title: Pick your weapon
 skill: logic
 shield: false
 concept:
-  short: "Expected, local failures return std::optional or a checked result; rare, far-away failures throw. RAII cleans up either way."
-  analogy: "A torch in a holder goes out by itself when you leave the room, even if you leave running."
+  short: "Everyday failures return std::optional; rare, far-away failures throw. RAII cleans up either way."
+  analogy: "A torch that goes out by itself when you leave, even running."
   body:
     - "C++ gives you several ways to report failure. Pick by **how normal the failure is** and **who can fix it**."
     - "**`std::optional<T>`**: \"a value, or nothing\". Best for expected, common failures where the reason doesn't matter: parsing input, searching for something that may not exist. The caller must check before using it."
@@ -96,16 +96,16 @@ challenges:
   - id: w12.l4.c1
     type: mcq
     tags: [ w12.strategy, w12.optional ]
-    prompt: "findPlayer(name) searches a list. \"Not found\" happens all the time and is normal. How should it report that?"
+    prompt: "findPlayer(name) often finds nothing, and that's normal. How should it report \"not found\"?"
     options:
       - t: Return std::optional<Player>
-        why: "Correct: an expected, common outcome. The caller checks if (p) before using *p."
+        why: "An everyday outcome. The caller checks if (p) before using *p."
       - t: Throw an exception
-        why: Exceptions are for rare, exceptional failures. A missed search is ordinary control flow.
+        why: Exceptions are for rare failures. A missed search is ordinary.
       - t: Return a Player with name "-1"
-        why: A magic sentinel is easy to forget to check and could collide with real data.
+        why: A magic value is easy to forget and could be real data.
       - t: assert that the player exists
-        why: assert is for programmer bugs. A missing name is a normal outcome, and asserts vanish in release builds.
+        why: assert is for programmer bugs, and a missing name is normal.
     answer: 0
     hints:
       - Is "not found" rare, or everyday?
@@ -144,10 +144,10 @@ challenges:
     options:
       - t: |
           +A+B-B-A!
-        why: "Correct: unwinding destroys locals in reverse order, B then A, before the catch body runs."
+        why: "Reverse order, B then A, all before the catch body."
       - t: |
           +A+B-A-B!
-        why: Locals are destroyed in REVERSE order of construction. B was built last, so it goes first.
+        why: Locals die in REVERSE order. B was built last.
       - t: |
           +A+B!-B-A
         why: Unwinding finishes (destructors run) before the catch block starts.
@@ -189,7 +189,7 @@ challenges:
     bugLine: 1
     options:
       - t: std::vector<int> tiles(size);  (and pass tiles.data())
-        why: "Correct: the vector owns the memory, and its destructor frees it even during unwinding."
+        why: "The vector's destructor frees the memory, even during unwinding."
       - t: Move delete[] tiles; above fillTiles
         why: Then fillTiles and drawTiles use freed memory. That's use-after-free, which is UB.
       - t: Use delete tiles; instead of delete[] tiles;
@@ -219,7 +219,7 @@ challenges:
   - id: w12.l4.c4
     type: breakit
     tags: [ w12.returncode, w12.strategy ]
-    prompt: "The caller treats -1 as \"sensor failed\". Which input breaks that logic?"
+    prompt: "The caller treats -1 as \"sensor failed\". Which typed input gets wrongly reported as a failure?"
     code: |-
       // Returns the temperature, or -1 if the read failed.
       int readTemperature() {
@@ -231,9 +231,9 @@ challenges:
       }
     options:
       - t: "-1"
-        why: "Correct: -1 degrees is a real reading, but the caller thinks the sensor failed."
+        why: "-1 degrees is a real reading, but looks like a failure."
       - t: abc
-        why: The read fails and -1 is returned. Reported as a failure, which is right.
+        why: The read really fails, so reporting a failure is right.
       - t: "20"
         why: A normal reading. Returned as 20, handled correctly.
       - t: "0"
@@ -266,7 +266,7 @@ challenges:
   - id: w12.l4.c5
     type: harden
     tags: [ w12.returncode ]
-    prompt: spendGold reports failure with false, and it's [[nodiscard]]. Pick the check that handles it.
+    prompt: spendGold returns false on failure. Pick the condition that runs the error branch only then.
     code: |-
       #include <iostream>
 
@@ -289,11 +289,11 @@ challenges:
       }
     options:
       - t: "!spendGold(gold, 50)"
-        why: "Correct: calls it once and runs the error branch exactly when it returns false."
+        why: Calls it once; the error branch runs exactly when it fails.
       - t: spendGold(gold, 50)
         why: "Inverted: a successful purchase would print \"Not enough gold!\"."
       - t: gold - 50 < 0
-        why: Re-does the check by hand and never spends the gold. Two copies of the rule drift apart.
+        why: Re-checks by hand and never actually spends the gold.
       - t: gold == 0
         why: Never calls spendGold at all, so nothing is bought or checked.
     answer: 0

@@ -5,8 +5,8 @@ title: Many paths
 skill: logic
 shield: false
 concept:
-  short: "else if chains test conditions top to bottom; the first true one wins and the rest are skipped."
-  analogy: "An else-if ladder is a row of doors: you walk through the first unlocked one and ignore the rest."
+  short: "else if checks conditions top to bottom; the first true one wins."
+  analogy: "A row of doors: you walk through the first unlocked one."
   body:
     - "`if (a) { ... } else if (b) { ... } else { ... }` checks a, then b, and so on. The **first** true condition's block runs, then the whole chain is done. The final `else` catches everything left over."
     - "**Order matters.** For ranges, test the most specific (or highest) case first: `score >= 90` before `score >= 50`. Otherwise 95 gets caught by the `>= 50` door."
@@ -73,14 +73,14 @@ challenges:
     options:
       - t: |
           Veteran
-        why: "Correct: 12 >= 20 is false, 12 >= 10 is true, so the chain stops there."
+        why: 12 >= 10 is the first true test, so the chain stops.
       - t: |
           Veteran
           Adventurer
         why: Once one block in an else-if chain runs, the rest are skipped.
       - t: |
           Adventurer
-        why: 12 >= 10 is checked first and is true, so we never reach >= 5.
+        why: 12 >= 10 is true first, so >= 5 is never checked.
       - t: |
           Legend
         why: 12 is not >= 20.
@@ -111,9 +111,9 @@ challenges:
     bugLine: 4
     options:
       - t: Test score >= 90 first, then score >= 50
-        why: "Correct: the most demanding condition must come first, or the easier one catches everything."
+        why: The strictest test must come first, or it can't be reached.
       - t: Change score >= 90 to score > 90
-        why: The Excellent branch still can never run; >= 50 grabs every score above 50 first.
+        why: Excellent still can't run; >= 50 catches 95 first.
       - t: Turn the else if into a separate if
         why: Then 95 prints BOTH "Pass" and "Excellent".
       - t: Change score >= 50 to score >= 49
@@ -143,7 +143,7 @@ challenges:
   - id: w4.l2.c3
     type: predict
     tags: [ w4.elseif, w4.if ]
-    prompt: Two separate ifs this time, no else. What does this print?
+    prompt: Two separate ifs, no else. What does this print? Spaces count.
     code: |-
       #include <iostream>
 
@@ -161,7 +161,7 @@ challenges:
     options:
       - t: |
           Strong Alive
-        why: "Correct: separate ifs are checked independently, and both are true."
+        why: Separate ifs are checked independently, and both are true.
       - t: "Strong \n"
         why: Without else, the second if is still checked on its own.
       - t: |
@@ -180,7 +180,7 @@ challenges:
     type: predict
     tags: [ w4.nested, w1.warnings ]
     unsafe: true
-    prompt: "No braces, tricky indentation. Which if does the else belong to? What prints?"
+    prompt: "What does this print? Careful: which if does the else belong to?"
     code: |-
       #include <iostream>
 
@@ -199,10 +199,10 @@ challenges:
       - t: |
           Down
           End
-        why: "Correct: else binds to the nearest if (shield > 0), which is false."
+        why: else binds to the nearest if (shield > 0), which is false.
       - t: |
           End
-        why: That assumes else belongs to hp > 0, as the indentation suggests. It doesn't.
+        why: That treats else as part of hp > 0. It isn't.
       - t: |
           Protected
           End
@@ -253,9 +253,9 @@ challenges:
       }
     options:
       - t: level >= 1 && level <= 10
-        why: "Correct: both ends of the range are checked, joined by &&."
+        why: Both ends of the range are checked, joined by &&.
       - t: 1 <= level <= 10
-        why: (1 <= level) is 1 or 0, and that is ALWAYS <= 10. Everyone gets in. -Wall warns.
+        why: (1 <= level) is 0 or 1, always <= 10. Everyone enters.
       - t: level >= 1 || level <= 10
         why: "Every number passes at least one side, so || lets everyone in."
       - t: level <= 10
@@ -264,7 +264,7 @@ challenges:
     hints:
       - A range has two ends. Check both.
       - Both checks must pass, so join them with &&.
-    short: "A range check needs both ends: level >= 1 && level <= 10."
+    short: "A range needs both ends: level >= 1 && level <= 10."
     explain: "`1 <= level <= 10` is read as `(1 <= level) <= 10`: a bool (0 or 1) compared with 10, always true. Write both comparisons and join with &&."
     sideBySide:
       unsafe: |-
@@ -277,9 +277,9 @@ challenges:
         }
       prelude: int level = 15;
 recap:
-  - else if checks top to bottom; first true wins.
+  - "else if: top to bottom, first true wins."
   - Test the highest or strictest case first.
-  - Separate ifs can all run; else if picks one.
+  - Separate ifs can all run.
   - "Ranges: check both ends, joined with &&."
 vault:
   - id: w4.elseif

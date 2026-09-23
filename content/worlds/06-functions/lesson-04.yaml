@@ -5,12 +5,12 @@ title: Scope and lifetime
 skill: memory
 shield: false
 concept:
-  short: A local variable lives only inside its block. When the function returns, its frame and locals vanish.
-  analogy: "A stack frame is a hotel room: you get it at check-in (the call), and it's emptied at check-out (the return)."
+  short: A local lives only inside its block. When a function returns, its locals vanish.
+  analogy: "A stack frame is a hotel room: yours at check-in, emptied at check-out."
   body:
     - "**Scope** is where a name can be used. A variable declared inside `{ }` is visible from its declaration to that block's closing `}`. Parameters are in scope for their whole function."
     - "**Lifetime** is when the variable actually exists. A local is created when execution reaches it and destroyed at the end of its block. Every call gets **fresh** locals: a local does not remember its value from the previous call."
-    - "Each call **pushes** a stack frame holding its parameters and locals, and `return` **pops** it. That's why two calls of the same function get independent variables, and why one function can't see another's locals."
+    - "Each call **pushes** a stack frame holding its parameters and locals, and `return` **pops** it. That's why two calls of the same function get independent variables, and why one function can't see another's locals. Check-in is the call; check-out is the return."
     - "Two functions can both have a local named `hp` without clashing: they're different variables in different frames."
     - "An inner block may declare a name that **shadows** an outer one. It compiles, but the outer variable is hidden until the inner `}`, which confuses readers. Prefer distinct names (`-Wshadow` warns)."
     - "Global variables (declared outside every function) live for the whole program and any function can change them, which makes bugs hard to trace. Pass values in and return results out instead."
@@ -41,21 +41,21 @@ demo:
     - line: 3
       vars:
         result: "4"
-      note: "result is a local: it lives only in roll's frame."
+      note: "result lives only in roll's frame."
     - line: 4
       pop: { returns: "4" }
       note: "pop frame: return 4. sides and result vanish."
     - line: 9
       vars:
         total: "4"
-      note: Back in main, total is now 4.
+      note: Back in main, total is 4.
     - line: 10
       push: { name: roll, vars: { sides: "4" } }
-      note: "push frame: roll(sides=4). A brand-new frame."
+      note: "push frame: a brand-new roll frame."
     - line: 3
       vars:
         result: "3"
-      note: A fresh result. Nothing is left over from the last call.
+      note: A fresh result. Nothing left over.
     - line: 4
       pop: { returns: "3" }
       note: "pop frame: return 3."
@@ -67,7 +67,7 @@ demo:
       out: |
         Total: 7
     - line: 12
-      note: main's frame pops last. Everything is cleaned up.
+      note: main's frame pops last.
 challenges:
   - id: w6.l4.c1
     type: mcq
@@ -89,23 +89,22 @@ challenges:
     expect: error
     options:
       - t: "No: compile error, result isn't in scope in main"
-        why: "Correct: result belongs to roll's body. main can only see its own names."
+        why: result belongs to roll, not main.
       - t: Yes, it prints 4
-        why: The 4 was returned and thrown away. The name result never exists in main.
+        why: main has no variable named result.
       - t: Yes, but it prints garbage
-        why: It never gets that far. The compiler rejects the unknown name.
+        why: It never compiles, so it never runs.
       - t: Only because roll(6) was called first
-        why: Calling roll doesn't make its locals visible. Scope is about where code is written.
+        why: Calling roll doesn't make its locals visible.
     answer: 0
     hints:
       - Where is result declared?
-      - A local is visible only inside its own braces.
-    short: "result is local to roll; main can't name it. Compile error."
-    explain: "Scope is decided by the braces: result is declared inside roll, so only roll's body can use it. g++ says \"'result' was not declared in this scope\". To use the value, store the return: `int r = roll(6);`."
+    short: "result is local to roll; main can't name it."
+    explain: "Scope is decided by where code is written, not by what ran before: result is declared inside roll, so only roll's body can use it. g++ says \"'result' was not declared in this scope\". To use the value, store the return: `int r = roll(6);`."
   - id: w6.l4.c2
     type: predict
     tags: [ w6.lifetime, w6.call ]
-    prompt: A call counter with a local variable. What does this print?
+    prompt: What does this print?
     code: |-
       #include <iostream>
 
@@ -122,22 +121,21 @@ challenges:
     options:
       - t: |
           111
-        why: "Correct: every call gets a brand-new count that starts at 0 and becomes 1."
+        why: Each call gets a new count, from 0 to 1.
       - t: |
           123
-        why: A local doesn't survive between calls. Each frame starts from scratch.
+        why: A local doesn't survive between calls.
       - t: |
           321
-        why: Since C++17 the chain runs left to right, and every call returns 1 anyway.
+        why: Every call returns 1, whatever the order.
       - t: |
           000
-        why: ++count runs before the return, so each call returns 1.
+        why: ++count runs before the return.
     answer: 0
     hints:
-      - Does count remember anything after the function returns?
-      - Each call pushes a fresh frame.
-    short: Each call gets a fresh count, so every call returns 1.
-    explain: 'count is created at 0 on every call and destroyed on return, so each call returns 1. Output: "111" and a newline. To keep a running count, pass it in and return the new value.'
+      - Does count remember anything after returning?
+    short: A fresh count every call, so each returns 1.
+    explain: 'count is created at 0 on every call and destroyed on return, so each call returns 1. Output: "111" and a newline. (Since C++17 a << chain runs left to right, but here the order wouldn''t matter anyway.) To keep a running count, pass it in and return the new value.'
   - id: w6.l4.c3
     type: predict
     tags: [ w6.scope ]
@@ -157,38 +155,36 @@ challenges:
     options:
       - t: |
           3 10
-        why: "Correct: the inner hp shadows the outer one until its }, then the outer 10 is back."
+        why: Inner hp prints 3, then outer hp prints 10.
       - t: |
           3 3
-        why: The inner hp is a separate variable. The outer hp was never changed.
+        why: The outer hp was never changed.
       - t: |
           10 10
-        why: Inside the block, the name hp means the inner variable (3).
+        why: Inside the block, hp means the inner 3.
       - t: Compile error
-        why: Shadowing in an inner block is legal. Confusing, but legal.
+        why: Shadowing is legal, just confusing.
     answer: 0
     hints:
-      - The inner block declares a second hp.
       - "After the inner }, which hp is left?"
-    short: The inner hp hides the outer one only until its closing brace.
-    explain: 'The inner `int hp{3};` is a new variable that shadows the outer hp inside its block. At the }, it dies, and hp means the outer 10 again. Output: "3 10" and a newline. Legal, but prefer distinct names.'
+    short: The inner hp hides the outer one until its }.
+    explain: 'The inner `int hp{3};` is a new, separate variable that shadows the outer hp inside its block. At the }, it dies, and hp means the outer 10 again. Output: "3 10" and a newline. Legal, but prefer distinct names.'
   - id: w6.l4.c4
     type: write
     tags: [ w6.return, w6.lifetime ]
-    prompt: nextTurn(t) returns t + 1. Write one line that makes main's `turn` go up by one using it.
+    prompt: nextTurn(t) returns t + 1. Write one line that adds 1 to `turn` using it.
     prelude: "auto nextTurn = [](int t) { return t + 1; }; int turn{0};"
     accept:
       - turn = nextTurn(turn);
     placeholder: turn = ...
     hints:
-      - The function can't change turn itself; it works on a copy.
       - Store the returned value back into turn.
-    short: turn = nextTurn(turn); passes a copy in and stores the result.
+    short: turn = nextTurn(turn); stores the new value.
     explain: "The function receives a copy, so it can't touch main's turn directly. It returns the new value, and main stores it: `turn = nextTurn(turn);`. No globals needed."
   - id: w6.l4.c5
     type: bug
     tags: [ w6.scope, w5.while ]
-    prompt: "This doesn't compile: \"lastHit was not declared in this scope\". Tap the buggy line, then pick the fix."
+    prompt: "lastHit is out of scope at the print. Tap the buggy line, then pick the fix."
     code: |-
       #include <iostream>
 
@@ -205,18 +201,18 @@ challenges:
     bugLine: 5
     options:
       - t: "lastHit = turn * 2;   // with int lastHit{0}; declared before the loop"
-        why: "Correct: declared outside, it lives past the loop; the body just updates it."
+        why: Declared before the loop, it lives past it.
       - t: int lastHit{turn * 2};
-        why: Still declared inside the loop body, so it still dies at the loop's }.
+        why: Still inside the loop, so it still dies at }.
       - t: int lastHit = turn * 2; return lastHit;
-        why: Returns from main on the first pass and never prints.
+        why: main returns early. Nothing prints.
       - t: "int lastHit = (turn * 2);"
-        why: Parentheses don't change scope. Still gone after the loop.
+        why: Parentheses don't change scope.
     answer: 0
     hints:
-      - Where does a variable declared inside the loop's braces die?
-      - Declare it where the print can still see it.
-    short: Declare lastHit before the loop so it's still alive after it.
+      - Where does a variable declared in the loop die?
+      - Declare it where the print can see it.
+    short: Declare lastHit before the loop so it outlives it.
     explain: "A variable declared inside the loop body is destroyed at the body's } on every pass. Declare `int lastHit{0};` before the loop and assign inside it; then the print after the loop can see the last value (4)."
     sideBySide:
       unsafe: |-
@@ -237,7 +233,7 @@ challenges:
   - id: w6.l4.c6
     type: mcq
     tags: [ w6.scope, w6.lifetime ]
-    prompt: "Two functions each declare `int hp`. What happens?"
+    prompt: "Both functions declare `int hp`. What happens?"
     code: |-
       int heal(int x) {
           int hp = x + 5;
@@ -254,24 +250,23 @@ challenges:
       }
     options:
       - t: They are two separate variables that never clash
-        why: "Correct: each hp lives in its own function's frame."
+        why: Each hp lives in its own function's frame.
       - t: "Compile error: hp is defined twice"
-        why: Different scopes can reuse a name. Only the same scope forbids it.
+        why: Different scopes may reuse a name.
       - t: They share one variable, so the second overwrites the first
-        why: Locals are never shared between functions. Each call gets its own.
+        why: Functions never share locals.
       - t: The one in the later function hides the earlier one everywhere
-        why: Neither hp is visible outside its own function body.
+        why: Neither hp is visible outside its function.
     answer: 0
     hints:
       - Where does each hp live?
-      - Scope ends at the closing brace of each function.
-    short: Same name, different functions, different frames, different variables.
-    explain: Each hp is local to its function and lives in that call's frame. They can't see or overwrite each other. main returns 6 + 4 = 10.
+    short: Same name in two functions means two variables.
+    explain: Each hp is local to its function and lives in that call's frame. They can't see or overwrite each other. Only the same scope forbids reusing a name. main returns 6 + 4 = 10.
 recap:
-  - "Scope: a name works until its block's }."
-  - Locals are born fresh on every call.
-  - return pops the frame; its locals vanish.
-  - Same name in two functions means two variables.
+  - "A name works until its block's }."
+  - Locals are fresh on every call.
+  - return pops the frame and its locals.
+  - Same name, two functions, two variables.
 vault:
   - id: w6.scope
     title: Scope and lifetime

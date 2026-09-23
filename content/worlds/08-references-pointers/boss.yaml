@@ -6,7 +6,7 @@ art: wraith
 hp: 8
 intro: "Ssss... I am the Dangling Wraith. Follow my arrows... into the void."
 taunt:
-  - Your local is gone, little hero. Its address is mine now.
+  - Your local is gone. Its address is mine now.
   - Dereference me. I dare you. I am nullptr.
   - An uninitialized pointer points wherever I want.
   - It printed the right number? That's just my trick.
@@ -14,7 +14,7 @@ rounds:
   - id: w8.boss.r1
     type: predict
     tags: [ w8.ref, w8.deref ]
-    prompt: The Wraith conjures two names and one arrow for the same box. What does this print?
+    prompt: What does this print?
     code: |-
       #include <iostream>
 
@@ -30,45 +30,43 @@ rounds:
     options:
       - t: |
           30
-        why: "Correct: r and *p are both hp. (8 + 2) * 3 = 30."
+        why: "(8 + 2) * 3 = 30, all in hp."
       - t: |
           24
-        why: r += 2 changes hp too, before the multiplication.
+        why: r += 2 changes hp before the multiply.
       - t: |
           10
-        why: "*p *= 3 writes through the pointer into hp as well."
+        why: "*p *= 3 also writes into hp."
       - t: |
           8
-        why: Neither r nor p is a copy; both change hp.
+        why: Neither r nor p is a copy.
     answer: 0
     hints:
       - How many int boxes exist here?
-      - Apply the changes in order.
-    short: "r and *p both mean hp: (8 + 2) * 3 = 30."
+    short: "r and *p are both just hp."
     explain: "One box, three ways to reach it. `r += 2` makes hp 10; `*p *= 3` makes it 30. Output: \"30\" and a newline."
   - id: w8.boss.r2
     type: mcq
     tags: [ w8.ptr-vs-ref, w8.reseat ]
-    prompt: The Wraith whispers four claims. Which one is TRUE?
+    prompt: Which claim is TRUE?
     options:
       - t: A pointer can be reseated and can be null; a reference can be neither.
-        why: "Correct: that's the core difference between them."
+        why: That's the core difference.
       - t: A reference can be reseated with r = other;
-        why: That assigns other's value into what r already names.
+        why: That copies other's value into what r names.
       - t: A reference may be declared first and bound later.
-        why: "References must be initialized: int& r; doesn't compile."
+        why: "int& r; doesn't compile."
       - t: Dereferencing nullptr throws an exception you can catch.
-        why: "It's undefined behavior, not an exception. Usually a crash, never guaranteed."
+        why: It's undefined behavior, not an exception.
     answer: 0
     hints:
       - Think about "nothing" and "switching targets".
-      - Only one of these ever needs a nullptr check.
     short: "Pointers: nullable and reseatable. References: neither."
     explain: "A reference is bound once and always names a real object (while it lives). A pointer can hold nullptr and can be pointed elsewhere, which is exactly why pointers need checks."
   - id: w8.boss.r3
     type: predict
     tags: [ w8.pointer, w8.byref, w6.params ]
-    prompt: A swap done with pointers. What does this print?
+    prompt: What does this print?
     code: |-
       #include <iostream>
 
@@ -88,19 +86,18 @@ rounds:
     options:
       - t: |
           7 3
-        why: "Correct: the function writes through both arrows into x and y."
+        why: It writes through both arrows into x and y.
       - t: |
           3 7
-        why: The pointers are copies, but they point at the real x and y.
+        why: The pointers are copies, but aim at x and y.
       - t: |
           7 7
-        why: temp saves x's old value before it's overwritten.
+        why: temp saves x's old value first.
       - t: |
           3 3
-        why: "*a = *b copies y's 7 into x first."
+        why: "*a = *b puts 7 into x."
     answer: 0
     hints:
-      - The addresses of x and y are passed in.
       - "*a is x itself."
     short: Writing through the pointers swaps the real x and y.
     explain: "a and b hold x's and y's addresses, so `*a` and `*b` are x and y. The swap trades them: \"7 3\" and a newline. A reference version is simpler and can't be handed nullptr."
@@ -126,13 +123,12 @@ rounds:
     placeholder: type
     hints:
       - "It's a std::string, passed by reference."
-      - Add the promise not to change it.
-    short: "`const std::string&` reads without copying and accepts literals."
+    short: "`const std::string&`: no copy, no changes, accepts literals."
     explain: "`const std::string&` avoids a copy and forbids changes. It can also bind to the temporary string made from \"Begone, Wraith!\"; a plain `std::string&` couldn't."
   - id: w8.boss.r5
     type: predict
     tags: [ w8.ptr-arith ]
-    prompt: The Wraith walks an arrow backward. What does this print?
+    prompt: What does this print?
     code: |-
       #include <array>
       #include <iostream>
@@ -147,26 +143,25 @@ rounds:
     options:
       - t: |
           6 2
-        why: "Correct: --p moves to souls[2] (6); two more back is souls[0] (2)."
+        why: "Two back from 6 is souls[0], 2."
       - t: |
           8 4
-        why: "--p really moves p one element back first."
+        why: "--p moves p back one element first."
       - t: |
           5 3
-        why: Pointer arithmetic moves between elements; it doesn't subtract from values.
+        why: Pointer math moves between elements, not values.
       - t: |
           6 4
-        why: p - 2 from souls[2] is souls[0], not souls[1].
+        why: Two back lands on souls[0], not souls[1].
     answer: 0
     hints:
       - Where is p after --p?
-      - p - 2 counts elements, not bytes or values.
-    short: "p moves to souls[2] = 6; p - 2 is souls[0] = 2."
+    short: Pointer steps count whole elements, backward too.
     explain: "p starts at souls[3]. `--p` moves it to souls[2] (6). `*(p - 2)` reads souls[0] (2). Every step stayed inside the array; one more step back from souls[0] would be UB. Output: \"6 2\" and a newline."
   - id: w8.boss.r6
     type: speed
     tags: [ w8.pointer, w8.ref, w8.const-ptr, w8.nullptr ]
-    prompt: SPEED ROUND! The Wraith is swooping. Answer fast!
+    prompt: Speed round! Answer fast!
     seconds: 45
     items:
       - q: "What does *p mean in an expression?"
@@ -217,15 +212,14 @@ rounds:
         answer: 1
     hints:
       - "* follows, & takes an address."
-      - "Read const right to left."
-    short: "* follows, & takes an address; only pointers can be null."
+    short: "* follows, & takes an address. Only pointers can be null."
     explain: "In expressions, `*p` follows the pointer and `&x` gives an address. Only pointers can be null. `const int*` locks the target; `int* const` locks the pointer. Assigning through a reference changes the original."
   - id: w8.boss.r7
     type: bug
     tags: [ w8.dangling, w6.return ]
     bug: dangling-ref
     unsafe: true
-    prompt: The Wraith hides in a return statement. Tap the dangerous line, then pick the fix.
+    prompt: This returns a dangling reference. Tap the buggy line, then pick the fix.
     code: |-
       #include <iostream>
 
@@ -242,17 +236,16 @@ rounds:
     bugLine: 2
     options:
       - t: int summonHp() {
-        why: "Correct: return by value. The caller gets its own copy of 99; nothing dangles."
+        why: The caller gets its own copy of 99.
       - t: const int& summonHp() {
-        why: const doesn't extend a local's life. hp still dies at the }.
+        why: const doesn't save hp; it still dies at }.
       - t: int* summonHp() {
-        why: Returning a pointer to a local dangles just the same (and won't compile here).
+        why: Dangles the same, and won't compile here.
       - t: int&& summonHp() {
-        why: Still a reference to the dead local. Same bug, fancier spelling.
+        why: Still a reference to the dead local.
     answer: 0
     hints:
-      - hp lives only inside summonHp.
-      - What should the function hand back instead of a reference?
+      - Return a copy instead.
     short: Never return a reference to a local; return by value.
     explain: "hp is destroyed when summonHp returns, so the returned reference dangles, and reading wraith is UB. g++ warns: \"reference to local variable 'hp' returned\". Return `int` by value, and in main write `int wraith = summonHp();`."
     sideBySide:
@@ -285,7 +278,7 @@ rounds:
   - id: w8.boss.r8
     type: safe
     tags: [ w8.init-ptr, w8.nullcheck, w8.dangling ]
-    prompt: Safe or unsafe? Banish the Wraith's arrows. Go fast!
+    prompt: Safe or unsafe? Go fast!
     seconds: 30
     items:
       - code: |-
@@ -298,7 +291,7 @@ rounds:
           int* p;
           std::cout << *p;
         safe: false
-        why: "Uninitialized pointer: reading a garbage address is UB."
+        why: "Reads a garbage address: UB."
       - code: |-
           int* p = nullptr;
           if (p) {
@@ -330,7 +323,7 @@ rounds:
           const int& r = 5;
           std::cout << r;
         safe: true
-        why: A const reference directly bound to a temporary extends its lifetime.
+        why: A direct const reference keeps the temporary alive.
       - code: |-
           int x = 2;
           int* p = &x;
@@ -338,16 +331,16 @@ rounds:
         safe: false
         why: x wasn't made with new. Deleting it is UB.
     hints:
-      - Is every pointer set, checked, and pointing at something alive?
+      - Is each pointer set, checked, and alive?
       - "Never delete what you didn't new."
-    short: "Safe arrows are initialized, checked, and aimed at living things."
+    short: "Safe arrows: initialized, checked, aimed at living things."
     explain: "Initialize every pointer, check nullptr before following it, don't keep pointers to out-of-scope locals, and never delete what you didn't new. A const reference bound directly to a temporary keeps that temporary alive; that rule has limits (see the defense phase!)."
   - id: w8.boss.r9
     type: edge
     tags: [ w8.nullcheck, w3.validate ]
     bug: null-deref
     unsafe: true
-    prompt: "The player picks a target: 1 for the Knight, 2 for the Mage. Which inputs crash into the void? Select all."
+    prompt: "Valid choices are 1 and 2. Which choice values cause undefined behavior? Select all."
     code: |-
       int* target = (choice == 1) ? &knight
                   : (choice == 2) ? &mage
@@ -360,15 +353,14 @@ rounds:
       - t: "2"
         why: Targets the Mage. Safe.
       - t: "0"
-        why: "Exposes it: no match, target is nullptr, *target is UB."
+        why: No match, so *target follows nullptr.
       - t: "3"
-        why: "Exposes it: also falls through to nullptr."
+        why: Also falls through to nullptr.
       - t: "-1"
-        why: "Exposes it: negatives match nothing either."
+        why: Negatives match nothing either.
     answers: [ 2, 3, 4 ]
     hints:
       - Which choices leave target as nullptr?
-      - Test just outside the valid range, on both sides.
     short: Every choice other than 1 or 2 leaves target null.
     explain: "Any input that isn't 1 or 2 makes target nullptr, and the unchecked `*target` is UB. Good edge tests try both sides of the valid range. Fix: check `target == nullptr` before printing."
     sideBySide:
@@ -395,7 +387,7 @@ defense:
       type: harden
       tags: [ w8.nullcheck, w6.params ]
       bug: null-deref
-      prompt: "The Wraith calls heal(nullptr). Pick the first line of heal that blocks it."
+      prompt: "The Wraith calls heal(nullptr). Pick the line for the blank that blocks it."
       code: |-
         #include <iostream>
 
@@ -413,18 +405,17 @@ defense:
         }
       options:
         - t: "if (hp == nullptr) { return; }"
-          why: "Correct: leaves before following a null pointer. (Even better: take int& so null is impossible.)"
+          why: Leaves before following null.
         - t: "if (*hp == 0) { return; }"
-          why: The check itself dereferences hp. With nullptr, that's UB.
+          why: The check itself dereferences null. UB.
         - t: "if (hp != nullptr) { return; }"
-          why: "Inverted: skips every real hero and dereferences the null one."
+          why: "Inverted: skips real heroes, follows null."
         - t: hp = &hp[0];
-          why: That's still nullptr (and pointer math on null is UB). Nothing is fixed.
+          why: Still nullptr, and pointer math on null is UB.
       answer: 0
       hints:
         - Test the pointer before *hp.
-        - Leave the function early if there's nothing to heal.
-      short: Check for nullptr first, or take a reference so null can't happen.
+      short: Check nullptr first, or take int& so null is impossible.
       explain: "A pointer parameter accepts nullptr, so the function must check before `*hp`. When a missing hero never makes sense, `void heal(int& hp)` is better: the compiler rejects `heal(nullptr)` outright."
       sideBySide:
         unsafe: |-
@@ -461,7 +452,7 @@ defense:
       tags: [ w8.dangling, w6.return ]
       bug: dangling-pointer
       unsafe: true
-      prompt: "summon hands back an address that's already dead. Tap the dangerous line, then pick the fix."
+      prompt: "summon returns a dead local's address. Tap the buggy line, then pick the fix."
       code: |-
         #include <iostream>
 
@@ -478,17 +469,16 @@ defense:
       bugLine: 4
       options:
         - t: "Return by value: int summon() { ...; return minion; }"
-          why: "Correct: the caller gets its own copy, so there is no address to dangle."
+          why: The caller gets its own copy. Nothing dangles.
         - t: return &minion + 0;
           why: Same dead address, just disguised.
         - t: "Make it: int* m = nullptr; m = summon();"
           why: m still receives the dead address.
         - t: "Add: delete m; at the end of main"
-          why: UB twice over. minion was never made with new.
+          why: minion was never made with new. UB.
       answer: 0
       hints:
-        - minion dies when summon returns.
-        - Hand back the value itself, not where it used to live.
+        - Hand back the value, not its address.
       short: Return a local by value, never by address.
       explain: "minion lives on summon's stack frame, which is gone once summon returns. The returned pointer dangles; reading `*m` is UB. g++ -Wall warns: \"function returns address of local variable\". AddressSanitizer can catch the bad read at run time."
       sideBySide:
@@ -524,7 +514,7 @@ defense:
       id: w8.boss.d3
       type: harden
       tags: [ w8.init-ptr, w2.init ]
-      prompt: "The Wraith plants an uninitialized pointer. Pick the declaration that makes the check below meaningful."
+      prompt: "Pick the declaration that makes the nullptr check below actually work."
       code: |-
         ___;
         if (curse != nullptr) {
@@ -533,17 +523,16 @@ defense:
         std::cout << "Curse lifted\n";
       options:
         - t: int* curse = nullptr
-          why: "Correct: a known \"nowhere\" value, so the nullptr check actually works."
+          why: "A known \"nowhere\", so the check works."
         - t: int* curse
-          why: Garbage address. It's almost certainly not nullptr, so the check passes and writes to junk.
+          why: Garbage passes the check, then writes to junk.
         - t: int curse = 0
-          why: Not a pointer; comparing an int with nullptr and *curse won't compile.
+          why: Not a pointer; the later lines won't compile.
         - t: int& curse
-          why: A reference must be bound at once; this doesn't compile.
+          why: An unbound reference doesn't compile.
       answer: 0
       hints:
-        - A nullptr check only helps if the pointer starts at a known value.
-        - Initialize at birth.
+        - A check needs a known starting value.
       short: Initialize pointers to nullptr so null checks mean something.
       explain: "An uninitialized pointer holds leftover bits: not nullptr, not valid. A check like `curse != nullptr` can't save you from that. Always initialize: `int* curse = nullptr;` or point it at a real object right away."
       sideBySide:
@@ -566,7 +555,7 @@ defense:
       tags: [ w8.dangling, w8.constref ]
       bug: dangling-ref
       unsafe: true
-      prompt: "UNSAFE: std::max returns a reference to the bigger argument. Which hit value leaves `best` dangling?"
+      prompt: "std::max returns a reference to the bigger argument. Which hit value leaves `best` dangling?"
       code: |-
         #include <algorithm>
 
@@ -575,18 +564,18 @@ defense:
       prelude: int hit{3};
       options:
         - t: "3"
-          why: "Correct: 10 wins, and best refers to the temporary 10, which dies at the ;."
+          why: 10 wins; that temporary dies at the ;.
         - t: "15"
-          why: hit wins, so best refers to hit, which is still alive.
+          why: best refers to hit, which is alive.
         - t: "10"
-          why: "A tie: std::max returns its first argument, hit. Still alive."
+          why: "A tie returns the first argument, hit."
         - t: "12"
-          why: hit wins again. best names a living variable.
+          why: hit wins; best names a living variable.
       answer: 0
       hints:
         - "Which argument is a temporary?"
-        - When does a temporary inside a full expression die?
-      short: A reference to a temporary returned from a function dangles after the ;.
+        - When does that temporary die?
+      short: A reference to a returned temporary dangles after the ;.
       explain: "The literal 10 becomes a temporary that lives only until the end of the statement. When 10 is bigger, std::max returns a reference to that temporary, so best dangles. Lifetime extension only applies when a const reference binds DIRECTLY to a temporary, not through a function's return. GCC 13 warns with -Wdangling-reference. Fix: store a copy, `int best = std::max(hit, 10);`."
       sideBySide:
         unsafe: |-
@@ -600,7 +589,7 @@ defense:
           int best = std::max(hit, 10);   // a copy: always safe
           std::cout << best << '\n';
         prelude: int hit{3};
-victory: "Nooo... my arrows... all checked... I fade... to... nullptr..."
+victory: "Nooo... all checked... I fade... to... nullptr..."
 reward:
   xp: 250
   cosmetic: pointer-goggles

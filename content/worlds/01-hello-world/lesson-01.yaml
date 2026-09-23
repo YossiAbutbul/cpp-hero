@@ -6,7 +6,7 @@ skill: structure
 shield: false
 concept:
   short: Every C++ program starts running at the first line inside main(), and statements end with ;.
-  analogy: "A program is like a recipe card: tools listed at the top, cooking starts at **main**."
+  analogy: "A program is a recipe card: tools at the top, cooking starts at **main**."
   body:
     - Every program has exactly one `main()`. Execution starts at the first line inside its braces `{ }` and runs down, statement by statement.
     - Most statements end with a semicolon `;`, like a full stop. The braces group the statements that belong to `main()`.
@@ -42,7 +42,7 @@ challenges:
       - t: At the very first line of the file
         why: "Those are usually #include lines, handled while building, not run as steps."
       - t: At the first statement inside main()
-        why: Correct! main() is every program's one starting point.
+        why: main() is every program's one starting point.
       - t: At whichever function is written last
         why: File order doesn't matter. main() is the start, wherever it is.
       - t: At the line with return 0;
@@ -56,7 +56,7 @@ challenges:
   - id: w1.l1.c2
     type: predict
     tags: [ w1.cout, w1.main ]
-    prompt: What exactly does this program print?
+    prompt: What does this print? (↵ marks a new line.)
     code: |-
       #include <iostream>
 
@@ -75,14 +75,14 @@ challenges:
         why: No space appears unless it's inside the quotes.
       - t: |
           Hi!
-        why: Correct! "Hi", then "!", then the newline.
+        why: '"Hi", then "!", then the newline.'
       - t: Hi!
         why: "The \\n at the end really is printed: it ends the line."
     answer: 2
     hints:
       - Two cout statements still share one line unless \n says otherwise.
       - Glue the two strings together exactly, including the \n.
-    short: "cout prints exactly what you give it: no extra spaces or line breaks."
+    short: cout adds no spaces or line breaks of its own.
     explain: "cout prints exactly what you give it, in order: \"Hi\", then \"!\", then a newline. Splitting text across two statements doesn't add spaces or line breaks."
   - id: w1.l1.c3
     type: order
@@ -123,7 +123,7 @@ challenges:
   - id: w1.l1.c5
     type: bug
     tags: [ w1.main, w1.compile ]
-    prompt: This program does NOT compile (intentionally broken). Tap the buggy line, then pick the fix.
+    prompt: This program does NOT compile. Tap the buggy line, then pick the fix.
     code: |-
       #include <iostream>
 
@@ -136,9 +136,9 @@ challenges:
     bugLine: 3
     options:
       - t: Add ; at the end of the std::cout line
-        why: Correct! Without it, the compiler reads straight into return 0.
+        why: Without it, the compiler reads straight into return 0.
       - t: Add another ; after return 0;
-        why: return 0; is already fine. The missing ; is on the line above.
+        why: return 0; is fine. The missing ; is one line above.
       - t: "Remove the #include line"
         why: Then std::cout is unknown too. Worse, not better.
       - t: Change \n to std::endl
@@ -148,7 +148,7 @@ challenges:
     hints:
       - Look at the end of each statement inside main().
       - One line is missing its full stop.
-    short: Missing ; on the cout line. Errors often point at the next line.
+    short: The cout line lacks its ;. Errors often flag the next line.
     explain: The std::cout line is missing its ;. The compiler usually reports this at the end of that line, or at the start of the next one ("expected ';' before 'return'"). When an error points at a line that looks fine, check the line above it.
     sideBySide:
       unsafe: |-
@@ -165,7 +165,7 @@ challenges:
       prelude: "#include <iostream>"
 recap:
   - Programs start at the first line inside main().
-  - Statements end with ; and main lives in { }.
+  - Statements end with ;, like a full stop.
   - "C++ is case-sensitive: main is not Main."
   - return 0; means success.
 vault:

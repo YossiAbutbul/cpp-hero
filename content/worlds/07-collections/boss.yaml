@@ -4,7 +4,7 @@ id: w7.boss
 name: The Overflow Blob
 art: blob
 hp: 8
-intro: Blorp! I ooze past the end of every array. Go on, index me!
+intro: Blorp! I ooze past the end of every array. Index me!
 taunt:
   - Read v[v.size()]. It's only ONE more. Blorp.
   - Your vector is empty? Call front() anyway!
@@ -29,21 +29,21 @@ rounds:
     options:
       - t: |
           4 12
-        why: "Correct: v becomes [2, 4, 6], then [2, 4, 6, 12]."
+        why: "6, then 6 * 2 = 12."
       - t: |
           4 8
-        why: "When the second push_back runs, back() is already 6, so it pushes 12."
+        why: "back() is already 6."
       - t: |
           2 12
-        why: Both push_backs grow the vector. The size is 4.
+        why: Both pushes grow v.
       - t: |
           3 12
-        why: Count again. 2 elements plus 2 pushes is 4.
+        why: 2 plus 2 pushes is 4.
     answer: 0
     hints:
-      - Track the vector after each push_back.
-      - back() is whatever is last at that moment.
-    short: "[2, 4] becomes [2, 4, 6, 12]: size 4, back 12."
+      - Track v after each push.
+      - back() is last at that moment.
+    short: "[2, 4] becomes [2, 4, 6, 12]."
     explain: "First push: v[0] + v[1] = 6, so [2, 4, 6]. Second push: back() is 6, times 2 is 12, so [2, 4, 6, 12]. Output: \"4 12\" and a newline."
   - id: w7.boss.r2
     type: mcq
@@ -51,23 +51,23 @@ rounds:
     prompt: "What is `v.size()` after `std::vector<int> v{3};`?"
     options:
       - t: "1"
-        why: "Correct: braces list the values, so v holds one element, 3."
+        why: "Braces list values: one 3."
       - t: "3"
-        why: "That's std::vector<int> v(3); with parentheses: three 0s."
+        why: "That's v(3): three 0s."
       - t: "0"
-        why: The braces aren't empty. They hold one value.
+        why: The braces hold one value.
       - t: Compile error
-        why: "It's perfectly valid. It just doesn't mean \"three elements\"."
+        why: It's valid code.
     answer: 0
     hints:
       - Braces or parentheses?
-      - "{3} is a list with one value in it."
-    short: "v{3} holds one element (3); v(3) holds three 0s."
+      - "{3} lists one value."
+    short: "v{3} is one 3; v(3) is three 0s."
     explain: "With braces, the values are a list: `v{3}` is [3], size 1. Parentheses call the count constructor: `v(3)` is [0, 0, 0], size 3."
   - id: w7.boss.r3
     type: predict
     tags: [ w7.ref-loop, w7.range-for, w7.string-append ]
-    prompt: One loop by reference, one by value. What does this print?
+    prompt: What does this print?
     code: |-
       #include <iostream>
       #include <string>
@@ -87,21 +87,21 @@ rounds:
     options:
       - t: |
           ana!bo!
-        why: "Correct: the & loop changes the real strings; the copy loop only changes copies."
+        why: "! sticks; ? hits copies."
       - t: |
           ??
-        why: "The second loop takes copies (std::string n), so the ? never reaches names."
+        why: "The ? loop uses copies."
       - t: |
           anabo
-        why: "The first loop uses std::string&, so the ! sticks."
+        why: "The & loop makes ! stick."
       - t: |
           ana! bo!
-        why: Nothing prints a space between the two names.
+        why: No space is printed.
     answer: 0
     hints:
       - Which loop has an &?
-      - Changing a copy never changes the vector.
-    short: "The & loop adds ! for real; the copy loop changes nothing."
+      - Copies never change the vector.
+    short: "Only the & loop changes names."
     explain: "`std::string& n` refers to each element, so += \"!\" changes names to [\"ana!\", \"bo!\"]. `std::string n` is a copy each pass, so = \"?\" is thrown away. Output: \"ana!bo!\" and a newline."
   - id: w7.boss.r4
     type: predict
@@ -120,26 +120,26 @@ rounds:
     options:
       - t: |
           5 up level
-        why: "Correct: '-' is at index 5; after it is \"up\", before it is \"level\"."
+        why: "Dash at 5, split around it."
       - t: |
           6 up level
-        why: "Count from 0: l0 e1 v2 e3 l4 -5."
+        why: "Count from 0: dash is at 5."
       - t: |
           5 -up level
-        why: "substr(d + 1) starts AFTER the dash."
+        why: "d + 1 skips the dash."
       - t: |
           5 up level-
-        why: "substr(0, d) takes d chars (5), which stops before the dash."
+        why: "5 chars stop before the dash."
     answer: 0
     hints:
       - "l-e-v-e-l is indexes 0 to 4."
-      - substr(0, d) takes exactly d chars.
-    short: "'-' is at index 5: after it \"up\", before it \"level\"."
+      - substr(0, d) takes d chars.
+    short: "find gives 5; substr splits around it."
     explain: "find('-') returns 5. substr(6) is \"up\", substr(0, 5) is \"level\". Output: \"5 up level\" and a newline. (Here the dash exists; in real code, check find against npos first!)"
   - id: w7.boss.r5
     type: fill
     tags: [ w7.npos, w7.find ]
-    prompt: "Only print the domain when an @ really exists. Fill in the blank."
+    prompt: "Fill in the blank so the domain prints only when an @ exists."
     code: |-
       #include <iostream>
       #include <string>
@@ -156,14 +156,14 @@ rounds:
       - npos
     placeholder: constant
     hints:
-      - The special "not found" value.
-      - It lives inside std::string.
-    short: "at != std::string::npos means the @ was found."
+      - The "not found" value.
+      - Starts with n.
+    short: "!= npos means found."
     explain: "find returns std::string::npos when there's no match. Only when `at != std::string::npos` is `at + 1` a real position. Without the check, npos + 1 wraps to 0 and you'd print the whole string as the domain."
   - id: w7.boss.r6
     type: speed
     tags: [ w7.std-array, w7.size, w7.string-compare, w7.at, w7.npos, w7.ref-loop ]
-    prompt: SPEED ROUND! The Blob is bubbling over. Answer fast!
+    prompt: SPEED ROUND! Answer fast!
     seconds: 45
     items:
       - q: "Valid indexes of std::array<int, 4>?"
@@ -179,7 +179,7 @@ rounds:
           - "6"
           - "4"
         answer: 0
-      - q: What does this print?
+      - q: Uppercase sorts before lowercase. What does this print?
         code: std::cout << (std::string{"Zeta"} < std::string{"alpha"});
         options:
           - "1"
@@ -221,14 +221,14 @@ rounds:
           - "for (const int& x : v)"
         answer: 1
     hints:
-      - "Indexes start at 0; uppercase sorts before lowercase."
-      - "Unchecked [] vs checked .at(); & means the real element."
-    short: "Zero-based indexes, size_t sizes, npos for not found, & to modify."
+      - "Indexes start at 0; uppercase sorts first."
+      - "[] is unchecked; & means the real element."
+    short: "0-based, size_t, npos, & to modify."
     explain: "std::array<int, 4> has indexes 0 to 3; \"brace\" has 5 chars; 'Z' (90) is less than 'a' (97), so \"Zeta\" < \"alpha\" is true (1); clear() empties the vector; .at() checks; size() is std::size_t; no match is npos; int& changes elements."
   - id: w7.boss.r7
     type: safe
     tags: [ w7.bounds, w7.empty, w7.invalidation, w7.substr ]
-    prompt: Safe or unsafe? The Blob splits into tiny blobs. Pop them fast!
+    prompt: Safe or unsafe? Pop the tiny blobs fast!
     seconds: 30
     items:
       - code: |-
@@ -237,37 +237,37 @@ rounds:
           std::array<int, 3> a{};
           int x = a.at(2);
         safe: true
-        why: Index 2 is the last valid slot of a 3-element array.
+        why: 2 is the last valid slot.
       - code: |-
           #include <vector>
 
           std::vector<int> v;
           v.pop_back();
         safe: false
-        why: pop_back on an empty vector is UB.
+        why: pop_back on empty is UB.
       - code: |-
           std::string s{"abc"};
           std::cout << s.substr(1, 50);
         safe: true
-        why: "Too long a length is fine: substr stops at the end. Prints \"bc\"."
+        why: "Long lengths stop at the end."
       - code: |-
           std::string s{"abc"};
           std::cout << s.substr(5);
         safe: false
-        why: Start 5 is past the end (size 3), so substr throws std::out_of_range.
+        why: Start 5 is past the end.
       - code: |-
           for (char& c : s) {
               c = 'x';
           }
         prelude: std::string s{"abc"};
         safe: true
-        why: Range-for can't go out of bounds, and char& changes each char.
+        why: Range-for stays in bounds.
       - code: |-
           int i{-1};
           std::cout << s[i];
         prelude: std::string s{"abc"};
         safe: false
-        why: "-1 converts to a gigantic std::size_t: far out of bounds. UB."
+        why: "-1 becomes a gigantic index."
       - code: |-
           #include <vector>
 
@@ -276,7 +276,7 @@ rounds:
               std::cout << v.back();
           }
         safe: true
-        why: back() only runs on a non-empty vector.
+        why: Checked for empty first.
       - code: |-
           #include <vector>
 
@@ -285,18 +285,18 @@ rounds:
           v.push_back(2);
           std::cout << r;
         safe: false
-        why: const doesn't stop reallocation. r may dangle after push_back.
+        why: r may dangle after push_back.
     hints:
-      - Watch for empty collections and indexes past size().
-      - A reference held across push_back is a trap.
-    short: Safe code checks empty, stays below size(), and drops references before push_back.
+      - Empty? Index past size()?
+      - References across push_back?
+    short: Check empty, stay below size().
     explain: "The unsafe ones: pop_back on empty (UB), substr starting past the end (throws), index -1 (becomes huge: UB), and a reference held across push_back (may dangle: UB). A length past the end is fine for substr: it just stops at the end."
   - id: w7.boss.r8
     type: bug
     tags: [ w7.bounds, w5.signed-unsigned, w5.offbyone ]
     bug: out-of-bounds
     unsafe: true
-    prompt: "UNSAFE: the vector is empty, and this loop still runs almost forever. Tap the buggy line, then pick the fix."
+    prompt: "UNSAFE: on an empty vector this loop runs almost forever. Tap the buggy line, pick the fix."
     code: |-
       #include <iostream>
       #include <vector>
@@ -311,19 +311,19 @@ rounds:
     bugLine: 5
     options:
       - t: for (std::size_t i = 0; i < scores.size(); ++i) {
-        why: "Correct: 0 < 0 is false, so an empty vector runs zero times."
+        why: "Empty runs zero times."
       - t: for (int i = 0; i <= scores.size() - 1; ++i) {
-        why: size() - 1 is still unsigned and still wraps. Now with a sign-compare warning too.
+        why: "size() minus 1 still wraps."
       - t: for (std::size_t i = 1; i <= scores.size(); ++i) {
-        why: "Skips scores[0], and on a full vector reads scores[size()], past the end."
+        why: "Reads scores[size()]."
       - t: for (std::size_t i = 0; i <= scores.size(); ++i) {
-        why: "Empty: runs once and reads scores[0], which doesn't exist."
+        why: "Empty still reads scores[0]."
     answer: 0
     hints:
-      - What is 0 - 1 for an unsigned std::size_t?
-      - Compare with size() directly, using <.
-    short: "size() - 1 wraps on empty. Use i < size() instead."
-    explain: "size() is unsigned, so on an empty vector 0 - 1 wraps to the largest std::size_t. The loop tries to read billions of elements that don't exist: undefined behavior (likely a crash, but not guaranteed). `i < scores.size()` needs no subtraction and handles empty correctly."
+      - Unsigned 0 minus 1 is what?
+      - Use < size() directly.
+    short: "Empty size() minus 1 wraps huge."
+    explain: "size() is unsigned, so on an empty vector 0 - 1 wraps to the largest std::size_t. The loop tries to read billions of elements that don't exist: undefined behavior (likely a crash, but not guaranteed). `i < scores.size()` needs no subtraction and handles empty correctly. Switching to `int i` doesn't help: `size() - 1` is computed unsigned before the compare, and you get a sign-compare warning too."
     sideBySide:
       unsafe: |-
         #include <vector>
@@ -344,7 +344,7 @@ rounds:
     tags: [ w7.bounds, w6.params, w5.signed-unsigned ]
     bug: out-of-bounds
     unsafe: true
-    prompt: "UNSAFE: doubled() trusts its slot. Which calls expose out-of-bounds access? Select all."
+    prompt: "UNSAFE: doubled() trusts its slot. Which calls read out of bounds? Select all."
     code: |-
       #include <iostream>
       #include <vector>
@@ -360,21 +360,21 @@ rounds:
       }
     options:
       - t: "v = {4, 5}, slot = 1"
-        why: "Fine: slot 1 exists, returns 10."
+        why: "Fine: returns 10."
       - t: "v = {4, 5}, slot = 2"
-        why: "Exposes it: slot 2 equals size(), one past the end."
+        why: "Slot 2 is past the end."
       - t: "v = {4, 5}, slot = -1"
-        why: "Exposes it: -1 becomes a gigantic std::size_t."
+        why: "-1 becomes gigantic."
       - t: "v = {}, slot = 0"
-        why: "Exposes it: an empty vector has no slot 0."
+        why: "Empty has no slot 0."
       - t: "v = {7}, slot = 0"
-        why: "Fine: the only element, returns 14."
+        why: "Fine: returns 14."
     answers: [ 1, 2, 3 ]
     hints:
-      - "Test both ends: too big, negative, and empty."
-      - Valid slots are 0 to size() - 1.
-    short: "Test slot == size(), negative slots and empty vectors."
-    explain: "Good edge tests hit every boundary: one past the end (slot == size()), negative (becomes huge), and the empty vector. All three are undefined behavior with []. Validate the parameter first (World 6), or use .at()."
+      - "Too big, negative, empty."
+      - size() is past the end.
+    short: "Test size(), negatives and empty."
+    explain: "Good edge tests hit every boundary: one past the end (slot == size()), negative (becomes huge), and the empty vector. All three are undefined behavior with []. Valid slots are 0 to size() minus 1. Validate the parameter first (World 6), or use .at()."
     sideBySide:
       unsafe: |-
         #include <vector>
@@ -398,7 +398,7 @@ defense:
       tags: [ w7.bounds, w5.signed-unsigned, w3.validate ]
       bug: out-of-bounds
       unsafe: true
-      prompt: "UNSAFE: this checks bad text and slots that are too big. Which input still breaks it?"
+      prompt: "UNSAFE: this rejects bad text and slots too big. Which input still breaks it?"
       code: |-
         #include <iostream>
         #include <vector>
@@ -415,9 +415,9 @@ defense:
         }
       options:
         - t: "-1"
-          why: "Correct: -1 passes both checks, then becomes a gigantic index. UB."
+          why: "Passes both checks, becomes huge."
         - t: "2"
-          why: The last valid slot. Prints 60.
+          why: Valid. Prints 60.
         - t: "3"
           why: "Caught: 3 >= 3."
         - t: abc
@@ -425,8 +425,8 @@ defense:
       answer: 0
       hints:
         - Which bad index isn't too BIG?
-        - What happens to -1 when it becomes a std::size_t?
-      short: "-1 slips past a size-only check and becomes a huge index."
+        - What does -1 become unsigned?
+      short: "Reject negatives too."
       explain: "The check only rejects slots that are too big. -1 is smaller than 3, so it passes, and static_cast<std::size_t>(-1) is the largest std::size_t: hp[that] is far out of bounds. Reject negatives too."
       sideBySide:
         unsafe: |-
@@ -454,7 +454,7 @@ defense:
       id: w7.boss.d2
       type: harden
       tags: [ w7.empty, w7.front-back, w4.guard ]
-      prompt: "The Blob sends zero scores. Pick the guard that protects front()."
+      prompt: "Zero scores arrive. Pick the condition that stops front() on empty."
       code: |-
         #include <iostream>
         #include <vector>
@@ -474,18 +474,18 @@ defense:
         }
       options:
         - t: scores.empty()
-          why: "Correct: stops before front() ever touches an empty vector."
+          why: Bails out before front().
         - t: "!scores.empty()"
-          why: "Inverted: rejects real scores and lets the empty vector through."
+          why: "Inverted: lets empty through."
         - t: scores.front() == 0
-          why: Calls front() to check, which is already UB on an empty vector.
+          why: That front() is already UB.
         - t: scores.size() < 0
-          why: std::size_t can't be negative. Always false.
+          why: Always false for size_t.
       answer: 0
       hints:
-        - Ask the vector, don't touch its elements.
-        - There's a member function that answers "is it empty?".
-      short: "Check scores.empty() before calling front()."
+        - Don't touch the elements.
+        - "Is it empty?"
+      short: "Check empty() before front()."
       explain: "front() on an empty vector is undefined behavior: it may print garbage or crash. empty() is always safe to call. Check it first, and bail out with a clear message."
       sideBySide:
         unsafe: |-
@@ -510,7 +510,7 @@ defense:
       tags: [ w7.npos, w7.find, w3.getline ]
       bug: out-of-bounds
       unsafe: true
-      prompt: "UNSAFE: this turns \"hp:5\" into \"hp=5\". The Blob types `hp5`, with no colon. Tap the buggy line, then pick the fix."
+      prompt: "UNSAFE: turns \"hp:5\" into \"hp=5\", but breaks on `hp5`. Tap the buggy line, pick the fix."
       code: |-
         #include <iostream>
         #include <string>
@@ -526,19 +526,19 @@ defense:
       bugLine: 7
       options:
         - t: "if (colon != std::string::npos) { cmd[colon] = '='; }"
-          why: "Correct: only writes when a colon was really found."
+          why: Only writes when found.
         - t: "if (colon >= 0) { cmd[colon] = '='; }"
-          why: std::size_t is always >= 0, so npos still gets through.
+          why: Always true. npos gets through.
         - t: "cmd.at(colon) = '=';"
-          why: Throws instead of UB, which is better, but uncaught it still stops the program.
+          why: Throws, and stops the program.
         - t: "if (colon) { cmd[colon] = '='; }"
-          why: "npos counts as true, and a colon at index 0 counts as false. Backwards."
+          why: "Backwards for npos and 0."
       answer: 0
       hints:
         - What does find return for hp5?
-        - Check against the "not found" value first.
-      short: "Check colon != std::string::npos before using it as an index."
-      explain: "With no colon, find returns npos, the largest std::size_t. `cmd[npos]` writes far outside the string: undefined behavior that might corrupt memory silently. Compare with npos first, then use the index."
+        - Check for "not found" first.
+      short: "Check npos before indexing."
+      explain: "With no colon, find returns npos, the largest std::size_t. `cmd[npos]` writes far outside the string: undefined behavior that might corrupt memory silently. Compare with npos first, then use the index. `.at()` would throw std::out_of_range instead, which is better than UB, but uncaught it still stops the program."
       sideBySide:
         unsafe: |-
           std::size_t colon = cmd.find(':');
@@ -558,7 +558,7 @@ defense:
       type: harden
       tags: [ w7.invalidation, w7.reserve ]
       bug: iterator-invalidation
-      prompt: "The Blob pushes while you hold a reference to gold[0]. Pick the call that keeps `first` valid."
+      prompt: "Pick the call that keeps `first` valid through the push_back."
       code: |-
         #include <iostream>
         #include <vector>
@@ -574,19 +574,19 @@ defense:
         }
       options:
         - t: reserve(2)
-          why: "Correct: room for 2 up front, so the push_back can't reallocate and first stays valid."
+          why: "Room for 2: no reallocation."
         - t: resize(2)
-          why: Makes the size 2 (adds a 0). The push_back then needs a third slot and may reallocate.
+          why: Push needs a third slot.
         - t: shrink_to_fit()
-          why: Asks to drop spare room, making reallocation on push_back even more likely.
+          why: Makes reallocation MORE likely.
         - t: clear()
-          why: Empties the vector, so gold[0] on the next line is already UB.
+          why: Then gold[0] is UB.
       answer: 0
       hints:
-        - Reallocation happens when the size passes the capacity.
-        - Ask for enough room BEFORE taking the reference.
-      short: "reserve(2) first: no reallocation, so the reference stays valid."
-      explain: "After `reserve(2)`, no reallocation happens until the size passes 2, so `first` stays valid through one push_back and the program prints \"15 20\". Even simpler: skip the reference and write `gold[0] += 5;` after pushing. Indexes never dangle."
+        - It moves when out of room.
+        - Ask for room BEFORE taking the reference.
+      short: "reserve first, and the reference stays valid."
+      explain: "After `reserve(2)`, no reallocation happens until the size passes 2, so `first` stays valid through one push_back and the program prints \"15 20\". `resize(2)` adds a 0 and makes the size 2, so the push_back needs a third slot and may reallocate. Even simpler: skip the reference and write `gold[0] += 5;` after pushing. Indexes never dangle."
       sideBySide:
         unsafe: |-
           #include <vector>
@@ -603,7 +603,7 @@ defense:
           int& first = gold[0];
           gold.push_back(20);
           first += 5;
-victory: Blorp... squeezed... back in bounds. The Blob shrinks into a tidy, bounded puddle.
+victory: Blorp... squeezed... back in bounds. Just a tidy puddle now.
 reward:
   xp: 225
   cosmetic: shield-bounds

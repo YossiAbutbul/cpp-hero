@@ -7,12 +7,12 @@ icon: list
 blurb: "Keep many values in one place: arrays, vectors and strings, looped over without ever stepping off the end."
 story:
   intro:
-    - The Scope Sentinel is gone, and every function returns home!
-    - But the Codebase's storage shelves are a total mess.
-    - "Let's line values up in {collections} and never step off the end!"
+    - The Scope Sentinel is gone. Every function returns home!
+    - But the Codebase's storage shelves are a mess.
+    - "Line values up in {collections}, and never step off the end!"
   bossIntro:
-    - Something is oozing past the end of the shelf... the Overflow Blob!
-    - It feeds on bad indexes. Check every bound, hero!
+    - Something oozes past the end of the shelf... the Overflow Blob!
+    - It feeds on bad indexes. Check every bound!
   victory:
-    - The Blob squished back inside its bounds! Every shelf is tidy again. {:D}
+    - The Blob squished back inside its bounds! {:D}
     - But what are those arrows in World 8, pointing at nothing?

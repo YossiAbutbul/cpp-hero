@@ -6,7 +6,7 @@ skill: logic
 shield: false
 concept:
   short: "while (condition) { body } repeats the body as long as the condition stays true."
-  analogy: "A while loop is a guard at a gate: before every lap it asks \"still true?\" and waves you round again."
+  analogy: "A guard at a gate asks \"still true?\" before every lap."
   body:
     - "`while (condition) { ... }` checks the condition **first**. If it's true, the body runs, then C++ jumps back and checks again. The moment it's false, execution continues after the closing `}`."
     - "If the condition is false the very first time, the body runs **zero** times."
@@ -106,16 +106,16 @@ challenges:
     options:
       - t: |
           27
-        why: "Correct: 1 → 3 → 9 → 27. Then 27 < 20 is false, so the loop stops."
+        why: "n goes 1, 3, 9, 27; then the check fails."
       - t: |
           9
         why: 9 < 20 is still true, so the body runs once more.
       - t: |
           20
-        why: The condition only decides when to stop; n never lands exactly on 20.
+        why: n jumps from 9 to 27 and never equals 20.
       - t: |
           81
-        why: The loop stops as soon as n reaches 27; the condition is checked first.
+        why: 27 < 20 is false, so there is no lap after 27.
     answer: 0
     hints:
       - Write down n after each lap.
@@ -134,7 +134,7 @@ challenges:
       }
     options:
       - t: Zero times
-        why: "Correct: 10 < 5 is false on the very first check, so the body is skipped."
+        why: 10 < 5 is false on the very first check.
       - t: Once
         why: That's a do-while. A while loop checks before the first lap.
       - t: Five times
@@ -167,14 +167,14 @@ challenges:
     hints:
       - Keep going while there's still something to count.
       - The last number printed is 1, so stop once count hits 0.
-    short: count > 0 keeps looping for 3, 2, 1 and stops at 0.
+    short: "count > 0 loops for 3, 2, 1 and stops at 0."
     explain: "count > 0 is true for 3, 2 and 1, so those print. After --count makes it 0, the check fails and Liftoff! prints. (count >= 1 works too.)"
   - id: w5.l1.c4
     type: bug
     tags: [ w5.infinite, w5.counter, w1.warnings ]
     bug: infinite-loop
     unsafe: true
-    prompt: "UNSAFE: this should count down 3 lives, then stop. It never stops. Tap the buggy line, then pick the fix."
+    prompt: "UNSAFE: this countdown never stops. Tap the buggy line, then pick the fix."
     code: |-
       int lives{3};
       while (lives > 0) {
@@ -185,18 +185,18 @@ challenges:
     bugLine: 3
     options:
       - t: --lives;
-        why: "Correct: lives really goes down each lap, so lives > 0 eventually becomes false."
+        why: lives really drops each lap, so lives > 0 turns false.
       - t: lives = 1;
         why: lives is stuck at 1, and 1 > 0 stays true forever.
       - t: ++lives;
-        why: "Wrong direction: lives grows away from 0, so the loop never ends."
+        why: lives grows away from 0, so the loop never ends.
       - t: lives + 1;
         why: Same problem as before. It computes a value and throws it away.
     answer: 0
     hints:
-      - Does lives - 1 actually change lives?
+      - Does `lives - 1` actually change lives?
       - The value must be stored back, or use --.
-    short: "lives - 1 computes a value but never stores it. Use --lives."
+    short: "`lives - 1` never stores its result. Use `--lives`."
     explain: "`lives - 1;` calculates 2 and throws it away: lives stays 3 and the loop spins forever. g++ even warns \"statement has no effect\" with -Wall. `--lives;` (or `lives -= 1;`) changes the variable, moving the loop toward its exit."
     sideBySide:
       unsafe: |-
@@ -230,7 +230,7 @@ challenges:
   - id: w5.l1.c6
     type: predict
     tags: [ w5.counter, w5.accum ]
-    prompt: What does this print? (Watch where i ends up.)
+    prompt: What does this print? (It shows i, then total.)
     code: |-
       #include <iostream>
 
@@ -247,27 +247,27 @@ challenges:
     options:
       - t: |
           4 60
-        why: "Correct: 10 + 20 + 30 = 60, and i stops at 4, the first value failing i <= 3."
+        why: "10 + 20 + 30 = 60, and i ends at 4."
       - t: |
           3 60
-        why: If i were 3, i <= 3 would still be true. The loop ends only when i is 4.
+        why: At i = 3, i <= 3 is still true.
       - t: |
           4 100
-        why: The body doesn't run for i = 4; the check fails first. So no + 40.
+        why: The body never runs for i = 4, so no extra 40.
       - t: |
           3 30
-        why: total adds 10, 20 AND 30, and i ends one past the last lap.
+        why: total adds 10, 20 and 30, not just 30.
     answer: 0
     hints:
       - Which value of i makes i <= 3 false?
       - "Add up only the laps that run: i = 1, 2, 3."
-    short: "Laps for i = 1, 2, 3 add 60; i ends at 4."
+    short: "Laps i = 1, 2, 3 add 60; i ends at 4."
     explain: "Laps run for i = 1, 2, 3, adding 10, 20, 30: total is 60. Then ++i makes i 4, 4 <= 3 is false, and the loop ends with i still 4. Output: \"4 60\" and a newline."
 recap:
   - while checks the condition before every lap.
-  - A false condition at the start means zero laps.
-  - Every lap must move the counter toward the exit.
-  - Start accumulators at a known value before the loop.
+  - False at the start means zero laps.
+  - Every lap moves the counter toward exit.
+  - Start accumulators at a known value.
 vault:
   - id: w5.while
     title: The while loop

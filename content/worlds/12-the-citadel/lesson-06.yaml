@@ -5,8 +5,8 @@ title: "Shield: Hunt UB before it hunts you"
 skill: defense
 shield: true
 concept:
-  short: "UB can pass every test and still be wrong. Test edge cases, and let warnings and sanitizers hunt."
-  analogy: "UB is a cracked wall painted to look solid: it holds until the day it doesn't."
+  short: "UB can pass every test and still be wrong. Test edges; let sanitizers hunt."
+  analogy: "UB is a cracked wall painted solid: it holds until it doesn't."
   body:
     - "**Undefined behavior** means the C++ rules say nothing about what happens. The usual sources: reading out of bounds (`v[v.size()]`, `back()` on an empty vector), reading uninitialized variables, **signed overflow**, dividing by zero, following null or dangling pointers, using an iterator or pointer after `push_back` reallocated, `*opt` on an empty optional, and falling off the end of a non-void function."
     - "**\"It seemed to work\" proves nothing.** The compiler is allowed to assume UB never happens, so the optimizer may delete your later checks or reorder code. The same bug can print the right answer in a debug build, garbage with `-O2`, and crash on a friend's compiler next month. UB doesn't guarantee a crash, which is exactly what makes it dangerous."
@@ -79,7 +79,7 @@ challenges:
   - id: w12.l6.c1
     type: safe
     tags: [ w12.ub ]
-    prompt: Safe or UB? The Hydra's heads are snapping. Go fast!
+    prompt: Is each snippet safe, or undefined behavior (UB)? Go fast!
     seconds: 35
     items:
       - code: |-
@@ -157,7 +157,7 @@ challenges:
     answers: [ 0, 1 ]
     hints:
       - What is v.size() for an empty vector?
-      - Can the sum of two valid ints be too big for an int?
+      - Can two valid ints add up to more than INT_MAX?
     short: "Test empty and huge inputs: division by zero and overflow hide there."
     explain: "Two classic edge cases: the empty input (divide by zero) and values near INT_MAX (the running sum overflows). Neither shows up with \"normal\" test data. Return std::optional for empty input and sum in a long long."
     sideBySide:
@@ -184,7 +184,7 @@ challenges:
     type: review
     tags: [ w12.ub, w7.bounds ]
     unsafe: true
-    prompt: "UNSAFE: this printed 30 on your machine. Tap every line with undefined behavior anyway."
+    prompt: "UNSAFE: this printed 30 on your machine, by luck. Tap every line with undefined behavior."
     code: |-
       std::vector<int> hp{10, 20, 30};
       int total;
@@ -233,13 +233,13 @@ challenges:
     prompt: Which build flag makes signed overflow stop the program with a report at run time?
     options:
       - t: -fsanitize=undefined
-        why: "Correct: UBSan instruments arithmetic, shifts, divisions and more, and reports UB as it happens."
+        why: UBSan checks arithmetic as it runs and reports overflow.
       - t: -Werror
         why: It turns compile-time warnings into errors. It doesn't watch the running program.
       - t: -fsanitize=address
-        why: ASan hunts memory errors (out of bounds, use-after-free, leaks), not arithmetic overflow.
+        why: ASan hunts memory errors, not arithmetic overflow.
       - t: -O2
-        why: Optimization often HIDES UB, or makes it behave differently. It detects nothing.
+        why: Optimization detects nothing, and often HIDES UB.
     answer: 0
     hints:
       - You want a checker for undefined behavior.
@@ -249,7 +249,7 @@ challenges:
   - id: w12.l6.c5
     type: harden
     tags: [ w12.edge, w7.empty ]
-    prompt: "Edge case: nobody in line. Pick the guard that makes queue.front() safe."
+    prompt: "If nobody typed a number, queue is empty. Pick the condition that protects queue.front()."
     code: |-
       #include <iostream>
       #include <vector>
@@ -269,18 +269,18 @@ challenges:
       }
     options:
       - t: queue.empty()
-        why: "Correct: an empty vector has no front. Check before reading it."
+        why: An empty vector has no front. Check before reading it.
       - t: queue.size() < 0
-        why: size() is unsigned, so it's never below 0. Always false; g++ even warns.
+        why: size() is unsigned, never below 0. Always false.
       - t: queue.front() == 0
-        why: Calls front() on the empty vector to check it. That's the UB we're avoiding.
+        why: Calls front() on the empty vector, the very UB we're avoiding.
       - t: n == 0
-        why: n is the last number typed, not the queue length. An empty input leaves the queue empty anyway.
+        why: n is the last number typed, not the queue length.
     answer: 0
     hints:
       - Which inputs make the vector empty?
       - Ask the vector itself, without reading an element.
-    short: "Guard front() and back() with empty(): the empty input is an edge case."
+    short: "Guard front() and back() with empty(): empty input is an edge."
     explain: "If the input is empty (or starts with text), no numbers are pushed. front() on an empty vector is UB and may even print a plausible number. Check queue.empty() first."
     sideBySide:
       unsafe: |-

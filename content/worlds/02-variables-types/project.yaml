@@ -93,10 +93,10 @@ steps:
     options:
       - t: |
           HP ratio: 0.75
-        why: "Correct: 90.0 / 120 = 0.75, printed without trailing zeros."
+        why: 90.0 / 120 is 0.75, with no extra zeros.
       - t: |
           HP ratio: 0
-        why: That's what integer division would give, but hp was converted to double first.
+        why: That's int division, but hp became a double first.
       - t: |
           HP ratio: 0.750000
         why: Default cout doesn't pad with zeros; that needs std::fixed.
@@ -112,7 +112,7 @@ steps:
     type: order
     tags: [ w2.bool, w2.char, w1.cout ]
     short: Print in card order; hp / maxHp with ints prints 0.
-    prompt: "Step 5: order the print lines so the card reads top to bottom: title, name, level, HP, ratio, shield. One line doesn't belong."
+    prompt: "Step 5: order the lines: title, name, level, HP, ratio, shield. One line doesn't belong."
     prelude: const std::string name{"Ada"}; int level{7}; const int maxHp{120}; int hp{90}; char rank{'B'}; bool shielded{true}; double hpRatio{static_cast<double>(hp) / maxHp};
     lines:
       - '    std::cout << "=== Hero Profile ===\n";'
@@ -173,9 +173,9 @@ stress:
         bugLine: 4
         options:
           - t: int hp{90};
-            why: "Correct: hp gets a real starting value before it's read."
+            why: hp gets a real value before it's read.
           - t: int hp;  // set later
-            why: A comment doesn't fill the box; the read on the next line is still UB.
+            why: A comment doesn't fill the box; reading it is still UB.
           - t: int hp = hp;
             why: "Copies hp's own garbage into itself: still UB."
         answer: 0
@@ -199,17 +199,17 @@ stress:
         tags: [ w2.narrowing, w2.convert ]
         bug: narrowing
         short: static_cast makes dropping the .5 a visible decision.
-        prompt: The config file says max HP is 119.5, but maxHp must be a whole number, rounded down on purpose. Pick the safest initializer.
+        prompt: "maxHp must be a whole number: drop the .5 on purpose. Pick the safest initializer."
         code: |-
           double configMaxHp{119.5};   // value from a config file
           const int maxHp___;
         options:
           - t: "{static_cast<int>(configMaxHp)}"
-            why: "Correct: an explicit, visible conversion. Anyone reading it sees that rounding down is intentional (119)."
+            why: A visible conversion. Readers see dropping to 119 is on purpose.
           - t: = configMaxHp
-            why: "Also gives 119, but silently: nobody can tell whether dropping the .5 was intended, and braces would have flagged it."
+            why: Gives 119 silently; nobody can tell it was intended.
           - t: "{configMaxHp}"
-            why: "Ill-formed narrowing: Clang/MSVC reject it, GCC warns. You still must decide about the .5."
+            why: Braces reject this lossy conversion (GCC only warns).
           - t: "{119.5}"
             why: Also a narrowing compile error, and it hardcodes the config value.
         answer: 0
@@ -229,7 +229,7 @@ stress:
         tags: [ w2.convert, w2.int ]
         unsafe: true
         short: 45 / 120 with ints is 0, not 0.375.
-        prompt: Someone "simplified" the ratio line. Which hp value breaks it? (maxHp is 120.)
+        prompt: Which hp value makes this print a wrong ratio? (maxHp is 120.)
         code: |-
           const int maxHp{120};
           int hp{/* value */};
@@ -237,11 +237,11 @@ stress:
           std::cout << "HP ratio: " << hpRatio << '\n';
         options:
           - t: hp = 120
-            why: "120 / 120 = 1: the right answer, so it hides the bug."
+            why: 120 / 120 = 1 is correct, so the bug hides.
           - t: hp = 0
             why: "0 / 120 = 0: correct by luck."
           - t: hp = 45
-            why: "Correct: 45 / 120 is integer division, 0, instead of 0.375."
+            why: "45 / 120 with ints is 0, not 0.375."
         answer: 2
         hints:
           - Which value gives a fractional true ratio?

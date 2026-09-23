@@ -2,7 +2,7 @@
 
 id: w12.p
 title: Armory Ledger
-intro: "Keep the Citadel's arrow count honest: read commands like add 50 or take 20, and reject anything that would corrupt the ledger."
+intro: "Keep the arrow count honest: handle add 50 or take 20, reject bad commands."
 steps:
   - id: w12.p.s1
     type: fill
@@ -27,7 +27,7 @@ steps:
   - id: w12.p.s2
     type: write
     tags: [ w12.throw, w12.custom ]
-    prompt: 'Inside add(), a non-positive amount is a caller mistake. Write the line that throws a LedgerError with the message "amount must be positive".'
+    prompt: 'Write the line that throws a LedgerError with the message "amount must be positive".'
     prelude: |-
       class LedgerError : public std::runtime_error {
       public:
@@ -50,13 +50,13 @@ steps:
     prompt: readAmount() returns std::optional<int> for "not a number", but add() THROWS for a bad amount. Why the difference?
     options:
       - t: Bad typing is expected and handled right there; a bad call to add() is rarer and handled far away
-        why: "Correct: optional for the everyday, local failure; exceptions for failures reported up to main."
+        why: Typos are everyday and local; bad calls are reported up to main.
       - t: Exceptions are faster than optional
         why: Throwing is actually slow compared to returning. Speed isn't the reason.
       - t: optional can't hold an int
         why: std::optional<int> holds an int or nothing. That's exactly what readAmount returns.
       - t: There's no reason; both should use assert
-        why: Both are input problems. assert is for programmer bugs and vanishes with NDEBUG.
+        why: Both are input problems, and assert is for programmer bugs.
     answer: 0
     hints:
       - How often do players mistype a number?
@@ -104,7 +104,7 @@ steps:
   - id: w12.p.s5
     type: predict
     tags: [ w12.throw, w12.catch ]
-    prompt: "A test run of the take logic, starting with 30 arrows. What does it print?"
+    prompt: "Stock starts at 30. What does this print?"
     code: |-
       #include <iostream>
       #include <stdexcept>
@@ -134,13 +134,13 @@ steps:
     options:
       - t: |
           ok not enough arrows ok 0
-        why: "Correct: 30 - 10 = 20, 50 is refused (stock stays 20), then 20 - 20 = 0."
+        why: "10 taken, 50 refused (stock stays 20), then 20 taken: 0."
       - t: |
           ok not enough arrows
-        why: The exception is caught inside the loop, so the loop and the final print continue.
+        why: The catch is inside the loop, so the loop keeps going.
       - t: |
           ok not enough arrows not enough arrows 20
-        why: "After 50 is refused, stock is still 20, and taking 20 is allowed (20 > 20 is false)."
+        why: "Stock is still 20, and 20 > 20 is false."
       - t: |
           ok ok ok -40
         why: 50 > 20 throws before the subtraction, so stock never goes negative.
@@ -245,7 +245,7 @@ stress:
         id: w12.p.a1
         type: harden
         tags: [ w12.invariant, w12.contract ]
-        prompt: "Stock is 30 and a scout orders take 999. Pick the check that protects the invariant stock_ >= 0."
+        prompt: "Stock is 30 and a scout orders take 999. Pick the check that keeps stock_ from going negative."
         code: |-
           class Armory {
           public:
@@ -269,9 +269,9 @@ stress:
           };
         options:
           - t: arrows > stock_
-            why: "Correct: refuses exactly the requests that would push stock below 0. Taking all 30 is allowed."
+            why: Refuses only what would go below 0. Taking all 30 is fine.
           - t: arrows >= stock_
-            why: "Refuses take 30 when stock is 30, a perfectly valid request that empties the armory."
+            why: Refuses take 30 at stock 30, a valid request.
           - t: stock_ < 0
             why: Checked before subtracting, so stock_ is never negative yet. Always false here.
           - t: arrows < stock_
@@ -315,7 +315,7 @@ stress:
         id: w12.p.a2
         type: bug
         tags: [ w12.validate, w3.cin ]
-        prompt: "After add abc, the ledger silently stops reading ALL later commands. Tap the line that needs fixing, then pick the fix."
+        prompt: "After add abc, every later command is lost. Tap the line to fix, then pick the fix."
         code: |-
           std::optional<int> readAmount() {
               int amount{};
@@ -327,18 +327,18 @@ stress:
         bugLine: 3
         options:
           - t: std::cin.clear(); and std::cin.ignore(max, '\n'); before returning
-            why: "Correct: clear resets the fail state, ignore drops \"abc\", and the next command reads normally."
+            why: "clear resets the fail state; ignore drops \"abc\"."
           - t: std::cin.ignore(max, '\n'); alone before returning
             why: A failed stream ignores nothing. clear() must come first.
           - t: Throw LedgerError instead of returning
-            why: The stream stays jammed either way, so the loop still ends after the catch.
+            why: cin stays jammed either way, so the loop still ends.
           - t: Return 0 instead of std::nullopt
             why: Adds a fake 0 and still leaves cin jammed.
         answer: 0
         hints:
           - What state is cin in after a failed read?
           - Remember World 3's two-step recovery.
-        short: After a failed read, clear() then ignore() the bad line, or cin stays jammed.
+        short: After a failed read, clear() then ignore() the bad line.
         explain: 'A failed read puts cin in the fail state, so `while (std::cin >> command)` ends the loop and every later command is lost. clear() resets the state, ignore(max, newline) throws away "abc". Then readAmount reports nullopt and the ledger keeps going.'
         sideBySide:
           unsafe: |-
@@ -389,18 +389,18 @@ stress:
           };
         options:
           - t: arrows > std::numeric_limits<int>::max() - stock_
-            why: "Correct: max - stock_ can't overflow (stock_ >= 0), and it's exactly the room left."
+            why: "The room left, computed with math that can't overflow."
           - t: stock_ + arrows > std::numeric_limits<int>::max()
-            why: The addition overflows (UB) before the comparison, and no int exceeds max anyway.
+            why: The addition itself overflows (UB) before comparing.
           - t: stock_ + arrows < 0
-            why: Relies on overflow wrapping. It's UB, so the optimizer may delete this check.
+            why: Relies on overflow wrapping, which is UB. It may vanish.
           - t: arrows > std::numeric_limits<int>::max()
             why: No int is bigger than the largest int. Always false.
         answer: 0
         hints:
           - Don't do the risky addition to test whether it's risky.
-          - "Move stock_ to the other side: arrows > max - stock_."
-        short: Compare against max - stock_ before adding; that side can't overflow.
+          - Move stock_ to the other side of the comparison.
+        short: Compare arrows with the room left before adding. No overflow.
         explain: "stock_ + arrows past INT_MAX is signed overflow: UB, maybe a negative stock, maybe a deleted check. Rearranged, the test arrows > max - stock_ uses only safe math, because stock_ is never negative (the invariant!)."
         sideBySide:
           unsafe: |-

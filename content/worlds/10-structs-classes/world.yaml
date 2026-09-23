@@ -8,12 +8,12 @@ blurb: "Bundle data into your own types, give it behavior, and build walls aroun
 story:
   intro:
     - The Heap Hoarder is gone and the heap is spotless! {^_^}
-    - "But look: all those loose ints lying around. Anyone can scribble on them!"
-    - "Let's give our data structure: structs, classes, and walls that guard the rules."
+    - "But loose ints lie everywhere. Anyone can scribble on them!"
+    - "Let's build structs, classes, and walls that guard the rules."
   bossIntro:
-    - "The Invariant Golem! It smashes objects into impossible states: hp -50, age -3."
-    - Private members and checking constructors are the only armor it can't crack!
+    - "The Invariant Golem! It smashes objects into impossible states, like hp -50."
+    - Private data and checking constructors are armor it can't crack!
   victory:
     - The Golem froze solid. Every object keeps its rules now! {^_^}
     - "But wait... our classes are having children. Whole families of types!"
-    - "World 11 awaits: inheritance and polymorphism. Onward, brace yourself!"
+    - "Next up, World 11: inheritance and polymorphism!"

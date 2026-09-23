@@ -5,12 +5,13 @@ title: "Shield: Guard the call"
 skill: defense
 shield: true
 concept:
-  short: "Guard every function: check parameters first, assert your assumptions, return on every path, never return references to locals."
-  analogy: A guard clause is a bouncer at the function's door; bad arguments get turned away before the party starts.
+  short: "Guard every function: check inputs first, return on every path, never return local references."
+  analogy: A guard clause is a bouncer. Bad arguments never get in.
   body:
     - "**Validate parameters with guard clauses** at the very top: `if (amount < 0) { return hp; }`. Reject bad input early, then write the happy path without deep nesting. Report problems with a value the caller can check: a `bool` for success, or a clearly documented error value."
     - "**`[[nodiscard]]`** before a function makes the compiler warn when a caller ignores its result: `[[nodiscard]] bool spend(int mana, int cost);`. Use it for success flags and computed values that are useless if dropped."
     - "**`assert`** (from `<cassert>`) checks something you believe is always true: `assert(hp >= 0);`. If it's false, the program stops with the file and line. It catches **your bugs** during development. Building with `-DNDEBUG` (typical for release builds) deletes every assert, so never use assert to validate user input, and never put work that must happen inside one."
+    - "A **guard clause** works like a bouncer at the function's door: bad arguments get turned away before the party starts."
     - "**Big parameters by const reference**: `const std::string&` avoids a copy and blocks accidental changes."
     - "**Never return a reference or pointer to a local.** The local dies when the frame pops, so the caller gets a **dangling reference**, and using it is undefined behavior. g++ warns with `-Wreturn-local-addr`. Return by value instead: the result is safely copied (or moved) out."
     - "**Every path of a non-void function must return a value.** Falling off the end without `return` is undefined behavior; `-Wreturn-type` (part of `-Wall`) warns. Add a final return for the \"none of the above\" case."
@@ -45,16 +46,16 @@ demo:
     }
   steps:
     - line: 3
-      note: "[[nodiscard]]: ignoring this result triggers a warning."
+      note: "[[nodiscard]]: ignoring the result warns."
     - line: 16
       push: { name: main, vars: { hp: "10" } }
       note: The hero starts with 10 HP.
     - line: 17
       push: { name: applyDamage, vars: { hp: "10", damage: "-4" } }
-      note: "push frame: applyDamage(hp=10, damage=-4)."
+      note: "push frame: damage is -4."
     - line: 4
       shield: Negative damage blocked!
-      note: "Guard clause: negative damage would secretly heal."
+      note: "Guard: negative damage would heal."
     - line: 5
       pop: { returns: "10" }
       note: "pop frame: return 10, unchanged."
@@ -63,16 +64,16 @@ demo:
         HP: 10
     - line: 19
       push: { name: applyDamage, vars: { hp: "10", damage: "3" } }
-      note: "push frame: applyDamage(hp=10, damage=3)."
+      note: "push frame: damage is 3."
     - line: 10
       vars:
         result: "7"
-      note: Both guards pass, so the happy path runs.
+      note: Both guards pass. Happy path runs.
     - line: 11
-      note: "assert documents our belief: result is positive here."
+      note: "assert documents our belief: result > 0."
     - line: 12
       pop: { returns: "7" }
-      note: "pop frame: return 7, copied out by value."
+      note: "pop frame: return 7 by value."
     - line: 20
       vars:
         hp: "7"
@@ -80,10 +81,10 @@ demo:
         HP: 7
     - line: 21
       push: { name: applyDamage, vars: { hp: "7", damage: "25" } }
-      note: "push frame: applyDamage(hp=7, damage=25)."
+      note: "push frame: damage is 25."
     - line: 7
       shield: Overkill clamped!
-      note: 25 >= 7, so clamp to 0. HP never goes negative.
+      note: 25 >= 7, so clamp to 0.
     - line: 8
       pop: { returns: "0" }
       note: "pop frame: return 0."
@@ -93,12 +94,12 @@ demo:
       out: |
         HP: 0
     - line: 23
-      note: Every path returned a value. No UB anywhere.
+      note: Every path returned a value. No UB.
 challenges:
   - id: w6.l5.c1
     type: harden
     tags: [ w6.validate, w4.guard, w4.if ]
-    prompt: heal(5, -3) would secretly hurt the hero. Pick the guard clause.
+    prompt: heal(5, -3) would hurt the hero. Pick the guard condition.
     code: |-
       #include <iostream>
 
@@ -115,18 +116,18 @@ challenges:
       }
     options:
       - t: amount < 0
-        why: "Correct: rejects every negative amount; the hero's hp comes back unchanged."
+        why: Rejects every negative amount. hp comes back unchanged.
       - t: hp < 0
-        why: Checks the wrong parameter. -3 healing walks right through.
+        why: Wrong parameter. -3 walks right through.
       - t: amount > 0
-        why: "Inverted: refuses every real heal and lets negatives in."
+        why: "Inverted: blocks real heals, lets negatives in."
       - t: amount == -3
-        why: Blocks only this exact value. -4 still hurts.
+        why: Blocks only -3. -4 still hurts.
     answer: 0
     hints:
       - Which parameter carries the bad value?
-      - Block the whole range of bad values, not one number.
-    short: "Guard first: if (amount < 0) return hp unchanged."
+      - Block every bad value, not one number.
+    short: "Guard first: negative amount returns hp unchanged."
     explain: "A guard clause at the top rejects bad arguments before any work happens. `amount < 0` blocks the whole negative range, so heal(5, -3) returns 5. (Hardened code would also cap huge amounts to avoid overflow; see the project.)"
     sideBySide:
       unsafe: |-
@@ -140,7 +141,7 @@ challenges:
   - id: w6.l5.c2
     type: mcq
     tags: [ w6.assert ]
-    prompt: "What happens to this line in a build compiled with -DNDEBUG?"
+    prompt: "What happens to this assert when compiled with -DNDEBUG?"
     code: |-
       #include <cassert>
 
@@ -148,19 +149,18 @@ challenges:
     prelude: int hp{3};
     options:
       - t: It is removed entirely, so the check never runs
-        why: "Correct: NDEBUG turns every assert into nothing. Great for bugs, useless for input."
+        why: NDEBUG turns every assert into nothing.
       - t: It throws an exception if hp is negative
-        why: assert never throws. When active, it prints a message and aborts.
+        why: assert never throws. A failing one aborts.
       - t: It becomes a compile error if hp could be negative
-        why: The compiler can't know runtime values. assert is a runtime check.
+        why: assert is a runtime check, not a compile check.
       - t: It prints a warning but keeps running
-        why: An active failing assert aborts the program. With NDEBUG it does nothing at all.
+        why: A failing assert aborts. With NDEBUG, nothing happens.
     answer: 0
     hints:
       - NDEBUG means "no debugging".
-      - Release builds often define it.
-    short: NDEBUG deletes asserts. Use them for bugs, never for input.
-    explain: "assert checks your assumptions while developing. With NDEBUG defined, `assert(x)` expands to nothing, so the condition isn't even evaluated. Validate user input with a real if."
+    short: NDEBUG deletes asserts. Never use them for input.
+    explain: "assert checks your assumptions while developing. When active and false, it prints a message and aborts (it never throws). With NDEBUG defined, `assert(x)` expands to nothing, so the condition isn't even evaluated. Validate user input with a real if."
   - id: w6.l5.c3
     type: review
     tags: [ w6.dangling, w6.missing-return, w6.assert ]
@@ -199,9 +199,9 @@ challenges:
       "16": "score below 50 falls off the end without a return: UB (-Wreturn-type)."
       "20": "With NDEBUG the whole read vanishes. Validate input with if, not assert."
     hints:
-      - Look for a local escaping by reference, and a path with no return.
+      - Find a local returned by reference, and a missing return.
       - What does NDEBUG remove?
-    short: Dangling reference, missing return path, and input checked by assert.
+    short: Dangling reference, missing return, and input checked by assert.
     explain: "title returns a reference to t, which is destroyed when title returns. grade has no return for scores under 50. The assert swallows the only read in release builds. All three may seem to work in testing; the first two are UB."
     sideBySide:
       unsafe: |-
@@ -258,7 +258,7 @@ challenges:
     type: breakit
     tags: [ w6.validate, w3.divzero ]
     unsafe: true
-    prompt: UNSAFE code. The player types total and count. Pick the input that breaks average().
+    prompt: "UNSAFE code. The player types total and count. Which input breaks average()?"
     code: |-
       #include <iostream>
 
@@ -279,16 +279,16 @@ challenges:
       - t: 10 2
         why: 10 / 2 = 5. Works fine.
       - t: 0 5
-        why: 0 / 5 = 0. Only the divisor matters.
+        why: 0 / 5 = 0. Fine.
       - t: 9 0
-        why: "Correct: average(9, 0) divides by zero, which is undefined behavior."
+        why: Divides by zero, which is undefined behavior.
       - t: -8 2
-        why: -8 / 2 = -4. Negatives divide just fine.
+        why: -8 / 2 = -4. Fine.
     answer: 2
     hints:
-      - The read is checked, but is every number a valid count?
+      - The read is checked. Is every count valid?
       - Look at the right side of /.
-    short: count 0 divides by zero. Nothing guards the parameter.
+    short: count 0 divides by zero. Nothing guards it.
     explain: "The read is validated, but nobody checks that count makes sense. 9 0 reaches total / 0: UB, which may crash or print junk. Validate in the caller and document the precondition with assert."
     sideBySide:
       unsafe: |-
@@ -347,18 +347,18 @@ challenges:
       - t: rank(120)
         why: Returns "Gold". Safe.
       - t: rank(0)
-        why: "Exposes it: 0 > 0 is false, so no return runs. UB."
+        why: 0 > 0 is false, so no return runs. UB.
       - t: rank(-5)
-        why: "Exposes it: negatives skip every if and fall off the end. UB."
+        why: Negatives skip every if. UB.
       - t: rank(50)
-        why: "50 >= 50 is true: returns \"Silver\"."
+        why: "50 >= 50: returns \"Silver\"."
       - t: rank(1)
-        why: "1 > 0 is true: returns \"Bronze\"."
+        why: "1 > 0: returns \"Bronze\"."
     answers: [ 1, 2 ]
     hints:
-      - Test the boundaries of each if, and below them.
+      - Test each boundary, and below it.
       - What happens when every condition is false?
-    short: Scores of 0 or less skip every return. Add a final one.
+    short: Scores of 0 or less skip every return.
     explain: 'For score <= 0 every condition is false and the function reaches its closing } without returning: UB, and for std::string often a crash. g++ warns "control reaches end of non-void function". Add `return "Unranked";` at the end.'
     sideBySide:
       unsafe: |-
@@ -395,7 +395,7 @@ challenges:
   - id: w6.l5.c6
     type: safe
     tags: [ w6.validate, w6.dangling, w6.nodiscard, w6.missing-return, w6.assert ]
-    prompt: Safe or unsafe? The Sentinel's scouts are coming. Go fast!
+    prompt: Is each snippet safe or unsafe? Go fast!
     seconds: 45
     items:
       - code: |-
@@ -404,14 +404,14 @@ challenges:
           }
         prelude: int amount{5};
         safe: true
-        why: "A guard clause: bad input is rejected before any work."
+        why: "A guard clause: bad input rejected first."
       - code: |-
           #include <cassert>
 
           assert(std::cin >> hp);
         prelude: int hp{};
         safe: false
-        why: With NDEBUG the read itself vanishes. Validate input with if.
+        why: With NDEBUG the read itself vanishes.
       - code: |-
           std::string title() {
               std::string t{"Hero"};
@@ -420,7 +420,7 @@ challenges:
           int main() { title(); }
         prelude: "#include <string>"
         safe: true
-        why: Returned by value, so the caller gets its own copy.
+        why: By value, so the caller gets its own copy.
       - code: |-
           const std::string& title() {
               std::string t{"Hero"};
@@ -429,7 +429,7 @@ challenges:
           int main() { title(); }
         prelude: "#include <string>"
         safe: false
-        why: "Reference to a local that dies at the return: dangling."
+        why: "Reference to a dead local: dangling."
       - code: |-
           int sign(int x) {
               if (x > 0) { return 1; }
@@ -442,7 +442,7 @@ challenges:
           [[nodiscard]] bool spend(int cost) { return cost <= 10; }
           int main() { spend(5); }
         safe: false
-        why: The success flag is ignored. The compiler warns, and the check is lost.
+        why: The result is ignored, so the check is lost.
       - code: |-
           void greet(const std::string& name) {
               std::cout << "Hi, " << name << '\n';
@@ -459,17 +459,16 @@ challenges:
           }
           int main() { return clampHp(50) == 50 ? 0 : 1; }
         safe: true
-        why: Every path returns a value in range.
+        why: Every path returns a value.
     hints:
-      - Look for references to locals and paths without a return.
-      - Ignored results and asserts around input are traps too.
-    short: "Safe functions guard inputs, return by value, and return on every path."
+      - Watch for local references and missing returns.
+    short: "Guard inputs, return by value, return on every path."
     explain: "Guard clauses, return by value, const references and a return on every path are safe. Asserting on input, ignoring [[nodiscard]] results, dangling references and missing returns are not."
 recap:
-  - "Guard clauses first: reject bad arguments early."
-  - "assert catches bugs; NDEBUG removes it. Not for input."
-  - "[[nodiscard]] makes ignored results warn."
-  - Return by value, and return on every path.
+  - "Guard clauses first: reject bad input."
+  - "assert is for bugs, never input."
+  - "[[nodiscard]]: ignored results warn."
+  - Return by value, on every path.
 vault:
   - id: w6.guard
     title: Guard clauses + [[nodiscard]]

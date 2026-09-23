@@ -5,8 +5,8 @@ title: Break, continue and nested loops
 skill: logic
 shield: false
 concept:
-  short: "break leaves the loop now; continue skips to the next lap. A loop inside a loop builds grids."
-  analogy: "Nested loops are a clock: the minute hand (inner loop) goes all the way round for every tick of the hour hand."
+  short: "break leaves the loop; continue skips to the next lap. Loops inside loops make grids."
+  analogy: "A clock: the minute hand circles fully for each hour tick."
   body:
     - "`break;` exits the loop immediately; execution continues after its closing `}`. Handy for \"stop as soon as...\" logic, like a `while (true)` loop that ends when hp hits 0."
     - "`continue;` skips the rest of this lap. In a `for` loop the update (`++i`) still runs; in a `while` loop it jumps straight back to the condition, so an update at the bottom is **skipped**."
@@ -105,7 +105,7 @@ challenges:
   - id: w5.l4.c1
     type: predict
     tags: [ w5.continue, w3.modulo ]
-    prompt: What does this print? (Watch the spaces.)
+    prompt: What does this print? Spaces count.
     code: |-
       #include <iostream>
 
@@ -121,7 +121,7 @@ challenges:
       }
     options:
       - t: "1 2 4 5 \n"
-        why: "Correct: 3 and 6 are multiples of 3, so continue skips printing them."
+        why: 3 and 6 hit continue before the print.
       - t: "1 2 \n"
         why: That's what break would do. continue only skips one lap.
       - t: "3 6 \n"
@@ -155,10 +155,10 @@ challenges:
     options:
       - t: |
           15
-        why: "Correct: totals go 1, 3, 6, 10, 15. 15 > 10, so break ends the loop."
+        why: "15 is the first total above 10, so break fires."
       - t: |
           10
-        why: 10 > 10 is false, so the loop keeps going one more lap.
+        why: 10 > 10 is false, so one more lap runs.
       - t: |
           55
         why: That's 1 through 10 with no break. The break stops it early.
@@ -174,7 +174,7 @@ challenges:
   - id: w5.l4.c3
     type: predict
     tags: [ w5.nested ]
-    prompt: A little grid. What does this print?
+    prompt: "What does this grid print? (↵ marks a new line.)"
     code: |-
       #include <iostream>
 
@@ -189,13 +189,13 @@ challenges:
       }
     options:
       - t: "00 01 02 \n10 11 12 \n"
-        why: "Correct: 2 rows; in each, c runs 0, 1, 2 before r moves on."
+        why: "Each r runs c through 0, 1, 2, then a newline."
       - t: "00 10 \n01 11 \n02 12 \n"
-        why: Rows and columns swapped. The inner loop (c) runs fully for each r.
+        why: Rows and columns swapped. c runs fully for each r.
       - t: "00 01 02 10 11 12 \n"
         why: The newline prints after every row, not once at the end.
       - t: "00 11 \n"
-        why: The inner loop restarts from 0 for every r and runs all 3 laps.
+        why: The inner loop runs all 3 laps for every r.
     answer: 0
     hints:
       - The inner loop runs completely for each outer lap.
@@ -205,7 +205,7 @@ challenges:
   - id: w5.l4.c4
     type: mcq
     tags: [ w5.break, w5.nested ]
-    prompt: How many pairs does this print?
+    prompt: "How many pairs (like `00`) does this print?"
     code: |-
       for (int r = 0; r < 3; ++r) {
           for (int c = 0; c < 3; ++c) {
@@ -217,13 +217,13 @@ challenges:
       }
     options:
       - t: "3"
-        why: "Correct: break ends only the inner loop, so each of the 3 rows prints just c = 0."
+        why: "Each of the 3 rows prints only c = 0."
       - t: "1"
-        why: That would mean break ended BOTH loops. It only leaves the innermost one.
+        why: That needs break to end BOTH loops. It ends one.
       - t: "9"
         why: The break stops each row at c = 1.
       - t: "6"
-        why: c = 1 hits the break before printing, so only c = 0 prints per row.
+        why: At c = 1 the break comes before the print.
     answer: 0
     hints:
       - Which loop does break leave?
@@ -258,7 +258,7 @@ challenges:
     tags: [ w5.continue, w5.infinite ]
     bug: infinite-loop
     unsafe: true
-    prompt: "UNSAFE: this should add up the odd numbers below 10. Tap every dangerous line."
+    prompt: "UNSAFE: this should add the odd numbers below 10, but never ends. Tap every dangerous line."
     code: |-
       int sum{0};
       int i{0};
@@ -300,7 +300,7 @@ recap:
   - break leaves the innermost loop immediately.
   - continue skips to the next lap.
   - In while loops, continue can skip your update.
-  - "Nested: the inner loop runs fully per outer lap."
+  - "Nested: inner loop runs fully each lap."
 vault:
   - id: w5.breakcontinue
     title: break and continue

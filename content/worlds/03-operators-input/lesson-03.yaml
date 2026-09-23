@@ -50,7 +50,7 @@ demo:
         potions: "2"
         alive: "false"
         canHeal: "true"
-      note: "!alive is true, potions > 0 is true, so && gives true."
+      note: "!alive and potions > 0 are both true."
     - line: 7
       out: |
         0 1
@@ -65,7 +65,7 @@ challenges:
   - id: w3.l3.c1
     type: predict
     tags: [ w3.compare, w2.bool ]
-    prompt: What does this print?
+    prompt: What does this print? Spaces count.
     code: |-
       #include <iostream>
 
@@ -78,7 +78,7 @@ challenges:
     options:
       - t: |
           101
-        why: "Correct: true, false, true print as 1, 0, 1, glued together."
+        why: true, false, true print as 1, 0, 1 with no gaps.
       - t: |
           truefalsetrue
         why: Without std::boolalpha, bools print as 1 and 0.
@@ -102,11 +102,11 @@ challenges:
     expect: warn
     options:
       - t: "true"
-        why: "Correct: && binds tighter, so it's true || (true && false) = true || false = true."
+        why: "&& binds tighter: true || (true && false) is true."
       - t: "false"
-        why: "That's reading left to right: (true || true) && false. But && is grouped first."
+        why: "That groups (true || true) first. && goes before ||."
       - t: It doesn't compile
-        why: Mixing && and || is legal (compilers may suggest parentheses, which is a good idea).
+        why: Mixing && and || is legal. Parentheses are still a good idea.
       - t: It's undefined behavior
         why: Nothing is modified here; it's a well-defined expression.
     answer: 0
@@ -131,10 +131,10 @@ challenges:
     options:
       - t: |
           0 0
-        why: "Correct: count > 5 is false, so && stops right there. ++count never runs."
+        why: count > 5 is false, so && stops. ++count never runs.
       - t: |
           0 1
-        why: "&& short-circuits: once the left side is false, the right side isn't evaluated, so count stays 0."
+        why: "The right side never ran, so count is still 0."
       - t: |
           1 1
         why: The left side is false, so the whole && is false.
@@ -143,7 +143,7 @@ challenges:
         why: Without std::boolalpha, false prints as 0.
     answer: 0
     hints:
-      - If the left side of && is false, can the result ever be true?
+      - Left side of && is false. Can the result still be true?
       - C++ skips the right side when the answer is already known.
     short: The left side is false, so && skips ++count entirely.
     explain: '0 > 5 is false, so && short-circuits: ++count is skipped. r is false (prints 0), count is still 0. Output: "0 0" and a newline.'
@@ -163,19 +163,19 @@ challenges:
     bugLine: 4
     options:
       - t: bool isBoss = (level == 10);
-        why: "Correct: == compares without changing level. 3 == 10 is false."
+        why: "== compares and leaves level alone. 3 == 10 is false."
       - t: bool isBoss = (level === 10);
         why: "=== is JavaScript. C++ has no such operator: compile error."
       - t: bool isBoss = level = 10;
         why: "Same bug without parentheses: it still assigns 10."
       - t: bool isBoss = (10 = level);
-        why: "You can't assign to the literal 10: compile error. (The \"Yoda\" trick is written 10 == level.)"
+        why: "You can't assign to the number 10: compile error."
     answer: 0
     hints:
       - Which line changes level when it shouldn't?
       - One = assigns. How many = do you need to compare?
     short: = assigns, == compares. Warnings catch this mix-up.
-    explain: "level = 10 assigns 10 and the expression's value (10) converts to true. Use == to compare. Compiling with -Wall warns about this: warnings are your friend!"
+    explain: "level = 10 assigns 10 and the expression's value (10) converts to true. Use == to compare. Compiling with -Wall warns about this: warnings are your friend! (Some write it \"Yoda style\", 10 == level: then a missing = won't compile.)"
     sideBySide:
       unsafe: bool isBoss = (level = 10);   // assigns! always true
       hardened: bool isBoss = (level == 10);  // compares
@@ -200,18 +200,18 @@ challenges:
     type: edge
     tags: [ w3.logic, w3.compare ]
     unsafe: true
-    prompt: validRoll should be true only for a die roll from 1 to 6. Which test inputs expose the bug? Select all that apply.
+    prompt: roll is the player's number. validRoll should mean 1 to 6. Which rolls expose the bug? Pick all.
     code: |-
       int roll = 0;
       std::cin >> roll;
       bool validRoll = (roll >= 1) || (roll <= 6);
     options:
       - t: "0"
-        why: "Exposes it: 0 <= 6 is true, so || says valid. It shouldn't be."
+        why: 0 should fail, but 0 <= 6 makes || say valid.
       - t: "7"
-        why: "Exposes it: 7 >= 1 is true, so || says valid. It shouldn't be."
+        why: 7 should fail, but 7 >= 1 makes || say valid.
       - t: "3"
-        why: 3 really is valid, and the code says valid. This test can't tell right from wrong.
+        why: 3 is valid either way, so it can't reveal the bug.
       - t: "-2"
         why: "Exposes it: -2 <= 6 is true, so it's wrongly accepted."
       - t: "6"
@@ -227,10 +227,10 @@ challenges:
       hardened: bool validRoll = (roll >= 1) && (roll <= 6);   // 1..6 only
       prelude: int roll = 0;
 recap:
-  - == compares, = assigns. Compile with warnings to catch mix-ups.
+  - "== compares, = assigns. Warnings catch mix-ups."
   - Bools print as 1/0 unless you use std::boolalpha.
   - "! first, then comparisons, then &&, then ||."
-  - "&& and || short-circuit: the right side may never run."
+  - "&& and || may skip the right side."
 vault:
   - id: w3.compare
     title: Comparison operators

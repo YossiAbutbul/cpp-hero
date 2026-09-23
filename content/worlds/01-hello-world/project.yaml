@@ -44,7 +44,7 @@ steps:
   - id: w1.p.s3
     type: write
     tags: [ w1.cout ]
-    prompt: Write the statement that prints Hero:, then a tab, then Curlo, then ends the line. (Use \t and \n.)
+    prompt: In one statement, print Hero:, a tab (\t), Curlo, then a new line (\n).
     accept:
       - std::cout << "Hero:\tCurlo\n";
       - std::cout << "Hero:\t" << "Curlo\n";
@@ -59,7 +59,7 @@ steps:
   - id: w1.p.s4
     type: fill
     tags: [ w1.cout ]
-    prompt: Chain the day number onto the output.
+    prompt: Fill in the operator that also prints the day number 1.
     code: |-
       #include <iostream>
 
@@ -88,7 +88,7 @@ steps:
       - t: "std::cout << 'Status: \"All braces balanced\"\\n';"
         why: "Single quotes are for one character: a warning, and a number prints."
       - t: 'std::cout << "Status: \"All braces balanced\"\n";'
-        why: Correct! \" puts a real double quote inside the string.
+        why: \" puts a real double quote inside the string.
       - t: "std::cout << \"Status: ''All braces balanced''\\n\";"
         why: Compiles, but prints pairs of single quotes, not double quotes.
     answer: 2
@@ -100,7 +100,7 @@ steps:
   - id: w1.p.s6
     type: predict
     tags: [ w1.cout, w1.comments ]
-    prompt: Here's the finished Mission Log. What exactly does it print?
+    prompt: What does the finished Mission Log print? (↵ marks a new line.)
     code: |-
       #include <iostream>
 
@@ -140,7 +140,7 @@ steps:
           Status: \"All braces balanced\"
 
           ===================\n"
-        why: Correct! Tabs, real quotes, and every line ends with a newline.
+        why: Tabs, real quotes, and every line ends with a newline.
       - t: "=== MISSION LOG ===Hero:\tCurlo
 
           Day:\t1
@@ -176,7 +176,7 @@ stress:
         id: w1.p.a1
         type: bug
         tags: [ w1.compile, w1.warnings ]
-        prompt: "Intentionally broken: the build fails with \"expected ';' before 'std'\". Tap the sabotaged line, then pick the fix."
+        prompt: "Build error: \"expected ';' before 'std'\". Tap the sabotaged line, then pick the fix."
         code: |-
           #include <iostream>
 
@@ -192,7 +192,7 @@ stress:
         bugLine: 5
         options:
           - t: Add ; after "Hero:\tCurlo\n"
-            why: Correct! The statement gets its full stop back.
+            why: The statement gets its full stop back.
           - t: Remove \t from the Hero line
             why: The tab is fine. The missing ; is the problem.
           - t: Add ; at the end of the Day line
@@ -220,7 +220,7 @@ stress:
         id: w1.p.a2
         type: harden
         tags: [ w1.include, w1.compile ]
-        prompt: The Gremlin deleted the first line! The build fails with "'cout' is not a member of 'std'". Pick the line that restores it properly.
+        prompt: The Gremlin deleted line 1! Pick the line that makes std::cout work again.
         code: |-
           ___
 
@@ -235,9 +235,9 @@ stress:
           - t: "#include <iostream>;"
             why: Directives take no semicolon; compilers warn about "extra tokens".
           - t: "#include <string>"
-            why: "Wrong toolbox: <string> isn't guaranteed to bring in std::cout."
+            why: "<string> is for text tools; it may not bring std::cout."
           - t: "#include <iostream>"
-            why: Correct! The input/output header, no semicolon.
+            why: The input/output header, no semicolon.
         answer: 3
         hints:
           - std::cout comes from the input/output stream header.
@@ -263,7 +263,7 @@ stress:
         id: w1.p.a3
         type: bug
         tags: [ w1.cout, w1.compile ]
-        prompt: "Intentionally broken: \"error: 'cuot' is not a member of 'std'; did you mean 'cout'?\". Tap the sabotaged line, then pick the fix."
+        prompt: "Error: \"'cuot' is not a member of 'std'; did you mean 'cout'?\" Tap the line, pick the fix."
         code: |-
           #include <iostream>
 
@@ -280,7 +280,7 @@ stress:
           - t: Add using namespace std; at the top
             why: cuot doesn't exist in std either. Still fails.
           - t: Change std::cuot to std::cout
-            why: Correct! The compiler even suggested it.
+            why: The compiler even suggested it.
           - t: Change std::cuot to std:cuot
             why: "One colon makes it worse: std: becomes a label."
           - t: "#include <cuot>"
