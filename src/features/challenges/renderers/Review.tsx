@@ -6,6 +6,7 @@ import { Icon } from '@/ui/Icon';
 import { Md } from '@/ui/Md';
 import { plural } from '@/ui/format';
 import { Actions } from '../Actions';
+import { checkReview } from '../check';
 import type { RendererProps } from '../types';
 import styles from '../challenges.module.css';
 
@@ -23,7 +24,7 @@ export function Review({ ch, phase, reveal, submit }: RendererProps) {
 
   const check = () => {
     if (!active) return;
-    const good = flagged.length === D.length && D.every((i) => flagged.includes(i));
+    const good = checkReview(c, flagged);
     const caught = D.filter((i) => flagged.includes(i)).length;
     const falseFlags = flagged.filter((i) => !D.includes(i)).length;
     const keys = Object.keys(c.lineNotes)

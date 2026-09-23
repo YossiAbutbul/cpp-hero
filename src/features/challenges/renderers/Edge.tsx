@@ -6,6 +6,7 @@ import { bounce } from '@/ui/fx/motion';
 import { Icon } from '@/ui/Icon';
 import { finalState, finalTag, OptionGrid, useOptionKeys, WhyList } from '../Options';
 import { Actions } from '../Actions';
+import { checkEdge } from '../check';
 import type { RendererProps } from '../types';
 import styles from '../challenges.module.css';
 
@@ -27,7 +28,7 @@ export function Edge({ ch, phase, reveal, submit }: RendererProps) {
   const check = () => {
     if (!active || !picked.length) return;
     const A = c.answers;
-    const good = picked.length === A.length && A.every((i) => picked.includes(i));
+    const good = checkEdge(c, picked);
     setSent(picked.slice());
     submit({
       correct: good,

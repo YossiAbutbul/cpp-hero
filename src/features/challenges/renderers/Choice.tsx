@@ -5,6 +5,7 @@ import { CodeBlock } from '@/features/code';
 import { Icon } from '@/ui/Icon';
 import { finalState, finalTag, looksLikeCode, OptionGrid, useOptionKeys, WhyList } from '../Options';
 import { Actions } from '../Actions';
+import { checkChoice } from '../check';
 import type { RendererProps } from '../types';
 import styles from '../challenges.module.css';
 
@@ -27,7 +28,7 @@ export function Choice({ ch, phase, attempt, reveal, submit }: RendererProps) {
     const next = picks.slice(0, attempt);
     next[attempt] = i;
     setPicks(next);
-    const good = i === c.answer;
+    const good = checkChoice(c, i);
     submit({
       correct: good,
       pickedWhy: c.options[i]?.why,
