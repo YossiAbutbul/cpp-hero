@@ -1,7 +1,7 @@
 /**
  * Lesson player (#/lesson/:id, immersive; legacy session.playLesson):
- * concept → demo → challenges (1–2 older ones interleaved; a first miss is
- * re-queued once at the end) → recap + new vault cards → results.
+ * concept → demo → the lesson's own challenges (a first miss is re-queued
+ * once at the end) → results (recap + new vault cards behind "What you learned").
  */
 import { useEffect, useState, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
@@ -31,7 +31,7 @@ interface QItem {
   retry?: boolean;
 }
 
-type Page = 'intro' | 'demo' | 'ch' | 'recap' | 'results';
+type Page = 'intro' | 'demo' | 'ch' | 'results';
 
 const cap = (s: string) => (s ? s[0]!.toUpperCase() + s.slice(1) : s);
 
@@ -90,17 +90,8 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
   }, [game]);
 
   const hasDemo = !!lesson.demo?.code;
-  const total = queue.length + 3;
-  const done =
-    page === 'intro'
-      ? 0
-      : page === 'demo'
-        ? 1
-        : page === 'ch'
-          ? 2 + qi
-          : page === 'recap'
-            ? total - 1
-            : total;
+  const total = queue.length + 2;
+  const done = page === 'intro' ? 0 : page === 'demo' ? 1 : page === 'ch' ? 2 + qi : total;
 
   const onResult = (item: QItem) => (r: ChallengeResult) => {
     setBestCombo((b) => Math.max(b, game.combo));
@@ -113,7 +104,7 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
 
   const next = () => {
     if (qi + 1 < queue.length) setQi(qi + 1);
-    else setPage('recap');
+    else finishLesson();
   };
 
   const finishLesson = () => {
@@ -179,12 +170,6 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
         />
       </SlidePage>
     );
-  else if (page === 'recap')
-    body = (
-      <SlidePage pageKey="recap" enterOnMount>
-        <Recap lesson={lesson} onNext={finishLesson} />
-      </SlidePage>
-    );
   else if (page === 'results' && finish)
     body = (
       <SlidePage pageKey="results" enterOnMount>
@@ -215,6 +200,9 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
                   <Icon name="vault" /> {plural(finish.newCards, 'new Code Vault card')}
                 </div>
               )}
+              <Expander label="What you learned" lessLabel="Hide">
+                <Recap lesson={lesson} />
+              </Expander>
             </div>
           }
           variant="lesson"
@@ -311,14 +299,13 @@ function Intro({
   );
 }
 
-function Recap({ lesson, onNext }: { lesson: Lesson; onNext: () => void }) {
+/** The lesson's recap bullets + new Vault cards (inside the results' "What you learned"). */
+function Recap({ lesson }: { lesson: Lesson }) {
   useEffect(() => {
     document.querySelectorAll(`.${styles.recapList} li`).forEach((li, k) => slideUp(li, 120 + k * 90));
   }, []);
   return (
     <div className={styles.recap}>
-      <div className={styles.eyebrow}>Recap</div>
-      <h2 className={styles.h2}>What you learned</h2>
       <ul className={styles.recapList}>
         {lesson.recap.map((r, i) => (
           <li key={i}>
@@ -349,17 +336,6 @@ function Recap({ lesson, onNext }: { lesson: Lesson; onNext: () => void }) {
           ))}
         </div>
       )}
-      <Button
-        variant="sun"
-        size="big"
-        block
-        iconEnd="next"
-        className={styles.pageNext}
-        onClick={onNext}
-        autoFocus
-      >
-        Finish lesson
-      </Button>
     </div>
   );
 }

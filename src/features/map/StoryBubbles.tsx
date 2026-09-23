@@ -5,7 +5,7 @@
  *   <StoryBubbles lines={w.story.intro} doneLabel="Let's go!" onDone={start} />
  *
  * Tap the bubble, Curlo or Next to advance; Enter works through the focused
- * button. `onSkip` adds a "Skip" link.
+ * button. A "Skip" link calls `onSkip` (default: `onDone`).
  */
 import { useState } from 'react';
 import { Curlo } from '@/features/curlo/Curlo';
@@ -50,7 +50,14 @@ export function StoryBubbles({
   return (
     <div className={styles.story}>
       {curloSize > 0 && !speaker && (
-        <button type="button" className={styles.curlo} style={{ width: curloSize }} onClick={next} tabIndex={-1} aria-hidden="true">
+        <button
+          type="button"
+          className={styles.curlo}
+          style={{ width: curloSize }}
+          onClick={next}
+          tabIndex={-1}
+          aria-hidden="true"
+        >
           <Curlo mood={mood} reactKey={i} />
         </button>
       )}
@@ -73,8 +80,9 @@ export function StoryBubbles({
       <Button block iconEnd={last ? undefined : 'next'} onClick={next} data-autofocus>
         {last ? doneLabel : 'Next'}
       </Button>
-      {onSkip && !last && (
-        <button type="button" className={styles.skip} onClick={onSkip}>
+      {!last && (
+        // Story is optional reading: Skip jumps straight to the end (onSkip, else onDone).
+        <button type="button" className={styles.skip} onClick={onSkip ?? onDone}>
           Skip
         </button>
       )}

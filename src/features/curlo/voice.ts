@@ -41,7 +41,11 @@ export const VOICE = {
     'Exactly right!',
     'Clean as a fresh compile!',
   ],
-  combo: ['Combo x{n}! Unstoppable!', 'x{n} in a row! Are you a compiler?', '{n} straight! The bugs are nervous.'],
+  combo: [
+    'Combo x{n}! Unstoppable!',
+    'x{n} in a row! Are you a compiler?',
+    '{n} straight! The bugs are nervous.',
+  ],
   wrong: [
     'Oof, close! Let’s look at why.',
     'No worries, mistakes are how we learn.',
@@ -51,8 +55,12 @@ export const VOICE = {
   ],
   hint: ['Here’s a little nudge…', 'Okay, a bigger clue…', 'Here’s the full answer. Let’s understand it!'],
   shield: ['Shields up! Nothing gets past us!', 'Blocked! That’s defensive coding!', 'Clang! Deflected!'],
-  crash: ['Yikes! That input broke it!', 'Uh-oh… the program went sideways!', 'Crash! Let’s patch that hole.'],
-  lessonDone: ['Lesson complete! I’m so proud I could curl.', 'Another concept in the bag!', 'Look at you go!'],
+  crash: [
+    'Yikes! That input broke it!',
+    'Uh-oh… the program went sideways!',
+    'Crash! Let’s patch that hole.',
+  ],
+  lessonDone: ['I’m so proud I could curl.', 'Another concept in the bag!', 'Look at you go!'],
   knockedOut: ['Ouch, that boss got us! Shake it off and go again?', 'Down, but not out! Round two?'],
   streak: ['{n}-day streak! Keep the flame alive!'],
   boss: ['That boss won’t know what hit it.', 'Stay calm. Harden everything.'],
@@ -71,5 +79,7 @@ export function curloLine(
 ): string {
   const arr: readonly string[] = VOICE[cat] ?? VOICE.idle;
   const line = arr[Math.floor(rng() * arr.length)] ?? arr[0] ?? '';
-  return line.replace(/\{(\w+)\}/g, (m, k: string) => (vars[k] != null ? String(vars[k]) : k === 'n' ? '' : m));
+  return line.replace(/\{(\w+)\}/g, (m, k: string) =>
+    vars[k] != null ? String(vars[k]) : k === 'n' ? '' : m,
+  );
 }

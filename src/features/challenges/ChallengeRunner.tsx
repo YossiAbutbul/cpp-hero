@@ -481,9 +481,14 @@ const ResultPanel = forwardRef<HTMLDivElement, ResultProps>(function ResultPanel
   const short = ch.short || firstSentence(ch.explain);
   const sbs = isDefensive(ch) && ch.sideBySide ? ch.sideBySide : null;
   const sbsLines = sbs ? Math.max(sbs.unsafe.split('\n').length, sbs.hardened.split('\n').length) : 0;
-  const compactSbs = !!sbs && sbsLines <= 6;
+  // Right answer: verdict + one line. The picked option's "why" and the code
+  // comparison wait behind Tell me more (they mostly repeat the short line).
+  // Wrong answer: show them, that's when they help.
+  const lean = good && !res.assisted;
+  const compactSbs = !!sbs && sbsLines <= 6 && !lean;
+  const whyInMore = lean && !!out?.pickedWhy;
   const explainMore = ch.explain && ch.explain !== short;
-  const hasMore = explainMore || out?.detail || (sbs && !compactSbs) || ch.unsafe || !!sbs;
+  const hasMore = explainMore || whyInMore || out?.detail || (sbs && !compactSbs) || ch.unsafe || !!sbs;
   return (
     <div ref={ref} className={`${styles.result} ${good ? styles.good : styles.bad}`} aria-live="polite">
       <div className={styles.rh}>
@@ -501,7 +506,7 @@ const ResultPanel = forwardRef<HTMLDivElement, ResultProps>(function ResultPanel
           <Md text={short} />
         </div>
       )}
-      {out?.pickedWhy && (
+      {out?.pickedWhy && !whyInMore && (
         <div className={styles.rpick}>
           <Icon name={good ? 'ok' : 'no'} />
           <span>
@@ -513,6 +518,14 @@ const ResultPanel = forwardRef<HTMLDivElement, ResultProps>(function ResultPanel
       {compactSbs && sbs && <SideBySide unsafe={sbs.unsafe} hardened={sbs.hardened} compact />}
       {hasMore && (
         <Expander className={styles.more}>
+          {whyInMore && (
+            <div className={styles.rpick}>
+              <Icon name="ok" />
+              <span>
+                <Md text={out!.pickedWhy!} />
+              </span>
+            </div>
+          )}
           {explainMore && (
             <div className={styles.rexp}>
               {ch.explain.split(/\n\s*\n/).map((p, i) => (
