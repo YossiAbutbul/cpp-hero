@@ -1,0 +1,212 @@
+rules_version = '2';
+
+// Cpp Hero cloud save. One document per learner: users/{uid}
+//   { v, epoch, save, createdAt, updatedAt, resetAt? }
+// - v:      save format version (SAVE_VERSION in src/engine/config.ts); never goes down
+// - epoch:  number of cloud resets (a reset is the only write that may lower progress)
+// - save:   the save object (docs/ARCHITECTURE.md "Save format"), shape checked below
+// Size caps mirror CLOUD_LIMITS in src/cloud/merge.ts. Tests: tests/rules (npm run test:rules).
+//
+// Firestore evaluates at most 1000 expressions per request, and list / set /
+// map-diff operations (hasAll, hasOnly, diff, list literals) are charged per
+// element; a full save has hundreds of lessons, cards and review entries. So
+// every check here is O(1): exact key sets are "size == n + every expected key
+// is read" (a missing key is an error = denied), and "never goes down" compares
+// numbers and counts (xp, counters, best streak, number of lessons / projects /
+// bosses / worlds / achievements / vault cards / bestiary / owned cosmetics).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{uid} {
+      allow get: if isOwner(uid);
+      allow list: if false;
+
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['v', 'epoch', 'save', 'createdAt', 'updatedAt'])
+        && request.resource.data.v is int && request.resource.data.v >= 1
+        && request.resource.data.epoch == 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && validSave(request.resource.data.save, request.resource.data.v);
+
+      allow update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['v', 'epoch', 'save', 'createdAt', 'updatedAt', 'resetAt'])
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.v is int && request.resource.data.v >= resource.data.v
+        && (isProgressUpdate(request.resource.data, resource.data) || isReset(request.resource.data, resource.data));
+
+      allow delete: if false;
+    }
+
+    // Everything else: denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+
+  // Signed in with Google (not anonymous / other providers) and it's your own document.
+  function isOwner(uid) {
+    return request.auth != null
+      && request.auth.uid == uid
+      && request.auth.token.firebase.sign_in_provider == 'google.com';
+  }
+
+  // Exact key set without a (costly) key list: a map with exactly n keys whose
+  // n expected keys are all read by the checks that follow (a missing key, or
+  // reading a field of a non-map, is an error = denied) cannot hold any other key.
+  function sized(m, n) {
+    return m.size() == n;
+  }
+
+  // ---- whole-save validation (create, update, reset) ----
+
+  function validSave(s, v) {
+    return sized(s, 21)
+      && s.v == v
+      && isIso(s.createdAt)
+      && isIso(s.updatedAt)
+      && s.xp is int && s.xp >= 0
+      && s.level is int
+      && mapMax(s.lessons, 500)
+      && mapMax(s.projects, 100)
+      && mapMax(s.bosses, 100)
+      && validWorlds(s.worldsUnlocked)
+      && mapMax(s.srs, 5000)
+      && listMax(s.vault, 2000)
+      && listMax(s.bestiary, 1000)
+      && mapMax(s.achievements, 500)
+      && validProfile(s.profile)
+      && validSettings(s.settings)
+      && validHearts(s.hearts)
+      && validStreak(s.streak)
+      && validDaily(s.daily)
+      && validStats(s.stats)
+      && validCosmetics(s.cosmetics)
+      && validCounters(s.counters);
+  }
+
+  function isIso(x) {
+    return x is string && x.size() <= 40;
+  }
+  function mapMax(m, max) {
+    return m is map && m.size() <= max;
+  }
+  function listMax(l, max) {
+    return l is list && l.size() <= max;
+  }
+  function validWorlds(w) {
+    return w is list && w.size() >= 1 && w.size() <= 64;
+  }
+
+  function validProfile(p) {
+    return sized(p, 5)
+      && p.name is string && p.name.size() <= 40
+      && p.variant is string && p.variant.size() <= 64
+      && p.dailyGoalMin is number
+      && p.onboarded is bool
+      && p.placementDone is bool;
+  }
+
+  function validSettings(x) {
+    return sized(x, 4)
+      && x.sound is bool
+      && x.music is bool
+      && x.reduceMotion is bool
+      && x.textSize in ['s', 'm', 'l'];
+  }
+
+  function validHearts(h) {
+    return sized(h, 3)
+      && h.n is number && h.max is number && h.max <= 10
+      && isIso(h.lastRefill);
+  }
+
+  function validStreak(x) {
+    return sized(x, 4)
+      && x.days is number && x.freezes is number && x.best is number
+      && x.lastDay is string && x.lastDay.size() <= 10;
+  }
+
+  function validDaily(x) {
+    return sized(x, 3)
+      && x.day is string && x.day.size() <= 10
+      && x.minutes is number
+      && listMax(x.quests, 10);
+  }
+
+  function validStats(x) {
+    return sized(x, 5)
+      && x.logic is number && x.logic <= 100
+      && x.structure is number && x.structure <= 100
+      && x.memory is number && x.memory <= 100
+      && x.toolkit is number && x.toolkit <= 100
+      && x.defense is number && x.defense <= 100;
+  }
+
+  function validCosmetics(c) {
+    return sized(c, 2)
+      && listMax(c.owned, 200)
+      && sized(c.equipped, 3)
+      && (c.equipped.hat == null || (c.equipped.hat is string && c.equipped.hat.size() <= 64))
+      && c.equipped.color is string && c.equipped.color.size() <= 64
+      && (c.equipped.shield == null || (c.equipped.shield is string && c.equipped.shield.size() <= 64));
+  }
+
+  function validCounters(c) {
+    return sized(c, 7)
+      && c.correct is number && c.wrong is number && c.bestCombo is number
+      && c.hardened is number && c.reviews is number && c.secondsPlayed is number
+      && mapMax(c.byTag, 3000);
+  }
+
+  // ---- normal sync: same epoch, valid save, progress never goes down ----
+
+  function isProgressUpdate(n, o) {
+    return n.epoch == o.epoch
+      && n.get('resetAt', null) == o.get('resetAt', null)
+      && validSave(n.save, n.v)
+      && monotonic(n.save, o.save);
+  }
+
+  function monotonic(ns, os) {
+    return ns.xp >= os.xp
+      && ns.lessons.size() >= os.lessons.size()
+      && ns.projects.size() >= os.projects.size()
+      && ns.bosses.size() >= os.bosses.size()
+      && ns.achievements.size() >= os.achievements.size()
+      && ns.worldsUnlocked.size() >= os.worldsUnlocked.size()
+      && ns.vault.size() >= os.vault.size()
+      && ns.bestiary.size() >= os.bestiary.size()
+      && ns.cosmetics.owned.size() >= os.cosmetics.owned.size()
+      && ns.streak.best >= os.streak.best
+      && countersUp(ns.counters, os.counters)
+      && (ns.profile.onboarded || !os.profile.onboarded)
+      && (ns.profile.placementDone || !os.profile.placementDone);
+  }
+
+  function countersUp(c, o) {
+    return c.correct >= o.correct
+      && c.wrong >= o.wrong
+      && c.bestCombo >= o.bestCombo
+      && c.hardened >= o.hardened
+      && c.reviews >= o.reviews
+      && c.secondsPlayed >= o.secondsPlayed;
+  }
+
+  // ---- reset (Settings > Reset progress while signed in) ----
+  // epoch + 1, stamped resetAt, and the new save must be a valid fresh start.
+
+  function isReset(n, o) {
+    return n.epoch == o.epoch + 1
+      && n.resetAt == request.time
+      && n.save.xp == 0
+      && n.save.lessons.size() == 0
+      && n.save.projects.size() == 0
+      && n.save.bosses.size() == 0
+      && n.save.achievements.size() == 0
+      && n.save.vault.size() == 0
+      && n.save.bestiary.size() == 0
+      && validSave(n.save, n.v);
+  }
+}

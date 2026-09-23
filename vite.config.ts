@@ -10,6 +10,17 @@ export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // All of the Firebase SDK in one lazily loaded chunk (see src/cloud/CloudProvider.tsx).
+        manualChunks(id) {
+          if (/\/node_modules\/(@firebase|firebase)\//.test(id)) return 'firebase';
+          return undefined;
+        },
+      },
+    },
+  },
   plugins: [
     contentPlugin(),
     react(),
@@ -39,9 +50,22 @@ export default defineConfig({
       workbox: {
         // Offline: precache the whole app shell (the content is bundled into the JS).
         globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
+        // The Firebase chunk (only built when VITE_FIREBASE_* is set) is not
+        // precached, so guests never download it; signed-in devices cache it
+        // on first use (runtime rule below).
+        globIgnores: ['**/node_modules/**/*', '**/firebase-*.js'],
         navigateFallback: 'index.html',
+        // Never answer Firebase auth handler pages (/__/auth/*, when proxied
+        // through this domain) with the app shell.
+        navigateFallbackDenylist: [/^\/__\//],
         cleanupOutdatedCaches: true,
         runtimeCaching: [
+          {
+            // Hashed file name: safe to cache forever.
+            urlPattern: ({ url, sameOrigin }) => sameOrigin && /\/assets\/firebase-[\w-]+\.js$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: { cacheName: 'cpphero-firebase', expiration: { maxEntries: 4 } },
+          },
           {
             urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
             handler: 'StaleWhileRevalidate',

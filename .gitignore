@@ -6,3 +6,10 @@ coverage/
 .claude/
 *.tsbuildinfo
 .cpp-check/
+# Local env (real Firebase keys live here or in Vercel, never in git)
+.env
+.env*.local
+# Firebase CLI / emulator logs
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
