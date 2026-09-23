@@ -42,7 +42,7 @@ import ss from '@/features/session/session.module.css';
 import { BossArt } from '@/ui/art/Art';
 import { Button } from '@/ui/Button';
 import { burstAt, floatText, rain } from '@/ui/fx/effects';
-import { anim, pulseClass, reduced, shake, slideUp, SPRING } from '@/ui/fx/motion';
+import { anim, EASE_OUT, pulseClass, reduced, shake, slideUp, SPRING } from '@/ui/fx/motion';
 import { plural } from '@/ui/format';
 import { Icon } from '@/ui/Icon';
 import { Screen } from '@/ui/Layout';
@@ -311,6 +311,7 @@ function Battle({ w, rematch, onRetry }: { w: World; rematch: boolean; onRetry: 
         <Intro
           w={w}
           maxHp={maxHp}
+          stages={stages.length}
           start={!dim}
           onFight={() => {
             if (staged) return toStage(0, false);
@@ -548,11 +549,13 @@ function Dim({ name, onDone }: { name: string; onDone: () => void }) {
 function Intro({
   w,
   maxHp,
+  stages,
   start,
   onFight,
 }: {
   w: World;
   maxHp: number;
+  stages: number;
   start: boolean;
   onFight: () => void;
 }) {
@@ -596,7 +599,8 @@ function Intro({
         <b>{b.name}:</b> <Md text={b.intro} />
       </SpeechBubble>
       <p className={`muted small ${styles.note}`}>
-        <Icon name="heart" /> {FIGHT_HEARTS} hearts, a miss costs one. Land {plural(maxHp, 'hit')}
+        <Icon name="heart" /> {FIGHT_HEARTS} hearts, a miss costs one.{' '}
+        {stages > 1 ? `Break ${stages} stages` : `Land ${plural(maxHp, 'hit')}`}
         {b.defense.length ? ', then survive the Defense Phase!' : '!'}
       </p>
       <StoryBubbles
@@ -690,6 +694,7 @@ function Victory({ w, onClaim }: { w: World; onClaim: () => void }) {
   const b = w.boss;
   const first = !game.bossBeaten(w);
   const vb = useRef<HTMLSpanElement>(null);
+  const slot = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = vb.current;
     void anim(
@@ -700,9 +705,18 @@ function Victory({ w, onClaim }: { w: World; onClaim: () => void }) {
         { transform: 'rotate(380deg) scale(.1)', opacity: 0 },
       ],
       { duration: 1200, delay: 500, easing: 'ease-in', fill: 'forwards', rm: 'skip' },
-    ).then(() => {
+    ).then((a) => {
       burstAt(el, { n: 160 });
       rain(100);
+      // the boss spun away: close its empty slot so the title card springs up
+      // (under reduced motion it never left, so the slot stays)
+      const sl = slot.current;
+      if (!a || !sl) return;
+      void anim(sl, [{ height: `${sl.offsetHeight}px` }, { height: '0px' }], {
+        duration: 420,
+        easing: EASE_OUT,
+      });
+      sl.style.height = '0px';
     });
   }, []);
   const r = b.reward;
@@ -711,7 +725,9 @@ function Victory({ w, onClaim }: { w: World; onClaim: () => void }) {
   const lines = w.story.victory.length ? w.story.victory : [b.victory];
   return (
     <div className={styles.victory}>
-      <BossArt ref={vb} kind={b.art} hurt className={styles.vicBoss} />
+      <div ref={slot} className={styles.vicSlot}>
+        <BossArt ref={vb} kind={b.art} hurt className={styles.vicBoss} />
+      </div>
       <div className={`${styles.phase} ${styles.win}`}>
         <small>Victory!</small>
         <b>{b.name} defeated</b>

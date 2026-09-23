@@ -1,34 +1,24 @@
 # World 16 notes (for the engine / schema owners)
 
-## Multi-stage boss (REQUIREMENTS §5, item 16)
+## Multi-stage boss (REQUIREMENTS §5, item 16): done
 
-The schema has no notion of boss stages, so the Undefined Dragon fakes it:
+`boss.yaml` uses the optional `stages` field (schema: `BossStageSchema` in `src/content/schema.ts`,
+logic: `src/engine/boss.ts`). Bosses 1-15 have no `stages` and play as one stage, unchanged.
 
-- `hp: 10` and 12 rounds (the brief's usual range is hp 6-8, 7-9 rounds), plus 5 defense attacks.
-- Rounds are grouped in order and every prompt starts with its stage name:
-  - Stage 1 · Scales of Logic (r1-r4): Worlds 1-7
-  - Stage 2 · Wings of Memory (r5-r8): Worlds 8-11
-  - Stage 3 · Fire of Abstraction (r9-r12): Worlds 12-15, ending in a timed `speed` and a timed `safe` round
+- `hp: 10`, 12 rounds, 5 defense attacks.
+  - Stage 1 · Scales of Logic (r1-r4, hp 3): Worlds 1-7
+  - Stage 2 · Wings of Memory (r5-r8, hp 3): Worlds 8-11
+  - Stage 3 · Fire of Abstraction (r9-r12, hp 4): Worlds 12-15, ending in a timed `speed` and a timed `safe` round
   - Defense · The Dragon's Fire (d1-d5): one hostile input per layer (empty string, negative index, huge value, nullptr, endless text)
-
-Suggested real support (optional, backward compatible):
-
-```yaml
-# boss.yaml
-stages:                      # optional; absent = today's single stage
-  - name: Scales of Logic
-    taunt: [ "..." ]         # stage-specific taunts
-    rounds: [ r1, r2, r3, r4 ]   # ids from `rounds`
-    hp: 3                    # hits needed to break this stage
-  - name: Wings of Memory
-    ...
-```
-
-Engine ideas: a stage banner and a short "phase change" animation between stages (the Dragon changes
-color or pose: `art` could accept `dragon` plus a stage index, or each stage could name its own tint); an hp
-bar split into segments, one per stage; losing all hearts in a stage restarts only that stage; the defense
-phase stays last as "the final fire". Validation: every stage round id must exist in `rounds`, stages must
-cover all rounds in order, and the stage hp values must add up to the boss `hp`.
+- Each stage has its own taunts. Round prompts no longer start with the stage name (the banner and the
+  "Stage 2 · Round 1" label show it).
+- Screen: a springy stage banner ("Stage 2 of 3 · Wings of Memory") before each stage, the Dragon rears up on
+  a new stage, the hp bar is one bar for the whole fight with a small gap between stage groups.
+- Hearts: 5 per fight, carried from stage to stage. Out of hearts restarts only the current stage (its hp comes
+  back, fresh 5 hearts, "Retry stage"); out of hearts in the Defense Phase restarts only the Defense Phase.
+- Validation: stage round ids must list every round once, in order; stage hp must add up to the boss hp; each
+  stage needs at least its hp in rounds.
+- Still open (nice to have): a per-stage tint or pose for the Dragon art.
 
 ## Other notes
 

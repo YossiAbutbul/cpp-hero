@@ -11,7 +11,7 @@
  *   run = answerRound(run, d.ch, correct);
  *   if (stageCleared(run)) run = startStage(stages, run.stage + 1);  // unless it was the last
  */
-import type { Boss, Challenge } from '@/content/schema';
+import type { Boss, Challenge } from '../content/schema';
 
 export interface Stage {
   /** '' for a single-stage boss */
@@ -76,15 +76,19 @@ export function drawRound(
   let lap = false;
   if (r.i >= r.list.length) {
     lap = true;
-    r = { ...r, list: shuffle(r.missed.length ? r.missed.slice() : stages[r.stage]!.rounds.slice()), missed: [], i: 0 };
+    r = {
+      ...r,
+      list: shuffle(r.missed.length ? r.missed.slice() : stages[r.stage]!.rounds.slice()),
+      missed: [],
+      i: 0,
+    };
   }
   return { run: { ...r, i: r.i + 1 }, ch: r.list[r.i]!, lap };
 }
 
 /** Settle a round: a hit lowers both hp counts, a miss queues the round again. */
 export function answerRound(run: BossRun, ch: Challenge, correct: boolean): BossRun {
-  if (correct)
-    return { ...run, hp: Math.max(0, run.hp - 1), stageHp: Math.max(0, run.stageHp - 1) };
+  if (correct) return { ...run, hp: Math.max(0, run.hp - 1), stageHp: Math.max(0, run.stageHp - 1) };
   return { ...run, missed: [...run.missed, ch] };
 }
 

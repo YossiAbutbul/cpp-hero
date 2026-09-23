@@ -13,7 +13,7 @@ content/                YAML content (see content/README.md): worlds/NN-slug/{wo
 src/
   app/                  App shell: GameProvider (store + game), routes (hash), Stage + transitions, header/HUD, tab bar, hosts
   features/<name>/      screens: map, lesson, challenges, boss, project, curlo, vault, bestiary, practice, stats, settings, onboarding
-  engine/               pure game logic, no React/DOM: save/store, progress (XP/levels), boss fight hearts, streak, quests,
+  engine/               pure game logic, no React/DOM: save/store, progress (XP/levels), boss fight hearts + stages, streak, quests,
                         achievements, cosmetics, srs, matching, contentIndex, game (rules wired together), config
   content/              schema.ts (zod: the content format + inferred types), load.ts/validate.ts (YAML → Content),
                         index.ts + useContent.ts (runtime access; hot-reloads in dev)
@@ -182,6 +182,9 @@ Defensive types = `bug`, `breakit`, `harden`, `review`, `edge`, `safe`; each nee
   hp: 6,                         // one hit per correct answer
   intro: "…", taunt: ["…", "…"],
   rounds: [ Challenge, … ],      // ≥ hp challenges, mixed types incl. at least one timed one
+  stages: [                      // optional (World 16): stages cover every round id once, in order;
+    { name: "Scales of Logic", taunt: ["…"], rounds: ["w16.boss.r1", …], hp: 3 },  // stage hp adds up to hp
+  ],                             // a knock-out restarts only the current stage (engine/boss.ts)
   defense: [                     // defense phase: boss attacks with hostile inputs, player blocks by hardening
     { attack: "-5", label: "Negative number!", challenge: Challenge /* harden/breakit */ }
   ],
