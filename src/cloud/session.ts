@@ -45,7 +45,7 @@ import { SAVE_VERSION } from '@/engine/config';
 import { defaultSave } from '@/engine/save';
 import type { Store } from '@/engine/store';
 import type { CloudConfig } from './config';
-import { backupSave, readLink, writeLink } from './link';
+import { backupSave, readLink, writeLink, type StoredLink } from './link';
 import { mergeSaves, sameSave, toCloudSave } from './merge';
 import { reconcile, type Reconciled } from './reconcile';
 import type { CloudSession, CloudStatus } from './types';
@@ -120,6 +120,13 @@ export async function startCloud(
   let unsubSnap: (() => void) | null = null;
   let disposed = false;
   let resetting = false; // our own reset: don't report it as "reset on another device"
+  // Link (account + reset counter) this session last synced with. Kept in memory, not
+  // re-read from localStorage: another tab's reset bumps the stored epoch, and this tab
+  // (still holding the old progress) must then take the reset cloud copy, not merge into it.
+  const seen = readLink();
+  const link = (patch: Partial<StoredLink>) => Object.assign(seen, writeLink(patch));
+  let markAuthReady: () => void = () => {};
+  const authReady = new Promise<void>((r) => (markAuthReady = r));
 
   // Serialize syncs / resets so two transactions never race each other here.
   let chain: Promise<unknown> = Promise.resolve();
@@ -140,14 +147,14 @@ export async function startCloud(
         say(
           r.replaced === 'reset'
             ? 'Progress was reset on another device.'
-            : 'Loaded this account’s progress. The old save is kept in its own account.',
+            : 'Loaded this accountג€™s progress. The old save is kept in its own account.',
         );
       }
     } else {
       const next = mergeSaves(store.state, r.local);
       if (!sameSave(next, store.state)) store.replace(next);
     }
-    writeLink({ uid, epoch: r.epoch, active: true });
+    link({ uid, epoch: r.epoch, active: true });
   };
 
   const fail = (e: unknown) => {
@@ -173,7 +180,7 @@ export async function startCloud(
           const data: DocumentData | null = snap.exists() ? snap.data() : null;
           const res = reconcile(
             store.state,
-            readLink(),
+            seen,
             u.uid,
             data ? { v: data.v, epoch: data.epoch, save: data.save } : null,
           );
@@ -199,6 +206,7 @@ export async function startCloud(
         set({ state: 'synced', lastSyncAt: Date.now() });
         listen(u.uid);
       } catch (e) {
+        if (user?.uid !== u.uid) return; // signed out meanwhile (permission-denied is expected)
         fail(e);
       }
     });
@@ -224,7 +232,7 @@ export async function startCloud(
         if (snap.metadata.hasPendingWrites || !snap.exists() || user?.uid !== uid || blocked || resetting)
           return;
         const d = snap.data();
-        const r = reconcile(store.state, readLink(), uid, { v: d.v, epoch: d.epoch, save: d.save });
+        const r = reconcile(store.state, seen, uid, { v: d.v, epoch: d.epoch, save: d.save });
         if (r.kind === 'too-new') {
           blocked = true;
           return set({ state: 'too-new' });
@@ -261,8 +269,13 @@ export async function startCloud(
   window.addEventListener('online', onOnline);
   document.addEventListener('visibilitychange', onHidden);
 
+  let first = true;
   const offAuth = onAuthStateChanged(auth, (u) => {
-    const changed = user?.uid !== u?.uid;
+    // The first callback always counts: a signed-out start must clear the "active" flag
+    // (abandoned redirect, expired session), or Firebase would load on every start.
+    const changed = first || user?.uid !== u?.uid;
+    first = false;
+    markAuthReady();
     user = u;
     blocked = false;
     set({
@@ -273,17 +286,17 @@ export async function startCloud(
     if (!changed) return;
     stopListening();
     if (u) {
-      writeLink({ active: true });
+      link({ active: true });
       void syncOnce();
     } else {
-      writeLink({ active: false });
+      link({ active: false });
     }
   });
 
   // Finish a redirect sign-in (no-op otherwise).
   getRedirectResult(auth).catch((e: unknown) => {
     console.warn('[cloud] redirect sign-in failed', e);
-    say('Sign-in didn’t finish. Try again.');
+    say('Sign-in didnג€™t finish. Try again.');
   });
 
   const provider = new GoogleAuthProvider();
@@ -318,6 +331,7 @@ export async function startCloud(
 
     resetProgress() {
       return serial(async () => {
+        await authReady; // a linked device must not reset locally only, before auth is known
         const u = user;
         if (!u) {
           store.reset();
@@ -329,7 +343,7 @@ export async function startCloud(
           timer = null;
         }
         const ref = doc(db, 'users', u.uid);
-        let epoch = readLink().epoch;
+        let epoch = seen.epoch;
         resetting = true;
         try {
           epoch = await runTransaction(db, async (tx) => {
@@ -350,7 +364,7 @@ export async function startCloud(
           if (errCode(e) === 'unavailable') throw new CloudOfflineError('offline');
           throw e;
         }
-        writeLink({ uid: u.uid, epoch, active: true });
+        link({ uid: u.uid, epoch, active: true });
         store.reset();
         resetting = false;
         set({ state: 'synced', lastSyncAt: Date.now() });

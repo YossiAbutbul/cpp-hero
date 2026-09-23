@@ -46,7 +46,8 @@ export function readCloudConfig(env: Env): CloudConfig | null {
             provider: str(env.VITE_FIREBASE_APPCHECK_PROVIDER) === 'v3' ? 'v3' : 'enterprise',
             siteKey,
             // "true" = print a debug token in the console (register it in the Firebase console).
-            debugToken: debug === 'true' ? true : debug,
+            // Dev server only: a token baked into a production bundle would let anyone past App Check.
+            debugToken: env.DEV !== true ? '' : debug === 'true' ? true : debug,
           }
         : null,
   };

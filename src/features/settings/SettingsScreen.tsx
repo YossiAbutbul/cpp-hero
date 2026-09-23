@@ -233,7 +233,11 @@ function Backup() {
             It replaces your progress with: <b>level {data.level}</b>, {plural(lessons, 'lesson')} done,{' '}
             {data.xp} XP.
           </p>
-          <p className="muted small">Tip: export your current save first.</p>
+          <p className="muted small">
+            {signedIn
+              ? 'You’re signed in: it gets merged with your cloud save, so it can only add progress.'
+              : 'Tip: export your current save first.'}
+          </p>
         </>
       ),
       yes: 'Import',

@@ -73,12 +73,19 @@ export function CloudProvider({ children }: { children: ReactNode }) {
       },
       syncNow: () => void ready.current?.syncNow(),
       async resetProgress(): Promise<ResetResult> {
-        const s = ready.current;
-        if (!s || !status.user) {
+        // Linked device whose session isn't up yet: start it and let it decide (it waits for
+        // auth), or a local-only reset would be merged back from the cloud on the next sync.
+        const linked = !!cloudConfig && readLink().active;
+        if (!linked && !status.user) {
           store.reset();
           return 'ok';
         }
         try {
+          const s = ready.current ?? (await load());
+          if (!s) {
+            store.reset();
+            return 'ok';
+          }
           await s.resetProgress();
           return 'ok';
         } catch (e) {
