@@ -1,6 +1,6 @@
 /**
  * Top bar (mini Curlo + brand, Stats / Settings toggles whose icons morph
- * into an X while open) and the HUD (hearts, streak, quests, XP/level).
+ * into an X while open) and the HUD (streak, quests, XP/level).
  */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Curlo } from '@/features/curlo/Curlo';
@@ -9,7 +9,6 @@ import { Chip } from '@/ui/Chip';
 import { CountUp } from '@/ui/CountUp';
 import { bounce, reduced } from '@/ui/fx/motion';
 import { StreakFlame } from '@/ui/GameBits';
-import { HeartsChip } from '@/ui/HeartsChip';
 import { Icon } from '@/ui/Icon';
 import { useDialog } from '@/ui/overlay/dialogContext';
 import { overlayCount } from '@/ui/overlay/overlay';
@@ -24,7 +23,7 @@ import styles from './shell.module.css';
 type Panel = 'stats' | 'settings';
 
 export function Header({ handle }: { handle: RouteHandle }) {
-  const { store, game } = useGame();
+  const { store } = useGame();
   const dialog = useDialog();
   const s = store.state;
   const panel = handle.panel;
@@ -78,13 +77,6 @@ export function Header({ handle }: { handle: RouteHandle }) {
       </div>
       <div className={styles.hud} aria-label="Player status" role="group">
         <div className={styles.hudRow}>
-          <HeartsChip
-            n={s.hearts.n}
-            max={s.hearts.max}
-            read={() => ({ n: store.state.hearts.n, max: store.state.hearts.max, nextIn: game.hearts.nextIn() })}
-            onTick={game.hearts.regen}
-            onPracticeReview={() => navigate('/practice', { dir: 1 })}
-          />
           <Chip
             lead={<StreakFlame days={s.streak.days} />}
             label={`Streak: ${s.streak.days} days, ${s.streak.freezes} freezes`}

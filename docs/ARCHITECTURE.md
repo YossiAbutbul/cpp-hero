@@ -13,7 +13,7 @@ content/                YAML content (see content/README.md): worlds/NN-slug/{wo
 src/
   app/                  App shell: GameProvider (store + game), routes (hash), Stage + transitions, header/HUD, tab bar, hosts
   features/<name>/      screens: map, lesson, challenges, boss, project, curlo, vault, bestiary, practice, stats, settings, onboarding
-  engine/               pure game logic, no React/DOM: save/store, progress (XP/levels), hearts, streak, quests,
+  engine/               pure game logic, no React/DOM: save/store, progress (XP/levels), boss fight hearts, streak, quests,
                         achievements, cosmetics, srs, matching, contentIndex, game (rules wired together), config
   content/              schema.ts (zod: the content format + inferred types), load.ts/validate.ts (YAML → Content),
                         index.ts + useContent.ts (runtime access; hot-reloads in dev)
@@ -48,7 +48,7 @@ Stored under localStorage key `cpphero.save`, JSON. Every read/write in try/catc
   profile: { name: "Curlo", variant: "classic", dailyGoalMin: 10, onboarded: true, placementDone: false },
   settings: { sound: true, music: false, reduceMotion: false, textSize: "m" },   // "s" | "m" | "l"
   xp: 0, level: 1,
-  hearts: { n: 5, max: 5, lastRefill: ISO },   // +1 heart per 30 min, or +1 per practice review completed
+  hearts: { n: 5, max: 5, lastRefill: ISO },   // unused: kept for old saves and cloud sync (hearts are per boss fight now)
   streak: { days: 0, lastDay: "YYYY-MM-DD", freezes: 0, best: 0 },
   daily: { day: "YYYY-MM-DD", minutes: 0, quests: [{ id, progress, done, claimed }] },
   stats: { logic: 0, structure: 0, memory: 0, toolkit: 0, defense: 0 },   // 0..100 each

@@ -1,7 +1,7 @@
 /**
  * A practice session (#/practice/run?mode=review | ?mode=arena&type=bug; immersive):
- *   review  5 spaced-repetition items (due first, then most-missed); +1 heart at the end
- *   arena   5 seen challenges of one type for bonus XP; no hearts at stake
+ *   review  5 spaced-repetition items (due first, then most-missed)
+ *   arena   5 seen challenges of one type for bonus XP
  * Both use the lesson session chrome, the ChallengeRunner and the results card.
  */
 import { useEffect, useState } from 'react';
@@ -15,9 +15,7 @@ import { Results, sessionTiles } from '@/features/session/Results';
 import { SessionFrame, SlidePage } from '@/features/session/SessionFrame';
 import { useQuit } from '@/features/session/useQuit';
 import { Button } from '@/ui/Button';
-import { Icon } from '@/ui/Icon';
 import { Card, Screen } from '@/ui/Layout';
-import styles from './practice.module.css';
 
 export function PracticeRun() {
   const [params] = useSearchParams();
@@ -42,7 +40,7 @@ function Run({ mode, type }: { mode: 'review' | 'arena'; type: ChallengeType | n
   const [bestCombo, setBestCombo] = useState(0);
   const [t0] = useState(() => Date.now());
   const [xp0] = useState(() => store.state.xp);
-  const [done, setDone] = useState<null | { seconds: number; xp: number; gained: number }>(null);
+  const [done, setDone] = useState<null | { seconds: number; xp: number }>(null);
   const noun = mode === 'review' ? 'review' : 'practice run';
   const askQuit = useQuit(noun);
 
@@ -63,13 +61,12 @@ function Run({ mode, type }: { mode: 'review' | 'arena'; type: ChallengeType | n
     );
 
   const finish = () => {
-    let gained = 0;
-    if (mode === 'review') gained = game.finishPractice();
+    if (mode === 'review') game.finishPractice();
     else {
       game.questEvent('practice.done', 1);
       game.markActive();
     }
-    setDone({ seconds: Math.round((Date.now() - t0) / 1000), xp: store.state.xp - xp0, gained });
+    setDone({ seconds: Math.round((Date.now() - t0) / 1000), xp: store.state.xp - xp0 });
   };
 
   const ch = list[i];
@@ -88,13 +85,6 @@ function Run({ mode, type }: { mode: 'review' | 'arena'; type: ChallengeType | n
             title={mode === 'review' ? 'Review complete!' : 'Practice complete!'}
             sub={mode === 'review' ? 'Spaced repetition keeps concepts fresh.' : 'Bonus XP earned in the Arena.'}
             tiles={sessionTiles({ xp: done.xp, right, total: list.length, bestCombo, seconds: done.seconds })}
-            extra={
-              mode === 'review' ? (
-                <div className={styles.gain}>
-                  <Icon name="heart" /> {done.gained ? '+1 heart for reviewing!' : 'Hearts are full. Nice upkeep!'}
-                </div>
-              ) : undefined
-            }
             variant="lesson"
             onContinue={() => goBack('/practice', { dir: 'close' })}
           />

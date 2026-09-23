@@ -2,9 +2,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Quest } from '../content/schema';
 import { testAchievement } from './achievements';
-import { HEART_REFILL_MS } from './config';
 import { allCosmetics, cosmeticTest } from './cosmetics';
-import { costsHeart, gainHeart, loseHeart, nextHeartIn, regenHearts } from './hearts';
+import { costsHeart, FIGHT_HEARTS, fightAnswer } from './hearts';
 import { applyXp, comboMultiplier, levelInfo, xpForLevel, xpToNext } from './progress';
 import { canonQuestEvent, isKnownQuestEvent } from './questEvents';
 import { ensureDaily, questEvent } from './quests';
@@ -39,40 +38,33 @@ describe('levels', () => {
   });
 });
 
-describe('hearts', () => {
-  const h = () => ({ n: 5, max: 5, lastRefill: new Date(T0).toISOString() });
-
-  it('losing from full starts the refill clock', () => {
-    const x = h();
-    expect(loseHeart(x, T0 + 1000)).toBe(4);
-    expect(x.lastRefill).toBe(new Date(T0 + 1000).toISOString());
-    expect(nextHeartIn(x, T0 + 1000)).toBe(HEART_REFILL_MS / 1000);
-  });
-
-  it('refills 1 per 30 min and keeps partial progress', () => {
-    const x = { n: 2, max: 5, lastRefill: new Date(T0).toISOString() };
-    expect(regenHearts(x, T0 + HEART_REFILL_MS * 2 + 60_000)).toBe(2);
-    expect(x.n).toBe(4);
-    expect(Date.parse(x.lastRefill)).toBe(T0 + HEART_REFILL_MS * 2);
-    expect(regenHearts(x, T0 + HEART_REFILL_MS * 10)).toBe(1);
-    expect(x.n).toBe(5);
-    expect(nextHeartIn(x, T0)).toBe(0);
-  });
-
-  it('never goes below 0 or above max', () => {
-    const x = { n: 0, max: 5, lastRefill: new Date(T0).toISOString() };
-    expect(loseHeart(x, T0)).toBe(0);
-    expect(gainHeart(x, 9, T0)).toBe(5);
-  });
-
-  it('only a wrong FIRST try in a lesson or boss costs a heart', () => {
-    expect(costsHeart({ mode: 'lesson', correct: false, retry: false })).toBe(true);
+describe('boss fight hearts', () => {
+  it('only a wrong FIRST try in a boss fight costs a heart', () => {
     expect(costsHeart({ mode: 'boss', correct: false, retry: false })).toBe(true);
-    expect(costsHeart({ mode: 'lesson', correct: false, retry: true })).toBe(false);
-    expect(costsHeart({ mode: 'lesson', correct: true, retry: false })).toBe(false);
-    expect(costsHeart({ mode: 'practice', correct: false, retry: false })).toBe(false);
-    expect(costsHeart({ mode: 'project', correct: false, retry: false })).toBe(false);
-    expect(costsHeart({ mode: 'boss', correct: false, retry: false, noHearts: true })).toBe(false);
+    expect(costsHeart({ mode: 'boss', correct: false, retry: true })).toBe(false);
+    expect(costsHeart({ mode: 'boss', correct: true, retry: false })).toBe(false);
+    for (const mode of ['lesson', 'project', 'practice', 'review', 'placement'] as const)
+      expect(costsHeart({ mode, correct: false, retry: false })).toBe(false);
+  });
+
+  it('a fight starts with 5 hearts and the 5th miss knocks you out', () => {
+    expect(FIGHT_HEARTS).toBe(5);
+    let n = FIGHT_HEARTS;
+    const out: boolean[] = [];
+    for (let i = 0; i < 5; i++) {
+      const r = fightAnswer(n, { correct: false, retry: false });
+      expect(r.lost).toBe(true);
+      n = r.hearts;
+      out.push(r.knockedOut);
+    }
+    expect(n).toBe(0);
+    expect(out).toEqual([false, false, false, false, true]);
+  });
+
+  it('right answers and retries keep hearts; never below 0', () => {
+    expect(fightAnswer(3, { correct: true, retry: false })).toEqual({ hearts: 3, lost: false, knockedOut: false });
+    expect(fightAnswer(3, { correct: false, retry: true })).toEqual({ hearts: 3, lost: false, knockedOut: false });
+    expect(fightAnswer(0, { correct: false, retry: false })).toEqual({ hearts: 0, lost: false, knockedOut: true });
   });
 });
 

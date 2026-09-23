@@ -253,7 +253,7 @@ function Offer({
       </div>
       <p className="muted">
         {canPlace
-          ? 'Take a short placement quiz (3 questions per world) to skip worlds you know. No hearts, no pressure.'
+          ? 'Take a short placement quiz (3 questions per world) to skip worlds you know. No pressure.'
           : 'Start from the beginning. Placement unlocks once more worlds arrive.'}
       </p>
       <div className={styles.col}>

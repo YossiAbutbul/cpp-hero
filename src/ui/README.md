@@ -48,7 +48,6 @@ compiled out of production builds; source `src/features/dev/UiGallery.tsx`).
 <Tabs label="Vault" value={tab} onChange={setTab} items={[{ id, label, icon, panel }]} />
 <Expander>{longText}</Expander>                          // "Tell me more" / "Show less"
 <StreakFlame days={7} />  <ComboMeter combo={c} multiplier={m} />  <Hearts n={3} max={5} />
-<HeartsChip n max read={() => ({ n, max, nextIn })} onTick={game.hearts.regen} onPracticeReview={…} />
 <AutoGrowInput variant="fill|console|field" value={v} onChange={setV} label="…" onEnter={check} />
 <Md text="Use `std::cout` for **output**." />           // markdown-lite from content
 <Screen label="Vault"><ScreenTitle eyebrow="…">Vault</ScreenTitle><Card>…</Card></Screen>
@@ -62,9 +61,9 @@ Every screen should render inside `<Screen>` (scroll container with the 16px gut
 ```tsx
 const dialog = useDialog();
 if (await dialog.confirm({ title: 'Reset progress?', body: <p>…</p>, danger: true })) reset();
-const v = await dialog.open({ title: 'Out of hearts', mood: 'worried', body: <p>…</p>,
-  buttons: [{ label: 'Earn a heart', value: 'p', variant: 'teal' }, { label: 'Wait', value: 'w', variant: 'ghost' }] });
-const s = dialog.sheet({ title: 'Hearts', body: (close) => <HeartsInfo … /> });  // s.close(), await s.closed
+const v = await dialog.open({ title: 'Knocked out!', mood: 'worried', body: <p>…</p>,
+  buttons: [{ label: 'Try again', value: 'retry', variant: 'coral' }, { label: 'Back to map', value: 'map', variant: 'ghost' }] });
+const s = dialog.sheet({ title: 'Daily streak', body: (close) => <StreakInfo … /> });  // s.close(), await s.closed
 toast('New world unlocked!', { icon: 'map', ms: 2600 });                        // works anywhere
 ```
 
@@ -141,7 +140,7 @@ scroll vertically (capped at 60vh; `capHeight={false}` to disable).
 
 - `useGame()` → `{ store, game, content, version, notice, update }`.
   `update((s) => { s.settings.textSize = 'l'; })` mutates the save, saves and re-renders.
-  Game rules go through `game.*` (XP, hearts, answers…).
+  Game rules go through `game.*` (XP, answers…).
 - Routes (`src/app/routes.tsx`, hash-based). `handle` = `{ tab?, panel?, immersive? }`:
   immersive screens cover the header, HUD and tab bar.
 - Navigate with the transition helpers, not react-router's `navigate`:

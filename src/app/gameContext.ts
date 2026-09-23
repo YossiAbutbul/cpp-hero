@@ -16,7 +16,7 @@ export interface GameContextValue {
   /**
    * Mutate the save directly (settings, profile…), then save + re-render:
    *   update((s) => { s.settings.textSize = 'l'; });
-   * Game rules (XP, hearts, answers) go through `game` instead.
+   * Game rules (XP, answers) go through `game` instead.
    */
   update: (fn: (state: SaveV1) => void) => void;
 }

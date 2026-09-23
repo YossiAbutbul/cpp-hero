@@ -7,7 +7,6 @@ export { CountUp } from './CountUp';
 export { Tabs, type TabItem } from './Tabs';
 export { Expander } from './Expander';
 export { StreakFlame, ComboMeter, Hearts } from './GameBits';
-export { HeartsChip, HeartsInfo, HeartClock } from './HeartsChip';
 export { AutoGrowInput } from './AutoGrowInput';
 export { Md } from './Md';
 export { Screen, ScreenTitle, Card, Eyebrow } from './Layout';

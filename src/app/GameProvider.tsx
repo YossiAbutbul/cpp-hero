@@ -47,7 +47,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const bump = () => setVersion((v) => v + 1);
     const offs = [
       store.subscribe(bump),
-      ...(['xp', 'hearts', 'quests', 'streak', 'equip', 'stats', 'combo'] as const).map((e) => game.events.on(e, bump)),
+      ...(['xp', 'quests', 'streak', 'equip', 'stats', 'combo'] as const).map((e) => game.events.on(e, bump)),
     ];
     // Flush pending writes when the page is hidden or closed.
     const flush = () => void store.saveNow();

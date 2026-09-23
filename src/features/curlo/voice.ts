@@ -53,7 +53,7 @@ export const VOICE = {
   shield: ['Shields up! Nothing gets past us!', 'Blocked! That’s defensive coding!', 'Clang! Deflected!'],
   crash: ['Yikes! That input broke it!', 'Uh-oh… the program went sideways!', 'Crash! Let’s patch that hole.'],
   lessonDone: ['Lesson complete! I’m so proud I could curl.', 'Another concept in the bag!', 'Look at you go!'],
-  noHearts: ['Out of hearts! A quick review will refill one.', 'We’re out of hearts. Let’s practice to earn one back!'],
+  knockedOut: ['Ouch, that boss got us! Shake it off and go again?', 'Down, but not out! Round two?'],
   streak: ['{n}-day streak! Keep the flame alive!'],
   boss: ['That boss won’t know what hit it.', 'Stay calm. Harden everything.'],
 } as const satisfies Record<string, readonly string[]>;

@@ -1,6 +1,6 @@
 /**
- * Practice tab (#/practice): spaced-repetition review (+1 heart) and the
- * Practice Arena (replay any challenge type you've met, bonus XP, no hearts).
+ * Practice tab (#/practice): spaced-repetition review and the Practice
+ * Arena (replay any challenge type you've met, bonus XP).
  * Runs open #/practice/run (immersive). `#/practice?review=1` starts a review.
  */
 import { useEffect, type MouseEvent } from 'react';
@@ -77,8 +77,7 @@ export function PracticeScreen() {
               ? `${plural(due, 'concept')} due for review.`
               : seen.length
                 ? 'Nothing due right now. Review anyway to stay sharp!'
-                : 'Finish your first lesson to unlock reviews.'}{' '}
-            Each review earns <b>+1 heart</b>.
+                : 'Finish your first lesson to unlock reviews.'}
           </p>
         </div>
         <Button
@@ -91,7 +90,7 @@ export function PracticeScreen() {
         </Button>
       </Card>
       <h3 className={styles.secH}>
-        Practice Arena <span className="muted small">bonus XP, no hearts lost</span>
+        Practice Arena <span className="muted small">bonus XP</span>
       </h3>
       <div className={styles.grid}>
         {CHALLENGE_TYPES.map((t) => {

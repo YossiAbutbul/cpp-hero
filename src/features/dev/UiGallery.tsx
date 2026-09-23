@@ -25,7 +25,6 @@ import { showCelebration } from '@/ui/fx/celebrationQueue';
 import { burstAt, flash, floatText, rain } from '@/ui/fx/effects';
 import { bounce, shake, wiggle } from '@/ui/fx/motion';
 import { ComboMeter, Hearts, StreakFlame } from '@/ui/GameBits';
-import { HeartsChip } from '@/ui/HeartsChip';
 import { Icon } from '@/ui/Icon';
 import { ICON_NAMES } from '@/ui/icons';
 import { Card, Screen, ScreenTitle } from '@/ui/Layout';
@@ -136,12 +135,6 @@ export default function UiGallery() {
             Done
           </Chip>
           <Chip lead={<StreakFlame days={12} />}>12</Chip>
-          <HeartsChip
-            n={n}
-            max={5}
-            read={() => ({ n, max: 5, nextIn: 754 })}
-            onPracticeReview={() => toast('→ practice review')}
-          />
           <ComboMeter combo={combo} multiplier={combo >= 10 ? 3 : combo >= 6 ? 2 : combo >= 3 ? 1.5 : 1} />
         </div>
         <div className={styles.row}>
@@ -210,12 +203,12 @@ export default function UiGallery() {
             variant="teal"
             onClick={async () => {
               const v = await dialog.open({
-                title: 'Out of hearts',
+                title: 'Knocked out!',
                 mood: 'worried',
-                body: <p>{curloLine('noHearts')}</p>,
+                body: <p>{curloLine('knockedOut')}</p>,
                 buttons: [
-                  { label: 'Earn a heart', value: 'practice', variant: 'teal', icon: 'practice' },
-                  { label: 'Wait for it', value: 'wait', variant: 'ghost' },
+                  { label: 'Try again', value: 'retry', variant: 'coral', icon: 'swords' },
+                  { label: 'Back to map', value: 'map', variant: 'ghost' },
                 ],
               });
               toast(`Picked: ${String(v)}`);

@@ -21,12 +21,9 @@ import { Icon } from '@/ui/Icon';
 import { Card, Screen } from '@/ui/Layout';
 import { Md } from '@/ui/Md';
 import { plural } from '@/ui/format';
-import { RefillRound } from '@/features/session/RefillRound';
 import { Results, sessionTiles } from '@/features/session/Results';
 import { SessionFrame, SlidePage } from '@/features/session/SessionFrame';
-import { useHeartsGate } from '@/features/session/useHeartsGate';
 import { useQuit } from '@/features/session/useQuit';
-import { useRefillPrompt } from '@/features/session/useRefillPrompt';
 import styles from './lesson.module.css';
 
 interface QItem {
@@ -68,13 +65,11 @@ function buildQueue(lesson: Lesson): QItem[] {
 
 function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; index: number }) {
   const { game, store } = useGame();
-  useHeartsGate();
   const [queue, setQueue] = useState<QItem[]>(() => buildQueue(lesson));
   const [page, setPage] = useState<Page>('intro');
   const [qi, setQi] = useState(0);
   const [firstTry, setFirstTry] = useState<Record<string, boolean>>({});
   const [bestCombo, setBestCombo] = useState(0);
-  const [refill, setRefill] = useState(false);
   const [t0] = useState(() => Date.now());
   const [xp0] = useState(() => store.state.xp);
   const [finish, setFinish] = useState<null | {
@@ -89,7 +84,6 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
   }>(null);
   const [retriedIds, setRetriedIds] = useState<string[]>([]);
   const askQuit = useQuit('lesson');
-  const askRefill = useRefillPrompt();
 
   useEffect(() => {
     game.resetCombo();
@@ -117,19 +111,7 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
     }
   };
 
-  const next = async () => {
-    game.hearts.regen(); // a heart owed by the timer counts before "out of hearts"
-    if (store.state.hearts.n <= 0) {
-      const v = await askRefill();
-      if (v === 'quit') {
-        goBack('/', { dir: 'close' });
-        return;
-      }
-      setRefill(true);
-    }
-    advance();
-  };
-  const advance = () => {
+  const next = () => {
     if (qi + 1 < queue.length) setQi(qi + 1);
     else setPage('recap');
   };
@@ -151,11 +133,10 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
   };
 
   const item = queue[qi];
-  const pageKey = page === 'ch' ? `ch:${qi}` : refill ? 'refill' : page;
+  const pageKey = page === 'ch' ? `ch:${qi}` : page;
 
   let body: ReactNode;
-  if (refill) body = <RefillRound pool={lesson.challenges} paged onDone={() => setRefill(false)} />;
-  else if (page === 'intro')
+  if (page === 'intro')
     body = (
       <SlidePage pageKey="intro">
         <Intro
@@ -194,7 +175,7 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
           mode="lesson"
           eyebrow={`${TYPE_LABELS[item.ch.type]}${item.retry ? ' · Try again' : ''}`}
           onResult={onResult(item)}
-          onContinue={() => void next()}
+          onContinue={next}
         />
       </SlidePage>
     );
@@ -246,7 +227,6 @@ function LessonPlayer({ lesson, world, index }: { lesson: Lesson; world: World; 
     <SessionFrame
       label={lesson.title}
       progress={done / total}
-      hearts
       onQuit={() => (page === 'results' ? goBack('/', { dir: 'close' }) : void askQuit())}
       scrollKey={pageKey}
       variant="lesson"

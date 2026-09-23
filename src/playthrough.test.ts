@@ -326,11 +326,6 @@ function play(
     result = { correct: ok, firstTry: ok };
   }
   check();
-  // Out of hearts: the screens offer a refill round (+1 heart) before going on.
-  if (s().hearts.n <= 0) {
-    game.hearts.gain(1);
-    check();
-  }
   return result;
 }
 
@@ -369,7 +364,7 @@ describe('full playthrough', { timeout: 120_000 }, () => {
 
     worlds.forEach((w: World, wi) => {
       expect(game.worldUnlocked(w)).toBe(true);
-      // one world per day (keeps a streak going, and hearts regenerate)
+      // one world per day (keeps a streak going)
       clock.t += DAY;
       game.boot();
 
