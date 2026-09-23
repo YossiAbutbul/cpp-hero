@@ -117,7 +117,7 @@ export function Bug({ ch, phase, attempt, canSoft, reveal, submit }: RendererPro
     return null;
   };
 
-  const picked = cur != null ? [cur] : [];
+  const picked = cur != null ? [...tried, cur] : tried;
   return (
     <>
       <div ref={lineEls}>

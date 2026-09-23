@@ -37,7 +37,7 @@ export function Choice({ ch, phase, attempt, reveal, submit }: RendererProps) {
   };
   useOptionKeys(texts.length, pick, phase === 'answer' && cur == null);
 
-  const picked = cur != null ? [cur] : [];
+  const picked = cur != null ? [...tried, cur] : tried;
   const blankText = reveal ? c.options[c.answer]?.t : undefined;
 
   return (

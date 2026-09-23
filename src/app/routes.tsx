@@ -12,6 +12,7 @@ import { CurloScreen } from '@/features/curlo/CurloScreen';
 import { LessonScreen } from '@/features/lesson/LessonScreen';
 import { MapScreen } from '@/features/map/MapScreen';
 import { OnboardingScreen } from '@/features/onboarding/OnboardingScreen';
+import { PracticeRun } from '@/features/practice/PracticeRun';
 import { PracticeScreen } from '@/features/practice/PracticeScreen';
 import { ProjectScreen } from '@/features/project/ProjectScreen';
 import { SettingsScreen } from '@/features/settings/SettingsScreen';
@@ -31,6 +32,7 @@ const children: RouteObject[] = [
   { index: true, element: <MapScreen />, handle: h({ tab: 'map' }) },
   { path: 'curlo', element: <CurloScreen />, handle: h({ tab: 'curlo' }) },
   { path: 'practice', element: <PracticeScreen />, handle: h({ tab: 'practice' }) },
+  { path: 'practice/run', element: <PracticeRun />, handle: h({ immersive: true, tab: 'practice' }) },
   { path: 'vault', element: <VaultScreen />, handle: h({ tab: 'vault' }) },
   { path: 'bestiary', element: <BestiaryScreen />, handle: h({ tab: 'bestiary' }) },
   { path: 'stats', element: <StatsScreen />, handle: h({ panel: 'stats' }) },

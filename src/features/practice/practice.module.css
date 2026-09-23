@@ -1,0 +1,110 @@
+.reviewCard {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.rcCurlo {
+  width: 64px;
+  flex: none;
+}
+.rcBody {
+  flex: 1;
+  min-width: 0;
+}
+.rcBody h3 {
+  margin: 0 0 2px;
+}
+.rcBody p {
+  margin: 0;
+}
+.reviewCard > button {
+  flex: 1 1 100%;
+}
+.secH {
+  margin: 18px 0 10px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.typeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-radius: 20px;
+  padding: 12px;
+  box-shadow: 0 4px 0 var(--line);
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 0.15s var(--spring);
+}
+.typeCard:hover {
+  transform: translateY(-2px);
+}
+.typeCard:active {
+  transform: translateY(4px);
+  box-shadow: none;
+}
+.typeCard b {
+  font-size: 0.95rem;
+  line-height: 1.15;
+}
+.typeCard small {
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 0.78rem;
+}
+.tcIc {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--tang-l);
+  color: var(--tang-d);
+  display: grid;
+  place-items: center;
+}
+.tcIc :global(.ic) {
+  width: 22px;
+  height: 22px;
+}
+.locked {
+  background: var(--bg);
+  opacity: 0.75;
+}
+.locked .tcIc {
+  background: var(--lock);
+  color: var(--muted);
+}
+.gain {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 900;
+  background: var(--card);
+  border-radius: 16px;
+  padding: 10px 12px;
+  margin: 8px 0;
+  box-shadow: var(--sh);
+}
+.gain :global(.ic) {
+  width: 22px;
+  height: 22px;
+  color: var(--coral-d);
+}
