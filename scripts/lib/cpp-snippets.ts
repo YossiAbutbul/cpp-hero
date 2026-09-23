@@ -28,17 +28,116 @@ export interface Snippet {
 }
 
 const INCLUDE_RE = /^\s*#\s*include\b/;
-const STD_INCLUDES = ['<iostream>', '<string>', '<limits>', '<cmath>', '<climits>', '<cstdint>', '<iomanip>'];
+/** Headers every fragment gets, so short items don't need visible #include lines. */
+export const STD_INCLUDES = [
+  '<algorithm>',
+  '<array>',
+  '<cassert>',
+  '<climits>',
+  '<cmath>',
+  '<cstddef>',
+  '<cstdint>',
+  '<iomanip>',
+  '<iostream>',
+  '<limits>',
+  '<map>',
+  '<memory>',
+  '<numeric>',
+  '<optional>',
+  '<set>',
+  '<stdexcept>',
+  '<string>',
+  '<utility>',
+  '<vector>',
+];
 
 /** Heuristic: is this a whole program (has its own main)? */
 const isProgram = (code: string) => /\bint\s+main\s*\(/.test(code);
+
+const NOT_A_TYPE = /^(if|for|while|switch|return|else|do|case|catch|try|throw|delete|new|co_return)$/;
+/**
+ * First line of a top-level function definition (at column 0):
+ *   [[nodiscard]] static int heal(int hp, int amount) const noexcept -> int {
+ * i.e. a return type + a name, a parameter list, then `{` (or nothing, with `{`
+ * on the next line). Not a call, a control statement or a lambda.
+ */
+function isFunctionHead(line: string, next: string | undefined): boolean {
+  if (/^\s/.test(line)) return false;
+  const m = /^(?:\[\[[^\]]*\]\]\s*)*([A-Za-z_][\w:<>,*&\s]*?)(?:\s+|\s*[*&]+\s*)([A-Za-z_][\w:]*|operator\S+)\s*\((.*)\)\s*(?:const\s*)?(?:noexcept\s*)?(?:->\s*[\w:<>*&\s]+)?(\{.*)?$/.exec(
+    line.replace(/\/\/.*$/, '').trimEnd(),
+  );
+  if (!m) return false;
+  const typeWords = m[1]!.trim().split(/\s+/);
+  if (NOT_A_TYPE.test(typeWords[0]!) || typeWords.some((w) => w.includes('='))) return false;
+  if (m[4] !== undefined) return true;
+  return next !== undefined && /^\{/.test(next.trim());
+}
+
+/** Top-level type definitions (struct/class/enum ... {) belong at file scope with the functions. */
+const isTypeHead = (line: string) =>
+  /^(?:template\s*<.*>\s*)?(struct|class|enum|union)\b/.test(line) && (/\{/.test(line) || !/;\s*$/.test(line));
+
+/**
+ * Split a fragment into top-level definitions (functions, types, with any
+ * `template <...>` line before them) and the remaining lines, in order.
+ * Braces are counted per line, ignoring comments, strings and char literals.
+ */
+export function splitTopLevel(code: string): { defs: string[]; rest: string[] } {
+  const lines = code.split('\n');
+  const defs: string[] = [];
+  const rest: string[] = [];
+  const depth = (l: string) => {
+    const s = l
+      .replace(/\/\/.*$/, '')
+      .replace(/"(?:\\.|[^"\\])*"/g, '""')
+      .replace(/'(?:\\.|[^'\\])*'/g, "''");
+    return (s.match(/\{/g)?.length ?? 0) - (s.match(/\}/g)?.length ?? 0);
+  };
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i]!;
+    const tmpl = /^template\s*<.*>\s*$/.test(line) ? 1 : 0;
+    const head = lines[i + tmpl];
+    if (head !== undefined && (isFunctionHead(head, lines[i + tmpl + 1]) || isTypeHead(head))) {
+      let d = 0;
+      let j = i;
+      let opened = false;
+      for (; j < lines.length; j++) {
+        d += depth(lines[j]!);
+        if (/\{/.test(lines[j]!)) opened = true;
+        if (opened && d <= 0) break;
+      }
+      // `struct X { ... };` ends on the closing line; a trailing `;` line is kept with it.
+      defs.push(lines.slice(i, j + 1).join('\n'));
+      i = j + 1;
+      continue;
+    }
+    rest.push(line);
+    i++;
+  }
+  return { defs, rest };
+}
+
+/**
+ * A top-level line that can only be a statement (needs to run inside main),
+ * not a declaration: output, control flow, a call or an assignment.
+ */
+const isStatement = (l: string) =>
+  /^(std::(cout|cin|cerr|getline)\b|return\b|if\b|for\b|while\b|do\b|switch\b|assert\s*\(|[A-Za-z_][\w.:\->[\]]*\s*(\(|\+\+|--|[+\-*/%]?=[^=]|<<|>>))/.test(
+    l.trim(),
+  ) && !/^[A-Za-z_][\w:<>,]*\s+[A-Za-z_]/.test(l.trim());
 
 /**
  * Turn a fragment into a program: its #include lines go to the top (after a
  * standard set), everything else goes inside main() after the prelude.
  * A lone expression ("7 / 2 * 2") is printed. Whole programs are kept as
  * they are, with the prelude (e.g. an implied #include) put at the top.
- * (Same approach as the legacy content agents' extract scripts.)
+ *
+ * Fragments with top-level function (or struct/class/enum) definitions:
+ * the definitions go at file scope. If the other lines are only
+ * declarations, they (and the prelude) go at file scope too, followed by an
+ * empty `int main() {}`; if they include statements (a call, output, ...),
+ * the prelude + those lines go inside main() after the definitions.
  */
 export function wrapSnippet(code: string, prelude = ''): { source: string; wrapped: boolean } {
   if (isProgram(code)) {
@@ -47,7 +146,18 @@ export function wrapSnippet(code: string, prelude = ''): { source: string; wrapp
   }
   const lines = code.split('\n');
   const includes = lines.filter((l) => INCLUDE_RE.test(l));
+  const inc = [...STD_INCLUDES.map((h) => `#include ${h}`), ...includes];
   let body = lines.filter((l) => !INCLUDE_RE.test(l)).join('\n');
+
+  const { defs, rest } = splitTopLevel(body);
+  if (defs.length) {
+    const statements = rest.some(isStatement);
+    const source = statements
+      ? [...inc, '', ...defs, '', 'int main() {', prelude, ...rest, 'return 0;', '}', '']
+      : [...inc, '', prelude, body, '', 'int main() {}', ''];
+    return { source: source.join('\n'), wrapped: true };
+  }
+
   const stripped = body
     .replace(/\/\/.*$/gm, '')
     .replace(/\/\*[\s\S]*?\*\//g, '')
@@ -55,7 +165,6 @@ export function wrapSnippet(code: string, prelude = ''): { source: string; wrapp
   const isExpression =
     stripped && !stripped.startsWith('#') && !stripped.includes('\n') && !/[;{}]$/.test(stripped);
   if (isExpression) body = `std::cout << (${stripped}) << '\\n';`;
-  const inc = [...STD_INCLUDES.map((h) => `#include ${h}`), ...includes];
   return {
     source: [...inc, '', 'int main() {', prelude, body, 'return 0;', '}', ''].join('\n'),
     wrapped: true,

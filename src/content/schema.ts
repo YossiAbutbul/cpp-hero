@@ -346,19 +346,127 @@ export const VaultCardSchema = z.strictObject({
   prelude: z.string().optional(),
 });
 
+/**
+ * A memory cell in a demo's memory view (`mem`, see docs/ARCHITECTURE.md
+ * "Demo memory view"). Cells are keyed by `name`; a later step that names the
+ * same cell updates only the fields it gives.
+ *   value  shown inside the cell ("?" = garbage, as in vars)
+ *   addr   small address label under the cell, e.g. "0x10" (display only)
+ *   ptr    this cell is a pointer: the name of the cell it points at, or null
+ *          for nullptr (drawn as a short stub ending in ⊘). Absent = not a pointer.
+ *   ref    this name is a reference: shown as an extra name tag on the target
+ *          cell, no box and no arrow ("a reference is another name")
+ *   group  cells with the same group sit side by side in one strip (arrays)
+ *   readonly  a pointer/reference through which the target can't be changed
+ *          (const T*, const T&): drawn with a lock
+ */
+export const MemCellSchema = z
+  .strictObject({
+    name: z.string().min(1),
+    value: z.string().optional(),
+    addr: z.string().optional(),
+    ptr: z.string().min(1).nullable().optional(),
+    ref: z.string().min(1).optional(),
+    group: z.string().min(1).optional(),
+    readonly: z.boolean().optional(),
+  })
+  .superRefine((c, ctx) => {
+    if (c.ref !== undefined && (c.ptr !== undefined || c.value !== undefined || c.addr !== undefined || c.group)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ref'],
+        message: 'a ref cell is only another name: it cannot also have ptr, value, addr or group',
+      });
+    }
+    if (c.ref === c.name || (c.ptr !== undefined && c.ptr === c.name)) {
+      ctx.addIssue({ code: 'custom', path: [c.ref === c.name ? 'ref' : 'ptr'], message: 'a cell cannot target itself' });
+    }
+  });
+
+/** Memory-view changes for one demo step: upserted cells, then cells whose lifetime ended. */
+export const DemoMemSchema = z.strictObject({
+  /** Cells to create or update (keyed by name, fields merge with earlier steps). */
+  cells: z.array(MemCellSchema).default([]),
+  /**
+   * Cells whose lifetime ended (scope exit, return). They crumble into a
+   * "ghost" slot; arrows still pointing at them turn red and dashed (dangling).
+   */
+  drop: z.array(z.string().min(1)).default([]),
+});
+
+/** A call-stack frame pushed by a demo step. */
+export const DemoFrameSchema = z.strictObject({
+  /** Function name shown on the frame card, e.g. "heal" (or "main"). */
+  name: z.string().min(1),
+  /** The frame's first boxes (parameters), e.g. { hp: "3", amount: "5" }. */
+  vars: z.record(z.string(), z.string()).optional(),
+});
+
 export const DemoStepSchema = z.strictObject({
   /** 0-based line index into demo.code. */
   line: z.number().int().min(0),
   note: words(TEXT_LIMITS.stepNote, 'step note').optional(),
   /** Text appended to the live output console at this step. */
   out: z.string().optional(),
-  /** Variable boxes to show/update; "?" = uninitialized/garbage. */
-  vars: z.record(z.string(), z.string()).optional(),
+  /**
+   * Variable boxes to show/update (merged into the boxes of earlier steps);
+   * "?" = uninitialized/garbage, null = remove the box (it went out of scope).
+   * While call-stack frames are in use (push), vars apply to the TOP frame.
+   */
+  vars: z.record(z.string(), z.string().nullable()).optional(),
+  /**
+   * Call stack: `pop: true` removes the top frame (its boxes vanish), then
+   * `push` puts a new frame on top. Order within a step: pop, push, vars, mem.
+   */
+  pop: z.literal(true).optional(),
+  push: DemoFrameSchema.optional(),
+  /** Memory cells and pointer arrows (see MemCellSchema). */
+  mem: DemoMemSchema.optional(),
   /** Themed crash animation text (unsafe demos). */
   crash: z.string().optional(),
   /** Shield-deflect text (hardened demos). */
   shield: z.string().optional(),
 });
+
+/**
+ * Replays a demo's steps and reports what doesn't add up: a line out of
+ * range, removing a box that isn't there, popping an empty stack, or a mem
+ * pointer/reference/drop that names a cell no step has defined yet.
+ */
+function checkDemoSteps(d: { code: string; steps: DemoStep[] }, ctx: z.RefinementCtx): void {
+  const issue = (path: (string | number)[], message: string) =>
+    ctx.addIssue({ code: 'custom', path: ['steps', ...path], message });
+  const n = lineCount(d.code);
+  // Frame 0 is the implicit base frame (boxes set before any push).
+  const frames: Set<string>[] = [new Set()];
+  const cells = new Set<string>();
+  d.steps.forEach((s, i) => {
+    if (s.line >= n) issue([i, 'line'], `out of range (${s.line}; demo code has ${n} lines, 0-based)`);
+    if (s.pop) {
+      if (frames.length > 1) frames.pop();
+      else issue([i, 'pop'], 'pop without a pushed frame');
+    }
+    if (s.push) frames.push(new Set(Object.keys(s.push.vars ?? {})));
+    const top = frames[frames.length - 1]!;
+    for (const [k, v] of Object.entries(s.vars ?? {})) {
+      if (v !== null) top.add(k);
+      else if (top.has(k)) top.delete(k);
+      else issue([i, 'vars', k], `null removes the box "${k}", but it isn't shown at this step`);
+    }
+    if (s.mem) {
+      s.mem.cells.forEach((c) => cells.add(c.name));
+      s.mem.cells.forEach((c, j) => {
+        const target = c.ref ?? c.ptr;
+        if (typeof target === 'string' && !cells.has(target)) {
+          issue([i, 'mem', 'cells', j, c.ref !== undefined ? 'ref' : 'ptr'], `no cell named "${target}" at this step`);
+        }
+      });
+      s.mem.drop.forEach((name, j) => {
+        if (!cells.has(name)) issue([i, 'mem', 'drop', j], `no cell named "${name}" to drop`);
+      });
+    }
+  });
+}
 
 export const DemoSchema = z
   .strictObject({
@@ -366,18 +474,7 @@ export const DemoSchema = z
     steps: z.array(DemoStepSchema).min(1),
     ...checkFields,
   })
-  .superRefine((d, ctx) => {
-    const n = lineCount(d.code);
-    d.steps.forEach((s, i) => {
-      if (s.line >= n) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['steps', i, 'line'],
-          message: `out of range (${s.line}; demo code has ${n} lines, 0-based)`,
-        });
-      }
-    });
-  });
+  .superRefine(checkDemoSteps);
 
 export const ConceptSchema = z.strictObject({
   short: words(TEXT_LIMITS.conceptShort, 'concept.short'),
@@ -560,6 +657,9 @@ export type SafeItem = z.infer<typeof SafeItemSchema>;
 export type SpeedItem = z.infer<typeof SpeedItemSchema>;
 export type VaultCard = z.infer<typeof VaultCardSchema>;
 export type DemoStep = z.infer<typeof DemoStepSchema>;
+export type DemoFrame = z.infer<typeof DemoFrameSchema>;
+export type DemoMem = z.infer<typeof DemoMemSchema>;
+export type MemCell = z.infer<typeof MemCellSchema>;
 export type Demo = z.infer<typeof DemoSchema>;
 export type Concept = z.infer<typeof ConceptSchema>;
 export type Lesson = z.infer<typeof LessonSchema>;

@@ -7,7 +7,8 @@
  *  - every id is unique
  *  - 4–6 lessons per world, exactly one Shield lesson
  *  - references exist: challenge.bug, boss.reward.{bug,cosmetic},
- *    achievement.{test,cosmetic}, quest.event, lesson.reviewTags
+ *    achievement.{test,cosmetic}, quest.event, lesson.reviewTags (a tag some
+ *    challenge in the same or an earlier world carries)
  */
 import type { ContentIssue, ParsedFile } from './load.ts';
 import { ACHIEVEMENT_KINDS, type Content } from './schema.ts';
@@ -107,7 +108,7 @@ export function crossValidate(
     const base = `content/worlds/${dir}/`;
     lessons.sort((a, b) => a.order - b.order);
     const orders = allPaths
-      .map((p) => (p.startsWith(base) ? /^lesson-(d{2}).yaml$/.exec(p.slice(base.length)) : null))
+      .map((p) => (p.startsWith(base) ? /^lesson-(\d{2})\.yaml$/.exec(p.slice(base.length)) : null))
       .filter((m): m is RegExpExecArray => !!m)
       .map((m) => Number(m[1]))
       .sort((a, b) => a - b);
@@ -139,7 +140,11 @@ export function crossValidate(
 
   /* ---- challenges ---- */
   const allTags = new Set<string>();
+  /** tag -> lowest world number (folder NN) with a challenge carrying it */
+  const tagFirstWorld = new Map<string, number>();
   for (const loc of walkChallenges(parsed)) {
+    const nn = Number(loc.worldDir.slice(0, 2));
+    loc.ch.tags.forEach((t) => tagFirstWorld.set(t, Math.min(nn, tagFirstWorld.get(t) ?? Infinity)));
     const { ch, file, path } = loc;
     unique(ch.id, file, `${path}.id`, 'challenge');
     const rest = ch.id.startsWith(loc.parentId + '.') ? ch.id.slice(loc.parentId.length) : null;
@@ -158,8 +163,15 @@ export function crossValidate(
       unique(v.id, p.path, `vault[${i}].id`, 'vault card');
       if (wid && !v.id.startsWith(wid + '.')) add(p.path, `vault[${i}].id`, `vault ids must start with "${wid}."`);
     });
+    const nn = Number(p.worldDir.slice(0, 2));
     p.data.reviewTags.forEach((t, i) => {
+      const tagWorld = /^w(\d+)\./.exec(t);
       if (!allTags.has(t)) add(p.path, `reviewTags[${i}]`, `no challenge has the tag "${t}"`);
+      else if (tagWorld && Number(tagWorld[1]) > nn) {
+        add(p.path, `reviewTags[${i}]`, `"${t}" belongs to a later world; review only earlier or current worlds`);
+      } else if ((tagFirstWorld.get(t) ?? Infinity) > nn) {
+        add(p.path, `reviewTags[${i}]`, `no challenge in this world or an earlier one has the tag "${t}"`);
+      }
     });
   }
 

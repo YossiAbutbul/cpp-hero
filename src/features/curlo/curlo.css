@@ -168,6 +168,11 @@
   --sb: #077a6f;
   --sc: #f2641b;
 }
+.curlo[data-shield='shield-bounds'][data-tier] {
+  --sa: #2463c4;
+  --sb: #ffc62e;
+  --sc: #ffedb0;
+}
 .curlo .g-scarf-tail {
   transform-box: fill-box;
   transform-origin: 20% 0;

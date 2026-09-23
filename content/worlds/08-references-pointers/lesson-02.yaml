@@ -155,7 +155,7 @@ challenges:
     explain: "`int temp = a;` saves 30. `a = b;` puts 12 in a. `b = temp;` puts the saved 30 in b. Using `b = a;` at the end would copy the NEW a (12): both would be 12."
   - id: w8.l2.c4
     type: mcq
-    tags: [ w8.constref, w6.const-ref ]
+    tags: [ w8.constref, w6.constref ]
     prompt: "`printBanner` only reads a long std::string. Which parameter is best?"
     options:
       - t: const std::string& text
@@ -313,4 +313,4 @@ vault:
       }
     note: "In real code, std::swap(a, b) from <utility> does this for you."
     defense: false
-reviewTags: [ w3.arith, w1.cout, w8.ref, w8.reseat ]
+reviewTags: [ w6.byvalue, w3.arith, w1.cout, w8.ref, w8.reseat ]

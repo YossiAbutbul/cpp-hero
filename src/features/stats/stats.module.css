@@ -1,0 +1,253 @@
+/* StatBar (legacy .stat / .sbar / .sfill / .snum) */
+.stat {
+  display: grid;
+  grid-template-columns: minmax(64px, 92px) 1fr 48px;
+  align-items: center;
+  gap: 10px;
+  margin: 9px 0;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+.statLabel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+.sbar {
+  height: 14px;
+  border-radius: 999px;
+  background: var(--lock);
+  overflow: hidden;
+  position: relative;
+}
+.sfill {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--c);
+  transform-origin: left;
+  transform: scaleX(var(--p, 0));
+  transition: transform 0.9s var(--elastic);
+}
+.sfill::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 3px;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.55);
+}
+.snum {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink2);
+}
+
+/* Stats screen tiles */
+.tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+@media (min-width: 620px) {
+  .tiles {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.tile {
+  border-radius: 18px;
+  padding: 10px 12px;
+  border: 2px solid;
+  background: #fff;
+  min-width: 0;
+}
+.tileL {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 900;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.tileV {
+  font-family: var(--f-disp);
+  font-weight: 800;
+  font-size: 1.6rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.tileS {
+  font-size: 0.78rem;
+  font-weight: 800;
+  opacity: 0.8;
+}
+.sun {
+  border-color: var(--sun);
+  background: var(--sun-l);
+}
+.sun .tileL {
+  color: #8a5a00;
+}
+.teal {
+  border-color: var(--teal);
+  background: var(--teal-l);
+}
+.teal .tileL {
+  color: var(--teal-d);
+}
+.tang {
+  border-color: var(--tang);
+  background: var(--tang-l);
+}
+.tang .tileL {
+  color: var(--tang-d);
+}
+.sky {
+  border-color: var(--sky);
+  background: var(--sky-l);
+}
+.sky .tileL {
+  color: var(--sky-d);
+}
+.coral {
+  border-color: var(--coral);
+  background: var(--coral-l);
+}
+.coral .tileL {
+  color: var(--coral-d);
+}
+
+.cardH {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.cardH h3 {
+  margin: 0;
+  flex: 1;
+}
+.best {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+.bestItem {
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: var(--bg);
+  min-width: 0;
+}
+.bestItem b {
+  display: block;
+  font-family: var(--f-disp);
+  font-size: 1.1rem;
+  line-height: 1.15;
+}
+.bestItem small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 900;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.strong small {
+  color: var(--teal-d);
+}
+.weak small {
+  color: var(--coral-d);
+}
+.topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.topic {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: var(--bg);
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+.topic span {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink2);
+}
+
+/* achievements */
+.achHead {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-weight: 800;
+}
+.achGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+@media (min-width: 620px) {
+  .achGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.ach {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: var(--bg);
+  border-radius: 16px;
+  padding: 8px 10px;
+  min-width: 0;
+}
+.ach.got {
+  background: var(--sun-l);
+}
+.ach:not(.got) b {
+  color: var(--ink2);
+}
+.achIc {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--lock-d);
+}
+.got .achIc {
+  color: var(--sun-d);
+  box-shadow: 0 2px 0 var(--sun);
+}
+.achIc svg {
+  width: 24px;
+  height: 24px;
+}
+.ach b {
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+.ach small {
+  display: block;
+  color: var(--ink2);
+  font-weight: 700;
+  line-height: 1.3;
+}
+.ach .date {
+  color: var(--sun-d);
+  font-weight: 900;
+}

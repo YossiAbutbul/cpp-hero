@@ -327,4 +327,4 @@ vault:
       }
     note: Rows outside, columns inside. The inner loop restarts every row.
     defense: false
-reviewTags: [ w3.modulo, w3.logic, w5.for, w5.accum ]
+reviewTags: [ w4.combine, w3.modulo, w3.logic, w5.for, w5.accum ]

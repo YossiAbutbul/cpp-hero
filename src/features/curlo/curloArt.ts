@@ -109,7 +109,48 @@ export function hatSvg(id: string): string {
   const tints = ['#3D8BFF', '#0FA898', '#FF5A70', '#7A4FD0', '#FFC62E'];
   const c = tints[hash(k) % tints.length];
   let g = '<g class="g-hat" transform="translate(80 36)">';
-  if (/bowtie|bow-tie/.test(k)) {
+  // Boss rewards from Worlds 4-8 (matched first so the keyword rules below can't catch them).
+  if (/phantom|veil/.test(k)) {
+    // Branch Phantom: a floaty lilac veil with a wavy hem and a trailing tail
+    g +=
+      '<path d="M22 4 Q40 10 44 30 Q48 44 40 52 Q42 36 30 22 Z" fill="#E6DCFF" stroke="#7A4FD0" stroke-width="2.5" stroke-linejoin="round" opacity=".95"/>' +
+      '<path d="M-33 14 Q-34 -24 0 -26 Q34 -24 33 14 Q27 8 22 14 Q16 20 11 13 Q5 7 0 13 Q-5 19 -11 13 Q-16 7 -22 14 Q-27 20 -33 14Z" fill="#E6DCFF" stroke="#7A4FD0" stroke-width="3" stroke-linejoin="round" opacity=".95"/>' +
+      '<path d="M-20 -8 Q-10 -18 4 -16" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" opacity=".85"/>' +
+      '<path d="M0 -26 Q2 -34 8 -36" fill="none" stroke="#7A4FD0" stroke-width="3" stroke-linecap="round"/>' +
+      '<circle cx="9" cy="-37" r="3.5" fill="#FFC62E" stroke="#7A4FD0" stroke-width="2"/>';
+  } else if (/hydra|crest/.test(k)) {
+    // Loop Hydra: three little serpent heads curling up as a crest
+    const head = (x: number, y: number, r: number) =>
+      `<g transform="translate(${x} ${y}) rotate(${r})">` +
+      '<path d="M-5 14 Q-7 -2 0 -10 Q8 -14 11 -7 Q12 -2 5 -1 Q3 6 5 14 Z" fill="#0FA898" stroke="#077A6F" stroke-width="2.5" stroke-linejoin="round"/>' +
+      '<circle cx="4" cy="-7" r="1.8" fill="#fff"/><circle cx="4.5" cy="-7" r=".9" fill="#2A2140"/>' +
+      '<path d="M-3 4 L1 4 M-3 9 L1 9" stroke="#8FD9CF" stroke-width="2" stroke-linecap="round"/></g>';
+    g +=
+      '<path d="M-26 8 Q0 -6 26 8 Q0 2 -26 8Z" fill="#077A6F" stroke="#077A6F" stroke-width="3" stroke-linejoin="round"/>' +
+      head(-16, -4, -24) +
+      head(16, -4, 24) +
+      head(0, -12, 0) +
+      '<circle cx="0" cy="4" r="3.5" fill="#FFC62E" stroke="#C98C00" stroke-width="1.8"/>';
+  } else if (/sentinel|visor/.test(k)) {
+    // Scope Sentinel: a steel forehead visor with a glowing scan slit and a fin
+    g +=
+      '<path d="M-5 -2 L0 -22 L5 -2 Z" fill="#6C87A3" stroke="#2A2140" stroke-width="2.5" stroke-linejoin="round"/>' +
+      '<path d="M-31 6 Q0 -6 31 6 L36 19 Q0 7 -36 19 Z" fill="#6C87A3" stroke="#2A2140" stroke-width="3" stroke-linejoin="round"/>' +
+      '<path d="M-24 11 Q0 3 24 11" fill="none" stroke="#7FF0DF" stroke-width="3.5" stroke-linecap="round"/>' +
+      '<path d="M-24 11 Q0 3 24 11" fill="none" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".8"/>' +
+      '<circle cx="-33" cy="13" r="3.5" fill="#FFC62E" stroke="#2A2140" stroke-width="2"/><circle cx="33" cy="13" r="3.5" fill="#FFC62E" stroke="#2A2140" stroke-width="2"/>';
+  } else if (/pointer|goggle/.test(k)) {
+    // Dangling Wraith: goggles pushed up on the head, with arrow (->) lenses
+    const lens = (x: number) =>
+      `<circle cx="${x}" cy="-9" r="9" fill="#FFD2B3" stroke="#2A2140" stroke-width="3.5"/>` +
+      `<path d="M${x - 5} -9 L${x + 4} -9 M${x + 1} -12.5 L${x + 4.5} -9 L${x + 1} -5.5" fill="none" stroke="#BF4808" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>` +
+      `<ellipse cx="${x - 3.5}" cy="-12.5" rx="2.6" ry="1.8" fill="#fff" opacity=".9"/>`;
+    g +=
+      '<path d="M-34 8 Q0 -16 34 8" fill="none" stroke="#2A2140" stroke-width="5" stroke-linecap="round"/>' +
+      lens(-12) +
+      lens(12) +
+      '<path d="M-3 -9 L3 -9" stroke="#2A2140" stroke-width="3.5"/>';
+  } else if (/bowtie|bow-tie/.test(k)) {
     g +=
       '<g transform="translate(0 84)"><path d="M0 0 L-17 -9 L-17 9 Z M0 0 L17 -9 L17 9 Z" fill="#7A4FD0" stroke="#5B35AE" stroke-width="3" stroke-linejoin="round"/><circle r="5" fill="#0FA898" stroke="#077A6F" stroke-width="2"/></g>';
   } else if (/helm/.test(k)) {

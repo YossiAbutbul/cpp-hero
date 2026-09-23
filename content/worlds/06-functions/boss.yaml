@@ -107,7 +107,7 @@ rounds:
     explain: 'shield''s hp is a copy: 3 + 5 = 8, returns 16. main''s hp is still 3. Output: "3 16" and a newline.'
   - id: w6.boss.r4
     type: predict
-    tags: [ w6.default, w5.for, w5.off-by-one ]
+    tags: [ w6.default, w5.for, w5.offbyone ]
     prompt: A default argument and a loop. What does this print?
     code: |-
       #include <iostream>

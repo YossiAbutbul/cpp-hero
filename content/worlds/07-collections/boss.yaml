@@ -293,7 +293,7 @@ rounds:
     explain: "The unsafe ones: pop_back on empty (UB), substr starting past the end (throws), index -1 (becomes huge: UB), and a reference held across push_back (may dangle: UB). A length past the end is fine for substr: it just stops at the end."
   - id: w7.boss.r8
     type: bug
-    tags: [ w7.bounds, w5.signed-unsigned, w5.off-by-one ]
+    tags: [ w7.bounds, w5.signed-unsigned, w5.offbyone ]
     bug: out-of-bounds
     unsafe: true
     prompt: "UNSAFE: the vector is empty, and this loop still runs almost forever. Tap the buggy line, then pick the fix."

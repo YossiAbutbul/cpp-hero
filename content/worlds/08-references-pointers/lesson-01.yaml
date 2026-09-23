@@ -235,4 +235,4 @@ vault:
       // int& bad;           // error: must be initialized
     note: Bound once, forever. `r = x;` copies x's value into what r names.
     defense: false
-reviewTags: [ w2.init, w2.const, w3.incdec ]
+reviewTags: [ w6.params, w2.init, w2.const, w3.incdec ]

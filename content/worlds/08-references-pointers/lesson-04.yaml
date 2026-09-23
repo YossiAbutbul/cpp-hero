@@ -223,4 +223,4 @@ vault:
     prelude: int hp{10};
     note: Read right to left. The thing left of const is what's locked.
     defense: false
-reviewTags: [ w7.vector, w7.at, w8.pointer, w8.deref, w8.byref ]
+reviewTags: [ w5.for, w7.vector, w7.at, w8.pointer, w8.deref, w8.byref ]

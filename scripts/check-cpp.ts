@@ -15,27 +15,45 @@
  *   predict           the program's stdout (fed `stdin`) must equal the correct option byte for byte
  *   demo              stdout must equal the concatenated `out` of its steps (when it has any)
  * Fragments (no main) are wrapped in a main() with common includes; unused
- * variable warnings are ignored for them.
+ * variable warnings are ignored for them. Fragments with top-level function
+ * definitions are placed at file scope (see wrapSnippet in lib/cpp-snippets.ts).
  *
- * Options: --keep (leave .cpp-check/ for inspection), --filter <substring>
+ * Each run works in its own directory, .cpp-check/<pid>-<timestamp>/, so
+ * parallel runs never clobber each other. It is deleted at the end unless
+ * there were problems or --keep is given.
+ *
+ * Options:
+ *   --filter <s>   only check snippets whose key or file contains <s>
+ *                  (repeatable, or comma-separated: --filter 06-functions,w7.)
+ *                  Validation errors only block the run when they are in a
+ *                  matching file or in content/shared/; others are warnings.
+ *   --jobs <n>     parallel compile workers (default: all CPUs; -j <n> works too)
+ *   --keep         keep the work directory for inspection
  */
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { cpus } from 'node:os';
-import { join } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { formatIssue } from '../src/content/load.ts';
 import { loadContentFromDisk, REPO_ROOT } from './lib/content-fs.ts';
 import { extractSnippets, type Snippet } from './lib/cpp-snippets.ts';
 
-const WORK = join(REPO_ROOT, '.cpp-check');
+const WORK_ROOT = join(REPO_ROOT, '.cpp-check');
+const WORK = join(WORK_ROOT, `${process.pid}-${Date.now()}`);
+const WORK_REL = relative(REPO_ROOT, WORK).split(sep).join('/');
 const BASE_FLAGS = ['-std=c++20', '-Wall', '-Wextra'];
 const FRAGMENT_FLAGS = ['-Wno-unused-variable', '-Wno-unused-but-set-variable'];
 const RUN_TIMEOUT_S = 5;
 
 const args = process.argv.slice(2);
 const keep = args.includes('--keep');
-const filterIdx = args.indexOf('--filter');
-const filter = filterIdx >= 0 ? args[filterIdx + 1] : undefined;
+/** Values of a repeatable option, e.g. --filter a --filter b,c → [a, b, c]. */
+const optionValues = (...names: string[]) =>
+  args.flatMap((a, i) => (names.includes(a) && args[i + 1] ? args[i + 1]!.split(',') : [])).filter(Boolean);
+const filters = optionValues('--filter');
+const jobsArg = Number(optionValues('--jobs', '-j').at(-1));
+const JOBS = Number.isInteger(jobsArg) && jobsArg > 0 ? jobsArg : Math.max(1, cpus().length);
+const matches = (s: string) => !filters.length || filters.some((f) => s.includes(f));
 
 type Backend = { kind: 'wsl'; distro: string } | { kind: 'native'; cxx: string };
 
@@ -60,7 +78,6 @@ const shq = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`;
 
 /** Write NNN.cpp / NNN.inK for every snippet. */
 function prepare(snips: Snippet[]): void {
-  rmSync(WORK, { recursive: true, force: true });
   mkdirSync(WORK, { recursive: true });
   snips.forEach((s, i) => {
     const n = String(i).padStart(4, '0');
@@ -98,7 +115,7 @@ function runWsl(snips: Snippet[], distro: string): void {
     `SRC=${shq(toWslPath(WORK))}`,
     'export B=$(mktemp -d)',
     'cp -r "$SRC"/. "$B"/ && cd "$B"',
-    'ls ./*.sh | xargs -P "$(nproc)" -n 1 bash',
+    `ls ./*.sh | xargs -P ${JOBS} -n 1 bash`,
     'cp ./*.status ./*.err "$SRC"/ && (cp ./*.out* ./*.rs* "$SRC"/ 2>/dev/null || true)',
     'cd / && rm -rf "$B"',
   ].join('\n');
@@ -146,7 +163,17 @@ async function runNative(snips: Snippet[], cxx: string): Promise<void> {
       }
     }
   };
-  await Promise.all(Array.from({ length: Math.max(1, cpus().length) }, worker));
+  await Promise.all(Array.from({ length: JOBS }, worker));
+}
+
+/** Remove this run's directory, and .cpp-check/ itself when no other run is using it. */
+function cleanUp(): void {
+  rmSync(WORK, { recursive: true, force: true });
+  try {
+    if (existsSync(WORK_ROOT) && readdirSync(WORK_ROOT).length === 0) rmSync(WORK_ROOT, { recursive: true });
+  } catch {
+    /* another run just created its directory */
+  }
 }
 
 const read = (f: string) => (existsSync(join(WORK, f)) ? readFileSync(join(WORK, f), 'utf8') : '');
@@ -154,16 +181,40 @@ const showWs = (s: string) => JSON.stringify(s);
 
 async function main(): Promise<void> {
   const { issues, parsed } = loadContentFromDisk();
-  if (issues.length) {
-    console.error(`Content has ${issues.length} validation error(s); run npm run validate first:`);
-    issues.slice(0, 20).forEach((i) => console.error('  ' + formatIssue(i)));
+  const extracted = extractSnippets(parsed);
+  const snippets = extracted.snippets.filter((s) => matches(s.key) || matches(s.file));
+  const skipped = extracted.skipped.filter(matches);
+  // With --filter, only issues in the checked files (or shared data) block the run.
+  const checkedFiles = new Set(snippets.map((s) => s.file));
+  const worldDirs = filters.flatMap((f) => {
+    const m = /^w(d+)(.|$)/.exec(f);
+    return m ? [`content/worlds/${m[1]!.padStart(2, '0')}-`] : [];
+  });
+  const blocking = issues.filter(
+    (i) =>
+      !filters.length ||
+      i.file.startsWith('content/shared/') ||
+      checkedFiles.has(i.file) ||
+      matches(i.file) ||
+      worldDirs.some((d) => i.file.startsWith(d)),
+  );
+  const other = issues.filter((i) => !blocking.includes(i));
+  if (blocking.length) {
+    console.error(`Content has ${blocking.length} validation error(s); run npm run validate first:`);
+    blocking.slice(0, 20).forEach((i) => console.error('  ' + formatIssue(i)));
     process.exit(1);
   }
-  const extracted = extractSnippets(parsed);
-  const skipped = extracted.skipped;
-  const snippets = extracted.snippets.filter(
-    (s) => !filter || s.key.includes(filter) || s.file.includes(filter),
-  );
+  if (other.length) {
+    console.warn(
+      `check:cpp: WARNING ${other.length} validation error(s) outside the filter (not blocking this run):`,
+    );
+    other.slice(0, 10).forEach((i) => console.warn('  ' + formatIssue(i)));
+    if (other.length > 10) console.warn(`  ... and ${other.length - 10} more (npm run validate)`);
+  }
+  if (filters.length && !snippets.length) {
+    console.error(`check:cpp: no snippets match --filter ${filters.join(',')}`);
+    process.exit(1);
+  }
 
   const backend = detectBackend();
   if (!backend) {
@@ -174,7 +225,7 @@ async function main(): Promise<void> {
   }
   const label = backend.kind === 'wsl' ? `g++ in WSL (${backend.distro})` : backend.cxx;
   console.log(
-    `check:cpp: ${snippets.length} snippets, ${skipped.length} skipped (expect: skip), compiler: ${label}`,
+    `check:cpp: ${snippets.length} snippets, ${skipped.length} skipped (expect: skip), compiler: ${label}, ${JOBS} jobs`,
   );
   const t0 = Date.now();
   prepare(snippets);
@@ -190,7 +241,7 @@ async function main(): Promise<void> {
     const err = read(`${n}.err`);
     const got = status !== 0 ? 'error' : /warning:/.test(err) ? 'warn' : 'clean';
     counts[got]++;
-    const where = `${s.file} › ${s.yamlPath}  [${s.key}, file .cpp-check/${n}.cpp]`;
+    const where = `${s.file} › ${s.yamlPath}  [${s.key}, file ${WORK_REL}/${n}.cpp]`;
     const ok = s.expect === got || (s.expect === 'compiles' && got !== 'error');
     if (!ok) {
       const diag = err
@@ -213,7 +264,8 @@ async function main(): Promise<void> {
     }
   });
 
-  if (!keep && !failures.length) rmSync(WORK, { recursive: true, force: true });
+  if (!keep && !failures.length) cleanUp();
+  else console.log(`Work files kept in ${WORK_REL}/`);
   const secs = ((Date.now() - t0) / 1000).toFixed(1);
   console.log(
     `compiled ${snippets.length} (clean ${counts.clean}, warn ${counts.warn}, error ${counts.error}), ran ${ran} programs in ${secs}s`,
@@ -221,7 +273,6 @@ async function main(): Promise<void> {
   if (failures.length) {
     console.error(`\n${failures.length} problem(s):\n`);
     failures.forEach((f) => console.error('  ' + f + '\n'));
-    console.error('Sources kept in .cpp-check/ for inspection.');
     process.exit(1);
   }
   console.log('check:cpp OK');
