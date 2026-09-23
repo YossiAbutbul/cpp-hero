@@ -5,8 +5,8 @@ title: "Gauntlet II: Collections and memory"
 skill: memory
 shield: false
 concept:
-  short: "Gauntlet stage two: stay in bounds, re-check pointers after containers change, and give every heap object one owner."
-  analogy: "Memory is a hotel: stay in your own room, and don't keep a key to a room that was torn down."
+  short: "Stay in bounds, refresh pointers after containers change, give each heap object one owner."
+  analogy: "A hotel: stay in your room; don't keep keys to demolished rooms."
   body:
     - "**Bounds** (World 7): `v[i]` is unchecked; past the end is undefined behavior. Use `.at(i)` when an index comes from outside (it throws `std::out_of_range`), or check `i < v.size()` first."
     - "**Invalidation** (World 7): `push_back` may move every element to a bigger block. Pointers, references and iterators into the old block now **dangle**. Take the address again after the vector changes, or store an index instead."
@@ -82,7 +82,7 @@ challenges:
   - id: w16.l2.c1
     type: predict
     tags: [ w16.bounds, w7.at, w7.bounds ]
-    prompt: The index runs out of room. What does this print?
+    prompt: What does this print?
     code: |-
       #include <iostream>
       #include <stdexcept>
@@ -102,23 +102,22 @@ challenges:
       - t: |
           8
           Out of range!
-        why: "Correct: hp.at(1) is 8; hp.at(2) throws before printing anything."
+        why: "at(1) is 8; at(2) throws before printing anything."
       - t: |
           8
           0
           Out of range!
-        why: ".at() never returns a made-up value. It throws instead of reading past the end."
+        why: ".at() never makes up a value. It throws."
       - t: |
           Out of range!
-        why: "Index 1 is valid (the second element), so 8 prints first."
+        why: "Index 1 is valid, so 8 prints first."
       - t: |
           4
           Out of range!
-        why: Indexes start at 0, so at(1) is the second element, 8.
+        why: Indexes start at 0, so at(1) is 8.
     answer: 0
     hints:
       - A 2-element vector has indexes 0 and 1.
-      - .at() checks the index and throws std::out_of_range.
     short: "at(1) prints 8; at(2) throws, so the catch prints."
     explain: "hp.at(1) is 8. hp.at(2) is past the end, so .at() throws std::out_of_range before the second line prints anything, and the catch block runs. With hp[2] instead, the read would be undefined behavior."
   - id: w16.l2.c2
@@ -147,16 +146,15 @@ challenges:
       }
     dangerous: [ 5, 12 ]
     lineNotes:
-      5: "Returns the address of a local. hp dies at the }, so the pointer dangles."
-      9: "Raw new: legal, but std::make_unique would own it for you."
-      10: "A second pointer to the same int. Fine on its own..."
+      5: "Returns a local's address. hp dies at the }."
+      9: "Legal, but std::make_unique would own it for you."
+      10: "A second pointer to the same int. Fine so far..."
       11: "...but after delete, BOTH pointers dangle."
-      12: "Use-after-free: spare points at deleted memory. UB, even if it prints 50."
-      13: "make_unique: one owner, deleted automatically. Safe."
+      12: "Use-after-free: UB, even if it prints 50."
+      13: "One owner, deleted automatically. Safe."
     hints:
       - "Look for pointers to things that no longer exist."
-      - Two pointers can share one target. What happens after delete?
-    short: "Returning a local's address and reading deleted memory are both UB."
+    short: "Returning a local's address and reading deleted memory: both UB."
     explain: "Line 5 hands out the address of a local that dies when makeHp returns. Line 12 reads through spare after line 11 deleted the int: use-after-free. Both are undefined behavior: they may print the old value, garbage, or crash. With make_unique there's one owner and nothing to forget."
     sideBySide:
       unsafe: |-
@@ -172,7 +170,7 @@ challenges:
     type: harden
     tags: [ w16.pointers, w8.nullcheck, w8.nullptr ]
     bug: null-deref
-    prompt: findHero returns nullptr when nobody matches. Pick the check before following the pointer.
+    prompt: findHero returns nullptr when nobody matches. Pick the safe check.
     code: |-
       #include <iostream>
       #include <string>
@@ -199,16 +197,15 @@ challenges:
       }
     options:
       - t: hero != nullptr
-        why: "Correct: only follow the pointer when it points at something."
+        why: "Only follow the pointer when it points at something."
       - t: "!hero->empty()"
-        why: Follows the pointer to check it. If hero is null, that's the crash itself.
+        why: The check itself follows a null pointer.
       - t: "*hero != \"\""
-        why: Dereferences first, asks questions later. Null makes this UB.
+        why: Dereferences first. Null makes this UB.
       - t: party.size() > 0
-        why: The party isn't empty, but Bard still isn't in it. hero is null.
+        why: The party isn't empty, but Bard still isn't in it.
     answer: 0
     hints:
-      - What does findHero return when nobody matches?
       - Check the pointer itself, not what it points at.
     short: "Check the pointer, not the target: hero != nullptr."
     explain: "A search that can fail returns nullptr. Check the pointer itself before using `*` or `->`; any check that reads through it has already done the dangerous part. (Pointing into party is safe here: party outlives hero.)"
@@ -236,20 +233,19 @@ challenges:
   - id: w16.l2.c4
     type: mcq
     tags: [ w16.ownership ]
-    prompt: A spell object lives on the heap and has exactly one owner. What should hold it?
+    prompt: A heap Spell has exactly one owner. What fits that best?
     options:
       - t: std::unique_ptr<Spell>, made with std::make_unique
-        why: "Correct: one owner, deleted automatically at the end of its scope. Can't leak or double delete."
+        why: "One owner, deleted automatically. No leak, no double delete."
       - t: A raw Spell* from new, with delete at the end
-        why: Any early return or exception skips the delete (leak). Copies of the pointer invite double delete.
+        why: An early return or exception skips the delete.
       - t: std::shared_ptr<Spell> everywhere, just in case
-        why: Works, but it's shared ownership with counting overhead. One owner means unique_ptr.
+        why: Works, but it means shared ownership, with overhead.
       - t: A Spell& to a local Spell
-        why: The local dies at the end of its scope. The reference would dangle.
+        why: The local dies at the end of its scope.
     answer: 0
     hints:
       - Which smart pointer means "exactly one owner"?
-      - The Rule of Zero prefers types that clean up themselves.
     short: "One owner: std::unique_ptr via std::make_unique."
     explain: "std::unique_ptr expresses sole ownership and deletes its object exactly once, even when a function returns early or throws. std::shared_ptr is for real shared ownership. Raw new/delete is where leaks, double deletes and use-after-free come from."
   - id: w16.l2.c5
@@ -257,7 +253,7 @@ challenges:
     tags: [ w16.bounds, w7.bounds, w3.validate ]
     bug: out-of-bounds
     unsafe: true
-    prompt: "UNSAFE: the player picks a slot to inspect. Pick the input that breaks it."
+    prompt: "UNSAFE: the player types a slot index. Pick the input that breaks it."
     code: |-
       std::vector<int> slots{10, 20, 30};
       int i{};
@@ -271,15 +267,14 @@ challenges:
       - t: "2"
         why: Index 2 is the last valid slot. Prints 30.
       - t: "3"
-        why: "Correct: 3 <= size() passes, but slots[3] is one past the end: UB."
+        why: "3 <= size() passes, but slots[3] is past the end."
       - t: "-1"
         why: Caught by i >= 0.
       - t: abc
         why: The read fails and the program exits early.
     answer: 1
     hints:
-      - Which indexes are valid for 3 slots?
-      - Look closely at <= in the check.
+      - Which indexes are valid for 3 slots? Look at <=.
     short: "<= size() lets index 3 through: one past the end."
     explain: "The check allows i == size(), and slots[3] reads past the end: undefined behavior. The bound must be `i < size`. Or use slots.at(i), which throws std::out_of_range instead of reading garbage."
     sideBySide:

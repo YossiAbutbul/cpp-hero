@@ -6,7 +6,7 @@ id: w16
 num: 16
 title: Final Boss
 icon: crown
-blurb: "Everything at once: logic, memory, objects, errors, templates, the STL and modern C++, ending with a full defense gauntlet against the Undefined Dragon."
+blurb: "Everything at once, ending with a showdown against the Undefined Dragon."
 story:
   intro:
     - "The ground won't stop shaking. Every bug we beat was one of its scales."

@@ -43,7 +43,7 @@ rounds:
   - id: w16.boss.r1
     type: predict
     tags: [ w16.flow, w5.continue, w5.break ]
-    prompt: "The Dragon twists a loop. What does this print?"
+    prompt: "What does this print? Spaces count. (↵ marks a new line.)"
     code: |-
       #include <iostream>
 
@@ -62,17 +62,16 @@ rounds:
       }
     options:
       - t: "1 9 \n"
-        why: "Correct: 1 prints 1, 2 is skipped, 3 prints 9, and 4 breaks out."
+        why: "1 prints, 2 is skipped, 3 prints 9, 4 breaks out."
       - t: "1 4 9 \n"
-        why: continue skips the rest of the pass when i is 2, so 4 never prints.
+        why: continue skips the print when i is 2.
       - t: "1 9 16 \n"
         why: "break happens before the print when i is 4."
       - t: "1 \n"
-        why: continue only skips one pass. The loop goes on to i = 3.
+        why: continue skips one pass only. The loop goes on.
     answer: 0
     hints:
       - continue skips to the next pass; break leaves the loop.
-      - Walk through i = 1, 2, 3, 4.
     short: "1 prints, 2 is skipped, 3 prints 9, 4 breaks."
     explain: "i = 1 prints 1. i = 2 hits continue and skips the print. i = 3 prints 9. i = 4 hits break before printing. Then one newline: \"1 9 \" and a newline."
   - id: w16.boss.r2
@@ -91,17 +90,16 @@ rounds:
     prelude: int rank{1};
     options:
       - t: "75"
-        why: "Correct: no break, so case 1 falls through into case 2 and default: 50 + 20 + 5."
+        why: "No break: case 1 falls into case 2 and default."
       - t: "50"
-        why: "Without break, execution doesn't stop at the end of case 1."
+        why: "Without break, execution doesn't stop after case 1."
       - t: "55"
-        why: Fallthrough doesn't skip case 2. It runs every case below the match.
+        why: Fallthrough runs every case below the match.
       - t: "5"
         why: default runs last here, but case 1 matched first.
     answer: 0
     hints:
       - Where are the break statements?
-      - A matched case runs everything below it until a break.
     short: "No break: case 1 falls through case 2 and default. 75."
     explain: "Without break, a switch keeps running every case below the matching one. 50 + 20 + 5 = 75. g++ warns with -Wimplicit-fallthrough; end each case with break (or [[fallthrough]]; when you really mean it)."
   - id: w16.boss.r3
@@ -109,7 +107,7 @@ rounds:
     tags: [ w16.flow, w5.signed-unsigned, w5.infinite ]
     bug: signed-unsigned
     unsafe: true
-    prompt: "UNSAFE: print hp backwards. Tap the buggy line, then pick the fix."
+    prompt: "UNSAFE: this should print hp backwards. Tap the buggy line, then pick the fix."
     code: |-
       std::vector<int> hp{3, 6, 9};
       for (std::size_t i = hp.size() - 1; i >= 0; --i) {
@@ -118,18 +116,17 @@ rounds:
     bugLine: 1
     options:
       - t: for (std::size_t i = hp.size(); i-- > 0;) {
-        why: "Correct: tests before decrementing, so i runs 2, 1, 0 and stops. Works for empty vectors too."
+        why: "Tests, then decrements: i runs 2, 1, 0. Safe when empty."
       - t: for (std::size_t i = hp.size(); i >= 0; --i) {
-        why: "Still i >= 0 on an unsigned: always true. Starts out of bounds, too."
+        why: "Still always true, and it starts out of bounds."
       - t: for (std::size_t i = hp.size() - 1; i > 0; --i) {
-        why: Skips hp[0], and an empty vector still wraps size() - 1 to a huge number.
+        why: "Skips hp[0], and empty vectors still wrap."
       - t: for (unsigned i = hp.size() - 1; i >= 0; --i) {
         why: unsigned is still never negative. Same endless loop.
     answer: 0
     hints:
       - Can a std::size_t ever be less than 0?
-      - What does 0 minus 1 become for an unsigned type?
-    short: "Unsigned i >= 0 is always true. Test with i-- > 0 instead."
+    short: "Unsigned i >= 0 is always true. Use i-- > 0."
     explain: "std::size_t is unsigned, so i >= 0 is always true. After i = 0, --i wraps to the largest size_t and hp[i] reads far out of bounds: undefined behavior. `i-- > 0` tests first, then decrements. (Or iterate with rbegin()/rend().)"
     sideBySide:
       unsafe: |-
@@ -144,7 +141,7 @@ rounds:
   - id: w16.boss.r4
     type: predict
     tags: [ w16.functions, w6.constref, w2.string, w2.char ]
-    prompt: "The Dragon mocks your name. What does this print?"
+    prompt: "What does this print?"
     code: |-
       #include <iostream>
       #include <string>
@@ -167,20 +164,19 @@ rounds:
     options:
       - t: |
           CURLO! 5
-        why: "Correct: shout works on a copy, so name stays \"curlo\" with 5 letters."
+        why: "shout works on a copy; name keeps its 5 letters."
       - t: |
           CURLO! 6
-        why: The ! is added to the copy, not to name. name.size() is still 5.
+        why: The ! is added to the copy, not to name.
       - t: |
           curlo! 5
-        why: "The loop's char& changes each letter of out to uppercase."
+        why: "The loop's char& uppercases each letter of out."
       - t: |
           CURLO 5
-        why: shout returns out + "!", so the ! is part of the result.
+        why: shout returns out + "!", so the ! is included.
     answer: 0
     hints:
       - word is a const reference; out is a copy.
-      - Which string gets the "!"?
     short: "The copy becomes CURLO!; name is untouched, still 5 letters."
     explain: "shout copies word into out, uppercases out through char&, and returns out + \"!\". name is passed by const reference and never changes, so its size is 5."
   # ---- Stage 2 · Wings of Memory (Worlds 8-11) ----
@@ -189,7 +185,7 @@ rounds:
     tags: [ w16.ownership, w16.virtual, w8.nullcheck ]
     bug: double-delete
     unsafe: true
-    prompt: "UNSAFE: tap every line that's a bug."
+    prompt: "UNSAFE: tap every buggy line, then submit."
     code: |-
       #include <iostream>
       #include <memory>
@@ -215,15 +211,14 @@ rounds:
       }
     dangerous: [ 15, 16, 19 ]
     lineNotes:
-      13: "Raw new: legal, but std::make_unique<Hydra>() leaves no raw pointer to misuse."
+      13: "Legal, but make_unique leaves no raw pointer to misuse."
       14: "One owner: fine so far."
-      15: "A second owner of the same object. Both delete it: double delete, UB."
-      16: "Slicing: copy is a plain Bug. bite() returns 1, not 3."
+      15: "A second owner: both delete it. Double delete, UB."
+      16: "Slicing: copy is a plain Bug. bite() returns 1."
       19: "Dereferencing nullptr: UB."
     hints:
-      - How many unique_ptrs own the Hydra?
-      - "Also look for a copy that loses its type, and a null pointer."
-    short: "Two owners (double delete), a sliced copy, and a null dereference."
+      - How many owners? Any sliced copy? Any null pointer?
+    short: "Two owners, a sliced copy, and a null dereference."
     explain: "Line 15 gives the same object a second unique_ptr, so it gets deleted twice. Line 16 slices the Hydra into a plain Bug (a logic bug: bite() says 1). Line 19 follows nullptr. Use make_unique, pass polymorphic objects by reference, and check pointers."
     sideBySide:
       unsafe: |-
@@ -246,26 +241,25 @@ rounds:
   - id: w16.boss.r6
     type: mcq
     tags: [ w16.ownership, w16.classes ]
-    prompt: "A class holds only a std::vector and a std::unique_ptr. Which special member functions must you write?"
+    prompt: "A class holds only a std::vector and a std::unique_ptr. Which special members must you write?"
     options:
       - t: None. The members already clean up and move correctly
-        why: "Correct: the Rule of Zero. The compiler-generated ones do the right thing."
+        why: "The Rule of Zero: the generated ones are right."
       - t: A destructor that deletes the unique_ptr's object
-        why: unique_ptr already deletes it. Doing it again would be a double delete.
+        why: unique_ptr already deletes it. That's a double delete.
       - t: All five, to be safe
-        why: Hand-written copies and moves are where bugs creep in. Let the members do it.
+        why: Hand-written copies and moves are where bugs creep in.
       - t: A copy constructor, or the class won't compile
-        why: It compiles. It's just move-only, because unique_ptr can't be copied.
+        why: It compiles; it's just move-only.
     answer: 0
     hints:
       - Do vector and unique_ptr clean up after themselves?
-      - Remember the Rule of Zero.
-    short: "Rule of Zero: members that manage themselves need no special functions."
+    short: "Rule of Zero: self-managing members need no special functions."
     explain: "std::vector and std::unique_ptr each handle their own cleanup and moving. The compiler-generated destructor and move operations call theirs, so you write none of the five. (The class is move-only, since unique_ptr can't be copied.)"
   - id: w16.boss.r7
     type: predict
     tags: [ w16.virtual, w16.ownership ]
-    prompt: "A Hydra hatches and dies in a scope. What does this print?"
+    prompt: "A Hydra is created and destroyed in a scope. What does this print?"
     code: |-
       #include <iostream>
       #include <memory>
@@ -290,27 +284,26 @@ rounds:
     options:
       - t: |
           BH~H~B
-        why: "Correct: base built first, derived destroyed first. The virtual destructor makes ~H run."
+        why: "Base built first, derived destroyed first. ~H runs: it's virtual."
       - t: |
           BH~B
-        why: That's what a NON-virtual base destructor might do. Here it's virtual.
+        why: A NON-virtual base destructor might do that. Here it's virtual.
       - t: |
           HB~B~H
-        why: The base part is constructed before the derived part, not after.
+        why: The base part is constructed first.
       - t: |
           BH~B~H
-        why: "Destruction runs in reverse order of construction: derived first."
+        why: "Destruction runs in reverse: derived first."
     answer: 0
     hints:
-      - Construction goes base first.
-      - Destruction is the mirror image.
+      - Construction goes base first; destruction is the mirror.
     short: "Built base-first, destroyed derived-first: BH~H~B."
     explain: "Constructing a Hydra builds the Bug part first (B), then the Hydra part (H). At the scope's end, the unique_ptr deletes through Bug*; the virtual destructor dispatches to ~Hydra (~H), which then runs ~Bug (~B)."
   - id: w16.boss.r8
     type: harden
     tags: [ w16.ownership ]
     bug: memory-leak
-    prompt: "countEggs can return early. Pick the line that can't leak."
+    prompt: "countEggs can return early. Pick the line that creates a Nest and can't leak."
     code: |-
       #include <memory>
 
@@ -328,17 +321,16 @@ rounds:
       }
     options:
       - t: auto nest = std::make_unique<Nest>();
-        why: "Correct: whatever path returns, the unique_ptr deletes the Nest."
+        why: "On every return path, the unique_ptr deletes the Nest."
       - t: Nest* nest = new Nest{};
-        why: Nothing ever deletes it. Every call leaks a Nest.
+        why: Nothing ever deletes it. Every call leaks.
       - t: Nest* nest = nullptr;
         why: No Nest at all. nest->eggs follows nullptr.
       - t: std::unique_ptr<Nest> nest;
-        why: An empty unique_ptr holds nullptr. nest->eggs is UB.
+        why: An empty unique_ptr is null. nest->eggs is UB.
     answer: 0
     hints:
       - Which option both creates a Nest and owns it?
-      - "Early returns skip any delete you write by hand."
     short: "make_unique creates AND owns: every return path cleans up."
     explain: "With a raw new, every return would need its own delete, and an exception would skip them all. std::make_unique ties the Nest's lifetime to a scope: RAII deletes it on every path."
     sideBySide:
@@ -365,7 +357,7 @@ rounds:
   - id: w16.boss.r9
     type: predict
     tags: [ w16.exceptions, w16.optional, w16.templates ]
-    prompt: "The Dragon throws mid-assignment. What does this print?"
+    prompt: "The second call throws. What does this print?"
     code: |-
       #include <iostream>
       #include <optional>
@@ -393,26 +385,25 @@ rounds:
     options:
       - t: |
           negative 4
-        why: "Correct: 9 / 2 = 4 is stored; the second call throws before assigning."
+        why: "9 / 2 = 4 is stored; the second call throws first."
       - t: |
           negative -1
-        why: result already got 4 from the first call. value_or only uses -1 when empty.
+        why: result already holds 4, so value_or ignores -1.
       - t: |
           negative -2
-        why: checkedHalf(-4) throws before any division, so -2 never exists.
+        why: checkedHalf(-4) throws before any division.
       - t: |
           4
-        why: -4 < 0, so the throw happens and the handler prints "negative ".
+        why: -4 < 0 throws, so the handler prints "negative ".
     answer: 0
     hints:
-      - What does result hold after the first call?
       - Does the second assignment happen if the call throws?
     short: "First call stores 4; the second throws before assigning."
     explain: "checkedHalf(9) returns 4 (int division), stored in result. checkedHalf(-4) throws before returning, so the assignment never happens. The handler prints \"negative \", and value_or(-1) finds 4. Output: \"negative 4\" and a newline."
   - id: w16.boss.r10
     type: speed
     tags: [ w16.stl, w16.modern, w16.exceptions, w16.ownership ]
-    prompt: "SPEED ROUND! The Dragon inhales. Answer before the fire!"
+    prompt: "Speed round! Answer each question before time runs out."
     seconds: 50
     items:
       - q: Which smart pointer means exactly one owner?
@@ -461,16 +452,15 @@ rounds:
           - catch (const std::out_of_range&)
         answer: 1
     hints:
-      - Specific before general; own with unique_ptr.
-      - "m[key] inserts; .at() throws; outliving lambdas capture by value."
-    short: "unique_ptr owns; m[] inserts; override checks; .at() throws; specific catch first."
+      - "m[key] inserts; .at() throws; specific catch first."
+    short: "unique_ptr owns; m[] inserts; .at() throws; specific first."
     explain: "One owner is std::unique_ptr. 17 % 5 is 2 and 17 / 5 is 3, printed back to back: 23. m[\"imp\"] inserts, so size is 1. override makes the compiler check. A lambda that outlives x must copy it: [x]. .at() throws std::out_of_range. Specific handlers go before std::exception."
   - id: w16.boss.r11
     type: edge
     tags: [ w16.templates, w16.stl ]
     bug: unchecked-find
     unsafe: true
-    prompt: "UNSAFE: m is {\"imp\": 3, \"hydra\": 40}. Which keys expose UB? Select all."
+    prompt: "UNSAFE: m is {\"imp\": 3, \"hydra\": 40}. Which keys cause UB? Select all."
     code: |-
       #include <map>
       #include <string>
@@ -483,17 +473,16 @@ rounds:
       - t: "\"imp\""
         why: Found. Returns 3.
       - t: "\"ghost\""
-        why: "Exposes it: not in the map, so find returns end(), and end()->second is UB."
+        why: "Missing, so find returns end(); end()->second is UB."
       - t: "\"\""
-        why: "Exposes it: the empty string isn't a key either."
+        why: "The empty string isn't a key either."
       - t: "\"Hydra\""
-        why: "Exposes it: keys are case-sensitive. \"Hydra\" isn't \"hydra\"."
+        why: "Keys are case-sensitive. \"Hydra\" isn't \"hydra\"."
       - t: "\"hydra\""
         why: Found. Returns 40.
     answers: [ 1, 2, 3 ]
     hints:
-      - Which keys are really in the map?
-      - Keys compare exactly, including case.
+      - Which keys are really in the map, exactly?
     short: "Every missing key, even a case typo, dereferences end()."
     explain: "The template is fine for any K and V, but it never checks find() against end(). Any missing key (ghost, the empty string, a capitalized Hydra) makes it dereference end(): undefined behavior. Return std::optional<V> instead."
     sideBySide:
@@ -517,7 +506,7 @@ rounds:
     type: safe
     tags: [ w16.ub, w16.move, w16.bounds, w3.overflow ]
     bug: ub-hydra
-    prompt: "Final breath! Safe or unsafe? Every world at once. Go!"
+    prompt: "Final breath! Safe or unsafe? Mark each snippet. Go!"
     seconds: 40
     items:
       - code: |-
@@ -569,9 +558,8 @@ rounds:
         safe: true
         why: Thrown, caught by const reference, handled.
     hints:
-      - Empty containers, moved-from pointers, and limits.
-      - Does every new match its delete?
-    short: "Check before front(), don't use moved-from pointers, respect int limits."
+      - Empty containers, moved-from pointers, limits, new vs delete.
+    short: "Check before front(), skip moved-from pointers, respect limits."
     explain: "Unsafe: front() on an empty vector, dereferencing a moved-from unique_ptr, signed overflow, and new[] freed with plain delete. Safe: each checked access, the scoped enum, and a caught exception."
 defense:
   - attack: '""'
@@ -580,7 +568,7 @@ defense:
       id: w16.boss.d1
       type: harden
       tags: [ w16.bounds, w2.string, w7.empty ]
-      prompt: "The Dragon submits an empty name. Pick the guard before front()."
+      prompt: "name may be empty. Pick the guard before front()."
       code: |-
         #include <string>
 
@@ -592,9 +580,9 @@ defense:
         }
       options:
         - t: name.empty()
-          why: "Correct: an empty string has no front(), so answer '?' instead."
+          why: "An empty string has no front(), so answer '?'."
         - t: "name.front() == '\\0'"
-          why: Calls front() to find out if front() is safe. On an empty string, that's the UB.
+          why: Calls front() to check if front() is safe. UB.
         - t: name.size() > 100
           why: Guards against long names, not empty ones.
         - t: "name == \" \""
@@ -602,7 +590,6 @@ defense:
       answer: 0
       hints:
         - Ask the string about its size, not its first character.
-        - One member function answers "is there anything here?"
       short: "front() on an empty string is UB: check empty() first."
       explain: "std::string::front() requires at least one character. Check `name.empty()` before touching any character. Any check that reads a character first has already done the dangerous part."
       sideBySide:
@@ -624,7 +611,7 @@ defense:
       type: harden
       tags: [ w16.bounds, w7.bounds, w6.validate ]
       bug: out-of-bounds
-      prompt: "The Dragon asks for slot -1. Pick the complete bounds check."
+      prompt: "The Dragon asks for slot -1. Pick the check that rejects every bad index."
       code: |-
         #include <stdexcept>
         #include <vector>
@@ -637,17 +624,16 @@ defense:
         }
       options:
         - t: i < 0 || i >= static_cast<int>(hp.size())
-          why: "Correct: blocks negatives AND anything at or past the end."
+          why: "Blocks negatives AND anything at or past the end."
         - t: i >= static_cast<int>(hp.size())
           why: Misses -1, which becomes a huge index after the cast.
         - t: i < 0
           why: Blocks -1, but slot 999 reads far past the end.
         - t: i > static_cast<int>(hp.size())
-          why: Misses negatives, and i == size() is already out of bounds.
+          why: Misses negatives, and lets i == size() through.
       answer: 0
       hints:
-        - Two ways to be out of range.
-        - The last valid index is size() - 1.
+        - There are two ways to be out of range.
       short: "Check both ends: i < 0 and i >= size()."
       explain: "An index is valid only from 0 to size() - 1. Check both ends before indexing. A negative int cast to std::size_t becomes an enormous number, so a missing `i < 0` check doesn't fail safely."
       sideBySide:
@@ -680,17 +666,16 @@ defense:
         int bounty = gold * 100;
       options:
         - t: "30000000"
-          why: "Correct: a valid int, but times 100 is 3 billion. Signed overflow: UB."
+          why: "A valid int, but times 100 overflows: UB."
         - t: "99999999999"
-          why: Too big for an int, so the read itself fails. Caught.
+          why: Too big for an int, so the read fails. Caught.
         - t: "-1"
           why: Caught by gold < 0.
         - t: abc
           why: The read fails. Caught.
       answer: 0
       hints:
-        - Which input passes every check?
-        - What happens when that input is multiplied?
+        - Which input passes every check, then gets multiplied?
       short: "30000000 passes the checks, but * 100 overflows."
       explain: "30000000 fits in an int, so it passes validation, but 30000000 * 100 is about 3 billion, past the largest int (about 2.1 billion). Signed overflow is UB. Cap the input so the math can't overflow: gold > max / 100."
       sideBySide:
@@ -724,16 +709,15 @@ defense:
         }
       options:
         - t: hero == nullptr
-          why: "Correct: check the pointer itself before following it with ->."
+          why: "Checks the pointer itself before following it."
         - t: hero->hp < 0
-          why: Follows the pointer to check it. With nullptr, that IS the crash.
+          why: The check itself follows nullptr. UB.
         - t: amount <= 0
-          why: A sensible extra check, but it lets nullptr through.
+          why: Sensible, but it lets nullptr through.
         - t: "!hero->hp"
           why: Dereferences hero first. Null makes this UB.
       answer: 0
       hints:
-        - Check the arrow before you walk it.
         - Compare the pointer, don't dereference it.
       short: "Check hero == nullptr before using ->."
       explain: "A pointer parameter can be null. Compare it with nullptr before using -> or *. (If null should never happen, take a Hero& instead: a reference can't be null.)"
@@ -757,7 +741,7 @@ defense:
       type: harden
       tags: [ w16.input, w16.layers, w3.cin, w5.retry ]
       bug: cin-fail
-      prompt: "The final attack! The Dragon types `abc` every time. Pick the line that makes each retry work."
+      prompt: "The Dragon types `abc` every time. Pick the line that makes each retry work."
       code: |-
         #include <iostream>
         #include <limits>
@@ -777,17 +761,16 @@ defense:
         }
       options:
         - t: "std::cin.clear(); std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\\n');"
-          why: "Correct: reset the fail state, then throw away the bad line. The next read sees fresh input."
+          why: "Reset the fail state, then throw away the bad line."
         - t: "std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\\n');"
-          why: A failed stream ignores nothing. Clear first, or every retry fails instantly.
+          why: A failed stream ignores nothing. Clear first.
         - t: std::cin.clear();
-          why: Unjams the stream, but abc is still waiting. The retry reads it again.
+          why: Unjams the stream, but abc is still waiting.
         - t: continue;
-          why: Changes nothing. The stream stays jammed on the same abc.
+          why: Changes nothing. The stream stays jammed.
       answer: 0
       hints:
-        - Two things are wrong after abc. Fix both.
-        - Clear the fail state first, then discard the line.
+        - Two things are wrong after abc. Fix both, in order.
       short: "clear() then ignore(): reset the stream, drop the junk, retry."
       explain: "After abc, cin is in the fail state AND the characters are still waiting. clear() resets the state; ignore(max, '\\n') discards the bad line. The tries counter bounds the loop, so even endless junk (or end of input) can't make it spin forever."
       sideBySide:
@@ -807,7 +790,7 @@ defense:
               std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
           }
         prelude: int power{};
-victory: "The Dragon's fire flickers out: every input checked, every bound held. The Codebase is safe."
+victory: "The Dragon's fire flickers out. Every input checked. The Codebase is safe."
 reward:
   xp: 500
   cosmetic: crown

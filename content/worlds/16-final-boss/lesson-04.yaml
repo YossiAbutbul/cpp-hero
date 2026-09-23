@@ -5,8 +5,8 @@ title: "Gauntlet IV: Errors and templates"
 skill: defense
 shield: false
 concept:
-  short: "Gauntlet stage four: report errors honestly with exceptions or optional, and constrain templates so bad types fail early."
-  analogy: "An exception is a fire alarm: it stops normal work and everyone heads to the nearest handler."
+  short: "Report errors honestly with exceptions or optional; constrain templates so bad types fail early."
+  analogy: "An exception is a fire alarm: work stops, everyone heads to a handler."
   body:
     - "**Choosing an error strategy** (World 12): a missing answer that's normal (a lookup that finds nothing) is a `std::optional`. A broken promise the caller can't ignore (a negative size, a corrupt file) is an **exception**. Never an unchecked magic value."
     - "**Throw and catch**: `throw std::invalid_argument{\"bad hp\"};`. Catch by `const&` so nothing gets sliced: `catch (const std::exception& e)`. Handlers are tried top to bottom, so put the most specific ones first."
@@ -71,7 +71,7 @@ demo:
       pop: true
       vars:
         e: "divide by zero"
-      note: The stack unwinds to the matching catch. Line 16 is skipped.
+      note: Unwinds to the matching catch, skipping line 16.
     - line: 18
       out: |
         Caught: divide by zero
@@ -81,7 +81,7 @@ challenges:
   - id: w16.l4.c1
     type: predict
     tags: [ w16.exceptions, w6.scope ]
-    prompt: The cave collapses mid-explore. What does this print?
+    prompt: explore() throws while a Torch is alive. What does this print?
     code: |-
       #include <iostream>
       #include <stdexcept>
@@ -107,39 +107,37 @@ challenges:
       - t: |
           torch out
           caught cave-in
-        why: "Correct: leaving explore() destroys t first; then the handler runs."
+        why: "Leaving explore() destroys t first; then the handler runs."
       - t: |
           caught cave-in
           torch out
-        why: The torch belongs to explore(). It's destroyed while unwinding, before the catch body runs.
+        why: t dies during unwinding, before the catch body runs.
       - t: |
           caught cave-in
-        why: "Unwinding runs every local destructor. That's what makes RAII work."
+        why: "Unwinding runs every local destructor."
       - t: |
           torch out
-        why: The runtime_error matches the handler, so it's caught and printed.
+        why: The runtime_error matches the handler, so it's caught.
     answer: 0
     hints:
       - What happens to explore()'s locals when the exception leaves it?
-      - Destructors run during unwinding, before the handler.
-    short: "Unwinding destroys locals first (torch out), then the handler runs."
+    short: "Unwinding destroys locals first, then the handler runs."
     explain: "When the exception leaves explore(), the stack unwinds: t's destructor runs and prints \"torch out\". Then the matching catch in main runs and prints \"caught cave-in\". This is why RAII types (smart pointers, containers) never leak on an exception."
   - id: w16.l4.c2
     type: mcq
     tags: [ w16.exceptions, w16.optional ]
-    prompt: findPlayer(name) searches the guild roster. A missing name is a normal, expected result. What should it return?
+    prompt: For findPlayer(name), a missing name is normal. What should it return?
     options:
       - t: std::optional<Player>
-        why: "Correct: \"maybe no answer\" is part of the type, and the caller must check."
+        why: "\"Maybe no answer\" is in the type; the caller must check."
       - t: A Player with an empty name
-        why: A magic value. Callers forget to check, and the fake Player spreads.
+        why: A magic value. Callers forget to check.
       - t: Throw an exception when the name is missing
-        why: Exceptions are for broken promises. A normal miss would turn into try/catch everywhere.
+        why: Exceptions are for broken promises, not normal misses.
       - t: A Player* to a local Player
-        why: The local dies when findPlayer returns. The pointer dangles.
+        why: The local dies when findPlayer returns.
     answer: 0
     hints:
-      - Is "not found" an error or a normal outcome here?
       - Which type says "a value, or nothing"?
     short: "Normal \"no answer\": std::optional. Broken promise: exception."
     explain: "Choose the error strategy by how surprising the failure is. A lookup that finds nothing is ordinary, so std::optional puts \"maybe nothing\" in the type. Exceptions fit contract violations the caller can't just shrug off."
@@ -158,18 +156,17 @@ challenges:
       }
     options:
       - t: std::is_arithmetic_v<T>
-        why: "Correct: true for int, double and friends; std::string fails with your message."
+        why: "True for int and double; std::string fails with your message."
       - t: sizeof(T) > 0
         why: Every complete type has a size, so this never fails.
       - t: "true"
-        why: Checks nothing. average(std::string, std::string) fails with a cryptic error.
+        why: Checks nothing. Strings fail with a cryptic error.
       - t: T{} == 0
-        why: Not a type check, and it won't even compile for many types.
+        why: Not a type check, and won't compile for many types.
     answer: 0
     hints:
-      - You need a type trait from <type_traits>.
-      - "Which trait means \"integer or floating point\"?"
-    short: "static_assert with a type trait turns misuse into a clear compile error."
+      - "Which <type_traits> trait means \"integer or floating point\"?"
+    short: "static_assert with a type trait gives a clear compile error."
     explain: "`static_assert(std::is_arithmetic_v<T>, \"...\")` stops the build with your message when someone calls average with a non-number. In C++20 you can put it in the signature instead: `template <typename T> requires std::is_arithmetic_v<T>`, or use a concept like `std::integral`."
     sideBySide:
       unsafe: |-
@@ -207,18 +204,17 @@ challenges:
     bugLine: 6
     options:
       - t: Move the std::out_of_range handler above the std::exception one
-        why: "Correct: handlers are tried in order, so the specific one must come first."
+        why: "Handlers are tried in order: specific first."
       - t: "Catch by value: catch (std::exception e)"
-        why: Still catches first, and now slices the exception too.
+        why: Still catches first, and now slices too.
       - t: Add catch (...) as the first handler
-        why: That catches everything before either handler gets a chance.
+        why: That catches everything before either handler.
       - t: Remove const from both handlers
-        why: const has nothing to do with the order handlers are tried.
+        why: const doesn't change the order handlers are tried.
     answer: 0
     hints:
-      - Handlers are tried top to bottom.
-      - out_of_range IS a std::exception.
-    short: "Handlers are tried in order: put the specific one before std::exception."
+      - Handlers are tried top to bottom. out_of_range IS a std::exception.
+    short: "Put the specific handler before std::exception."
     explain: "std::out_of_range derives from std::exception, so the first handler matches and the second is dead code (g++ warns about it). Order handlers from most specific to most general."
     sideBySide:
       unsafe: |-
@@ -248,9 +244,8 @@ challenges:
       - ^throw std::invalid_argument ?(\{ ?"bad hp" ?\}|\( ?"bad hp" ?\)) ?;$
     placeholder: throw ...
     hints:
-      - "Start with the keyword throw."
-      - "std::invalid_argument takes the message: {\"bad hp\"}."
-    short: "throw std::invalid_argument{\"bad hp\"}; reports a broken promise."
+      - "Pattern: throw Type{\"message\"};"
+    short: "throw reports a broken promise to the nearest handler."
     explain: "`throw` creates the exception object and starts unwinding to the nearest matching handler. std::invalid_argument (from <stdexcept>) is the standard type for \"this argument breaks the rules\"."
 recap:
   - "Normal miss: optional. Broken promise: exception."
