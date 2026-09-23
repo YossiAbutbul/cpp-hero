@@ -17,13 +17,13 @@ challenges are YAML files in [`content/`](content/README.md), validated at build
 | Cloud save + deploy | **Live at https://cpp-hero.vercel.app** (Vercel, auto-deploys from `main`). Firebase project `cpp-hero` (Spark, free): Google sign-in, Firestore `me-west1`, rules + indexes deployed. Sign-in and sync checked by the user on computer + phone, offline works. **App Check off on purpose** (reCAPTCHA Enterprise needs billing); set `VITE_FIREBASE_APPCHECK_SITE_KEY` in Vercel to turn it on later. Known limits: XP from two devices played offline at the same time merges by taking the higher value; the newer device's streak wins |
 | Polish (done) | Boss and lesson session shells merged into `src/features/session/`. World 6 demos use `push`/`pop` frames, World 8 demos use `mem` cells |
 | Hearts | **Boss fights only.** Each fight starts with 5 hearts (not saved); a wrong first try costs one; at 0 a "Knocked out!" dialog offers Try again (fresh fight, intro skipped) or Back to map. No hearts, timers or lockouts in lessons, projects, practice or placement. `save.hearts` stays in the save format for old saves and cloud sync only |
+| Playtest | **Done (2026-09-23).** Automated: all 802 challenges + a fresh save through all 16 worlds (`src/playthrough.test.ts`). By hand: World 1 boss knock-out, Try again and a full win to World 2; World 16 boss opens and renders; lessons, scroll-to-feedback, Tell me more; Settings Paste (junk, broken save, valid), Import file (newer version, too big, valid, Cancel), Copy, Reset (cancel + real). Lessons show only their own questions (review lives in Practice) |
 
 ### How to continue
 
 When the user says **"continue according to plan"**, do these steps in order. Use parallel subagents where noted.
 
-1. **Full playtest: mostly done (2026-09-23).** Done: automated playthrough of all 16 worlds and all 802 challenges (`src/playthrough.test.ts`, 3 content bugs fixed); by hand: World 1 boss knock-out + Try again and a full win to World 2; lessons and scroll-to-feedback; review in lessons removed (only a lesson's own questions now); import/hearts/lock bugs from a code review fixed. **Left:** Import/Paste/Reset in Settings by hand (code reviewed and hardened, not clicked through), and a quick look at one boss from a later world.
-2. **Polish / follow-ups.** Can run as parallel subagents, each with its own folders:
+1. **Polish / follow-ups.** Can run as parallel subagents, each with its own folders:
    - World 6 and World 8 `NOTES.md` still describe the old demo format; update them.
    - Ideas from NOTES: a multi-stage boss schema (`content/worlds/16-final-boss/NOTES.md`), `obj` cards for inheritance/slicing (World 11 NOTES), moved-from "husk" boxes (World 15 NOTES).
    - If sign-in fails on iPhone/Safari: proxy `/__/auth/*` to `cpp-hero.firebaseapp.com` in `vercel.json` and set `VITE_FIREBASE_AUTH_DOMAIN=cpp-hero.vercel.app` (see docs/DEPLOY.md).
