@@ -9,7 +9,15 @@
  * again / Show answer) and the explanation (Tell me more + side-by-side for
  * defensive types). Renderers (./renderers) only own their inputs.
  */
-import { forwardRef, useEffect, useRef, useState, type MouseEvent, type ReactNode, type RefObject } from 'react';
+import {
+  forwardRef,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { useGame } from '@/app/gameContext';
 import type { Challenge } from '@/content/schema';
 import { HINT_COST, RETRY_MODES, type SessionMode } from '@/engine/config';
@@ -38,7 +46,8 @@ export interface ChallengeResult {
   retried: boolean;
 }
 
-export type RunnerMode = 'lesson' | 'project' | 'stress' | 'boss' | 'practice' | 'review' | 'placement' | 'refill';
+export type RunnerMode =
+  'lesson' | 'project' | 'stress' | 'boss' | 'practice' | 'review' | 'placement' | 'refill';
 
 export interface ChallengeRunnerProps {
   challenge: Challenge;
@@ -203,11 +212,18 @@ export function ChallengeRunner(props: ChallengeRunnerProps) {
       bounce(bodyEl.current);
     };
     if (el && !reduced())
-      void anim(el, [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(16px) scale(.96)' }], {
-        duration: 180,
-        fill: 'forwards',
-        rm: 'keep',
-      }).then(reset);
+      void anim(
+        el,
+        [
+          { opacity: 1, transform: 'none' },
+          { opacity: 0, transform: 'translateY(16px) scale(.96)' },
+        ],
+        {
+          duration: 180,
+          fill: 'forwards',
+          rm: 'keep',
+        },
+      ).then(reset);
     else reset();
   };
 
@@ -234,13 +250,13 @@ export function ChallengeRunner(props: ChallengeRunnerProps) {
     onContinue(final.res);
   };
 
-  // Result panel: slide in, scroll into view, focus the main button.
+  // Result panel: slide in, scroll it fully into view, focus the main button.
   useEffect(() => {
     if (phase === 'answer') return;
     slideUp(resultEl.current);
     const t = window.setTimeout(() => {
       try {
-        resultEl.current?.scrollIntoView({ block: 'nearest', behavior: reduced() ? 'auto' : 'smooth' });
+        revealResult(resultEl.current);
       } catch {
         /* ignore */
       }
@@ -303,7 +319,13 @@ export function ChallengeRunner(props: ChallengeRunnerProps) {
   };
 
   const R = RENDERERS[ch.type];
-  const prompt = ch.prompt || (ch.type === 'safe' ? 'Safe or unsafe? Decide fast!' : ch.type === 'speed' ? 'Answer as many as you can!' : '');
+  const prompt =
+    ch.prompt ||
+    (ch.type === 'safe'
+      ? 'Safe or unsafe? Decide fast!'
+      : ch.type === 'speed'
+        ? 'Answer as many as you can!'
+        : '');
   const shownHints = ch.hints.slice(0, Math.min(hints, ch.hints.length));
   const answerShown = hints >= tiers && !noHints;
 
@@ -328,7 +350,14 @@ export function ChallengeRunner(props: ChallengeRunnerProps) {
       {before}
       <div ref={bodyEl} className={styles.body}>
         <ActionsContext.Provider value={actions}>
-          <R ch={ch} phase={phase} attempt={attempt} canSoft={canSoft} reveal={phase === 'done'} submit={submit} />
+          <R
+            ch={ch}
+            phase={phase}
+            attempt={attempt}
+            canSoft={canSoft}
+            reveal={phase === 'done'}
+            submit={submit}
+          />
         </ActionsContext.Provider>
       </div>
       {(shownHints.length > 0 || answerShown) && (
@@ -514,3 +543,19 @@ const ResultPanel = forwardRef<HTMLDivElement, ResultProps>(function ResultPanel
     </div>
   );
 });
+
+/**
+ * Scroll the result panel into view with the space under it (the scroller's
+ * bottom padding), i.e. to the end of the page: the panel is the last thing
+ * on it. A panel taller than the screen keeps its top (the verdict) in view.
+ */
+function revealResult(el: HTMLElement | null) {
+  if (!el) return;
+  let sc = el.parentElement;
+  while (sc && !/(auto|scroll)/.test(getComputedStyle(sc).overflowY)) sc = sc.parentElement;
+  if (!sc) return el.scrollIntoView({ block: 'end', behavior: reduced() ? 'auto' : 'smooth' });
+  const panelTop = el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
+  const end = sc.scrollHeight - sc.clientHeight;
+  const top = Math.min(end, Math.max(0, panelTop - 12));
+  if (top > sc.scrollTop) sc.scrollTo({ top, behavior: reduced() ? 'auto' : 'smooth' });
+}
